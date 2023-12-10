@@ -22,46 +22,11 @@
 #define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.dylib"
 #endif
 
-template <class T>
-T* ScriptingManager::InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, void* args...) {
-	InvokeCSharp(targetAssembly, targetNamespace, targetClass, fnName, args);
+template<class T, class ... Types>
+T* ScriptingManager::InvokeCSharpWithReturn(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
+	//InvokeCSharp(targetAssembly, targetNamespace, targetClass, fnName, args);
 	return nullptr;
 }
-
-
-void ScriptingManager::InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, void* args...) {
-	//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
-	//I'll make this more readable in the future, and we'll probably accept some heap allocs, for now I want to test if it works being performant
-	//Concatenate them as {targetNamespace.targetClass}, {assemblyName}
-	const int MAX_ASSEMBLY_DECL = 2048; //Dedicate 2MBs to the target
-	std::string fullClassPath;
-	fullClassPath.reserve(MAX_ASSEMBLY_DECL);
-	fullClassPath += targetNamespace;
-	fullClassPath += '.';
-	fullClassPath += targetClass;
-	fullClassPath += ", ";
-	fullClassPath += targetAssembly;
-	
-	//Allocate memory to concatenate the string
-	//Get the correct type of function pointer
-	using test_delegate_fn = void (*)(void**);
-	test_delegate_fn test_delegate;
-	int rc = this->function_getter_fptr(
-							  fullClassPath.c_str(),
-							  fnName,
-							  UNMANAGEDCALLERSONLY_METHOD,
-							  nullptr,
-							  nullptr,
-							  reinterpret_cast<void**>(&test_delegate));
-	if (rc != 0) {
-		fputs("Error invoking CSharp method with name: ", stderr);
-		fputs(fnName, stderr);
-		fputs(". Please verify the signature\n", stderr);
-		return;
-	}
-	test_delegate(&args);
-}
-
 
 template <class T>
 T ScriptingManager::LoadSymbol(void *sharedLibrary, const char *name) {
@@ -82,25 +47,25 @@ ScriptingManager::ScriptingManager(const char* dotnetPath) {
 		return;
 	}
 	//TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
-	this->cmd_line_fptr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD);
-	this->init_fptr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG);
-	this->get_delegate_fptr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE);
-	this->run_app_fptr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION);
-	this->close_fptr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION);
-	this->error_writer_fptr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER);
-	this->error_writer_fptr([](const char *message) { fputs(message, stderr); });
+	this->cmdLineFuncPtr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD);
+	this->initFuncPtr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG);
+	this->getDelegateFuncPtr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE);
+	this->runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION);
+	this->closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION);
+	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER);
+	this->errorWriterFuncPtr([](const char *message) { fputs(message, stderr); });
 	this->InitDotnetCore();
 }
 
 ScriptingManager::~ScriptingManager() {
-	this->close_fptr(this->hostFxrHandle);
+	this->closeFuncPtr(this->hostFxrHandle);
 }
 
 void ScriptingManager::InitDotnetCore() {
 	const char* runtime_config = "assembly-test.runtimeconfig.json";
 	
 	// Load and initialize .NET Core
-	int rc = this->init_fptr(runtime_config, nullptr, &this->hostFxrHandle);
+	int rc = this->initFuncPtr(runtime_config, nullptr, &this->hostFxrHandle);
 	if (rc != 0)
 	{
 		fputs("Init failed\n", stderr);
@@ -132,13 +97,13 @@ void ScriptingManager::InitDotnetCore() {
 load_assembly_fn ScriptingManager::GetLoadAssembly(void* hostFxrHandle) {
 	// Get the load_assembly_and_get_function_pointer function pointer
 	load_assembly_fn load_assembly = nullptr;
-	get_delegate_fptr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&load_assembly));
+	getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&load_assembly));
 	return load_assembly;
 }
 
 get_function_pointer_fn ScriptingManager::GetFunctionPtr(void* hostFxrHandle) {
 	get_function_pointer_fn get_function_pointer = nullptr;
-	get_delegate_fptr(hostFxrHandle, hdt_get_function_pointer, reinterpret_cast<void**>(&get_function_pointer));
+	getDelegateFuncPtr(hostFxrHandle, hdt_get_function_pointer, reinterpret_cast<void**>(&get_function_pointer));
 	return get_function_pointer;
 }
 

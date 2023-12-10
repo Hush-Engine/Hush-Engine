@@ -15,19 +15,54 @@
 class ScriptingManager {
 public:
 	ScriptingManager(const char* dotnetPath);
-	~ScriptingManager();
-	template<class T>
-	T* InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, void* args...);
 	
-	void InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, void* args...);
+	~ScriptingManager();
+	
+	template<class T, class ... Types>
+	T* InvokeCSharpWithReturn(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args);
+	
+	template<class ... Types>
+	void InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
+		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
+		//I'll make this more readable in the future, and we'll probably accept some heap allocs, for now I want to test if it works being performant
+		//Concatenate them as {targetNamespace.targetClass}, {assemblyName}
+		const int MAX_ASSEMBLY_DECL = 2048; //Dedicate 2MBs to the target
+		std::string fullClassPath;
+		fullClassPath.reserve(MAX_ASSEMBLY_DECL);
+		fullClassPath += targetNamespace;
+		fullClassPath += '.';
+		fullClassPath += targetClass;
+		fullClassPath += ", ";
+		fullClassPath += targetAssembly;
+		
+		//Allocate memory to concatenate the string
+		//Get the correct type of function pointer
+		using test_delegate_fn = void (*)(Types...);
+		test_delegate_fn test_delegate;
+		int rc = this->function_getter_fptr(
+								fullClassPath.c_str(),
+								fnName,
+								UNMANAGEDCALLERSONLY_METHOD,
+								nullptr,
+								nullptr,
+								reinterpret_cast<void**>(&test_delegate));
+		if (rc != 0) {
+			fputs("Error invoking CSharp method with name: ", stderr);
+			fputs(fnName, stderr);
+			fputs(". Please verify the signature\n", stderr);
+			return;
+		}
+		test_delegate(args...);
+	}
+
 private:
 	// Declare function pointers for the coreclr functions
-	hostfxr_initialize_for_dotnet_command_line_fn cmd_line_fptr;
-	hostfxr_initialize_for_runtime_config_fn init_fptr;
-	hostfxr_get_runtime_delegate_fn get_delegate_fptr;
-	hostfxr_run_app_fn run_app_fptr;
-	hostfxr_close_fn close_fptr;
-	hostfxr_set_error_writer_fn error_writer_fptr;
+	hostfxr_initialize_for_dotnet_command_line_fn cmdLineFuncPtr;
+	hostfxr_initialize_for_runtime_config_fn initFuncPtr;
+	hostfxr_get_runtime_delegate_fn getDelegateFuncPtr;
+	hostfxr_run_app_fn runAppFuncPtr;
+	hostfxr_close_fn closeFuncPtr;
+	hostfxr_set_error_writer_fn errorWriterFuncPtr;
 	get_function_pointer_fn function_getter_fptr;
 	void* hostFxrHandle;
 	

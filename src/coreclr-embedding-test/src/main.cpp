@@ -1,4 +1,5 @@
 #include "ScriptingManager.hpp"
+#include <iostream>
 
 struct DemoStruct
 {
@@ -8,35 +9,15 @@ struct DemoStruct
 
 int main()
 {
+	//Demo stuff
 	auto scriptManager = ScriptingManager("/usr/local/share/dotnet");
 	const char* assembly = "assembly-test";
-	
-	scriptManager.InvokeCSharp(assembly, "Test", "Class1", "Func", nullptr);
-	
+	printf("Hi there, this is a C++ app, please input a name: ");
+	char name[200];
+	std::cin >> name;
+	scriptManager.InvokeCSharp(assembly, "Test", "Class1", "SayName", name, strlen(name));
 	// Get the function pointer for the managed code method
 	/*
-	if (rc != 0)
-	{
-		fputs("Get function pointer failed\n", stderr);
-		return -1;
-	}
-	
-	using dotnet_version_fn = void (*)(char*, int32_t);
-	dotnet_version_fn dotnet_version;
-	rc = get_function_pointer(
-							  "Test.Class1, assembly-test",
-							  "GetDotNetVersion",
-							  UNMANAGEDCALLERSONLY_METHOD,
-							  nullptr,
-							  nullptr,
-							  reinterpret_cast<void**>(&dotnet_version));
-	
-	if (rc != 0)
-	{
-		fputs("Get function pointer failed\n", stderr);
-		return -1;
-	}
-	
 	char version[100];
 	dotnet_version(version, 100);
 	std::cout << "DotNetVersion: " << version << std::endl;
@@ -65,7 +46,6 @@ int main()
 	// Run the managed code
 	test_delegate();
 	*/
-	// Clean up
 	
 	return 0;
 }
