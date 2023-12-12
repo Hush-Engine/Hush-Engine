@@ -1,0 +1,59 @@
+name: Clang-Tidy static analysis
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  clang-tidy:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
+          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev clang-tidy-17
+          sudo rm /usr/bin/clang-tidy
+          sudo ln -s /usr/bin/clang-tidy-17 /usr/bin/clang-tidy
+          wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O ninja-linux.zip && \
+            sudo unzip ninja-linux.zip -d /usr/bin && \
+            sudo rm ninja-linux.zip
+
+      - name: Configure CMake
+        run: >
+          cmake -B build
+          -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -S ${{ github.workspace }}
+
+      - name: Run clang tidy
+        id: clang-tidy
+        uses: mathiasvr/command-output@v2.0.0
+        timeout-minutes: 40
+        with:
+          run: cd build && cmake --build . --target tidy -j 4
+      - name: Comment PR
+        # Only execute if clang-tidy found errors
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ### Clang-Tidy found errors
+            <details>
+            <summary>Click to expand</summary>
+
+            ```
+            ${{ steps.clang-tidy.outputs.stdout }}
+            ```
+
+            </details>
