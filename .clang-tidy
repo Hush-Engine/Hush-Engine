@@ -29,6 +29,7 @@ Checks:
     -readability-magic-numbers
     -cppcoreguidelines-avoid-magic-numbers
     -readability-function-cognitive-complexity
+    -cppcoreguidelines-pro-type-reinterpret-cast
 
 
 CheckOptions:
