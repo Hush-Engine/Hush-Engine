@@ -7,12 +7,12 @@
 
 #include "ScriptingManager.hpp"
 
-#define DOTNET_CMD "hostfxr_initialize_for_dotnet_command_line"
-#define DOTNET_RUNTIME_INIT_CONFIG "hostfxr_initialize_for_runtime_config"
-#define DOTNET_RUNTIME_DELEGATE "hostfxr_get_runtime_delegate"
-#define DOTNET_RUN_FUNCTION "hostfxr_run_app"
-#define DOTNET_CLOSE_FUNCTION "hostfxr_close"
-#define DOTNET_ERROR_WRITER "hostfxr_set_error_writer"
+constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
+constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
+constexpr std::string_view DOTNET_RUNTIME_DELEGATE("hostfxr_get_runtime_delegate");
+constexpr std::string_view DOTNET_RUN_FUNCTION("hostfxr_run_app");
+constexpr std::string_view DOTNET_CLOSE_FUNCTION ("hostfxr_close");
+constexpr std::string_view DOTNET_ERROR_WRITER ("hostfxr_set_error_writer");
 
 #if WIN32
 #define HOST_FXR_PATH "hostfxr.dll"
@@ -30,6 +30,7 @@ T* ScriptingManager::InvokeCSharpWithReturn(const char* targetAssembly, const ch
 
 template <class T>
 T ScriptingManager::LoadSymbol(void *sharedLibrary, const char *name) {
+	//TODO: OS specific stuff
 	return reinterpret_cast<T>(dlsym(sharedLibrary, name));
 }
 
@@ -47,12 +48,12 @@ ScriptingManager::ScriptingManager(const char* dotnetPath) {
 		return;
 	}
 	//TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
-	this->cmdLineFuncPtr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD);
-	this->initFuncPtr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG);
-	this->getDelegateFuncPtr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE);
-	this->runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION);
-	this->closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION);
-	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER);
+	this->cmdLineFuncPtr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD.data());
+	this->initFuncPtr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG.data());
+	this->getDelegateFuncPtr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE.data());
+	this->runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION.data());
+	this->closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION.data());
+	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
 	this->errorWriterFuncPtr([](const char *message) { fputs(message, stderr); });
 	this->InitDotnetCore();
 }

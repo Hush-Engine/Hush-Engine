@@ -5,7 +5,12 @@
 //  Created by Leonidas Neftali Gonzalez Campos on 06/12/23.
 //
 #pragma once
+#if WIN32
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
+
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
