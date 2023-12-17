@@ -72,8 +72,10 @@ private:
 	template <class ... Types>
 	int GetMethodFromCS(const char* fullClassPath, const char* fnName, VoidCSMethod<Types...>* outMethod) {
 #if WIN32
-		const char_t* classPath =  StringUtils::ToWString(fullClassPath).data();
-		const char_t* targetFunction = StringUtils::ToWString(fnName).data();
+		std::wstring pathStr = StringUtils::ToWString(fullClassPath);
+		const char_t* classPath = pathStr.data();
+		std::wstring funcStr = StringUtils::ToWString(fnName);
+		const char_t* targetFunction = funcStr.data();
 #else
 		const char* classPath = fullClassPath;
 		const char* targetFunction = fnName;
