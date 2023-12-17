@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Filename: devtool.sh
+# Author: Alan Ramirez Herrera
+# Date: 2023-12-12
+# Brief: Wrapper around devtool.py
+
+python3 scripts/devtool.py $@
