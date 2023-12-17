@@ -5,17 +5,17 @@
 //  Created by Leonidas Neftali Gonzalez Campos on 06/12/23.
 //
 #pragma once
-#if WIN32
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
-
+#include "utils/LibManager.hpp"
+#include "utils/StringUtils.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
+#include <string_view>
+#include <string>
 #include <filesystem>
-#include "../../utils.hpp"
+
+template <class ... Types>
+using VoidCSMethod = void (*)(Types...);
 
 class ScriptingManager {
 public:
@@ -42,22 +42,15 @@ public:
 		
 		//Allocate memory to concatenate the string
 		//Get the correct type of function pointer
-		using test_delegate_fn = void (*)(Types...);
-		test_delegate_fn test_delegate;
-		int rc = this->function_getter_fptr(
-								fullClassPath.c_str(),
-								fnName,
-								UNMANAGEDCALLERSONLY_METHOD,
-								nullptr,
-								nullptr,
-								reinterpret_cast<void**>(&test_delegate));
+		VoidCSMethod<Types ...> testDelegate;
+		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, &testDelegate);
 		if (rc != 0) {
 			fputs("Error invoking CSharp method with name: ", stderr);
 			fputs(fnName, stderr);
 			fputs(". Please verify the signature\n", stderr);
 			return;
 		}
-		test_delegate(args...);
+		testDelegate(args...);
 	}
 
 private:
@@ -76,6 +69,25 @@ private:
 	
 	void InitDotnetCore();
 	
+	template <class ... Types>
+	int GetMethodFromCS(const char* fullClassPath, const char* fnName, VoidCSMethod<Types...>* outMethod) {
+#if WIN32
+		const char_t* classPath =  StringUtils::ToWString(fullClassPath).data();
+		const char_t* targetFunction = StringUtils::ToWString(fnName).data();
+#else
+		const char* classPath = fullClassPath;
+		const char* targetFunction = fnName;
+#endif
+		int rc = this->function_getter_fptr(
+			classPath,
+			targetFunction,
+			UNMANAGEDCALLERSONLY_METHOD,
+			nullptr,
+			nullptr,
+			reinterpret_cast<void**>(outMethod));
+		return rc;
+	}
+
 	load_assembly_fn GetLoadAssembly(void* hostFxrHandle);
 	
 	get_function_pointer_fn GetFunctionPtr(void* hostFxrHandle);

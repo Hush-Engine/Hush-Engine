@@ -1,6 +1,12 @@
 #include "ScriptingManager.hpp"
 #include <iostream>
 
+#if WIN32
+constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
+#else
+constexpr std::string_view DOTNET_PATH = "/usr/local/share/dotnet";
+#endif
+
 struct DemoStruct
 {
 	int32_t a;
@@ -10,12 +16,17 @@ struct DemoStruct
 int main()
 {
 	//Demo stuff
-	auto scriptManager = ScriptingManager("/usr/local/share/dotnet");
+	auto scriptManager = ScriptingManager(DOTNET_PATH.data());
 	const char* assembly = "assembly-test";
 	printf("Hi there, this is a C++ app, please input a name: ");
 	char name[200];
 	std::cin >> name;
-	scriptManager.InvokeCSharp(assembly, "Test", "Class1", "SayName", name, strlen(name));
+	const char* testNamespace = "Test";
+	const char* testClass = "Class1";
+	const char* testFunc = "SayName";
+	int length = strlen(name);
+	scriptManager.InvokeCSharp(assembly, testNamespace, testClass, "Func");
+	scriptManager.InvokeCSharp(assembly, testNamespace, testClass, testFunc, name, length);
 	// Get the function pointer for the managed code method
 	/*
 	char version[100];

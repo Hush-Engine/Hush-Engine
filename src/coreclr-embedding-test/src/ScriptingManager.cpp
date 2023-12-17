@@ -15,7 +15,7 @@ constexpr std::string_view DOTNET_CLOSE_FUNCTION ("hostfxr_close");
 constexpr std::string_view DOTNET_ERROR_WRITER ("hostfxr_set_error_writer");
 
 #if WIN32
-#define HOST_FXR_PATH "hostfxr.dll"
+#define HOST_FXR_PATH "host/fxr/8.0.0/hostfxr.dll"
 #elif __linux__
 #define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.so"
 #elif __APPLE__
@@ -31,19 +31,27 @@ T* ScriptingManager::InvokeCSharpWithReturn(const char* targetAssembly, const ch
 template <class T>
 T ScriptingManager::LoadSymbol(void *sharedLibrary, const char *name) {
 	//TODO: OS specific stuff
-	return reinterpret_cast<T>(dlsym(sharedLibrary, name));
+	void* libraryPtr = LibManager::DynamicLoadSymbol(sharedLibrary, name);
+	return reinterpret_cast<T>(libraryPtr);
 }
+
 
 ScriptingManager::ScriptingManager(const char* dotnetPath) {
 	//Get env for dotnet here and use that as our path
 	//auto sharedLibrary = dlopen("/usr/share/dotnet/host/fxr/8.0.0/libhostfxr.so", RTLD_LAZY);
 	std::filesystem::path targetPath = dotnetPath;
 	targetPath /= HOST_FXR_PATH;
-	void* sharedLibrary = dlopen(targetPath.c_str(), RTLD_LAZY);
+#if WIN32
+	std::string strLibPath = targetPath.string();
+	const char* libPath = strLibPath.c_str();
+#else
+	const char* libPath = targetPath.c_str();
+#endif
+	void* sharedLibrary = LibManager::LibraryOpen(libPath);
 	if (!sharedLibrary)
 	{
 		fputs("Failed to load ", stderr);
-		fputs(targetPath.c_str(), stderr);
+		fputs(libPath, stderr);
 		fputs("\n", stderr);
 		return;
 	}
@@ -54,7 +62,7 @@ ScriptingManager::ScriptingManager(const char* dotnetPath) {
 	this->runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION.data());
 	this->closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION.data());
 	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
-	this->errorWriterFuncPtr([](const char *message) { fputs(message, stderr); });
+	//this->errorWriterFuncPtr([](const char *message) { fputs(message, stderr); });
 	this->InitDotnetCore();
 }
 
@@ -63,8 +71,13 @@ ScriptingManager::~ScriptingManager() {
 }
 
 void ScriptingManager::InitDotnetCore() {
+#if WIN32
+	std::wstring configStr = StringUtils::ToWString("assembly-test.runtimeconfig.json");
+	const char_t* runtime_config = configStr.data();
+#else
 	const char* runtime_config = "assembly-test.runtimeconfig.json";
-	
+#endif
+
 	// Load and initialize .NET Core
 	int rc = this->initFuncPtr(runtime_config, nullptr, &this->hostFxrHandle);
 	if (rc != 0)
@@ -72,6 +85,7 @@ void ScriptingManager::InitDotnetCore() {
 		fputs("Init failed\n", stderr);
 		return;
 	}
+	fputs("Init .NET core succeeded!\n", stdout);
 	load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->hostFxrHandle);
 	
 	if (assemblyLoader == nullptr) {
