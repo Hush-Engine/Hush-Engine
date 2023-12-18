@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{05A48F94-FEA1-4C72-89A4-D8CCE53CE769}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "coreclr-embedding-test", "coreclr-embedding-test", "{02BBDCD8-513E-4CDB-9A78-FD85192E03BA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "assembly-test", "src\coreclr-embedding-test\assembly-test\assembly-test.csproj", "{EF171724-07B6-488A-B628-C3873C046E2A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EF171724-07B6-488A-B628-C3873C046E2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF171724-07B6-488A-B628-C3873C046E2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF171724-07B6-488A-B628-C3873C046E2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF171724-07B6-488A-B628-C3873C046E2A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{02BBDCD8-513E-4CDB-9A78-FD85192E03BA} = {05A48F94-FEA1-4C72-89A4-D8CCE53CE769}
+		{EF171724-07B6-488A-B628-C3873C046E2A} = {02BBDCD8-513E-4CDB-9A78-FD85192E03BA}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F4D28FF6-E0A5-47AE-BF9C-8F3683FE7D1E}
+	EndGlobalSection
+EndGlobal
