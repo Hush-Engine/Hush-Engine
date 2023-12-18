@@ -9,10 +9,8 @@
 #include <string>
 #include <codecvt>
 
-
 class StringUtils {
 
 public:
 	static std::wstring ToWString(const char* data);
-
 };

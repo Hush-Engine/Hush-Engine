@@ -1,6 +1,8 @@
 
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace Test;
 
@@ -35,11 +37,10 @@ public class Class1
     }
 
     [UnmanagedCallersOnly]
-    public static unsafe void MultipleArgs(int a, char b, char* c)
+    public static unsafe void MultipleArgs(int a, int b)
     {
-        string testStr = new(c);
-        Console.WriteLine($"Multiple args: {a}, {b}, {testStr}");
-    }
+        Console.WriteLine($"Sum: {a + b}");
+	}
 
     // Receive a native char* and copy the .NET version string into it.
     [UnmanagedCallersOnly]

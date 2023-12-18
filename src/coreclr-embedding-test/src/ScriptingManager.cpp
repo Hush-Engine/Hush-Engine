@@ -11,8 +11,10 @@ constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_lin
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
 constexpr std::string_view DOTNET_RUNTIME_DELEGATE("hostfxr_get_runtime_delegate");
 constexpr std::string_view DOTNET_RUN_FUNCTION("hostfxr_run_app");
-constexpr std::string_view DOTNET_CLOSE_FUNCTION ("hostfxr_close");
-constexpr std::string_view DOTNET_ERROR_WRITER ("hostfxr_set_error_writer");
+constexpr std::string_view DOTNET_CLOSE_FUNCTION("hostfxr_close");
+constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
+
+constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
 
 #if WIN32
 #define HOST_FXR_PATH "host/fxr/8.0.0/hostfxr.dll"
@@ -21,12 +23,6 @@ constexpr std::string_view DOTNET_ERROR_WRITER ("hostfxr_set_error_writer");
 #elif __APPLE__
 #define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.dylib"
 #endif
-
-template<class T, class ... Types>
-T* ScriptingManager::InvokeCSharpWithReturn(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
-	//InvokeCSharp(targetAssembly, targetNamespace, targetClass, fnName, args);
-	return nullptr;
-}
 
 template <class T>
 T ScriptingManager::LoadSymbol(void *sharedLibrary, const char *name) {
@@ -37,8 +33,6 @@ T ScriptingManager::LoadSymbol(void *sharedLibrary, const char *name) {
 
 
 ScriptingManager::ScriptingManager(const char* dotnetPath) {
-	//Get env for dotnet here and use that as our path
-	//auto sharedLibrary = dlopen("/usr/share/dotnet/host/fxr/8.0.0/libhostfxr.so", RTLD_LAZY);
 	std::filesystem::path targetPath = dotnetPath;
 	targetPath /= HOST_FXR_PATH;
 #if WIN32
@@ -71,11 +65,13 @@ ScriptingManager::~ScriptingManager() {
 }
 
 void ScriptingManager::InitDotnetCore() {
+	std::filesystem::path runtimeConfigPath = LibManager::GetCurrentExecutablePath();
+	runtimeConfigPath /= RUNTIME_CONFIG_JSON.data();
 #if WIN32
-	std::wstring configStr = StringUtils::ToWString("assembly-test.runtimeconfig.json");
+	std::wstring configStr = runtimeConfigPath.wstring();
 	const char_t* runtime_config = configStr.data();
 #else
-	const char* runtime_config = "assembly-test.runtimeconfig.json";
+	const char* runtime_config = runtimeConfigPath.c_str();
 #endif
 
 	// Load and initialize .NET Core
@@ -123,7 +119,23 @@ get_function_pointer_fn ScriptingManager::GetFunctionPtr(void* hostFxrHandle) {
 }
 
 bool ScriptingManager::LoadAssemblyFromPath(load_assembly_fn assembly_loader) {
-	auto assembly_path = std::filesystem::current_path() / "assembly-test.dll";
+	std::filesystem::path assembly_path = LibManager::GetCurrentExecutablePath() / "assembly-test.dll";
 	int rc = assembly_loader(assembly_path.c_str(), nullptr, nullptr);
 	return rc == 0;
+}
+
+std::string ScriptingManager::BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass)
+{
+	//I'll make this more readable in the future, and we'll probably accept some heap allocs, for now I want to test if it works being performant
+	//Concatenate them as {targetNamespace.targetClass}, {assemblyName}
+	//Allocate memory to concatenate the string
+	const int MAX_ASSEMBLY_DECL = 2048; //Dedicate 2MBs to the target
+	std::string fullClassPath;
+	fullClassPath.reserve(MAX_ASSEMBLY_DECL);
+	fullClassPath += targetNamespace;
+	fullClassPath += '.';
+	fullClassPath += targetClass;
+	fullClassPath += ", ";
+	fullClassPath += targetAssembly;
+	return fullClassPath;
 }

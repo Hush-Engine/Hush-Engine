@@ -1,5 +1,8 @@
 #include "LibManager.hpp"
 
+#define MAX_PATH_LENGTH 260
+
+
 void* LibManager::LibraryOpen(const char* libraryPath)
 {
 #if WIN32
@@ -19,3 +22,17 @@ void* LibManager::DynamicLoadSymbol(void* handle, const char* symbol)
     return dlsym(handle, symbol);
 #endif
 }
+
+std::filesystem::path LibManager::GetCurrentExecutablePath()
+{
+    char buffer[MAX_PATH_LENGTH];
+#if WIN32
+    GetModuleFileName(nullptr, buffer, MAX_PATH_LENGTH);
+    //Remove the last bit that contains the executable's name
+    PathRemoveFileSpec(buffer);
+#else
+    readlink("/proc/self/", buffer, MAX_PATH_LENGTH);
+#endif
+    return std::filesystem::path(buffer);
+}
+
