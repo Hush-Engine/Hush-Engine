@@ -26,8 +26,8 @@ int main()
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
-
 	int res = scriptManager.InvokeCSharpWithReturn<int>(assembly, testNamespace, testClass, testFunc, a, b);
 	std::cout << "Result: " << res << std::endl;
+	scriptManager.InvokeCSharp(assembly, testNamespace, testClass, "MultipleArgs", a, b);
 	return 0;
 }

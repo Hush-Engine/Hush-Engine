@@ -39,7 +39,7 @@ public class Class1
     [UnmanagedCallersOnly]
     public static unsafe void MultipleArgs(int a, int b)
     {
-        Console.WriteLine($"Sum: {a + b}");
+        Console.WriteLine($"From C#... Sum: {a + b}");
 	}
 
     // Receive a native char* and copy the .NET version string into it.
