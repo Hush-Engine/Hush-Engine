@@ -3,8 +3,10 @@
 
 #if WIN32
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
-#else
+#elif __APPLE__
 constexpr std::string_view DOTNET_PATH = "/usr/local/share/dotnet";
+#else
+constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
 #endif
 
 struct DemoStruct

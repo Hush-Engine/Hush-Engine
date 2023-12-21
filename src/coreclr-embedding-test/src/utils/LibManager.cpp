@@ -30,9 +30,12 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
     GetModuleFileName(nullptr, buffer, MAX_PATH_LENGTH);
     //Remove the last bit that contains the executable's name
     PathRemoveFileSpec(buffer);
-#else
-    readlink("/proc/self/", buffer, MAX_PATH_LENGTH);
-#endif
     return std::filesystem::path(buffer);
+#else
+    readlink("/proc/self/exe", buffer, MAX_PATH_LENGTH);
+    //Find the last / on the path, and remove it from there
+    std::filesystem::path result(buffer);
+    return result.parent_path();
+#endif
 }
 
