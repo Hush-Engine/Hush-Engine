@@ -1,8 +1,10 @@
-  
+set(SOURCES src/main.cpp src/ScriptingManager.cpp src/ScriptingManager.hpp src/utils/LibManager.cpp src/utils/LibManager.hpp src/utils/StringUtils.cpp src/utils/StringUtils.hpp)
 
-add_executable(embedding_test src/main.cpp)
+add_executable(embedding_test ${SOURCES})
+target_include_directories(embedding_test PRIVATE src src/utils)
 
-target_link_libraries(embedding_test PUBLIC coreclr)
+add_link_options("-ldl")
+target_link_libraries(embedding_test PUBLIC coreclr dl)
 
 # Copy assembly-test.runtimeconfig.json to the output directory
 add_custom_command(TARGET embedding_test POST_BUILD
