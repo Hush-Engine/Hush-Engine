@@ -20,16 +20,15 @@ int main()
 	//Demo stuff
 	auto scriptManager = ScriptingManager(DOTNET_PATH.data());
 	const char* assembly = "assembly-test";
-	int a, b;
-	printf("Hi there, this is a C++ app, please input two numbers: ");
-	std::cin >> a;
-	printf("Second one: ");
-	std::cin >> b;
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
-	int res = scriptManager.InvokeCSharpWithReturn<int>(assembly, testNamespace, testClass, testFunc, a, b);
-	std::cout << "Result: " << res << std::endl;
-	scriptManager.InvokeCSharp(assembly, testNamespace, testClass, "MultipleArgs", a, b);
+
+	for (float i = 0.0f; i < 10000.0f; i++)
+	{
+		float result = scriptManager.InvokeCSharpWithReturn<float>(assembly, testNamespace, testClass, "SqrRootTest", i, 0.5f);
+		printf("From sqr root in C#: %f\n", result);
+	}
+
 	return 0;
 }

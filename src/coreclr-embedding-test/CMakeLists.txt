@@ -1,4 +1,13 @@
-set(SOURCES src/main.cpp src/ScriptingManager.cpp src/ScriptingManager.hpp src/utils/LibManager.cpp src/utils/LibManager.hpp src/utils/StringUtils.cpp src/utils/StringUtils.hpp)
+# Set the source files
+set(SOURCES
+    src/main.cpp
+    src/ScriptingManager.cpp
+    src/ScriptingManager.hpp
+    src/utils/LibManager.cpp
+    src/utils/LibManager.hpp
+    src/utils/StringUtils.cpp
+    src/utils/StringUtils.hpp
+)
 
 add_executable(embedding_test ${SOURCES})
 
