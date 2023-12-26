@@ -44,9 +44,7 @@ ScriptingManager::ScriptingManager(const char* dotnetPath) {
 	void* sharedLibrary = LibManager::LibraryOpen(libPath);
 	if (!sharedLibrary)
 	{
-		fputs("Failed to load ", stderr);
-		fputs(libPath, stderr);
-		fputs("\n", stderr);
+		LOG_ERROR_LN("Failed to load %s", libPath);
 		return;
 	}
 	//TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
@@ -78,28 +76,28 @@ void ScriptingManager::InitDotnetCore() {
 	int rc = this->initFuncPtr(runtime_config, nullptr, &this->hostFxrHandle);
 	if (rc != 0)
 	{
-		fputs("Init failed\n", stderr);
+		LOG_ERROR_LN("Init failed");
 		return;
 	}
-	fputs("Init .NET core succeeded!\n", stdout);
+	LOG_INFO_LN("Init .NET core succeeded!");
 	load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->hostFxrHandle);
 	
 	if (assemblyLoader == nullptr) {
-		fputs("Could not get load assembly ptr\n", stderr);
+		LOG_ERROR_LN("Could not get load assembly ptr");
 		return;
 	}
 	
 	this->function_getter_fptr = this->GetFunctionPtr(this->hostFxrHandle);
 	
 	if (this->function_getter_fptr == nullptr) {
-		fputs("Get function ptr failed\n", stderr);
+		LOG_ERROR_LN("Get function ptr failed");
 		return;
 	}
 	//Actually load the assembly
 	bool isAssemblyLoaded = LoadAssemblyFromPath(assemblyLoader);
 
 	if (!isAssemblyLoaded) {
-		fputs("Failed to load the assembly\n", stderr);
+		LOG_ERROR_LN("Failed to load the assembly");
 		return;
 	}
 	

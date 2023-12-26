@@ -5,6 +5,13 @@ using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
 namespace Test;
+file class Win32Methods
+{
+	[DllImport("msvcrt.dll", SetLastError = false)]
+	public static extern IntPtr memcpy(IntPtr dest, IntPtr src, int count);
+
+}
+
 
 [StructLayout(LayoutKind.Sequential)]
 public struct TestStruct
@@ -36,10 +43,16 @@ public class Class1
         return a + b;
     }
 
-    [UnmanagedCallersOnly]
+	[UnmanagedCallersOnly]
+	public static float SqrRootTest(float x, float y)
+	{
+        return MathF.Pow(x, y);
+	}
+
+	[UnmanagedCallersOnly]
     public static unsafe void MultipleArgs(int a, int b)
     {
-        Console.WriteLine($"Sum: {a + b}");
+        Console.WriteLine($"From C#... Sum: {a + b}");
 	}
 
     // Receive a native char* and copy the .NET version string into it.
@@ -64,6 +77,21 @@ public class Class1
         // Convert to a ref struct to access the fields.
         ref TestStruct testStructRef = ref Unsafe.AsRef<TestStruct>(testStruct);
         HandleStruct(ref testStructRef);
+    }
+
+    [UnmanagedCallersOnly]
+    public static unsafe char* GetCsharpString()
+    {
+        const int SIZE = 50;
+        Span<char> buffer = stackalloc char[SIZE];
+        Random r = new Random();
+        for (int i = 0; i < SIZE; i++)
+        {
+            buffer[i] = (char)r.Next(65, 91);
+        }
+        string testedBuffer = buffer.ToString();
+        Console.WriteLine($"C# says that the resulting string is: {testedBuffer}");
+        return testedBuffer.ToUnmanagedString();
     }
 
     private static void HandleStruct(ref TestStruct testStruct)

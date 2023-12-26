@@ -7,6 +7,7 @@
 #pragma once
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
+#include "../../Core/Logger.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
@@ -33,11 +34,10 @@ public:
 
 		//Get the correct type of function pointer
 		ReturnableCSMethod<R, Types ...> testDelegate;
-		int rc = this->GetReturnableMethodFromCS<R>(fullClassPath.c_str(), fnName, &testDelegate);
+		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
-			fputs("Error invoking CSharp method with name: ", stderr);
-			fputs(fnName, stderr);
-			fputs(". Please verify the signature\n", stderr);
+			//TODO: Error handling
+			LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
 			return R();
 		}
 		return testDelegate(args...);
@@ -50,11 +50,9 @@ public:
 
 		//Get the correct type of function pointer
 		VoidCSMethod<Types ...> testDelegate;
-		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, &testDelegate);
+		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
-			fputs("Error invoking CSharp method with name: ", stderr);
-			fputs(fnName, stderr);
-			fputs(". Please verify the signature\n", stderr);
+			LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
 			return;
 		}
 		testDelegate(args...);
@@ -85,7 +83,7 @@ private:
 	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass);
 	
 	template <class ... Types>
-	int GetMethodFromCS(const char* fullClassPath, const char* fnName, VoidCSMethod<Types...>* outMethod) {
+	int GetMethodFromCS(const char* fullClassPath, const char* fnName, void** outMethod) {
 #if WIN32
 		std::wstring pathStr = StringUtils::ToWString(fullClassPath);
 		const char_t* classPath = pathStr.data();
@@ -101,28 +99,7 @@ private:
 			UNMANAGEDCALLERSONLY_METHOD,
 			nullptr,
 			nullptr,
-			reinterpret_cast<void**>(outMethod));
-		return rc;
-	}
-
-	template <class R, class ... Types>
-	int GetReturnableMethodFromCS(const char* fullClassPath, const char* fnName, ReturnableCSMethod<R, Types...>* outMethod) {
-#if WIN32
-		std::wstring pathStr = StringUtils::ToWString(fullClassPath);
-		const char_t* classPath = pathStr.data();
-		std::wstring funcStr = StringUtils::ToWString(fnName);
-		const char_t* targetFunction = funcStr.data();
-#else
-		const char* classPath = fullClassPath;
-		const char* targetFunction = fnName;
-#endif
-		int rc = this->function_getter_fptr(
-			classPath,
-			targetFunction,
-			UNMANAGEDCALLERSONLY_METHOD,
-			nullptr,
-			nullptr,
-			reinterpret_cast<void**>(outMethod));
+			outMethod);
 		return rc;
 	}
 	
