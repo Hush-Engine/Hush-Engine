@@ -10,7 +10,7 @@ import jinja2
 @click.group()
 def cli():
   """
-  devtool is a cli for developing the project, it contains
+  devtool is a cli for developing the UNNAMED ENGINE project, it contains
   commands for adding new files, building, testing, etc.
   """
   pass
@@ -137,7 +137,7 @@ def get_git_username():
   return git_username
 
 @click.command('new-file')
-@click.option('--file-path', '-f', help='File path', required=True, type=click.Path())
+@click.option('--file-path', '-f', help='File path', required=False, type=click.Path())
 @click.option('--brief', '-b', help='Brief description of the file', required=False)
 def add(file_path, brief):
   """
@@ -145,7 +145,10 @@ def add(file_path, brief):
   """
   import os
   import shutil
-  
+
+  if not file_path:
+    #We'll prompt a file dialog if no path was provided
+    file_path = save_with_file_dialog()
   # Check extension
   file_type = os.path.splitext(file_path)[1]
   if file_type == '':
@@ -185,6 +188,19 @@ def add(file_path, brief):
     click.echo(f'✅ File {file_path} created successfully.')
   else:
     raise click.ClickException(f'File {file_path} already exists.')
+
+def save_with_file_dialog():
+  import tkinter as tk
+  from tkinter import filedialog
+  import os
+
+  dialogTitle = "DevTool - New file from template"
+  currDir = os.path.dirname(os.path.realpath(__file__))
+  parentDir = os.path.dirname(currDir)
+  root = tk.Tk()
+  root.withdraw()
+
+  return filedialog.asksaveasfilename(title=dialogTitle, initialdir=parentDir, defaultextension='*.*')
 
 if __name__ == '__main__':
   cli.add_command(configure)
