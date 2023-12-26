@@ -185,7 +185,7 @@ def add(file_path, brief):
     with open(file_path, 'w') as f:
       f.write(rendered)
     
-    click.echo(f'✅ File {file_path} created successfully.')
+    click.echo(f'✅ File {os.path.relpath(file_path)} created successfully.')
   else:
     raise click.ClickException(f'File {file_path} already exists.')
 
@@ -200,10 +200,24 @@ def save_with_file_dialog():
   root = tk.Tk()
   root.withdraw()
 
-  return filedialog.asksaveasfilename(title=dialogTitle, initialdir=parentDir, defaultextension='*.*')
+  filePath = filedialog.asksaveasfilename(title=dialogTitle, initialdir=parentDir, defaultextension='*.*')
+
+  if not filePath:
+    raise click.ClickException(f'File creation was cancelled by the user!')
+
+  return filePath
+
+
+@click.command('update-links')
+def update_linking():
+  """ 
+  Updates all Cmake lists to link .hpp and .cpp files.
+  """
+  raise click.ClickException(f'Update linking not implemented yet')
 
 if __name__ == '__main__':
   cli.add_command(configure)
   cli.add_command(build)
   cli.add_command(add)
+  cli.add_command(update_linking)
   cli()
