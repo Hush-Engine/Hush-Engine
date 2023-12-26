@@ -1,3 +1,4 @@
+#define DEBUG 1
 #include "ScriptingManager.hpp"
 #include <iostream>
 
@@ -17,6 +18,11 @@ struct DemoStruct
 
 int main()
 {
+	LOG_INFO_LN("Heeeey, this is an info log");
+	LOG_DEBUG_LN("Hey, this should only show up to the devs, y'all are handsome ;)");
+	LOG_WARN_LN("This is a warning, you should probably reconsider how you coded this");
+	LOG_ERROR_LN("Oh, no, an error! D:");
+
 	//Demo stuff
 	auto scriptManager = ScriptingManager(DOTNET_PATH.data());
 	const char* assembly = "assembly-test";
@@ -24,10 +30,11 @@ int main()
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
 
-	for (float i = 0.0f; i < 10000.0f; i++)
+
+	for (int i = 0; i < 10; i++)
 	{
-		float result = scriptManager.InvokeCSharpWithReturn<float>(assembly, testNamespace, testClass, "SqrRootTest", i, 0.5f);
-		printf("From sqr root in C#: %f\n", result);
+		float result = scriptManager.InvokeCSharpWithReturn<float>(assembly, testNamespace, testClass, "SqrRootTest", (float)i, 0.5f);
+		std::cout << result << std::endl;
 	}
 
 	return 0;

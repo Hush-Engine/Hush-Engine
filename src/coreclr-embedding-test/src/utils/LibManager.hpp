@@ -13,7 +13,12 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #endif
+#if __APPLE__
+//Header to get the current exe's path in Mac as well, yup, readlink does not seem to work here
+#include <mach-o/dyld.h>
+#endif
 #include <filesystem>
+#include "../../../Core/Logger.hpp"
 /// <summary>
 /// Provides easy access to cross platform library loading functions
 /// </summary>

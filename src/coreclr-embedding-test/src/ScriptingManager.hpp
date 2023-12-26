@@ -7,6 +7,7 @@
 #pragma once
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
+#include "../../Core/Logger.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
@@ -36,9 +37,7 @@ public:
 		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
 			//TODO: Error handling
-			fputs("Error invoking CSharp method with name: ", stderr);
-			fputs(fnName, stderr);
-			fputs(". Please verify the signature\n", stderr);
+			LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
 			return R();
 		}
 		return testDelegate(args...);
@@ -53,9 +52,7 @@ public:
 		VoidCSMethod<Types ...> testDelegate;
 		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
-			fputs("Error invoking CSharp method with name: ", stderr);
-			fputs(fnName, stderr);
-			fputs(". Please verify the signature\n", stderr);
+			LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
 			return;
 		}
 		testDelegate(args...);
