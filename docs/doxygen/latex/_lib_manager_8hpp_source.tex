@@ -1,0 +1,37 @@
+\doxysection{Lib\+Manager.\+hpp}
+\hypertarget{_lib_manager_8hpp_source}{}\label{_lib_manager_8hpp_source}\index{src/coreclr-\/embedding-\/test/src/utils/LibManager.hpp@{src/coreclr-\/embedding-\/test/src/utils/LibManager.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ \ LibManager.hpp}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ \ embedding\_test}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ \ Created\ by\ Leonidas\ Neftali\ Gonzalez\ Campos\ on\ 13/12/23.}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#if\ WIN32}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <windows.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <Shlwapi.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#pragma\ comment(lib,\ "{}shlwapi.lib"{})}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <dlfcn.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <unistd.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#if\ \_\_APPLE\_\_}}
+\DoxyCodeLine{00017\ \textcolor{comment}{//Header\ to\ get\ the\ current\ exe's\ path\ in\ Mac\ as\ well,\ yup,\ readlink\ does\ not\ seem\ to\ work\ here}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <mach-\/o/dyld.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ "{}../../../Core/Logger.hpp"{}}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_lib_manager}{LibManager}}\ \{}
+\DoxyCodeLine{00026\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}*\ \mbox{\hyperlink{class_lib_manager_a3fb72aefc6370d4c3489f7a50f6fa03c}{LibraryOpen}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ libraryPath);}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}*\ \mbox{\hyperlink{class_lib_manager_a4abe5fc1998b99e22cef0f01c7cd9d8d}{DynamicLoadSymbol}}(\textcolor{keywordtype}{void}*\ handle,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ symbol);}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{static}\ std::filesystem::path\ \mbox{\hyperlink{class_lib_manager_aca45f21609e920333aef3a00b1ba1c6e}{GetCurrentExecutablePath}}();}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \};}
+
+\end{DoxyCode}

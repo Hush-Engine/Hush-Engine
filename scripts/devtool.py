@@ -195,8 +195,7 @@ def save_with_file_dialog():
   import os
 
   dialogTitle = "DevTool - New file from template"
-  currDir = os.path.dirname(os.path.realpath(__file__))
-  parentDir = os.path.dirname(currDir)
+  parentDir = get_project_root()
   root = tk.Tk()
   root.withdraw()
 
@@ -215,9 +214,58 @@ def update_linking():
   """
   raise click.ClickException(f'Update linking not implemented yet')
 
+@click.command('docs')
+@click.option('--open', '-o', is_flag=True ,help='Opens the index of the currently generated documentation')
+@click.option('--make', '-m', is_flag=True, help='Generate or update the documentation')
+@click.option('--delete', '-d', is_flag=True, help='Deletes all documentation files (for debug purposes)')
+def handle_docs(open, make, delete):
+  import os, subprocess
+
+  if not open and not make and not delete:
+    #Empty case
+    raise click.ClickException("You must provide an option to the docs command, please see docs --help to learn more...")
+  
+  DOCS_FOLDER = '/docs/doxygen'
+  PROJECT_ROOT = get_project_root()
+  fullPath = PROJECT_ROOT + DOCS_FOLDER
+
+  if open:
+    click.echo('Opening the documentation...')
+    #Go to docs/doxygen/index.html and open that file  
+    indexPath = os.path.join(fullPath, 'html/index.html')
+    if not os.path.exists(indexPath):
+      raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
+    subprocess.call(('open', indexPath))
+  elif make:
+    configFilePath = os.path.join(PROJECT_ROOT, 'Doxyfile.in')
+    click.echo("Creating/Updating the documentation based on config file: " + configFilePath)
+    #Create the docs/doxygen directories
+    try:
+      #Run doxygen Doxyfile.in
+      os.system('doxygen ' + configFilePath)
+    except FileNotFoundError as e:
+      raise click.ClickException(e)
+  elif delete:
+    comfirmed = click.confirm('Are you sure you want to delete all documentation files?')
+    if not comfirmed:
+      click.echo('Cancelled delete operation')
+      return
+    click.echo('Deleting files...')
+    for root, dirs, files in os.walk(fullPath):
+      with click.progressbar(files, len(files)) as bar:
+        for file in bar:
+          os.remove(os.path.join(root, file))
+    click.echo('Done deleting files c:')
+
+def get_project_root():
+  import os
+  scripts = os.path.dirname(os.path.realpath(__file__))
+  return os.path.dirname(scripts)
+
 if __name__ == '__main__':
   cli.add_command(configure)
   cli.add_command(build)
   cli.add_command(add)
   cli.add_command(update_linking)
+  cli.add_command(handle_docs)
   cli()

@@ -15,14 +15,22 @@
 #include <string>
 #include <filesystem>
 
+/// @brief A void C# method with any type of arguments
+/// @tparam ...Types Types of the C# arguments list
 template <class ... Types>
 using VoidCSMethod = void (*)(Types...);
 
+/// @brief A C# method with a return value (non complex value type)
+/// @tparam R Return type
+/// @tparam ...Types Types of the C# arguments list
 template <class R, class ... Types>
 using ReturnableCSMethod = R (*)(Types...);
 
+/// @brief Class for bridging with .NET using hostfxr
 class ScriptingManager {
 public:
+	/// @brief Creates a new scripting manager to connect with .NET 
+	/// @param dotnetPath Path of the .NET runtime
 	ScriptingManager(const char* dotnetPath);
 	
 	~ScriptingManager();

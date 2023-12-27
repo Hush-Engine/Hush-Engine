@@ -1,0 +1,83 @@
+\doxysection{Lib\+Manager Class Reference}
+\hypertarget{class_lib_manager}{}\label{class_lib_manager}\index{LibManager@{LibManager}}
+
+
+Provides easy access to cross platform library loading functions.  
+
+
+
+
+{\ttfamily \#include $<$Lib\+Manager.\+hpp$>$}
+
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{class_lib_manager_a3fb72aefc6370d4c3489f7a50f6fa03c}{Library\+Open}} (const char \texorpdfstring{$\ast$}{*}library\+Path)
+\begin{DoxyCompactList}\small\item\em Opens the selected library path (analogous to dlopen) \end{DoxyCompactList}\item 
+static void \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{class_lib_manager_a4abe5fc1998b99e22cef0f01c7cd9d8d}{Dynamic\+Load\+Symbol}} (void \texorpdfstring{$\ast$}{*}handle, const char \texorpdfstring{$\ast$}{*}symbol)
+\begin{DoxyCompactList}\small\item\em Loads the desired symbol using a library handle (analogous to dlsym) \end{DoxyCompactList}\item 
+static std\+::filesystem\+::path \mbox{\hyperlink{class_lib_manager_aca45f21609e920333aef3a00b1ba1c6e}{Get\+Current\+Executable\+Path}} ()
+\begin{DoxyCompactList}\small\item\em Gets the parent directory of the current executable file. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Provides easy access to cross platform library loading functions. 
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_lib_manager_a4abe5fc1998b99e22cef0f01c7cd9d8d}\label{class_lib_manager_a4abe5fc1998b99e22cef0f01c7cd9d8d} 
+\index{LibManager@{LibManager}!DynamicLoadSymbol@{DynamicLoadSymbol}}
+\index{DynamicLoadSymbol@{DynamicLoadSymbol}!LibManager@{LibManager}}
+\doxysubsubsection{\texorpdfstring{DynamicLoadSymbol()}{DynamicLoadSymbol()}}
+{\footnotesize\ttfamily void \texorpdfstring{$\ast$}{*} Lib\+Manager\+::\+Dynamic\+Load\+Symbol (\begin{DoxyParamCaption}\item[{void \texorpdfstring{$\ast$}{*}}]{handle,  }\item[{const char \texorpdfstring{$\ast$}{*}}]{symbol }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Loads the desired symbol using a library handle (analogous to dlsym) 
+
+
+\begin{DoxyParams}{Parameters}
+{\em handle} & Library handle where the symbol is located \\
+\hline
+{\em symbol} & Name of the symbol to be loaded \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A handle to the desired symbol (essentially a function pointer) 
+\end{DoxyReturn}
+\Hypertarget{class_lib_manager_aca45f21609e920333aef3a00b1ba1c6e}\label{class_lib_manager_aca45f21609e920333aef3a00b1ba1c6e} 
+\index{LibManager@{LibManager}!GetCurrentExecutablePath@{GetCurrentExecutablePath}}
+\index{GetCurrentExecutablePath@{GetCurrentExecutablePath}!LibManager@{LibManager}}
+\doxysubsubsection{\texorpdfstring{GetCurrentExecutablePath()}{GetCurrentExecutablePath()}}
+{\footnotesize\ttfamily std\+::filesystem\+::path Lib\+Manager\+::\+Get\+Current\+Executable\+Path (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Gets the parent directory of the current executable file. 
+
+\begin{DoxyReturn}{Returns}
+Parent directory path value 
+\end{DoxyReturn}
+\Hypertarget{class_lib_manager_a3fb72aefc6370d4c3489f7a50f6fa03c}\label{class_lib_manager_a3fb72aefc6370d4c3489f7a50f6fa03c} 
+\index{LibManager@{LibManager}!LibraryOpen@{LibraryOpen}}
+\index{LibraryOpen@{LibraryOpen}!LibManager@{LibManager}}
+\doxysubsubsection{\texorpdfstring{LibraryOpen()}{LibraryOpen()}}
+{\footnotesize\ttfamily void \texorpdfstring{$\ast$}{*} Lib\+Manager\+::\+Library\+Open (\begin{DoxyParamCaption}\item[{const char \texorpdfstring{$\ast$}{*}}]{library\+Path }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Opens the selected library path (analogous to dlopen) 
+
+
+\begin{DoxyParams}{Parameters}
+{\em library\+Path} & Path of the dynamically linked library \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A handle of the desired library 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/coreclr-\/embedding-\/test/src/utils/Lib\+Manager.\+hpp\item 
+src/coreclr-\/embedding-\/test/src/utils/Lib\+Manager.\+cpp\end{DoxyCompactItemize}
