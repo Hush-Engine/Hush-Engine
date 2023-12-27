@@ -227,18 +227,18 @@ def handle_docs(open, make, delete):
   
   DOCS_FOLDER = '/docs/doxygen'
   PROJECT_ROOT = get_project_root()
+  fullPath = PROJECT_ROOT + DOCS_FOLDER
 
   if open:
     click.echo('Opening the documentation...')
-    #Go to docs/doxygen/index.html and open that file
-    fullPath = PROJECT_ROOT + DOCS_FOLDER
+    #Go to docs/doxygen/index.html and open that file  
     indexPath = os.path.join(fullPath, 'html/index.html')
     if not os.path.exists(indexPath):
       raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
     subprocess.call(('open', indexPath))
   elif make:
     configFilePath = os.path.join(PROJECT_ROOT, 'Doxyfile.in')
-    click.echo("Creating / Updating the documentation based on config file: " + configFilePath)
+    click.echo("Creating/Updating the documentation based on config file: " + configFilePath)
     #Create the docs/doxygen directories
     try:
       #Run doxygen Doxyfile.in
@@ -246,7 +246,16 @@ def handle_docs(open, make, delete):
     except FileNotFoundError as e:
       raise click.ClickException(e)
   elif delete:
-    pass
+    comfirmed = click.confirm('Are you sure you want to delete all documentation files?')
+    if not comfirmed:
+      click.echo('Cancelled delete operation')
+      return
+    click.echo('Deleting files...')
+    for root, dirs, files in os.walk(fullPath):
+      with click.progressbar(files, len(files)) as bar:
+        for file in bar:
+          os.remove(os.path.join(root, file))
+    click.echo('Done deleting files c:')
 
 def get_project_root():
   import os

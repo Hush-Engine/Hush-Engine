@@ -107,16 +107,19 @@ $(function() { codefold.init(0); });
 <div class="foldopen" id="foldopen00025" data-start="{" data-end="};">
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="class_lib_manager.html">   25</a></span><span class="keyword">class </span><a class="code hl_class" href="class_lib_manager.html">LibManager</a> {</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="keyword">static</span> <span class="keywordtype">void</span>* LibraryOpen(<span class="keyword">const</span> <span class="keywordtype">char</span>* libraryPath);</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keyword">static</span> <span class="keywordtype">void</span>* DynamicLoadSymbol(<span class="keywordtype">void</span>* handle, <span class="keyword">const</span> <span class="keywordtype">char</span>* symbol);</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">static</span> std::filesystem::path GetCurrentExecutablePath();</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>};</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">static</span> <span class="keywordtype">void</span>* <a class="code hl_function" href="class_lib_manager.html#a3fb72aefc6370d4c3489f7a50f6fa03c">LibraryOpen</a>(<span class="keyword">const</span> <span class="keywordtype">char</span>* libraryPath);</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keyword">static</span> <span class="keywordtype">void</span>* <a class="code hl_function" href="class_lib_manager.html#a4abe5fc1998b99e22cef0f01c7cd9d8d">DynamicLoadSymbol</a>(<span class="keywordtype">void</span>* handle, <span class="keyword">const</span> <span class="keywordtype">char</span>* symbol);</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keyword">static</span> std::filesystem::path <a class="code hl_function" href="class_lib_manager.html#aca45f21609e920333aef3a00b1ba1c6e">GetCurrentExecutablePath</a>();</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>};</div>
 </div>
 <div class="ttc" id="aclass_lib_manager_html"><div class="ttname"><a href="class_lib_manager.html">LibManager</a></div><div class="ttdoc">Provides easy access to cross platform library loading functions.</div><div class="ttdef"><b>Definition</b> LibManager.hpp:25</div></div>
+<div class="ttc" id="aclass_lib_manager_html_a3fb72aefc6370d4c3489f7a50f6fa03c"><div class="ttname"><a href="class_lib_manager.html#a3fb72aefc6370d4c3489f7a50f6fa03c">LibManager::LibraryOpen</a></div><div class="ttdeci">static void * LibraryOpen(const char *libraryPath)</div><div class="ttdoc">Opens the selected library path (analogous to dlopen)</div><div class="ttdef"><b>Definition</b> LibManager.cpp:6</div></div>
+<div class="ttc" id="aclass_lib_manager_html_a4abe5fc1998b99e22cef0f01c7cd9d8d"><div class="ttname"><a href="class_lib_manager.html#a4abe5fc1998b99e22cef0f01c7cd9d8d">LibManager::DynamicLoadSymbol</a></div><div class="ttdeci">static void * DynamicLoadSymbol(void *handle, const char *symbol)</div><div class="ttdoc">Loads the desired symbol using a library handle (analogous to dlsym)</div><div class="ttdef"><b>Definition</b> LibManager.cpp:15</div></div>
+<div class="ttc" id="aclass_lib_manager_html_aca45f21609e920333aef3a00b1ba1c6e"><div class="ttname"><a href="class_lib_manager.html#aca45f21609e920333aef3a00b1ba1c6e">LibManager::GetCurrentExecutablePath</a></div><div class="ttdeci">static std::filesystem::path GetCurrentExecutablePath()</div><div class="ttdoc">Gets the parent directory of the current executable file.</div><div class="ttdef"><b>Definition</b> LibManager.cpp:26</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -9,8 +9,12 @@
 #include <string>
 #include <codecvt>
 
+/// @brief Provides utility functions for handling strings (C and std strings)
 class StringUtils {
 
 public:
+	/// @brief Converts the given char* to a standard wstring, used for Windows, since char_t* is wchar_t*
+	/// @param data String to convert
+	/// @return wstring of the converted string, from 8B to 16B chars
 	static std::wstring ToWString(const char* data);
 };

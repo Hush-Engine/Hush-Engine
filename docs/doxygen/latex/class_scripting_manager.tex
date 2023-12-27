@@ -1,17 +1,46 @@
 \doxysection{Scripting\+Manager Class Reference}
 \hypertarget{class_scripting_manager}{}\label{class_scripting_manager}\index{ScriptingManager@{ScriptingManager}}
+
+
+Class for bridging with .NET using hostfxr.  
+
+
+
+
+{\ttfamily \#include $<$Scripting\+Manager.\+hpp$>$}
+
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\Hypertarget{class_scripting_manager_ac78e281ef64e53e16e1b4db1bb8988b9}\label{class_scripting_manager_ac78e281ef64e53e16e1b4db1bb8988b9} 
-{\bfseries Scripting\+Manager} (const char \texorpdfstring{$\ast$}{*}dotnet\+Path)
-\item 
+\mbox{\hyperlink{class_scripting_manager_ac78e281ef64e53e16e1b4db1bb8988b9}{Scripting\+Manager}} (const char \texorpdfstring{$\ast$}{*}dotnet\+Path)
+\begin{DoxyCompactList}\small\item\em Creates a new scripting manager to connect with .NET. \end{DoxyCompactList}\item 
 \Hypertarget{class_scripting_manager_a5f35e344cc222edcaed4b69522b5275a}\label{class_scripting_manager_a5f35e344cc222edcaed4b69522b5275a} 
 {\footnotesize template$<$class R , class ... Types$>$ }\\R {\bfseries Invoke\+CSharp\+With\+Return} (const char \texorpdfstring{$\ast$}{*}target\+Assembly, const char \texorpdfstring{$\ast$}{*}target\+Namespace, const char \texorpdfstring{$\ast$}{*}target\+Class, const char \texorpdfstring{$\ast$}{*}fn\+Name, Types... args)
 \item 
 \Hypertarget{class_scripting_manager_a94333720605df05ab40ab19e1e41f4a3}\label{class_scripting_manager_a94333720605df05ab40ab19e1e41f4a3} 
 {\footnotesize template$<$class ... Types$>$ }\\void {\bfseries Invoke\+CSharp} (const char \texorpdfstring{$\ast$}{*}target\+Assembly, const char \texorpdfstring{$\ast$}{*}target\+Namespace, const char \texorpdfstring{$\ast$}{*}target\+Class, const char \texorpdfstring{$\ast$}{*}fn\+Name, Types... args)
 \end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class for bridging with .NET using hostfxr. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_scripting_manager_ac78e281ef64e53e16e1b4db1bb8988b9}\label{class_scripting_manager_ac78e281ef64e53e16e1b4db1bb8988b9} 
+\index{ScriptingManager@{ScriptingManager}!ScriptingManager@{ScriptingManager}}
+\index{ScriptingManager@{ScriptingManager}!ScriptingManager@{ScriptingManager}}
+\doxysubsubsection{\texorpdfstring{ScriptingManager()}{ScriptingManager()}}
+{\footnotesize\ttfamily Scripting\+Manager\+::\+Scripting\+Manager (\begin{DoxyParamCaption}\item[{const char \texorpdfstring{$\ast$}{*}}]{dotnet\+Path }\end{DoxyParamCaption})}
+
+
+
+Creates a new scripting manager to connect with .NET. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em dotnet\+Path} & Path of the .NET runtime \\
+\hline
+\end{DoxyParams}
 
 
 The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}

@@ -77,11 +77,16 @@ $(function() {
   <div class="headertitle"><div class="title">ScriptingManager Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Class for bridging with .NET using hostfxr.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="_scripting_manager_8hpp_source.html">ScriptingManager.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac78e281ef64e53e16e1b4db1bb8988b9" id="r_ac78e281ef64e53e16e1b4db1bb8988b9"><td class="memItemLeft" align="right" valign="top"><a id="ac78e281ef64e53e16e1b4db1bb8988b9" name="ac78e281ef64e53e16e1b4db1bb8988b9"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>ScriptingManager</b> (const char *dotnetPath)</td></tr>
+<tr class="memitem:ac78e281ef64e53e16e1b4db1bb8988b9" id="r_ac78e281ef64e53e16e1b4db1bb8988b9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac78e281ef64e53e16e1b4db1bb8988b9">ScriptingManager</a> (const char *dotnetPath)</td></tr>
+<tr class="memdesc:ac78e281ef64e53e16e1b4db1bb8988b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new scripting manager to connect with .NET.  <br /></td></tr>
 <tr class="separator:ac78e281ef64e53e16e1b4db1bb8988b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5f35e344cc222edcaed4b69522b5275a" id="r_a5f35e344cc222edcaed4b69522b5275a"><td class="memTemplParams" colspan="2"><a id="a5f35e344cc222edcaed4b69522b5275a" name="a5f35e344cc222edcaed4b69522b5275a"></a>
 template&lt;class R , class ... Types&gt; </td></tr>
@@ -92,6 +97,34 @@ template&lt;class ... Types&gt; </td></tr>
 <tr class="memitem:a94333720605df05ab40ab19e1e41f4a3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>InvokeCSharp</b> (const char *targetAssembly, const char *targetNamespace, const char *targetClass, const char *fnName, Types... args)</td></tr>
 <tr class="separator:a94333720605df05ab40ab19e1e41f4a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Class for bridging with .NET using hostfxr. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="ac78e281ef64e53e16e1b4db1bb8988b9" name="ac78e281ef64e53e16e1b4db1bb8988b9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac78e281ef64e53e16e1b4db1bb8988b9">&#9670;&#160;</a></span>ScriptingManager()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">ScriptingManager::ScriptingManager </td>
+          <td>(</td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>dotnetPath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Creates a new scripting manager to connect with .NET. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dotnetPath</td><td>Path of the .NET runtime </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/coreclr-embedding-test/src/<a class="el" href="_scripting_manager_8hpp_source.html">ScriptingManager.hpp</a></li>
 <li>src/coreclr-embedding-test/src/<b>ScriptingManager.cpp</b></li>

@@ -100,99 +100,101 @@ $(function() { codefold.init(0); });
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &lt;filesystem&gt;</span></div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">template</span> &lt;<span class="keyword">class </span>... Types&gt;</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">using </span>VoidCSMethod = void (*)(Types...);</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">template</span> &lt;<span class="keyword">class </span>R, <span class="keyword">class </span>... Types&gt;</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">using </span>ReturnableCSMethod = R (*)(Types...);</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="foldopen" id="foldopen00024" data-start="{" data-end="};">
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="class_scripting_manager.html">   24</a></span><span class="keyword">class </span><a class="code hl_class" href="class_scripting_manager.html">ScriptingManager</a> {</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <a class="code hl_class" href="class_scripting_manager.html">ScriptingManager</a>(<span class="keyword">const</span> <span class="keywordtype">char</span>* dotnetPath);</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <a class="code hl_class" href="class_scripting_manager.html">~ScriptingManager</a>();</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">template</span>&lt;<span class="keyword">class </span>R, <span class="keyword">class </span>... Types&gt;</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    R InvokeCSharpWithReturn(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, Types... args) {</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>        <span class="comment">//TODO: Consider caching the functions in memory to a map so that we don&#39;t have to constantly load them every time</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        std::string fullClassPath = this-&gt;BuildFullClassPath(targetAssembly, targetNamespace, targetClass);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        <span class="comment">//Get the correct type of function pointer</span></div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        ReturnableCSMethod&lt;R, Types ...&gt; testDelegate;</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keywordtype">int</span> rc = this-&gt;GetMethodFromCS(fullClassPath.c_str(), fnName, <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">void</span>**<span class="keyword">&gt;</span>(&amp;testDelegate));</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <span class="keywordflow">if</span> (rc != 0) {</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>            <span class="comment">//TODO: Error handling</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>            LOG_ERROR_LN(<span class="stringliteral">&quot;Failed to invoke C# method with name %s. Please verify the signature&quot;</span>, fnName);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>            <span class="keywordflow">return</span> R();</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        }</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        <span class="keywordflow">return</span> testDelegate(args...);</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    }</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keyword">template</span>&lt;<span class="keyword">class </span>... Types&gt;</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordtype">void</span> InvokeCSharp(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, Types... args) {</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        <span class="comment">//TODO: Consider caching the functions in memory to a map so that we don&#39;t have to constantly load them every time</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        std::string fullClassPath = this-&gt;BuildFullClassPath(targetAssembly, targetNamespace, targetClass);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="comment">//Get the correct type of function pointer</span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        VoidCSMethod&lt;Types ...&gt; testDelegate;</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        <span class="keywordtype">int</span> rc = this-&gt;GetMethodFromCS(fullClassPath.c_str(), fnName, <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">void</span>**<span class="keyword">&gt;</span>(&amp;testDelegate));</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        <span class="keywordflow">if</span> (rc != 0) {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>            LOG_ERROR_LN(<span class="stringliteral">&quot;Failed to invoke C# method with name %s. Please verify the signature&quot;</span>, fnName);</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>            <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        }</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        testDelegate(args...);</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    }</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="comment">// Declare function pointers for the coreclr functions</span></div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    hostfxr_initialize_for_dotnet_command_line_fn cmdLineFuncPtr;</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    hostfxr_initialize_for_runtime_config_fn initFuncPtr;</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    hostfxr_get_runtime_delegate_fn getDelegateFuncPtr;</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    hostfxr_run_app_fn runAppFuncPtr;</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    hostfxr_close_fn closeFuncPtr;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    hostfxr_set_error_writer_fn errorWriterFuncPtr;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    get_function_pointer_fn function_getter_fptr;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keywordtype">void</span>* hostFxrHandle;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    T LoadSymbol(<span class="keywordtype">void</span> *shared_library, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">void</span> InitDotnetCore();</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    </div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    load_assembly_fn GetLoadAssembly(<span class="keywordtype">void</span>* hostFxrHandle);</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span> </div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    get_function_pointer_fn GetFunctionPtr(<span class="keywordtype">void</span>* hostFxrHandle);</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    </div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">bool</span> LoadAssemblyFromPath(load_assembly_fn assembly_loader);</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    std::string BuildFullClassPath(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass);</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">template</span> &lt;<span class="keyword">class </span>... Types&gt;</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">using </span>VoidCSMethod = void (*)(Types...);</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">template</span> &lt;<span class="keyword">class </span>R, <span class="keyword">class </span>... Types&gt;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keyword">using </span>ReturnableCSMethod = R (*)(Types...);</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="foldopen" id="foldopen00030" data-start="{" data-end="};">
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="class_scripting_manager.html">   30</a></span><span class="keyword">class </span><a class="code hl_class" href="class_scripting_manager.html">ScriptingManager</a> {</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <a class="code hl_function" href="class_scripting_manager.html#ac78e281ef64e53e16e1b4db1bb8988b9">ScriptingManager</a>(<span class="keyword">const</span> <span class="keywordtype">char</span>* dotnetPath);</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <a class="code hl_class" href="class_scripting_manager.html">~ScriptingManager</a>();</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keyword">template</span>&lt;<span class="keyword">class </span>R, <span class="keyword">class </span>... Types&gt;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    R InvokeCSharpWithReturn(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, Types... args) {</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="comment">//TODO: Consider caching the functions in memory to a map so that we don&#39;t have to constantly load them every time</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        std::string fullClassPath = this-&gt;BuildFullClassPath(targetAssembly, targetNamespace, targetClass);</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        <span class="comment">//Get the correct type of function pointer</span></div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        ReturnableCSMethod&lt;R, Types ...&gt; testDelegate;</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <span class="keywordtype">int</span> rc = this-&gt;GetMethodFromCS(fullClassPath.c_str(), fnName, <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">void</span>**<span class="keyword">&gt;</span>(&amp;testDelegate));</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <span class="keywordflow">if</span> (rc != 0) {</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>            <span class="comment">//TODO: Error handling</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>            LOG_ERROR_LN(<span class="stringliteral">&quot;Failed to invoke C# method with name %s. Please verify the signature&quot;</span>, fnName);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>            <span class="keywordflow">return</span> R();</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        }</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="keywordflow">return</span> testDelegate(args...);</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    }</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keyword">template</span>&lt;<span class="keyword">class </span>... Types&gt;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">void</span> InvokeCSharp(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, Types... args) {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        <span class="comment">//TODO: Consider caching the functions in memory to a map so that we don&#39;t have to constantly load them every time</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        std::string fullClassPath = this-&gt;BuildFullClassPath(targetAssembly, targetNamespace, targetClass);</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <span class="comment">//Get the correct type of function pointer</span></div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        VoidCSMethod&lt;Types ...&gt; testDelegate;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        <span class="keywordtype">int</span> rc = this-&gt;GetMethodFromCS(fullClassPath.c_str(), fnName, <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">void</span>**<span class="keyword">&gt;</span>(&amp;testDelegate));</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>        <span class="keywordflow">if</span> (rc != 0) {</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>            LOG_ERROR_LN(<span class="stringliteral">&quot;Failed to invoke C# method with name %s. Please verify the signature&quot;</span>, fnName);</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>            <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>        }</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>        testDelegate(args...);</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    }</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="comment">// Declare function pointers for the coreclr functions</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    hostfxr_initialize_for_dotnet_command_line_fn cmdLineFuncPtr;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    hostfxr_initialize_for_runtime_config_fn initFuncPtr;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    hostfxr_get_runtime_delegate_fn getDelegateFuncPtr;</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    hostfxr_run_app_fn runAppFuncPtr;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    hostfxr_close_fn closeFuncPtr;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    hostfxr_set_error_writer_fn errorWriterFuncPtr;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    get_function_pointer_fn function_getter_fptr;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordtype">void</span>* hostFxrHandle;</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    </div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    T LoadSymbol(<span class="keywordtype">void</span> *shared_library, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    </div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordtype">void</span> InitDotnetCore();</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    </div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keyword">template</span> &lt;<span class="keyword">class </span>... Types&gt;</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordtype">int</span> GetMethodFromCS(<span class="keyword">const</span> <span class="keywordtype">char</span>* fullClassPath, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, <span class="keywordtype">void</span>** outMethod) {</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="preprocessor">#if WIN32</span></div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        std::wstring pathStr = StringUtils::ToWString(fullClassPath);</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        <span class="keyword">const</span> char_t* classPath = pathStr.data();</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        std::wstring funcStr = StringUtils::ToWString(fnName);</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="keyword">const</span> char_t* targetFunction = funcStr.data();</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* classPath = fullClassPath;</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* targetFunction = fnName;</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>        <span class="keywordtype">int</span> rc = this-&gt;function_getter_fptr(</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>            classPath,</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            targetFunction,</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>            UNMANAGEDCALLERSONLY_METHOD,</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>            <span class="keyword">nullptr</span>,</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keyword">nullptr</span>,</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            outMethod);</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        <span class="keywordflow">return</span> rc;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    }</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    </div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>};</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    load_assembly_fn GetLoadAssembly(<span class="keywordtype">void</span>* hostFxrHandle);</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    get_function_pointer_fn GetFunctionPtr(<span class="keywordtype">void</span>* hostFxrHandle);</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    </div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordtype">bool</span> LoadAssemblyFromPath(load_assembly_fn assembly_loader);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    std::string BuildFullClassPath(<span class="keyword">const</span> <span class="keywordtype">char</span>* targetAssembly, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetNamespace, <span class="keyword">const</span> <span class="keywordtype">char</span>* targetClass);</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    </div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keyword">template</span> &lt;<span class="keyword">class </span>... Types&gt;</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keywordtype">int</span> GetMethodFromCS(<span class="keyword">const</span> <span class="keywordtype">char</span>* fullClassPath, <span class="keyword">const</span> <span class="keywordtype">char</span>* fnName, <span class="keywordtype">void</span>** outMethod) {</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="preprocessor">#if WIN32</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>        std::wstring pathStr = <a class="code hl_function" href="class_string_utils.html#af3b07f0cef333a98d4e841bc1a60db10">StringUtils::ToWString</a>(fullClassPath);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        <span class="keyword">const</span> char_t* classPath = pathStr.data();</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        std::wstring funcStr = <a class="code hl_function" href="class_string_utils.html#af3b07f0cef333a98d4e841bc1a60db10">StringUtils::ToWString</a>(fnName);</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="keyword">const</span> char_t* targetFunction = funcStr.data();</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* classPath = fullClassPath;</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* targetFunction = fnName;</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>        <span class="keywordtype">int</span> rc = this-&gt;function_getter_fptr(</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            classPath,</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>            targetFunction,</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>            UNMANAGEDCALLERSONLY_METHOD,</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            <span class="keyword">nullptr</span>,</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            <span class="keyword">nullptr</span>,</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>            outMethod);</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    }</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    </div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>};</div>
 </div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span> </div>
-<div class="ttc" id="aclass_scripting_manager_html"><div class="ttname"><a href="class_scripting_manager.html">ScriptingManager</a></div><div class="ttdef"><b>Definition</b> ScriptingManager.hpp:24</div></div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
+<div class="ttc" id="aclass_scripting_manager_html"><div class="ttname"><a href="class_scripting_manager.html">ScriptingManager</a></div><div class="ttdoc">Class for bridging with .NET using hostfxr.</div><div class="ttdef"><b>Definition</b> ScriptingManager.hpp:30</div></div>
+<div class="ttc" id="aclass_scripting_manager_html_ac78e281ef64e53e16e1b4db1bb8988b9"><div class="ttname"><a href="class_scripting_manager.html#ac78e281ef64e53e16e1b4db1bb8988b9">ScriptingManager::ScriptingManager</a></div><div class="ttdeci">ScriptingManager(const char *dotnetPath)</div><div class="ttdoc">Creates a new scripting manager to connect with .NET.</div><div class="ttdef"><b>Definition</b> ScriptingManager.cpp:35</div></div>
+<div class="ttc" id="aclass_string_utils_html_af3b07f0cef333a98d4e841bc1a60db10"><div class="ttname"><a href="class_string_utils.html#af3b07f0cef333a98d4e841bc1a60db10">StringUtils::ToWString</a></div><div class="ttdeci">static std::wstring ToWString(const char *data)</div><div class="ttdoc">Converts the given char* to a standard wstring, used for Windows, since char_t* is wchar_t*.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
