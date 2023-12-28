@@ -6,6 +6,8 @@ commands for adding new files, building, testing, etc.
 import datetime
 import click
 import jinja2
+import subprocess
+import os
 
 @click.group()
 def cli():
@@ -20,7 +22,6 @@ def check_cmake_installed():
   """
   Checks if CMake is installed.
   """
-  import subprocess
   try:
       subprocess.check_call(['cmake', '--version'], stdout=subprocess.DEVNULL)
   except OSError:
@@ -30,7 +31,6 @@ def check_cmake_version():
   """
   Checks if CMake version is at least 3.25
   """
-  import subprocess
   import re
   try:
       cmake_version = subprocess.check_output(['cmake', '--version']).decode('utf-8')
@@ -44,7 +44,6 @@ def check_ninja_installed():
   """
   Checks if Ninja is installed. If not installed, recommends installing Ninja.
   """
-  import subprocess
   try:
     subprocess.check_call(['ninja', '--version'], stdout=subprocess.DEVNULL)
     return True
@@ -60,8 +59,6 @@ def configure(build_type, build_dir, no_echo):
   """
   Configures the project using CMake.
   """
-  import os
-  import subprocess
   
   click.echo('🛠️ Configuring project...')
   
@@ -101,9 +98,7 @@ def build(build_dir, no_echo):
   """
   Builds the project using CMake.
   """
-  import os
-  import subprocess
-  
+
   click.echo('🛠️ Building project...')
   
   # Check if CMake is installed
@@ -129,7 +124,6 @@ def get_git_username():
   """
   Gets the git username from the git config.
   """
-  import subprocess
   try:
     git_username = subprocess.check_output(['git', 'config', 'user.name']).decode('utf-8').strip()
   except OSError:
@@ -143,8 +137,6 @@ def add(file_path, brief):
   """
   Adds a new file to the project.
   """
-  import os
-  import shutil
 
   if not file_path:
     #We'll prompt a file dialog if no path was provided
@@ -225,42 +217,62 @@ def handle_docs(open, make, delete):
     #Empty case
     raise click.ClickException("You must provide an option to the docs command, please see docs --help to learn more...")
   
-  DOCS_FOLDER = '/docs/doxygen'
+  DOCS_FOLDER = '/docs/build'
   PROJECT_ROOT = get_project_root()
   fullPath = PROJECT_ROOT + DOCS_FOLDER
 
   if open:
-    click.echo('Opening the documentation...')
-    #Go to docs/doxygen/index.html and open that file  
-    indexPath = os.path.join(fullPath, 'html/index.html')
-    if not os.path.exists(indexPath):
-      raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
-    subprocess.call(('open', indexPath))
+   open_generated_docs(fullPath)
   elif make:
-    configFilePath = os.path.join(PROJECT_ROOT, 'Doxyfile.in')
-    click.echo("Creating/Updating the documentation based on config file: " + configFilePath)
-    #Create the docs/doxygen directories
-    try:
-      #Run doxygen Doxyfile.in
-      os.system('doxygen ' + configFilePath)
-    except FileNotFoundError as e:
-      raise click.ClickException(e)
+    generate_docs(PROJECT_ROOT)
   elif delete:
-    comfirmed = click.confirm('Are you sure you want to delete all documentation files?')
-    if not comfirmed:
-      click.echo('Cancelled delete operation')
-      return
-    click.echo('Deleting files...')
-    for root, dirs, files in os.walk(fullPath):
-      with click.progressbar(files, len(files)) as bar:
-        for file in bar:
-          os.remove(os.path.join(root, file))
-    click.echo('Done deleting files c:')
+    delete_docs(fullPath)
+    
+
+def open_generated_docs(pathToBuild):
+  import os, subprocess
+  click.echo('Opening the documentation...')
+  #Go to docs/doxygen/index.html and open that file  
+  indexPath = os.path.join(pathToBuild, 'html/index.html')
+  if not os.path.exists(indexPath):
+    raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
+  subprocess.call(('open', indexPath))
+
+def generate_docs(pathToProjectRoot):
+  configFilePath = os.path.join(pathToProjectRoot, 'Doxyfile.in')
+  click.echo("Creating/Updating the documentation based on config file: " + configFilePath)
+  #Create the docs/doxygen directories
+  try:
+    #Run doxygen Doxyfile.in
+    subprocess.call('doxygen ' + configFilePath, shell=True)
+    #Now make the sphynx docs by calling make
+    makeTargetDir = pathToProjectRoot + '/docs'
+    subprocess.call('make html -C ' + makeTargetDir, shell=True)
+    #Alert the user
+    click.echo('Finished generating the documentation, run docs -o to open the index file')
+  except FileNotFoundError as e:
+    raise click.ClickException(e)
+
+def delete_docs(pathToBuild):
+  comfirmed = click.confirm('Are you sure you want to delete all documentation files?')
+  if not comfirmed:
+    click.echo('Cancelled delete operation')
+    return
+  click.echo('Deleting files...')
+  for root, dirs, files in os.walk(pathToBuild):
+    with click.progressbar(files, len(files)) as bar:
+      for file in bar:
+        os.remove(os.path.join(root, file))
+  click.echo('Done deleting files c:')
 
 def get_project_root():
   import os
   scripts = os.path.dirname(os.path.realpath(__file__))
   return os.path.dirname(scripts)
+
+def get_parent_dir(dir):
+  import os
+  return os.path.dirname(os.path.realpath(dir))
 
 if __name__ == '__main__':
   cli.add_command(configure)

@@ -1,3 +1,4 @@
 click
 jinja2
 global_state
+sphinx_rtd_theme
