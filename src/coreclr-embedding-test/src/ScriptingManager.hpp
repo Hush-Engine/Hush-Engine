@@ -72,7 +72,7 @@ private:
 	std::string_view targetAssembly;
 	std::shared_ptr<DotnetHost> host;
 
-	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass);
+	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass) const;
 	
 	template <class ... Types>
 	int GetMethodFromCS(const char* fullClassPath, const char* fnName, void** outMethod) {
