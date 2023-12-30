@@ -8,6 +8,7 @@
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
 #include "../../Core/Logger.hpp"
+#include "DotnetHost.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
@@ -29,16 +30,17 @@ using ReturnableCSMethod = R (*)(Types...);
 /// @brief Class for bridging with .NET using hostfxr
 class ScriptingManager {
 public:
-	/// @brief Creates a new scripting manager to connect with .NET 
-	/// @param dotnetPath Path of the .NET runtime
-	ScriptingManager(const char* dotnetPath);
-	
-	~ScriptingManager();
-	
+	/// <summary>
+	/// Creates a new scripting manager to invoke C# methods
+	/// </summary>
+	/// <param name="host">The host connected to the C# runtime</param>
+	/// <param name="targetAssembly">The desired assembly this manager is going to invoke methods from, THIS SHOULD BE CONSTANT WHEN POSSIBLE</param>
+	ScriptingManager(std::shared_ptr<DotnetHost> host, std::string_view targetAssembly);
+
 	template<class R, class ... Types>
-	R InvokeCSharpWithReturn(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
+	R InvokeCSharpWithReturn(const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
 		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
-		std::string fullClassPath = this->BuildFullClassPath(targetAssembly, targetNamespace, targetClass);
+		std::string fullClassPath = this->BuildFullClassPath(this->targetAssembly.data(), targetNamespace, targetClass);
 
 		//Get the correct type of function pointer
 		ReturnableCSMethod<R, Types ...> testDelegate;
@@ -52,9 +54,9 @@ public:
 	}
 	
 	template<class ... Types>
-	void InvokeCSharp(const char* targetAssembly, const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
+	void InvokeCSharp(const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
 		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
-		std::string fullClassPath = this->BuildFullClassPath(targetAssembly, targetNamespace, targetClass);
+		std::string fullClassPath = this->BuildFullClassPath(this->targetAssembly.data(), targetNamespace, targetClass);
 
 		//Get the correct type of function pointer
 		VoidCSMethod<Types ...> testDelegate;
@@ -67,26 +69,8 @@ public:
 	}
 
 private:
-	// Declare function pointers for the coreclr functions
-	hostfxr_initialize_for_dotnet_command_line_fn cmdLineFuncPtr;
-	hostfxr_initialize_for_runtime_config_fn initFuncPtr;
-	hostfxr_get_runtime_delegate_fn getDelegateFuncPtr;
-	hostfxr_run_app_fn runAppFuncPtr;
-	hostfxr_close_fn closeFuncPtr;
-	hostfxr_set_error_writer_fn errorWriterFuncPtr;
-	get_function_pointer_fn function_getter_fptr;
-	void* hostFxrHandle;
-	
-	template <class T>
-	T LoadSymbol(void *shared_library, const char *name);
-	
-	void InitDotnetCore();
-	
-	load_assembly_fn GetLoadAssembly(void* hostFxrHandle);
-
-	get_function_pointer_fn GetFunctionPtr(void* hostFxrHandle);
-	
-	bool LoadAssemblyFromPath(load_assembly_fn assembly_loader);
+	std::string_view targetAssembly;
+	std::shared_ptr<DotnetHost> host;
 
 	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass);
 	
@@ -101,7 +85,10 @@ private:
 		const char* classPath = fullClassPath;
 		const char* targetFunction = fnName;
 #endif
-		int rc = this->function_getter_fptr(
+		//Retrieve getter from the host
+		get_function_pointer_fn functionGetter = this->host.get()->GetFunctionGetterFuncPtr();
+
+		int rc = functionGetter(
 			classPath,
 			targetFunction,
 			UNMANAGEDCALLERSONLY_METHOD,

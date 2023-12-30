@@ -4,10 +4,15 @@ commands for adding new files, building, testing, etc.
 """
 
 import datetime
+from sys import stderr, stdout
 import click
 import jinja2
 import subprocess
 import os
+
+OS_WINDOWS_ID = 'nt'
+OS_MAC_ID = 'mac'
+OS_UNIX_ID = 'posix'
 
 @click.group()
 def cli():
@@ -78,12 +83,12 @@ def configure(build_type, build_dir, no_echo):
   if is_ninja_installed:
     cmake_args.append('-GNinja')
   # For Windows, use Visual Studio 17 2022 or newer
-  elif os.name == 'nt':
+  elif os.name == OS_WINDOWS_ID:
     cmake_args.append('-GVisual Studio 17 2022')
-  elif os.name == 'posix':
+  elif os.name == OS_UNIX_ID:
     cmake_args.append('-GUnix Makefiles')
   # For OS X, use Xcode
-  elif os.name == 'mac':
+  elif os.name == OS_MAC_ID:
     cmake_args.append('-GXcode')
   cmake_args.append('..')
   
@@ -210,21 +215,23 @@ def update_linking():
 @click.option('--open', '-o', is_flag=True ,help='Opens the index of the currently generated documentation')
 @click.option('--make', '-m', is_flag=True, help='Generate or update the documentation')
 @click.option('--delete', '-d', is_flag=True, help='Deletes all documentation files (for debug purposes)')
-def handle_docs(open, make, delete):
+@click.option('--verbose', '-v', is_flag=True, help='Shows all output')
+def handle_docs(open, make, delete, verbose):
   import os, subprocess
 
   if not open and not make and not delete:
     #Empty case
     raise click.ClickException("You must provide an option to the docs command, please see docs --help to learn more...")
+  #Check if on windows (Yeah, I know we could use path, but for some reason it's shortening to a relative one when we want the absolute path)
   
-  DOCS_FOLDER = '/docs/build'
+  DOCS_FOLDER = '\\docs\\build' if os.name == OS_WINDOWS_ID else '/docs/build'
   PROJECT_ROOT = get_project_root()
   fullPath = PROJECT_ROOT + DOCS_FOLDER
 
   if open:
    open_generated_docs(fullPath)
   elif make:
-    generate_docs(PROJECT_ROOT)
+    generate_docs(PROJECT_ROOT, verbose=verbose)
   elif delete:
     delete_docs(fullPath)
     
@@ -233,25 +240,47 @@ def open_generated_docs(pathToBuild):
   import os, subprocess
   click.echo('Opening the documentation...')
   #Go to docs/doxygen/index.html and open that file  
-  indexPath = os.path.join(pathToBuild, 'html/index.html')
+  indexPath = os.path.join(pathToBuild, 'html\\index.html' if os.name == OS_WINDOWS_ID else 'html/index.html')
   if not os.path.exists(indexPath):
     raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
-  subprocess.call(('open', indexPath))
+  if os.name == OS_WINDOWS_ID:
+    os.startfile(indexPath)
+  else:
+    subprocess.call(('open', indexPath))
 
-def generate_docs(pathToProjectRoot):
-  configFilePath = os.path.join(pathToProjectRoot, 'Doxyfile.in')
-  click.echo("Creating/Updating the documentation based on config file: " + configFilePath)
+def generate_docs(pathToProjectRoot, verbose=False):
+  click.echo("Creating/Updating the documentation based on config file Doxyfile.in")
   #Create the docs/doxygen directories
+  outputStream = None if verbose else subprocess.DEVNULL
   try:
+    configFilePath = 'Doxyfile.in'
     #Run doxygen Doxyfile.in
-    subprocess.call('doxygen ' + configFilePath, shell=True)
+    returnCode = subprocess.Popen(['doxygen', configFilePath], cwd=pathToProjectRoot, shell=True, stdout=outputStream, stderr=outputStream).wait()
+    if returnCode != 0:
+      raise click.ClickException('Failed to run doxygen, please verify your input')
+    else:
+      click.echo('Finished generating doxygen docs, please wait while we run formatting with sphinx...')
     #Now make the sphynx docs by calling make
-    makeTargetDir = pathToProjectRoot + '/docs'
-    subprocess.call('make html -C ' + makeTargetDir, shell=True)
+    if os.name == OS_WINDOWS_ID:
+      #TODO: This still does not work with sphinx and Windows, so, yeah
+      makeTargetDir = pathToProjectRoot + '\\docs'
+      baseSphinxBuildCmd = 'python -m sphinx.cmd.build'
+      sphinxCmd = baseSphinxBuildCmd + '>NUL 2>NUL'
+      returnCode = subprocess.call(sphinxCmd, shell=True, stdout=outputStream, stdin=outputStream)
+      sphinxCmd = 'python -m sphinx.cmd.build -M ' + makeTargetDir + '\\source ' + makeTargetDir + '\\build html'
+      returnCode = subprocess.call(sphinxCmd, shell=True, stdout=outputStream, stdin=outputStream)
+      if returnCode != 0:
+        raise click.ClickException('There was an error running Sphinx, please verify your path and installation. Exit code ' + str(returnCode))
+    else:
+      makeTargetDir = pathToProjectRoot + '/docs'
+      subprocess.call('make html -C ' + makeTargetDir, shell=True)
     #Alert the user
     click.echo('Finished generating the documentation, run docs -o to open the index file')
   except FileNotFoundError as e:
-    raise click.ClickException(e)
+    message = e.strerror
+    if e.filename:
+      message += str(e.filename)
+    raise click.ClickException(message)
 
 def delete_docs(pathToBuild):
   comfirmed = click.confirm('Are you sure you want to delete all documentation files?')

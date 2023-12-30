@@ -10,6 +10,8 @@ constexpr std::string_view DOTNET_PATH = "/usr/local/share/dotnet";
 constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
 #endif
 
+constexpr std::string_view ASSEMBLY_TEST = "assembly-test";
+
 struct DemoStruct
 {
 	int32_t a;
@@ -22,10 +24,9 @@ int main()
 	LOG_DEBUG_LN("Hey, this should only show up to the devs, y'all are handsome ;)");
 	LOG_WARN_LN("This is a warning, you should probably reconsider how you coded this");
 	LOG_ERROR_LN("Oh, no, an error! D:");
-
+	std::shared_ptr<DotnetHost> host = std::make_shared<DotnetHost>(DOTNET_PATH.data());
 	//Demo stuff
-	auto scriptManager = ScriptingManager(DOTNET_PATH.data());
-	const char* assembly = "assembly-test";
+	auto scriptManager = ScriptingManager(host, ASSEMBLY_TEST);
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
@@ -33,9 +34,8 @@ int main()
 
 	for (int i = 0; i < 10; i++)
 	{
-		float result = scriptManager.InvokeCSharpWithReturn<float>(assembly, testNamespace, testClass, "SqrRootTest", (float)i, 0.5f);
-		std::cout << result << std::endl;
+		char* result = scriptManager.InvokeCSharpWithReturn<char*>(testNamespace, testClass, "GetCsharpString");
+		LOG_INFO_LN("C++ thinks the string is: %s", result);
 	}
-
 	return 0;
 }
