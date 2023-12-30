@@ -1,7 +1,7 @@
 #define DEBUG 1
 #include "ScriptingManager.hpp"
 #include <iostream>
-
+#include <map>
 #if WIN32
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
 #elif __APPLE__
@@ -12,30 +12,38 @@ constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
 
 constexpr std::string_view ASSEMBLY_TEST = "assembly-test";
 
-struct DemoStruct
-{
-	int32_t a;
-	int32_t b;
-};
+#if DEBUG
+static int allocCntr = 0;
+
+void* operator new(size_t size) {
+	allocCntr++;
+	LOG_DEBUG_LN("Allocated %zu bytes, current count: %d", size, allocCntr);
+	return malloc(size);
+}
+
+void operator delete(void* p) {
+	allocCntr--;
+	LOG_DEBUG_LN("Deallocating a pointer, current count: %d", allocCntr);
+	free(p);
+}
+
+#endif
 
 int main()
 {
-	LOG_INFO_LN("Heeeey, this is an info log");
-	LOG_DEBUG_LN("Hey, this should only show up to the devs, y'all are handsome ;)");
-	LOG_WARN_LN("This is a warning, you should probably reconsider how you coded this");
-	LOG_ERROR_LN("Oh, no, an error! D:");
 	std::shared_ptr<DotnetHost> host = std::make_shared<DotnetHost>(DOTNET_PATH.data());
+	LOG_INFO_LN("Just finished initializing our host!");
 	//Demo stuff
 	auto scriptManager = ScriptingManager(host, ASSEMBLY_TEST);
+	LOG_INFO_LN("Now finished initializing our script manager");
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
-
-
-	for (int i = 0; i < 10; i++)
+	for (size_t i = 0; i < 90000; i++)
 	{
 		char* result = scriptManager.InvokeCSharpWithReturn<char*>(testNamespace, testClass, "GetCsharpString");
 		LOG_INFO_LN("C++ thinks the string is: %s", result);
+		Sleep(100);
 	}
 	return 0;
 }
