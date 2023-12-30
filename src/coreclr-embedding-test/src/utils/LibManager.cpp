@@ -36,7 +36,7 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
     uint32_t pathLength = MAX_PATH_LENGTH; 
     int readPath = _NSGetExecutablePath(buffer, &pathLength);
     if (readPath != 0) {
-        LOG_INFO_LN("The buffer did not allocate sufficient memory to get the executable's path");
+        LOG_ERROR_LN("The buffer did not allocate sufficient memory to get the executable's path");
     }
     std::filesystem::path result(buffer);
     return result.parent_path();
