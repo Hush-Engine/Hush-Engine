@@ -3,4 +3,6 @@
 # Date: 2023-12-12
 # Brief: Wrapper around devtool
 
-python devtool.py $args
+$ScriptDir = Join-Path -Path $PSScriptRoot -ChildPath 'devtool.py'
+
+python $ScriptDir  $args
