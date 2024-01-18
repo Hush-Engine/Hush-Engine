@@ -5,4 +5,5 @@
 # Date: 2023-12-12
 # Brief: Wrapper around devtool.py
 
-python3 scripts/devtool.py $@
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+python3 $SCRIPT_DIR/devtool.py $@
