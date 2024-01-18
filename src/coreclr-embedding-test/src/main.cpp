@@ -1,4 +1,3 @@
-#define DEBUG 1
 #include "ScriptingManager.hpp"
 #include <iostream>
 #include <map>
