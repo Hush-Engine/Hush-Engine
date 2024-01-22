@@ -1,2 +1,2 @@
 
-add_subdirectory(coreclr-embedding-test)
+add_subdirectory(unnamed-engine)

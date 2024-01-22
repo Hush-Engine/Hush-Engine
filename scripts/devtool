@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Filename: devtool.sh
+# Author: Alan Ramirez Herrera
+# Date: 2023-12-12
+# Brief: Wrapper around devtool.py
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+python3 $SCRIPT_DIR/devtool.py $@
