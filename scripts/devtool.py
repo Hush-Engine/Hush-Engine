@@ -31,7 +31,7 @@ def check_cmake_installed():
       subprocess.check_call(['cmake', '--version'], stdout=subprocess.DEVNULL)
   except OSError:
       raise click.ClickException('CMake is not installed. Please install CMake and try again.')
-    
+
 def check_cmake_version():
   """
   Checks if CMake version is at least 3.25
@@ -44,7 +44,7 @@ def check_cmake_version():
   cmake_version = re.search(r'version\s+(\d+\.\d+\.\d+)', cmake_version).group(1)
   if cmake_version < '3.25':
       raise click.ClickException('CMake version must be at least 3.1. Please update CMake and try again.')
-      
+
 def check_ninja_installed():
   """
   Checks if Ninja is installed. If not installed, recommends installing Ninja.
@@ -64,13 +64,13 @@ def configure(build_type, build_dir, no_echo):
   """
   Configures the project using CMake.
   """
-  
+
   click.echo('🛠️ Configuring project...')
-  
+
   # Check if CMake is installed
   check_cmake_installed()
   check_cmake_version()
-  
+
   # Check if Ninja is installed
   is_ninja_installed = check_ninja_installed()
   if not is_ninja_installed:
@@ -91,11 +91,11 @@ def configure(build_type, build_dir, no_echo):
   elif os.name == OS_MAC_ID:
     cmake_args.append('-GXcode')
   cmake_args.append('..')
-  
+
   subprocess.check_call(['cmake'] + cmake_args, stdout=None if no_echo else subprocess.DEVNULL)
-  
+
   click.echo('✅ Project configured successfully.')
-  
+
 @click.command()
 @click.option('--build-dir', '-b', default='build', help='Build directory')
 @click.option('--no-echo', '-n', is_flag=True, help='Do not echo commands')
@@ -105,11 +105,11 @@ def build(build_dir, no_echo):
   """
 
   click.echo('🛠️ Building project...')
-  
+
   # Check if CMake is installed
   check_cmake_installed()
   check_cmake_version()
-  
+
   # Check if Ninja is installed
   is_ninja_installed = check_ninja_installed()
   if not is_ninja_installed:
@@ -121,9 +121,9 @@ def build(build_dir, no_echo):
     subprocess.check_call(['ninja'], stdout=None if no_echo else subprocess.DEVNULL)
   else:
     subprocess.check_call(['cmake', '--build', '.'], stdout=None if no_echo else subprocess.DEVNULL)
-  
+
   click.echo('✅ Project built successfully.')
-  
+
 
 def get_git_username():
   """
@@ -155,24 +155,24 @@ def add(file_path, brief):
     return
   # Remove the dot
   file_type = file_type[1:]
-  
+
   template_path = os.path.join(os.path.dirname(__file__), 'templates', f'.{file_type}')
   if not os.path.exists(template_path):
     raise click.ClickException(f'File type {file_type} is not supported.')
-  
+
   # File_path includes the full path to the file
   if not os.path.exists(file_path):
     # Check if the directory exists
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory) and directory != '':
       os.makedirs(directory)
-    
+
     # Replace template variables
     author = get_git_username()
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     if brief is None:
       brief = click.prompt('Brief description of the file')
-    
+
     environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(template_path)))
     template = environment.get_template(os.path.basename(template_path))
     # Render filename, author, date, and brief
@@ -181,7 +181,7 @@ def add(file_path, brief):
 
     with open(file_path, 'w') as f:
       f.write(rendered)
-    
+
     click.echo(f'✅ File {os.path.relpath(file_path)} created successfully.')
   else:
     raise click.ClickException(f'File {file_path} already exists.')
@@ -206,7 +206,7 @@ def save_with_file_dialog():
 
 @click.command('update-links')
 def update_linking():
-  """ 
+  """
   Updates all Cmake lists to link .hpp and .cpp files.
   """
   raise click.ClickException(f'Update linking not implemented yet')
@@ -223,7 +223,7 @@ def handle_docs(open, make, delete, verbose):
     #Empty case
     raise click.ClickException("You must provide an option to the docs command, please see docs --help to learn more...")
   #Check if on windows (Yeah, I know we could use path, but for some reason it's shortening to a relative one when we want the absolute path)
-  
+
   DOCS_FOLDER = '\\docs\\build' if os.name == OS_WINDOWS_ID else '/docs/build'
   PROJECT_ROOT = get_project_root()
   fullPath = PROJECT_ROOT + DOCS_FOLDER
@@ -234,12 +234,86 @@ def handle_docs(open, make, delete, verbose):
     generate_docs(PROJECT_ROOT, verbose=verbose)
   elif delete:
     delete_docs(fullPath)
-    
+
+@click.command('format')
+@click.option('--verbose', '-v', is_flag=True, help='Shows all output')
+def format(verbose: bool):
+  """
+  Formats the project using clang-format.
+  """
+
+  # Check if clang-format is installed
+  try:
+    subprocess.check_call(['clang-format', '--version'], stdout=subprocess.DEVNULL)
+  except OSError:
+    raise click.ClickException('clang-format is not installed. Please install clang-format and try again.')
+
+  sources = []
+  for root, dirs, files in os.walk('src'):
+    for file in files:
+      if file.endswith('.cpp') or file.endswith('.hpp'):
+        sources.append(os.path.join(root, file))
+
+  if len(sources) == 0:
+    raise click.ClickException('No source files found.')
+
+  subprocess.check_call(['clang-format', '-style=file', '-i'] + sources, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
+
+  click.echo('✅ Project formatted successfully.')
+
+@click.command('tidy')
+@click.option('--verbose', '-v', is_flag=True, help='Shows all output')
+@click.option('--fix', '-f', is_flag=True, help='Fixes the issues')
+def tidy(verbose: bool, fix: bool):
+  """
+  Checks the project for issues using clang-tidy.
+  """
+
+  # Check if clang-tidy is installed
+  try:
+    subprocess.check_call(['clang-tidy', '--version'], stdout=subprocess.DEVNULL)
+  except OSError:
+    raise click.ClickException('clang-tidy is not installed. Please install clang-tidy and try again.')
+
+  CONFIG_FILE = '.clang-tidy'
+  WRAPPER_FILE = './scripts/run-clang-tidy.py'
+
+  # Check the python executable
+  python_executable = 'python'
+  if os.name == OS_WINDOWS_ID:
+    python_executable = 'python.exe'
+  elif os.name == OS_MAC_ID or os.name == OS_UNIX_ID:
+    python_executable = 'python3'
+
+  sources = []
+  for root, dirs, files in os.walk('src'):
+    for file in files:
+      if file.endswith('.cpp') or file.endswith('.hpp'):
+        sources.append(os.path.join(root, file))
+
+  if len(sources) == 0:
+    raise click.ClickException('No source files found.')
+
+  args = [python_executable, WRAPPER_FILE, '-p', 'build', './src', '-quiet', '-header-filter=.*']
+  if fix:
+    args.append('-fix')
+
+  click.echo('🛠️ Checking project for issues...')
+  exit_code = subprocess.check_call(args, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
+
+  if exit_code == 0:
+    message = 'clang-tidy found issues.'
+    if fix:
+      message += ' clang-tidy fixed the issues.'
+    if not verbose:
+      message += ' Run with --verbose for more information.'
+    raise click.ClickException(message)
+  click.echo('✅ Project checked successfully.')
 
 def open_generated_docs(pathToBuild):
   import os, subprocess
   click.echo('Opening the documentation...')
-  #Go to docs/doxygen/index.html and open that file  
+  #Go to docs/doxygen/index.html and open that file
   indexPath = os.path.join(pathToBuild, 'html\\index.html' if os.name == OS_WINDOWS_ID else 'html/index.html')
   if not os.path.exists(indexPath):
     raise click.ClickException('The documentation is not generated, we could not find ' + indexPath)
@@ -309,4 +383,6 @@ if __name__ == '__main__':
   cli.add_command(add)
   cli.add_command(update_linking)
   cli.add_command(handle_docs)
+  cli.add_command(format)
+  cli.add_command(tidy)
   cli()
