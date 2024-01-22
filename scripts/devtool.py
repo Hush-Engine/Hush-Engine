@@ -237,7 +237,9 @@ def handle_docs(open, make, delete, verbose):
 
 @click.command('format')
 @click.option('--verbose', '-v', is_flag=True, help='Shows all output')
-def format(verbose: bool):
+@click.option('--no-fix', '-n', is_flag=True, help='Does not fix the issues')
+@click.option('--check', '-c', is_flag=True, help='Checks the issues. On error, the command will fail.')
+def format(verbose: bool, no_fix: bool, check: bool):
   """
   Formats the project using clang-format.
   """
@@ -257,7 +259,21 @@ def format(verbose: bool):
   if len(sources) == 0:
     raise click.ClickException('No source files found.')
 
-  subprocess.check_call(['clang-format', '-style=file', '-i'] + sources, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
+  args = ['clang-format', '-style=file']
+  if verbose:
+    args.append('-verbose')
+  if not no_fix:
+    args.append('-i')
+  else:
+    args.append('--dry-run')
+  if check:
+    args.append('-Werror')
+
+  args += sources
+
+  click.echo('🛠️ Formatting project...')
+
+  subprocess.check_call(args)
 
   click.echo('✅ Project formatted successfully.')
 
@@ -301,7 +317,7 @@ def tidy(verbose: bool, fix: bool):
   click.echo('🛠️ Checking project for issues...')
   exit_code = subprocess.check_call(args, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
 
-  if exit_code == 0:
+  if exit_code != 0:
     message = 'clang-tidy found issues.'
     if fix:
       message += ' clang-tidy fixed the issues.'

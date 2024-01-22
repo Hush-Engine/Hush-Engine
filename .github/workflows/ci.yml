@@ -21,8 +21,8 @@ jobs:
           sudo ln -s /usr/bin/clang-format-17 /usr/bin/clang-format
       - name: Format
         run: |
-          find src -iname *.hpp -o -iname *.cpp | xargs clang-format -i -style=file --dry-run --Werror
-          find tests -iname *.hpp -o -iname *.cpp | xargs clang-format -i -style=file --dry-run --Werror
+          source ./scripts/bootstrap.sh
+          devtool format --no-fix --check
   build:
     runs-on: ${{ matrix.os }}
     needs: format
@@ -120,7 +120,7 @@ jobs:
         uses: mathiasvr/command-output@v2.0.0
         timeout-minutes: 40
         with:
-          run: cd build && cmake --build . --target tidy -j 4
+          run: source ./scripts/bootstrap.sh && devtool tidy -v
       - name: Comment PR
         # Only execute if clang-tidy found errors
         if: ${{ failure() && github.event_name == 'pull_request' }}
