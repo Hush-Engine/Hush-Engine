@@ -29,12 +29,10 @@ template <class R, class... Types> using ReturnableCSMethod = R (*)(Types...);
 class ScriptingManager
 {
   public:
-    /// <summary>
-    /// Creates a new scripting manager to invoke C# methods
-    /// </summary>
-    /// <param name="host">The host connected to the C# runtime</param>
-    /// <param name="targetAssembly">The desired assembly this manager is going to invoke methods from, THIS SHOULD BE
-    /// CONSTANT WHEN POSSIBLE</param>
+    /// @brief Creates a new scripting manager to invoke C# methods
+    /// @param host The host connected to the C# runtime
+    /// @param targetAssembly The desired assembly this manager is going to invoke methods from, THIS SHOULD BE CONSTANT
+    /// WHEN POSSIBLE
     ScriptingManager(std::shared_ptr<DotnetHost> host, std::string_view targetAssembly);
 
     template <class R, class... Types>

@@ -20,9 +20,7 @@
 #include "core/Logger.hpp"
 #include <filesystem>
 
-/// <summary>
-/// Provides easy access to cross platform library loading functions
-/// </summary>
+/// @brief Provides easy access to cross platform library loading functions
 class LibManager
 {
   public:

@@ -17,16 +17,13 @@
 #include <string>
 #include <string_view>
 
-/// <summary>
-/// hold references to all .NET function pointers with a valid initialization, to pass onto <see
-/// cref="ScriptingManager"/>
-/// </summary>
+/// @brief Holds references to all .NET function pointers with a valid initialization, to pass onto a scripting manager
+/// @see ScriptingManager
 class DotnetHost
 {
   public:
-    /// <summary>
-    /// Creates a new .NET host using hostfxr with the provided path of the runtime
-    /// </summary>
+    /// @brief Creates a new .NET host using hostfxr with the provided path of the runtime
+    /// @param dotnetPath Path to the .NET runtime
     DotnetHost(const char *dotnetPath);
 
     DotnetHost(const DotnetHost &other) = delete;

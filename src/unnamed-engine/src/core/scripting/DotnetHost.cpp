@@ -45,7 +45,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     this->m_errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
     // Add logging for any errors in C#
 #if WIN32
-    this->errorWriterFuncPtr([](const char_t *message) {
+    this->m_errorWriterFuncPtr([](const char_t *message) {
         std::wstring wStrMessage = message;
         std::string strMessage = StringUtils::FromWString(wStrMessage);
         const char *cMessage = strMessage.c_str();
@@ -115,7 +115,7 @@ void DotnetHost::InitDotnetCore()
     runtimeConfigPath /= RUNTIME_CONFIG_JSON.data();
 #if WIN32
     std::wstring configStr = runtimeConfigPath.wstring();
-    const char_t *runtime_config = configStr.data();
+    const char_t *runtimeConfig = configStr.data();
 #else
     const char *runtimeConfig = runtimeConfigPath.c_str();
 #endif
