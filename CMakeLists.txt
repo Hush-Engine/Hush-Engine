@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.26)
 
 project(test)
+
+include(cmake/clang-tidy.cmake)
+include(cmake/format.cmake)
+
+set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(src)
 
