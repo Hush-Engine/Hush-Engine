@@ -1,4 +1,4 @@
-//FileName: {{filename}}
-//Author: {{author}}
-//Date: {{date}}
-//Brief : {{brief}}
+/// FileName: {{filename}}
+/// Author: {{author}}
+/// Date: {{date}}
+/// Brief : {{brief}}
