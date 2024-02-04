@@ -37,11 +37,10 @@ int main()
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
 	const char* testFunc = "SumTest";
-	for (size_t i = 0; i < 90000; i++)
+	for (size_t i = 0; i < 10; i++)
 	{
 		char* result = scriptManager.InvokeCSharpWithReturn<char*>(testNamespace, testClass, "GetCsharpString");
 		LOG_INFO_LN("C++ thinks the string is: %s", result);
-		Sleep(100);
 	}
 	return 0;
 }

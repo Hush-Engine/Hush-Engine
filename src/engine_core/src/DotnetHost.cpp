@@ -114,7 +114,7 @@ void DotnetHost::InitDotnetCore()
 load_assembly_fn DotnetHost::GetLoadAssembly(void* hostFxrHandle) {
 	// Get the load_assembly_and_get_function_pointer function pointer
 	load_assembly_fn loadAssembly = nullptr;
-	getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&loadAssembly));
+	this->m_getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&loadAssembly));
 	return loadAssembly;
 }
 
