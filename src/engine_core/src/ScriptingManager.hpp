@@ -11,6 +11,7 @@
 #include "./DotnetHost.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
+#include <cstddef>
 #include <cstdio>
 #include <string_view>
 #include <string>
@@ -34,16 +35,16 @@ public:
 	/// Creates a new scripting manager to invoke C# methods
 	/// </summary>
 	/// <param name="host">The host connected to the C# runtime</param>
-	/// <param name="targetAssembly">The desired assembly this manager is going to invoke methods from, THIS SHOULD BE CONSTANT WHEN POSSIBLE</param>
+	/// <param name="m_targetAssembly">The desired assembly this manager is going to invoke methods from, THIS SHOULD BE CONSTANT WHEN POSSIBLE</param>
 	ScriptingManager(std::shared_ptr<DotnetHost> host, std::string_view targetAssembly);
 
 	template<class R, class ... Types>
 	R InvokeCSharpWithReturn(const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
 		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
-		std::string fullClassPath = this->BuildFullClassPath(this->targetAssembly.data(), targetNamespace, targetClass);
+		std::string fullClassPath = this->BuildFullClassPath(this->m_targetAssembly.data(), targetNamespace, targetClass);
 
 		//Get the correct type of function pointer
-		ReturnableCSMethod<R, Types ...> testDelegate;
+		ReturnableCSMethod<R, Types ...> testDelegate = nullptr;
 		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
 			//TODO: Error handling
@@ -56,10 +57,10 @@ public:
 	template<class ... Types>
 	void InvokeCSharp(const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
 		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
-		std::string fullClassPath = this->BuildFullClassPath(this->targetAssembly.data(), targetNamespace, targetClass);
+		std::string fullClassPath = this->BuildFullClassPath(this->m_targetAssembly.data(), targetNamespace, targetClass);
 
 		//Get the correct type of function pointer
-		VoidCSMethod<Types ...> testDelegate;
+		VoidCSMethod<Types ...> testDelegate = nullptr;
 		int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void**>(&testDelegate));
 		if (rc != 0) {
 			LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
@@ -69,8 +70,8 @@ public:
 	}
 
 private:
-	std::string_view targetAssembly;
-	std::shared_ptr<DotnetHost> host;
+	std::string_view m_targetAssembly;
+	std::shared_ptr<DotnetHost> m_host;
 
 	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass) const;
 

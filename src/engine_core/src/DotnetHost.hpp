@@ -8,6 +8,7 @@
 
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
+#include <cstddef>
 #include <filesystem>
 #include <cstdio>
 #include <string_view>
@@ -30,14 +31,14 @@ public:
 
 private:
 	// Declare function pointers for the coreclr functions
-	hostfxr_initialize_for_dotnet_command_line_fn cmdLineFuncPtr;
-	hostfxr_initialize_for_runtime_config_fn initFuncPtr;
-	hostfxr_get_runtime_delegate_fn getDelegateFuncPtr;
-	hostfxr_run_app_fn runAppFuncPtr;
-	hostfxr_close_fn closeFuncPtr;
-	hostfxr_set_error_writer_fn errorWriterFuncPtr;
-	get_function_pointer_fn function_getter_fptr;
-	void* hostFxrHandle;
+	hostfxr_initialize_for_dotnet_command_line_fn m_cmdLineFuncPtr = nullptr;
+	hostfxr_initialize_for_runtime_config_fn m_initFuncPtr = nullptr;
+	hostfxr_get_runtime_delegate_fn m_getDelegateFuncPtr = nullptr;
+	hostfxr_run_app_fn m_runAppFuncPtr = nullptr;
+	hostfxr_close_fn m_closeFuncPtr = nullptr;
+	hostfxr_set_error_writer_fn m_errorWriterFuncPtr = nullptr;
+	get_function_pointer_fn m_functionGetterFuncPtr = nullptr;
+	void* m_hostFxrHandle = nullptr;
 
 	void InitDotnetCore();
 
@@ -45,7 +46,7 @@ private:
 
 	get_function_pointer_fn GetFunctionPtr(void* hostFxrHandle);
 
-	bool LoadAssemblyFromPath(load_assembly_fn assembly_loader);
+	bool LoadAssemblyFromPath(load_assembly_fn assemblyLoader);
 
 	template<class T>
 	T LoadSymbol(void* sharedLibrary, const char* name);

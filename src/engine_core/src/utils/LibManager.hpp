@@ -26,7 +26,7 @@ class LibManager {
 public:
 	/// @brief Opens the selected library path (analogous to dlopen)
 	/// @param libraryPath Path of the dynamically linked library
-	/// @return A handle of the desired library
+	/// @return A handle of the desired library or null
 	static void* LibraryOpen(const char* libraryPath);
 
 	/// @brief Loads the desired symbol using a library handle (analogous to dlsym)

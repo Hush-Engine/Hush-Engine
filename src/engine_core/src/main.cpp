@@ -1,6 +1,5 @@
 #include "ScriptingManager.hpp"
-#include <iostream>
-#include <map>
+
 #if WIN32
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
 #elif __APPLE__

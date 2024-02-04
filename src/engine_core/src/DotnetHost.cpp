@@ -32,18 +32,18 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 	const char* libPath = targetPath.c_str();
 #endif
 	void* sharedLibrary = LibManager::LibraryOpen(libPath);
-	if (!sharedLibrary)
+	if (sharedLibrary != nullptr)
 	{
 		LOG_ERROR_LN("Failed to load %s", libPath);
 		return;
 	}
 	//TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
-	this->cmdLineFuncPtr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD.data());
-	this->initFuncPtr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG.data());
-	this->getDelegateFuncPtr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE.data());
-	this->runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION.data());
-	this->closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION.data());
-	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
+	this->m_cmdLineFuncPtr = LoadSymbol<hostfxr_initialize_for_dotnet_command_line_fn>(sharedLibrary, DOTNET_CMD.data());
+	this->m_initFuncPtr = LoadSymbol<hostfxr_initialize_for_runtime_config_fn>(sharedLibrary, DOTNET_RUNTIME_INIT_CONFIG.data());
+	this->m_getDelegateFuncPtr = LoadSymbol<hostfxr_get_runtime_delegate_fn>(sharedLibrary, DOTNET_RUNTIME_DELEGATE.data());
+	this->m_runAppFuncPtr = LoadSymbol<hostfxr_run_app_fn>(sharedLibrary, DOTNET_RUN_FUNCTION.data());
+	this->m_closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION.data());
+	this->m_errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
 	//Add logging for any errors in C#
 #if WIN32
 	this->errorWriterFuncPtr([](const char_t* message) {
@@ -53,7 +53,7 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 		LOG_ERROR_LN("Received an error from C# runtime %s", cMessage);
 	});
 #else
-	this->errorWriterFuncPtr([](const char* message) {
+	this->m_errorWriterFuncPtr([](const char* message) {
 		LOG_ERROR_LN("Received an error from C# runtime %s", message);
 	});
 #endif
@@ -62,12 +62,12 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 
 DotnetHost::~DotnetHost()
 {
-	this->closeFuncPtr(this->hostFxrHandle);
+	this->m_closeFuncPtr(this->m_hostFxrHandle);
 }
 
 get_function_pointer_fn DotnetHost::GetFunctionGetterFuncPtr()
 {
-	return this->function_getter_fptr;
+	return this->m_functionGetterFuncPtr;
 }
 
 void DotnetHost::InitDotnetCore()
@@ -76,29 +76,29 @@ void DotnetHost::InitDotnetCore()
 	runtimeConfigPath /= RUNTIME_CONFIG_JSON.data();
 #if WIN32
 	std::wstring configStr = runtimeConfigPath.wstring();
-	const char_t* runtime_config = configStr.data();
+	const char_t* runtimeConfig = configStr.data();
 #else
-	const char* runtime_config = runtimeConfigPath.c_str();
+	const char* runtimeConfig = runtimeConfigPath.c_str();
 #endif
 
 	// Load and initialize .NET Core
-	int rc = this->initFuncPtr(runtime_config, nullptr, &this->hostFxrHandle);
+	int rc = this->m_initFuncPtr(runtimeConfig, nullptr, &this->m_hostFxrHandle);
 	if (rc != 0)
 	{
 		LOG_ERROR_LN("Init failed");
 		return;
 	}
 	LOG_INFO_LN("Init .NET core succeeded!");
-	load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->hostFxrHandle);
+	load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->m_hostFxrHandle);
 
 	if (assemblyLoader == nullptr) {
 		LOG_ERROR_LN("Could not get load assembly ptr");
 		return;
 	}
 
-	this->function_getter_fptr = this->GetFunctionPtr(this->hostFxrHandle);
+	this->m_functionGetterFuncPtr = this->GetFunctionPtr(this->m_hostFxrHandle);
 
-	if (this->function_getter_fptr == nullptr) {
+	if (this->m_functionGetterFuncPtr == nullptr) {
 		LOG_ERROR_LN("Get function ptr failed");
 		return;
 	}
@@ -113,22 +113,22 @@ void DotnetHost::InitDotnetCore()
 
 load_assembly_fn DotnetHost::GetLoadAssembly(void* hostFxrHandle) {
 	// Get the load_assembly_and_get_function_pointer function pointer
-	load_assembly_fn load_assembly = nullptr;
-	getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&load_assembly));
-	return load_assembly;
+	load_assembly_fn loadAssembly = nullptr;
+	getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void**>(&loadAssembly));
+	return loadAssembly;
 }
 
 get_function_pointer_fn DotnetHost::GetFunctionPtr(void* hostFxrHandle)
 {
-	get_function_pointer_fn get_function_pointer = nullptr;
-	getDelegateFuncPtr(hostFxrHandle, hdt_get_function_pointer, reinterpret_cast<void**>(&get_function_pointer));
-	return get_function_pointer;
+	get_function_pointer_fn getFunctionPointer = nullptr;
+	m_getDelegateFuncPtr(hostFxrHandle, hdt_get_function_pointer, reinterpret_cast<void**>(&getFunctionPointer));
+	return getFunctionPointer;
 }
 
-bool DotnetHost::LoadAssemblyFromPath(load_assembly_fn assembly_loader)
+bool DotnetHost::LoadAssemblyFromPath(load_assembly_fn assemblyLoader)
 {
-	std::filesystem::path assembly_path = LibManager::GetCurrentExecutablePath() / "assembly-test.dll";
-	int rc = assembly_loader(assembly_path.c_str(), nullptr, nullptr);
+	std::filesystem::path assemblyPath = LibManager::GetCurrentExecutablePath() / "assembly-test.dll";
+	int rc = assemblyLoader(assemblyPath.c_str(), nullptr, nullptr);
 	return rc == 0;
 }
 
