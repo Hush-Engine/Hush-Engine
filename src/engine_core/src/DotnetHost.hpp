@@ -5,9 +5,6 @@
 */
 
 #pragma once
-#include "Logger.hpp"
-#include "utils/LibManager.hpp"
-#include "utils/StringUtils.hpp"
 
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>

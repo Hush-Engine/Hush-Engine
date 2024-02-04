@@ -7,8 +7,8 @@
 #pragma once
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
-#include "../../Core/Logger.hpp"
-#include "DotnetHost.hpp"
+#include "Logger.hpp"
+#include "./DotnetHost.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstdio>
@@ -52,7 +52,7 @@ public:
 		}
 		return testDelegate(args...);
 	}
-	
+
 	template<class ... Types>
 	void InvokeCSharp(const char* targetNamespace, const char* targetClass, const char* fnName, Types... args) {
 		//TODO: Consider caching the functions in memory to a map so that we don't have to constantly load them every time
@@ -73,7 +73,7 @@ private:
 	std::shared_ptr<DotnetHost> host;
 
 	std::string BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass) const;
-	
+
 	template <class ... Types>
 	int GetMethodFromCS(const char* fullClassPath, const char* fnName, void** outMethod) {
 #if WIN32
@@ -97,6 +97,5 @@ private:
 			outMethod);
 		return rc;
 	}
-	
-};
 
+};

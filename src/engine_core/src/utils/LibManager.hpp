@@ -18,7 +18,7 @@
 #include <mach-o/dyld.h>
 #endif
 #include <filesystem>
-#include "../../../Core/Logger.hpp"
+#include "../Logger.hpp"
 /// <summary>
 /// Provides easy access to cross platform library loading functions
 /// </summary>

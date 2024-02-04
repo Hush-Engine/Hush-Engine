@@ -17,10 +17,10 @@ ScriptingManager::ScriptingManager(std::shared_ptr<DotnetHost> host, std::string
 std::string ScriptingManager::BuildFullClassPath(const char* targetAssembly, const char* targetNamespace, const char* targetClass) const
 {
 	//Allocate memory to concatenate the string
-	const int MAX_ASSEMBLY_DECL = 2048; //Dedicate 2MBs to the target
-	char fullClassPathCStr[MAX_ASSEMBLY_DECL];
+	const int maxAssemblyDecl = 2048; //Dedicate 2MBs to the target
+	char fullClassPathCStr[maxAssemblyDecl];
 	std::string fullClassPath;
-	fullClassPath.reserve(MAX_ASSEMBLY_DECL);
+	fullClassPath.reserve(maxAssemblyDecl);
 	fullClassPath += targetNamespace;
 	fullClassPath += '.';
 	fullClassPath += targetClass;

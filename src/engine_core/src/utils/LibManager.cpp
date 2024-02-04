@@ -33,8 +33,8 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
     return std::filesystem::path(buffer);
 #elif __APPLE__
     //Use the _NSGetExecutablePath method to get the path
-    uint32_t pathLength = MAX_PATH_LENGTH; 
-    int readPath = _NSGetExecutablePath(buffer, &pathLength);
+    uint32_t pathLength = MAX_PATH_LENGTH;
+    int readPath = _NSGetExecutablePath((char*)buffer, &pathLength);
     if (readPath != 0) {
         LOG_ERROR_LN("The buffer did not allocate sufficient memory to get the executable's path");
     }
@@ -46,4 +46,3 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
     return result.parent_path();
 #endif
 }
-

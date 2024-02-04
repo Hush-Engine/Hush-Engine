@@ -1,5 +1,9 @@
 #include "DotnetHost.hpp"
 
+#include "Logger.hpp"
+#include "utils/LibManager.hpp"
+#include "utils/StringUtils.hpp"
+
 constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
 constexpr std::string_view DOTNET_RUNTIME_DELEGATE("hostfxr_get_runtime_delegate");
@@ -42,7 +46,7 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 	this->errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
 	//Add logging for any errors in C#
 #if WIN32
-	this->errorWriterFuncPtr([](const char_t* message) { 
+	this->errorWriterFuncPtr([](const char_t* message) {
 		std::wstring wStrMessage = message;
 		std::string strMessage = StringUtils::FromWString(wStrMessage);
 		const char* cMessage = strMessage.c_str();
