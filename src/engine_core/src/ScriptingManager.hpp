@@ -87,16 +87,10 @@ private:
 		const char* targetFunction = fnName;
 #endif
 		//Retrieve getter from the host
-		get_function_pointer_fn functionGetter = this->host.get()->GetFunctionGetterFuncPtr();
-
-		int rc = functionGetter(
-			classPath,
-			targetFunction,
-			UNMANAGEDCALLERSONLY_METHOD,
-			nullptr,
-			nullptr,
-			outMethod);
-		return rc;
+		get_function_pointer_fn functionGetter = this->m_host->GetFunctionGetterFuncPtr();
+		//NOLINTNEXTLINE (Unamaged callers does a C style cast)
+		int rc = functionGetter(classPath, targetFunction, UNMANAGEDCALLERSONLY_METHOD, nullptr, nullptr, outMethod);
+        return rc;
 	}
 
 };
