@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "core/Logger.hpp"
+#include "core/log/Logger.hpp"
 #include "core/utils/LibManager.hpp"
 #include "core/utils/StringUtils.hpp"
 

@@ -60,7 +60,7 @@ def check_ninja_installed():
 @click.option('--build-type', '-t', default='Release', help='Build type (Debug, Release, RelWithDebInfo, MinSizeRel)')
 @click.option('--build-dir', '-b', default='build', help='Build directory')
 @click.option('--no-echo', '-n', is_flag=True, help='Do not echo commands')
-def configure(build_type, build_dir, no_echo):
+def configure(build_type: str, build_dir: str, no_echo: bool):
   """
   Configures the project using CMake.
   """
@@ -92,7 +92,7 @@ def configure(build_type, build_dir, no_echo):
     cmake_args.append('-GXcode')
   cmake_args.append('..')
 
-  subprocess.check_call(['cmake'] + cmake_args, stdout=None if no_echo else subprocess.DEVNULL)
+  subprocess.check_call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
 
   click.echo('✅ Project configured successfully.')
 
@@ -117,10 +117,11 @@ def build(build_dir, no_echo):
 
   # Build
   os.chdir(build_dir)
-  if is_ninja_installed:
-    subprocess.check_call(['ninja'], stdout=None if no_echo else subprocess.DEVNULL)
-  else:
-    subprocess.check_call(['cmake', '--build', '.'], stdout=None if no_echo else subprocess.DEVNULL)
+  cpu_count = os.cpu_count()
+  call = ['cmake', '--build', '.']
+  if not is_ninja_installed:
+    call += ['--', f'-j{cpu_count}']
+  subprocess.check_call(['cmake', '--build', '.'], stdout=subprocess.DEVNULL if no_echo else None)
 
   click.echo('✅ Project built successfully.')
 

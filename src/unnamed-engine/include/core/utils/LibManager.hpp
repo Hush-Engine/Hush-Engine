@@ -17,7 +17,7 @@
 // Header to get the current exe's path in Mac as well, yup, readlink does not seem to work here
 #include <mach-o/dyld.h>
 #endif
-#include "core/Logger.hpp"
+#include "core/log/Logger.hpp"
 #include <filesystem>
 
 /// @brief Provides easy access to cross platform library loading functions

@@ -19,14 +19,14 @@ static int allocCntr = 0;
 void *operator new(size_t size)
 {
     allocCntr++;
-    LOG_DEBUG_LN("Allocated %zu bytes, current count: %d", size, allocCntr);
+    LogDebug("Allocated {} bytes, current count: {}", size, allocCntr);
     return malloc(size);
 }
 
 void operator delete(void *p)
 {
     allocCntr--;
-    LOG_DEBUG_LN("Deallocating a pointer, current count: %d", allocCntr);
+    LogDebug("Deallocating a pointer, current count: {}", allocCntr);
     free(p);
 }
 
@@ -35,18 +35,25 @@ void operator delete(void *p)
 int main()
 {
     std::shared_ptr<DotnetHost> host = std::make_shared<DotnetHost>(DOTNET_PATH.data());
-    LOG_INFO_LN("Just finished initializing our host!");
+    LogTrace("Just finished initializing our host!");
     // Demo stuff
     auto scriptManager = ScriptingManager(host, ASSEMBLY_TEST);
-    LOG_INFO_LN("Now finished initializing our script manager");
+    LogDebug("Now finished initializing our script manager");
     const char *testNamespace = "Test";
     const char *testClass = "Class1";
     const char *testFunc = "SumTest";
+    auto logHandler = [](std::uint32_t level, const char *message) {
+        LogMessage(static_cast<LogLevel>(level), message);
+    };
+    LogInfo("Log handler address: {}", reinterpret_cast<void *>(+logHandler));
+    scriptManager.InvokeCSharp(testNamespace, testClass, "SetLogHandler", +logHandler);
     for (size_t i = 0; i < 90000; i++)
     {
         char *result = scriptManager.InvokeCSharpWithReturn<char *>(testNamespace, testClass, "GetCsharpString");
-        LOG_INFO_LN("C++ thinks the string is: %s", result);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // LogInfo("C++ thinks the string is: {}", result);
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        scriptManager.InvokeCSharp<char *>(testNamespace, testClass, "DeallocateString", result);
     }
     return 0;
 }

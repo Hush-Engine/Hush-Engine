@@ -4,3 +4,6 @@ BasedOnStyle: Microsoft
 ---
 Language: CSharp
 BasedOnStyle: Microsoft
+---
+Language: Json
+BasedOnStyle: Google

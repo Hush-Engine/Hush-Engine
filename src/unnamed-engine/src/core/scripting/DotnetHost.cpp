@@ -12,7 +12,7 @@ constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json
 #if WIN32
 #define HOST_FXR_PATH "host/fxr/8.0.0/hostfxr.dll"
 #elif __linux__
-#define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.so"
+#define HOST_FXR_PATH "host/fxr/8.0.2/libhostfxr.so"
 #elif __APPLE__
 #define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.dylib"
 #endif
@@ -30,7 +30,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     void *sharedLibrary = LibManager::LibraryOpen(libPath);
     if (sharedLibrary == nullptr)
     {
-        LOG_ERROR_LN("Failed to load %s", libPath);
+        LogError("Failed to load {}", libPath);
         return;
     }
     // TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
@@ -49,11 +49,10 @@ DotnetHost::DotnetHost(const char *dotnetPath)
         std::wstring wStrMessage = message;
         std::string strMessage = StringUtils::FromWString(wStrMessage);
         const char *cMessage = strMessage.c_str();
-        LOG_ERROR_LN("Received an error from C# runtime %s", cMessage);
+        LogError("Received an error from C# runtime {}", cMessage);
     });
 #else
-    this->m_errorWriterFuncPtr(
-        [](const char *message) { LOG_ERROR_LN("Received an error from C# runtime %s", message); });
+    this->m_errorWriterFuncPtr([](const char *message) { LogError("Received an error from C# runtime {}", message); });
 #endif
     this->InitDotnetCore();
 }
@@ -124,15 +123,15 @@ void DotnetHost::InitDotnetCore()
     int rc = this->m_initFuncPtr(runtimeConfig, nullptr, &this->m_hostFxrHandle);
     if (rc != 0)
     {
-        LOG_ERROR_LN("Init failed");
+        LogError("Failed to initialize .NET core with error code {}", rc);
         return;
     }
-    LOG_INFO_LN("Init .NET core succeeded!");
+    LogTrace("Init .NET core succeeded!");
     load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->m_hostFxrHandle);
 
     if (assemblyLoader == nullptr)
     {
-        LOG_ERROR_LN("Could not get load assembly ptr");
+        LogError("Could not get load assembly ptr");
         return;
     }
 
@@ -140,7 +139,7 @@ void DotnetHost::InitDotnetCore()
 
     if (this->m_functionGetterFuncPtr == nullptr)
     {
-        LOG_ERROR_LN("Get function ptr failed");
+        LogError("Could not get function ptr");
         return;
     }
     // Actually load the assembly
@@ -148,7 +147,7 @@ void DotnetHost::InitDotnetCore()
 
     if (!isAssemblyLoaded)
     {
-        LOG_ERROR_LN("Failed to load the assembly");
+        LogError("Failed to load the assembly");
         return;
     }
 }
