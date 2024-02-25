@@ -1,4 +1,4 @@
-#include "core/utils/LibManager.hpp"
+#include "LibManager.hpp"
 
 #define MAX_PATH_LENGTH 260
 

@@ -7,7 +7,7 @@
 #pragma once
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
-#include "./scripting/DotnetHost.hpp"
+#include "DotnetHost.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstddef>
