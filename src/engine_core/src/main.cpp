@@ -1,4 +1,4 @@
-#include "ScriptingManager.hpp"
+#include "scripting/ScriptingManager.hpp"
 
 #if WIN32
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";

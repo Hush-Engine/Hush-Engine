@@ -1,8 +1,10 @@
 # Set the source files
 set(SOURCES
     src/main.cpp
-    src/ScriptingManager.cpp
-    src/ScriptingManager.hpp
+    src/scripting/ScriptingManager.cpp
+    src/scripting/ScriptingManager.hpp
+    src/scripting/DotnetHost.hpp
+    src/scripting/DotnetHost.cpp
     src/utils/LibManager.cpp
     src/utils/LibManager.hpp
     src/utils/StringUtils.cpp

@@ -31,18 +31,10 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
     PathRemoveFileSpec(buffer);
     return std::filesystem::path(buffer);
 #elif __APPLE__
-<<<<<<<< HEAD:src/engine_core/src/utils/LibManager.cpp
     //Use the _NSGetExecutablePath method to get the path
     uint32_t pathLength = MAX_PATH_LENGTH;
     int readPath = _NSGetExecutablePath((char*)buffer, &pathLength);
     if (readPath != 0) {
-========
-    // Use the _NSGetExecutablePath method to get the path
-    uint32_t pathLength = MAX_PATH_LENGTH;
-    int readPath = _NSGetExecutablePath(buffer, &pathLength);
-    if (readPath != 0)
-    {
->>>>>>>> d907258152573b4948fd68415957254ec51169d7:src/unnamed-engine/src/core/utils/LibManager.cpp
         LOG_ERROR_LN("The buffer did not allocate sufficient memory to get the executable's path");
     }
     std::filesystem::path result(buffer);
