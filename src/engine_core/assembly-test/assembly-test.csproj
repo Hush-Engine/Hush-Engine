@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:src/engine_core/assembly-test/assembly-test.csproj
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -10,3 +11,17 @@
   </PropertyGroup>
 
 </Project>
+========
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>assembly_test</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>
+>>>>>>>> d907258152573b4948fd68415957254ec51169d7:src/unnamed-engine/assembly-test/assembly-test.csproj

@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:src/engine_core/assembly-test/assembly-test.sln
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
@@ -23,3 +24,30 @@ Global
 		SolutionGuid = {4BCFF461-A8AE-48A2-B7CD-D762B32420A7}
 	EndGlobalSection
 EndGlobal
+========
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 25.0.1706.7
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "assembly-test", "assembly-test.csproj", "{4306E34F-D29F-4BB5-9D53-8E5BA161ADCF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4306E34F-D29F-4BB5-9D53-8E5BA161ADCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4306E34F-D29F-4BB5-9D53-8E5BA161ADCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4306E34F-D29F-4BB5-9D53-8E5BA161ADCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4306E34F-D29F-4BB5-9D53-8E5BA161ADCF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4BCFF461-A8AE-48A2-B7CD-D762B32420A7}
+	EndGlobalSection
+EndGlobal
+>>>>>>>> d907258152573b4948fd68415957254ec51169d7:src/unnamed-engine/assembly-test/assembly-test.sln

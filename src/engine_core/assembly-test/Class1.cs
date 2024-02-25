@@ -7,11 +7,9 @@ using System.Xml.Linq;
 namespace Test;
 file class Win32Methods
 {
-	[DllImport("msvcrt.dll", SetLastError = false)]
-	public static extern IntPtr memcpy(IntPtr dest, IntPtr src, int count);
-
+    [DllImport("msvcrt.dll", SetLastError = false)]
+    public static extern IntPtr memcpy(IntPtr dest, IntPtr src, int count);
 }
-
 
 [StructLayout(LayoutKind.Sequential)]
 public struct TestStruct
@@ -29,7 +27,7 @@ public class Class1
     }
 
     [UnmanagedCallersOnly]
-    public static unsafe void SayName(char* name, int size)
+    public static unsafe void SayName(char *name, int size)
     {
         Console.WriteLine("We're now in C# :D");
         Console.WriteLine($"Size of the string passed: {size}");
@@ -43,25 +41,25 @@ public class Class1
         return a + b;
     }
 
-	[UnmanagedCallersOnly]
-	public static float SqrRootTest(float x, float y)
-	{
+    [UnmanagedCallersOnly]
+    public static float SqrRootTest(float x, float y)
+    {
         return MathF.Pow(x, y);
-	}
+    }
 
-	[UnmanagedCallersOnly]
+    [UnmanagedCallersOnly]
     public static unsafe void MultipleArgs(int a, int b)
     {
         Console.WriteLine($"From C#... Sum: {a + b}");
-	}
+    }
 
     // Receive a native char* and copy the .NET version string into it.
     [UnmanagedCallersOnly]
-    public static unsafe void GetDotNetVersion(byte* buffer, int bufferLength)
+    public static unsafe void GetDotNetVersion(byte *buffer, int bufferLength)
     {
         string versionString = RuntimeInformation.FrameworkDescription;
         int length = Math.Min(versionString.Length, bufferLength - 1);
-        fixed (char* pVersionString = versionString)
+        fixed(char *pVersionString = versionString)
         {
             for (int i = 0; i < length; i++)
             {
@@ -72,7 +70,7 @@ public class Class1
     }
 
     [UnmanagedCallersOnly]
-    public static unsafe void GetStruct(TestStruct* testStruct)
+    public static unsafe void GetStruct(TestStruct *testStruct)
     {
         // Convert to a ref struct to access the fields.
         ref TestStruct testStructRef = ref Unsafe.AsRef<TestStruct>(testStruct);
@@ -80,7 +78,7 @@ public class Class1
     }
 
     [UnmanagedCallersOnly]
-    public static unsafe char* GetCsharpString()
+    public static unsafe char *GetCsharpString()
     {
         const int SIZE = 50;
         Span<char> buffer = stackalloc char[SIZE];
