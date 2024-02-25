@@ -32,7 +32,7 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 	const char* libPath = targetPath.c_str();
 #endif
 	void* sharedLibrary = LibManager::LibraryOpen(libPath);
-	if (sharedLibrary != nullptr)
+	if (sharedLibrary == nullptr)
 	{
 		LOG_ERROR_LN("Failed to load %s", libPath);
 		return;
