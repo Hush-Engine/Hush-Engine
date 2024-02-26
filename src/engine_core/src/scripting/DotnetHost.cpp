@@ -4,6 +4,7 @@
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
 
+
 constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
 constexpr std::string_view DOTNET_RUNTIME_DELEGATE("hostfxr_get_runtime_delegate");
@@ -13,18 +14,29 @@ constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
 
+#define HOST_FXR_FIRST_PATH "host/fxr/"
 #if WIN32
-#define HOST_FXR_PATH "host/fxr/8.0.0/hostfxr.dll"
+#define HOST_FXR_FILENAME "hostfxr.dll"
 #elif __linux__
-#define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.so"
+#define HOST_FXR_FILENAME "libhostfxr.so"
 #elif __APPLE__
-#define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.dylib"
+#define HOST_FXR_FILENAME "libhostfxr.dylib"
 #endif
 
 DotnetHost::DotnetHost(const char* dotnetPath)
 {
+	//We want to find a substring in the path that will lead us to a supported version of .NET hostfxr 
+	//for now we will do the first subdir that contains this given substr
+    const char *targetPathSubstring = "8.";
 	std::filesystem::path targetPath = dotnetPath;
-	targetPath /= HOST_FXR_PATH;
+	//
+	targetPath /= HOST_FXR_FIRST_PATH;
+    bool appended = PathUtils::FindAndAppendSubDirectory(targetPath, targetPathSubstring);
+    if (!appended)
+    {
+        LOG_ERROR_LN("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
+        return;
+	}
 #if WIN32
 	std::string strLibPath = targetPath.string();
 	const char* libPath = strLibPath.c_str();

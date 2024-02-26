@@ -9,6 +9,8 @@ set(SOURCES
     src/utils/LibManager.hpp
     src/utils/StringUtils.cpp
     src/utils/StringUtils.hpp
+    src/utils/filesystem/PathUtils.hpp
+    src/utils/filesystem/PathUtils.cpp
 )
 
 add_executable(engine_core ${SOURCES})

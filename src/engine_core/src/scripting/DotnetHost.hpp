@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <string_view>
 #include <string>
+#include <filesystem/PathUtils.hpp>
 
 /// <summary>
 /// hold references to all .NET function pointers with a valid initialization, to pass onto <see cref="ScriptingManager"/>
