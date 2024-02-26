@@ -23,6 +23,16 @@ public:
 	/// Creates a new .NET host using hostfxr with the provided path of the runtime
 	/// </summary>
 	DotnetHost(const char* dotnetPath);
+	
+	DotnetHost(const DotnetHost &other) = default;
+
+	DotnetHost(DotnetHost &&other) = default;
+
+	DotnetHost &operator=(const DotnetHost &) = default;
+	
+	DotnetHost &operator=(DotnetHost &&) = default;
+
+
 
 	~DotnetHost();
 

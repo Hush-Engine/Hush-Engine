@@ -1,7 +1,7 @@
 #include "StringUtils.hpp"
 
 #if WIN32
-typedef std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> UTF8ToUTF16Convert;
+using UTF8ToUTF16Convert = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
 std::wstring StringUtils::ToWString(const char* data)
 {
 	UTF8ToUTF16Convert converter;

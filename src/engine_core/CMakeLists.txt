@@ -20,6 +20,18 @@ add_link_options("-ldl")
 target_link_libraries(engine_core PUBLIC coreclr dl)
 elseif(WIN32)
 target_link_libraries(engine_core PUBLIC coreclr)
+set_target_properties(engine_core PROPERTIES
+    VS_GLOBAL_RunCodeAnalysis false
+
+    # Use visual studio core guidelines
+    VS_GLOBAL_EnableMicrosoftCodeAnalysis false
+    #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
+    #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
+
+    # Use clangtidy
+    VS_GLOBAL_EnableClangTidyCodeAnalysis true
+    VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*" 
+)
 endif()
 
 target_compile_features(engine_core PRIVATE cxx_std_17)
