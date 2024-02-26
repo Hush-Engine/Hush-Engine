@@ -46,7 +46,7 @@ DotnetHost::DotnetHost(const char* dotnetPath)
 	this->m_errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
 	//Add logging for any errors in C#
 #if WIN32
-	this->errorWriterFuncPtr([](const char_t* message) {
+	this->m_errorWriterFuncPtr([](const char_t* message) {
 		std::wstring wStrMessage = message;
 		std::string strMessage = StringUtils::FromWString(wStrMessage);
 		const char* cMessage = strMessage.c_str();
