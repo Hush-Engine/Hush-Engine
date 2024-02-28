@@ -40,15 +40,23 @@ set_target_properties(engine_core PROPERTIES
 endif()
 
 target_compile_features(engine_core PRIVATE cxx_std_17)
+#Copy the .NET runtime configuration
+set(RUNTIME_CONFIG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assembly-test/bin)
+#Check if we're in a single or multiple config generator
+if (CMAKE_CONFIGURATION_TYPES)
+    set(BUILD_TYPE $<CONFIG>)
+else()
+    set(BUILD_TYPE ${CMAKE_BUILD_TYPE})
+endif()
 
 # Copy assembly-test.runtimeconfig.json to the output directory
 add_custom_command(TARGET engine_core POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/assembly-test/bin/${CMAKE_BUILD_TYPE}/net8.0/assembly-test.runtimeconfig.json
+        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.runtimeconfig.json
         $<TARGET_FILE_DIR:engine_core>)
 
 # Copy assembly-test.dll to the output directory
 add_custom_command(TARGET engine_core POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/assembly-test/bin/${CMAKE_BUILD_TYPE}/net8.0/assembly-test.dll
+        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.dll
         $<TARGET_FILE_DIR:engine_core>)
