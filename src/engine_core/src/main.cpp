@@ -1,4 +1,5 @@
 #include "scripting/ScriptingManager.hpp"
+#include "rendering/WindowRenderer.hpp"
 
 #if WIN32
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
@@ -29,6 +30,7 @@ void operator delete(void* p) {
 
 int main()
 {
+    WindowRenderer window("Hush Engine");
 	std::shared_ptr<DotnetHost> host = std::make_shared<DotnetHost>(DOTNET_PATH.data());
 	LOG_INFO_LN("Just finished initializing our host!");
 	//Demo stuff
@@ -36,11 +38,11 @@ int main()
 	LOG_INFO_LN("Now finished initializing our script manager");
 	const char* testNamespace = "Test";
 	const char* testClass = "Class1";
-	const char* testFunc = "SumTest";
 	for (size_t i = 0; i < 10; i++)
 	{
 		char* result = scriptManager.InvokeCSharpWithReturn<char*>(testNamespace, testClass, "GetCsharpString");
 		LOG_INFO_LN("C++ thinks the string is: %s", result);
 	}
+    Sleep(10000);
 	return 0;
 }

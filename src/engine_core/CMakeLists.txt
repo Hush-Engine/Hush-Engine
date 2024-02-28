@@ -11,6 +11,9 @@ set(SOURCES
     src/utils/StringUtils.hpp
     src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
+    src/Logger.hpp
+    src/rendering/WindowRenderer.hpp
+    src/rendering/WindowRenderer.cpp
 )
 
 add_executable(engine_core ${SOURCES})
