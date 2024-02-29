@@ -11,6 +11,7 @@
 
 #include <SDL2/SDL.h>
 #include "Logger.hpp"
+#include <input/InputManager.hpp>
 
 constexpr int DEFAULT_WINDOW_HEIGHT = 1080;
 constexpr int DEFAULT_WINDOW_WIDTH = 1920;
@@ -26,7 +27,9 @@ public:
 
 	WindowRenderer &operator=(const WindowRenderer &) = default;
 
-    WindowRenderer &operator=(WindowRenderer &&) = default;
+	WindowRenderer &operator=(WindowRenderer &&) = default;
+
+	void HandleEvents(bool *shouldQuit);
 
 	~WindowRenderer();
 
@@ -42,8 +45,12 @@ private:
 	bool InitSDLIfNotStarted() noexcept;
 
 	constexpr uint32_t GetInitialRendererFlags()
-    {
-        return SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_SHOWN;
+	{
+        return SDL_WindowFlags::SDL_WINDOW_VULKAN | 
+			SDL_WindowFlags::SDL_WINDOW_SHOWN | 
+			SDL_WindowFlags::SDL_WINDOW_MOUSE_GRABBED |
+			SDL_WindowFlags::SDL_WINDOW_MOUSE_CAPTURE |
+			SDL_WindowFlags::SDL_WINDOW_RESIZABLE;
 	}
 
 };

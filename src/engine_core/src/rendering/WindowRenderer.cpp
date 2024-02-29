@@ -1,5 +1,6 @@
 #include "WindowRenderer.hpp"
 
+
 WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
 	if (!InitSDLIfNotStarted())
@@ -9,17 +10,34 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
 	}
 	//Now create the window
 	uint32_t defaultFlag = 0;
+	const int defaultWindowIndex = -1;
+
 	this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 										 DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+	this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
+}
 
-    this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, -1, GetInitialRendererFlags());
+void WindowRenderer::HandleEvents(bool *applicationRunning)
+{
+	SDL_Event event;
+	SDL_PollEvent(&event);
+	switch (event.type)
+	{
+	case SDL_QUIT:
+		*applicationRunning = false;
+		break;
+    case SDL_KEYDOWN:
+        KeyCode code = event.key.keysym.scancode;
+        InputManager::SendKeyEvent(code, EKeyState::Pressed);
+		break;
+	}
 }
 
 WindowRenderer::~WindowRenderer()
 {
-    SDL_DestroyWindow(this->m_windowPtr);
+	SDL_DestroyWindow(this->m_windowPtr);
 	SDL_DestroyRenderer(this->m_rendererPtr);
-    SDL_Quit();
+	SDL_Quit();
 }
 
 bool WindowRenderer::InitSDLIfNotStarted() noexcept

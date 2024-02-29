@@ -19,7 +19,7 @@ _deps
 *.suo
 *.user
 *.sln.docstates
-
+.editorconfig
 # Build results
 
 [Dd]ebug/

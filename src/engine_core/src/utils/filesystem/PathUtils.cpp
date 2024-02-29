@@ -9,7 +9,6 @@ using PathIterator_t = std::filesystem::recursive_directory_iterator;
 
 bool PathUtils::FindAndAppendSubDirectory(std::filesystem::path &path, const char *targetDirectorySubString)
 {
-
     PathIterator_t iterator = PathIterator_t(path);
     iterator++;
     std::filesystem::path nextPath = iterator->path();
