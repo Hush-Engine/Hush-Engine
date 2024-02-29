@@ -7,7 +7,6 @@
 #pragma once
 #include <string_view>
 #include "rendering/WindowRenderer.hpp"
-#include "utils/threading/ThreadingUtils.hpp"
 
 class HushEngine {
 public:

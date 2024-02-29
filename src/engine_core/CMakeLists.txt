@@ -16,7 +16,6 @@ set(SOURCES
     src/Logger.hpp
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
-    src/utils/threading/ThreadingUtils.hpp
     src/input/KeyStates.hpp
     src/input/KeyData.hpp
     src/input/InputManager.hpp
