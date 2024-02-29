@@ -9,7 +9,7 @@ internal static class StringExtensions {
 	/// <returns>A char* in the global heap, encoded in ANSI</returns>
 	public static unsafe char* ToUnmanagedString(this string input)
 	{
-		return (char*)Marshal.StringToHGlobalAnsi(input);
+		return (char*)Marshal.StringToCoTaskMemUTF8(input);
 	}
 
 }
