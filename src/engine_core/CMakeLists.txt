@@ -1,6 +1,8 @@
 # Set the source files
 set(SOURCES
     src/main.cpp
+    src/HushEngine.hpp
+    src/HushEngine.cpp
     src/scripting/ScriptingManager.cpp
     src/scripting/ScriptingManager.hpp
     src/scripting/DotnetHost.hpp
@@ -14,6 +16,11 @@ set(SOURCES
     src/Logger.hpp
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
+    src/utils/threading/ThreadingUtils.hpp
+    src/input/KeyStates.hpp
+    src/input/KeyData.hpp
+    src/input/InputManager.hpp
+    src/input/InputManager.cpp
 )
 
 add_executable(engine_core ${SOURCES})
