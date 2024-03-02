@@ -1,8 +1,7 @@
 #include "InputManager.hpp"
 
 // TODO: Populate the map in the stack with all enums
-std::map<KeyCode, KeyData> InputManager::s_keyDataByCode = {
-};
+std::map<KeyCode, KeyData> InputManager::s_keyDataByCode = {};
 
 bool InputManager::IsKeyDown(KeyCode key)
 {
@@ -11,9 +10,9 @@ bool InputManager::IsKeyDown(KeyCode key)
 
 void InputManager::SendKeyEvent(KeyCode key, EKeyState state)
 {
-    KeyData data{ (EKeyCode)key, state};
+    KeyData data{(EKeyCode)key, state};
     bool containsKey = s_keyDataByCode.find(key) != s_keyDataByCode.end();
-    //If the key is already inserted and the state is not none
+    // If the key is already inserted and the state is not none
     if (containsKey && s_keyDataByCode[key].currentState != EKeyState::None)
     {
         data.previousState = s_keyDataByCode[key].currentState;

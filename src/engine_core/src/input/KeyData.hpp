@@ -5,8 +5,8 @@
 */
 
 #pragma once
-#include "KeyStates.hpp"
 #include "KeyCode.hpp"
+#include "KeyStates.hpp"
 
 struct KeyData
 {

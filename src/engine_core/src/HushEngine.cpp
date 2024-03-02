@@ -11,7 +11,7 @@ void HushEngine::Run()
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
     while (this->m_isApplicationRunning)
     {
-        //TODO: Delta time calculations
+        // TODO: Delta time calculations
         mainRenderer.HandleEvents(&this->m_isApplicationRunning);
         SDL_Delay(1000 / 60);
     }

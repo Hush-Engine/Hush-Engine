@@ -6,21 +6,18 @@
 
 #pragma once
 #include "KeyData.hpp"
-#include <map>
 #include <Logger.hpp>
 #include <magic_enum.hpp>
-
+#include <map>
 
 class InputManager
 {
-public:
-
+  public:
     static bool IsKeyDown(KeyCode key);
 
     static void SendKeyEvent(KeyCode key, EKeyState state);
 
-private:
-    //TODO: Reserve memory for this map???
+  private:
+    // TODO: Reserve memory for this map???
     static std::map<KeyCode, KeyData> s_keyDataByCode;
-
 };

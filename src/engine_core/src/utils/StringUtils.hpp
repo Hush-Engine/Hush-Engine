@@ -9,7 +9,6 @@
 #include <codecvt>
 #include <string>
 
-
 /// @brief Provides utility functions for handling strings (C and std strings)
 class StringUtils
 {
