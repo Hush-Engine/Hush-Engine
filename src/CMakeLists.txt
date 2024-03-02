@@ -1,2 +1,2 @@
 
-add_subdirectory(unnamed-engine)
+add_subdirectory(engine_core)

@@ -92,9 +92,9 @@ def configure(build_type, build_dir, no_echo):
     cmake_args.append('-GXcode')
   cmake_args.append('..')
 
-  subprocess.check_call(['cmake'] + cmake_args, stdout=None if no_echo else subprocess.DEVNULL)
+  ret = subprocess.check_call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
 
-  click.echo('✅ Project configured successfully.')
+  click.echo('✅ Project configured successfully.' if ret == 0 else '❌ Project configuration failed.', file=stdout if no_echo else stderr)
 
 @click.command()
 @click.option('--build-dir', '-b', default='build', help='Build directory')
@@ -117,12 +117,10 @@ def build(build_dir, no_echo):
 
   # Build
   os.chdir(build_dir)
-  if is_ninja_installed:
-    subprocess.check_call(['ninja'], stdout=None if no_echo else subprocess.DEVNULL)
-  else:
-    subprocess.check_call(['cmake', '--build', '.'], stdout=None if no_echo else subprocess.DEVNULL)
+  cpu_count = os.cpu_count()
+  ret = subprocess.call(['cmake', '--build', '.', f'-j{cpu_count}'], stdout=subprocess.DEVNULL if no_echo else None)
 
-  click.echo('✅ Project built successfully.')
+  click.echo('✅ Project built successfully.' if ret == 0 else '❌ Project build failed.', file=stdout if no_echo else stderr)
 
 
 def get_git_username():
@@ -315,7 +313,7 @@ def tidy(verbose: bool, fix: bool):
     args.append('-fix')
 
   click.echo('🛠️ Checking project for issues...')
-  exit_code = subprocess.check_call(args, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
+  exit_code = subprocess.call(args, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
 
   if exit_code != 0:
     message = 'clang-tidy found issues.'
