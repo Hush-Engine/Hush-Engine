@@ -20,6 +20,7 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
 void WindowRenderer::HandleEvents(bool *applicationRunning)
 {
 	SDL_Event event;
+    KeyCode code;
 	SDL_PollEvent(&event);
 	switch (event.type)
 	{
@@ -27,9 +28,13 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
 		*applicationRunning = false;
 		break;
     case SDL_KEYDOWN:
-        KeyCode code = event.key.keysym.scancode;
+        code = event.key.keysym.scancode;
         InputManager::SendKeyEvent(code, EKeyState::Pressed);
 		break;
+    case SDL_KEYUP:
+        code = event.key.keysym.scancode;
+        InputManager::SendKeyEvent(code, EKeyState::Released);
+        break;
 	}
 }
 

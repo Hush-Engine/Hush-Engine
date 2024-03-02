@@ -6,11 +6,11 @@
 
 #pragma once
 #include "KeyStates.hpp"
-using KeyCode = int;
+#include "KeyCode.hpp"
 
 struct KeyData
 {
-    KeyCode code;
-    EKeyState currentState;
-    EKeyState previousState;
+    EKeyCode code;
+    EKeyState currentState = EKeyState::None;
+    EKeyState previousState = EKeyState::None;
 };

@@ -7,6 +7,7 @@
 #pragma once
 #if _WIN32
 #include <Shlwapi.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #pragma comment(lib, "shlwapi.lib")
 #else

@@ -11,6 +11,7 @@ set(SOURCES
     src/utils/LibManager.hpp
     src/utils/StringUtils.cpp
     src/utils/StringUtils.hpp
+    src/utils/EnumUtils.hpp
     src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
     src/Logger.hpp
@@ -18,6 +19,7 @@ set(SOURCES
     src/rendering/WindowRenderer.cpp
     src/input/KeyStates.hpp
     src/input/KeyData.hpp
+    src/input/KeyCode.hpp
     src/input/InputManager.hpp
     src/input/InputManager.cpp
 )

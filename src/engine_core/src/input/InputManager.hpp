@@ -7,6 +7,8 @@
 #pragma once
 #include "KeyData.hpp"
 #include <map>
+#include <Logger.hpp>
+#include <magic_enum.hpp>
 
 
 class InputManager

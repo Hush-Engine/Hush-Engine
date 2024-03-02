@@ -32,10 +32,10 @@ void operator delete(void *p)
 
 int main()
 {
-    std::unique_ptr<HushEngine> engine = std::make_unique<HushEngine>(HushEngine());
+    HushEngine engine;
 
-    engine->Run();
+    engine.Run();
 
-    delete engine.release();
+    engine.Quit();
     return 0;
 }

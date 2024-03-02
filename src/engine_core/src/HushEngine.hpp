@@ -7,6 +7,7 @@
 #pragma once
 #include <string_view>
 #include "rendering/WindowRenderer.hpp"
+#include "scripting/DotnetHost.hpp"
 
 class HushEngine {
 public:
