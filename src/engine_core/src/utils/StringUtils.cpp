@@ -13,23 +13,21 @@ std::wstring StringUtils::ToWString(const char *data)
         LOG_ERROR_LN("Failed to convert UTF8 string to wide string!");
         return {};
     }
-    wchar_t *buffer = new wchar_t[bytesToAlloc];
-    MultiByteToWideChar(CP_UTF8, 0, data, -1, buffer, bytesToAlloc);
-
-    return {buffer};
+    auto buffer = std::make_unique<wchar_t[]>(bytesToAlloc);
+    MultiByteToWideChar(CP_UTF8, 0, data, -1, buffer.get(), bytesToAlloc);
+    return {buffer.get()};
 }
 std::string StringUtils::FromWString(std::wstring str)
 {
-    char *buffer = nullptr;
-    int bytesToAlloc = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), buffer, 0, nullptr, nullptr);
+    int bytesToAlloc = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), nullptr, 0, nullptr, nullptr);
     if (bytesToAlloc <= 0)
     {
         LOG_ERROR_LN("Failed to convert wide string to UTF8!");
         return {};
     }
-    buffer = new char[bytesToAlloc];
-    WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), buffer, bytesToAlloc, nullptr, nullptr);
+    auto buffer = std::make_unique<char[]>(bytesToAlloc);
+    WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), buffer.get(), bytesToAlloc, nullptr, nullptr);
 
-    return {buffer};
+    return {buffer.get()};
 }
 #endif
