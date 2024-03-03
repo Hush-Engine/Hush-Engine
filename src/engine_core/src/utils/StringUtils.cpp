@@ -1,9 +1,11 @@
 #include "StringUtils.hpp"
-#define WIN32_LEAN_AND_MEAN
 #include "Logger.hpp"
-#include <windows.h>
 
 #if _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 using UTF8ToUTF16Convert = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
 std::wstring StringUtils::ToWString(const char *data)
 {

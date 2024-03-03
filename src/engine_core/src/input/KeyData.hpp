@@ -10,7 +10,7 @@
 
 struct KeyData
 {
-    EKeyCode code;
+    EKeyCode code = EKeyCode::UNKNOWN;
     EKeyState currentState = EKeyState::None;
     EKeyState previousState = EKeyState::None;
 };

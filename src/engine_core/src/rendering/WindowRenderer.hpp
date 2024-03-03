@@ -29,7 +29,7 @@ class WindowRenderer
 
     WindowRenderer &operator=(WindowRenderer &&) = default;
 
-    void HandleEvents(bool *shouldQuit);
+    void HandleEvents(bool *applicationRunning);
 
     ~WindowRenderer();
 

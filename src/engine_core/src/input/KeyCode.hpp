@@ -141,22 +141,22 @@ enum class EKeyCode : KeyCode
 
     NUMLOCKCLEAR = 83, /**< num lock on PC, clear on Mac keyboards
                         */
-    KP_DIVIDE = 84,
-    KP_MULTIPLY = 85,
-    KP_MINUS = 86,
-    KP_PLUS = 87,
-    KP_ENTER = 88,
-    KP_1 = 89,
-    KP_2 = 90,
-    KP_3 = 91,
-    KP_4 = 92,
-    KP_5 = 93,
-    KP_6 = 94,
-    KP_7 = 95,
-    KP_8 = 96,
-    KP_9 = 97,
-    KP_0 = 98,
-    KP_PERIOD = 99,
+    KpDivide = 84,
+    KpMultiply = 85,
+    KpMinus = 86,
+    KpPlus = 87,
+    KpEnter = 88,
+    Kp1 = 89,
+    Kp2 = 90,
+    Kp3 = 91,
+    Kp4 = 92,
+    Kp5 = 93,
+    Kp6 = 94,
+    Kp7 = 95,
+    Kp8 = 96,
+    Kp9 = 97,
+    Kp0 = 98,
+    KpPeriod = 99,
 
     NONUSBACKSLASH = 100, /**< This is the additional key that ISO
                            *   keyboards have over ANSI ones,
@@ -172,7 +172,7 @@ enum class EKeyCode : KeyCode
     POWER = 102,          /**< The USB document says this is a status flag,
                            *   not a physical key - but some Mac keyboards
                            *   do have a power key. */
-    KP_EQUALS = 103,
+    KpEquals = 103,
     F13 = 104,
     F14 = 105,
     F15 = 106,
@@ -203,8 +203,8 @@ enum class EKeyCode : KeyCode
     /*     LOCKINGCAPSLOCK = 130,  */
     /*     LOCKINGNUMLOCK = 131, */
     /*     LOCKINGSCROLLLOCK = 132, */
-    KP_COMMA = 133,
-    KP_EQUALSAS400 = 134,
+    KpComma = 133,
+    KpEqualsaS400 = 134,
 
     INTERNATIONAL1 = 135, /**< used on Asian keyboards, see
                                             footnotes in USB doc */
@@ -239,52 +239,52 @@ enum class EKeyCode : KeyCode
     CRSEL = 163,
     EXSEL = 164,
 
-    KP_00 = 176,
-    KP_000 = 177,
+    Kp00 = 176,
+    Kp000 = 177,
     THOUSANDSSEPARATOR = 178,
     DECIMALSEPARATOR = 179,
     CURRENCYUNIT = 180,
     CURRENCYSUBUNIT = 181,
-    KP_LEFTPAREN = 182,
-    KP_RIGHTPAREN = 183,
-    KP_LEFTBRACE = 184,
-    KP_RIGHTBRACE = 185,
-    KP_TAB = 186,
-    KP_BACKSPACE = 187,
-    KP_A = 188,
-    KP_B = 189,
-    KP_C = 190,
-    KP_D = 191,
-    KP_E = 192,
-    KP_F = 193,
-    KP_XOR = 194,
-    KP_POWER = 195,
-    KP_PERCENT = 196,
-    KP_LESS = 197,
-    KP_GREATER = 198,
-    KP_AMPERSAND = 199,
-    KP_DBLAMPERSAND = 200,
-    KP_VERTICALBAR = 201,
-    KP_DBLVERTICALBAR = 202,
-    KP_COLON = 203,
-    KP_HASH = 204,
-    KP_SPACE = 205,
-    KP_AT = 206,
-    KP_EXCLAM = 207,
-    KP_MEMSTORE = 208,
-    KP_MEMRECALL = 209,
-    KP_MEMCLEAR = 210,
-    KP_MEMADD = 211,
-    KP_MEMSUBTRACT = 212,
-    KP_MEMMULTIPLY = 213,
-    KP_MEMDIVIDE = 214,
-    KP_PLUSMINUS = 215,
-    KP_CLEAR = 216,
-    KP_CLEARENTRY = 217,
-    KP_BINARY = 218,
-    KP_OCTAL = 219,
-    KP_DECIMAL = 220,
-    KP_HEXADECIMAL = 221,
+    KpLeftparen = 182,
+    KpRightparen = 183,
+    KpLeftbrace = 184,
+    KpRightbrace = 185,
+    KpTab = 186,
+    KpBackspace = 187,
+    KpA = 188,
+    KpB = 189,
+    KpC = 190,
+    KpD = 191,
+    KpE = 192,
+    KpF = 193,
+    KpXor = 194,
+    KpPower = 195,
+    KpPercent = 196,
+    KpLess = 197,
+    KpGreater = 198,
+    KpAmpersand = 199,
+    KpDblampersand = 200,
+    KpVerticalbar = 201,
+    KpDblverticalbar = 202,
+    KpColon = 203,
+    KpHash = 204,
+    KpSpace = 205,
+    KpAt = 206,
+    KpExclam = 207,
+    KpMemstore = 208,
+    KpMemrecall = 209,
+    KpMemclear = 210,
+    KpMemadd = 211,
+    KpMemsubtract = 212,
+    KpMemmultiply = 213,
+    KpMemdivide = 214,
+    KpPlusminus = 215,
+    KpClear = 216,
+    KpClearentry = 217,
+    KpBinary = 218,
+    KpOctal = 219,
+    KpDecimal = 220,
+    KpHexadecimal = 221,
 
     LCTRL = 224,
     LSHIFT = 225,
@@ -324,13 +324,13 @@ enum class EKeyCode : KeyCode
     MAIL = 265,
     CALCULATOR = 266, /**< AL Calculator */
     COMPUTER = 267,
-    AC_SEARCH = 268,    /**< AC Search */
-    AC_HOME = 269,      /**< AC Home */
-    AC_BACK = 270,      /**< AC Back */
-    AC_FORWARD = 271,   /**< AC Forward */
-    AC_STOP = 272,      /**< AC Stop */
-    AC_REFRESH = 273,   /**< AC Refresh */
-    AC_BOOKMARKS = 274, /**< AC Bookmarks */
+    AcSearch = 268,    /**< AC Search */
+    AcHome = 269,      /**< AC Home */
+    AcBack = 270,      /**< AC Back */
+    AcForward = 271,   /**< AC Forward */
+    AcStop = 272,      /**< AC Stop */
+    AcRefresh = 273,   /**< AC Refresh */
+    AcBookmarks = 274, /**< AC Bookmarks */
 
     /* @} */ /* Usage page 0x0C */
 
@@ -390,5 +390,5 @@ enum class EKeyCode : KeyCode
 
     /* Add any other keys here. */
 
-    SDL_NUM_SCANCODES = 512
+    SdlNumScancodes = 512
 };

@@ -101,4 +101,4 @@ WarningsAsErrors: >
     cppcoreguidelines-*,
     readability-*,
 
-    readability-identifier-naming
+    -cppcoreguidelines-avoid-non-const-global-variables,

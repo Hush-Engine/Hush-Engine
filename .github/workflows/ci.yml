@@ -58,6 +58,8 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up CMake ${{ matrix.c_compiler }} ${{ matrix.cxx_compiler }}
         uses: jwlawson/actions-setup-cmake@v1.14
         with:
@@ -65,32 +67,46 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.x
-      - name: Build dotnet
-        run: |
-          cd src/engine_core/assembly-test && dotnet publish -c ${{ matrix.build_type }}
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
         with:
           version: '1.11.1'
+      - name: Install Ubuntu dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev autopoint
+      - name: Build dotnet
+        run: |
+          cd src/engine_core/assembly-test && dotnet publish -c ${{ matrix.build_type }}
+      - name: Install python requirements
+        run: pip install -r requirements.txt
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.c_compiler == 'cl'
         with:
           arch: amd64
-      - name: Generate build files
-        run: >
-          cmake -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }}
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: knicknic/os-specific-run@v1.0.3
+        name: Set up environment
+        with:
+          macos: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
+          linux: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
+          windows: |
+            echo ${{ github.workspace }}/scripts >> $env:GITHUB_PATH
+            echo "UTF-8" >> $env:PYTHONIOENCODING
+      - name: Add scripts to path
+        run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
+      - name: Configure the project
+        run: devtool configure --c-compiler ${{ matrix.c_compiler }} --cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
       - name: Build
-        run: cmake --build build
+        run: devtool build
   clang-tidy:
-    needs: build
+    needs: format
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Install Ubuntu dependencies
         run: |
@@ -98,29 +114,24 @@ jobs:
           echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
           echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev clang-tidy-17
+          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev clang-tidy-17 autopoint
           sudo rm /usr/bin/clang-tidy
           sudo ln -s /usr/bin/clang-tidy-17 /usr/bin/clang-tidy
           wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O ninja-linux.zip && \
             sudo unzip ninja-linux.zip -d /usr/bin && \
             sudo rm ninja-linux.zip
+      - name: Add scripts to path
+        run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
 
-      - name: Configure CMake
-        run: >
-          cmake -B build
-          -G Ninja
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_C_COMPILER=clang
-          -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -S ${{ github.workspace }}
+      - name: Configure the project
+        run: devtool configure --c-compiler clang --cxx-compiler clang++ --build-type Debug
 
       - name: Run clang tidy
         id: clang-tidy
         uses: mathiasvr/command-output@v2.0.0
         timeout-minutes: 40
         with:
-          run: source ./scripts/bootstrap.sh && devtool tidy -v
+          run: devtool tidy -v
       - name: Comment PR
         # Only execute if clang-tidy found errors
         if: ${{ failure() && github.event_name == 'pull_request' }}
