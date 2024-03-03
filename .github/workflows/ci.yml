@@ -81,7 +81,7 @@ jobs:
       - name: Add scripts to path
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       - name: Configure the project
-        run: devtool configure -c-compiler ${{ matrix.c_compiler }} -cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
+        run: devtool configure --c-compiler ${{ matrix.c_compiler }} --cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
       # - name: Generate build files
       #   run: >
       #     cmake -B build -G Ninja
@@ -116,7 +116,7 @@ jobs:
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       
       - name: Configure the project
-        run: devtool configure -c-compiler clang -cxx-compiler clang++ --build-type Debug
+        run: devtool configure --c-compiler clang --cxx-compiler clang++ --build-type Debug
 
       - name: Run clang tidy
         id: clang-tidy
