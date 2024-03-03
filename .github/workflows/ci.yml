@@ -114,7 +114,7 @@ jobs:
           echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
           echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev clang-tidy-17
+          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev clang-tidy-17 autopoint
           sudo rm /usr/bin/clang-tidy
           sudo ln -s /usr/bin/clang-tidy-17 /usr/bin/clang-tidy
           wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O ninja-linux.zip && \
