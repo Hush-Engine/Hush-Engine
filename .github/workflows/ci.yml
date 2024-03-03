@@ -85,17 +85,16 @@ jobs:
         if: matrix.c_compiler == 'cl'
         with:
           arch: amd64
+      - uses: knicknic/os-specific-run@v1.0.3
+        name: Set up environment
+        with:
+          macos: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
+          linux: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
+          windows: echo ${{ github.workspace }}/scripts >> $env:GITHUB_PATH
       - name: Add scripts to path
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       - name: Configure the project
         run: devtool configure --c-compiler ${{ matrix.c_compiler }} --cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
-      # - name: Generate build files
-      #   run: >
-      #     cmake -B build -G Ninja
-      #     -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-      #     -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-      #     -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }}
-      #     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Build
         run: devtool build
   clang-tidy:
