@@ -1,6 +1,6 @@
 #include "LibManager.hpp"
 
-#define MAX_PATH_LENGTH 260
+constexpr size_t MAX_PATH_LENGTH = 260;
 
 void *LibManager::LibraryOpen(const char *libraryPath)
 {
@@ -43,7 +43,7 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
 #else
     if (readlink("/proc/self/exe", &buffer[0], MAX_PATH_LENGTH) < 0)
     {
-        LogError("The buffer did not allocate sufficient memory to get the executable's path");
+        Hush::LogError("The buffer did not allocate sufficient memory to get the executable's path");
     }
     std::filesystem::path result(buffer);
     return result.parent_path();

@@ -22,7 +22,7 @@ set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlo
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)
-    target_compile_definitions(engine_core PRIVATE -WAll -WExtra)
+    target_compile_options(engine_core PRIVATE -Wall -Wextra)
 elseif(WIN32)
     set_target_properties(engine_core PROPERTIES
         VS_GLOBAL_RunCodeAnalysis false
@@ -34,10 +34,10 @@ elseif(WIN32)
 
         # Use clangtidy
         VS_GLOBAL_EnableClangTidyCodeAnalysis true
-        VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*" 
+        VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*"
     )
 
-    target_compile_definitions(engine_core PRIVATE /Wall /Wx)
+    target_compile_options(engine_core PRIVATE /Wall /Wx)
 endif()
 
 target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})

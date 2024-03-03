@@ -39,7 +39,6 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
     default:
         break;
     }
-    char my_variable = 1;
 }
 
 WindowRenderer::~WindowRenderer()

@@ -13,14 +13,13 @@ constexpr std::string_view DOTNET_CLOSE_FUNCTION("hostfxr_close");
 constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
-
-#define HOST_FXR_FIRST_PATH "host/fxr/"
+constexpr std::string_view HOST_FXR_FIRST_PATH("host/fxr/");
 #if _WIN32
-#define HOST_FXR_FILENAME "hostfxr.dll"
+constexpr std::string_view HOST_FXR_FILENAME("hostfxr.dll");
 #elif __linux__
-#define HOST_FXR_FILENAME "libhostfxr.so"
+constexpr std::string_view HOST_FXR_FILENAME("libhostfxr.so");
 #elif __APPLE__
-#define HOST_FXR_FILENAME "libhostfxr.dylib"
+constexpr std::string_view HOST_FXR_FILENAME("libhostfxr.dylib");
 #endif
 
 DotnetHost::DotnetHost(const char *dotnetPath)
@@ -68,7 +67,9 @@ DotnetHost::DotnetHost(const char *dotnetPath)
         Hush::LogFormat(Hush::ELogLevel::Error, "Received an error from C# runtime {}", cMessage);
     });
 #else
-    this->m_errorWriterFuncPtr([](const char *message) { LogError("Received an error from C# runtime {}", message); });
+    this->m_errorWriterFuncPtr([](const char *message) {
+        Hush::LogFormat(Hush::ELogLevel::Error, "Received an error from C# runtime {}", message);
+    });
 #endif
     this->InitDotnetCore();
 }

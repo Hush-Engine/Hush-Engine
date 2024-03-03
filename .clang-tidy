@@ -35,7 +35,7 @@ Checks:
 
 
 CheckOptions:
-    readability-identifier-naming.NamespaceCase: lower_case
+    readability-identifier-naming.NamespaceCase: CamelCase
     readability-identifier-naming.ClassCase: CamelCase
     readability-identifier-naming.StructCase: CamelCase
     readability-identifier-naming.FunctionCase: CamelCase
