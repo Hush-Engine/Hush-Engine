@@ -19,7 +19,7 @@ _deps
 *.suo
 *.user
 *.sln.docstates
-
+.editorconfig
 # Build results
 
 [Dd]ebug/
@@ -32,6 +32,7 @@ x64/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+.zed/*
 *_i.c
 *_p.c
 *_i.h

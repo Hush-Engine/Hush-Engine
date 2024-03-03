@@ -1,4 +1,8 @@
-#include "core/scripting/DotnetHost.hpp"
+#include "DotnetHost.hpp"
+
+#include "Logger.hpp"
+#include "utils/LibManager.hpp"
+#include "utils/StringUtils.hpp"
 
 constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
@@ -9,19 +13,30 @@ constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
 
-#if WIN32
-#define HOST_FXR_PATH "host/fxr/8.0.0/hostfxr.dll"
+#define HOST_FXR_FIRST_PATH "host/fxr/"
+#if _WIN32
+#define HOST_FXR_FILENAME "hostfxr.dll"
 #elif __linux__
-#define HOST_FXR_PATH "host/fxr/8.0.2/libhostfxr.so"
+#define HOST_FXR_FILENAME "libhostfxr.so"
 #elif __APPLE__
-#define HOST_FXR_PATH "host/fxr/8.0.0/libhostfxr.dylib"
+#define HOST_FXR_FILENAME "libhostfxr.dylib"
 #endif
 
 DotnetHost::DotnetHost(const char *dotnetPath)
 {
+    // We want to find a substring in the path that will lead us to a supported version of .NET hostfxr
+    // for now we will do the first subdir that contains this given substr
+    const char *targetPathSubstring = "8.";
     std::filesystem::path targetPath = dotnetPath;
-    targetPath /= HOST_FXR_PATH;
-#if WIN32
+    //
+    targetPath /= HOST_FXR_FIRST_PATH;
+    bool appended = PathUtils::FindAndAppendSubDirectory(targetPath, targetPathSubstring);
+    if (!appended)
+    {
+        LOG_ERROR_LN("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
+        return;
+    }
+#if _WIN32
     std::string strLibPath = targetPath.string();
     const char *libPath = strLibPath.c_str();
 #else
@@ -44,7 +59,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     this->m_closeFuncPtr = LoadSymbol<hostfxr_close_fn>(sharedLibrary, DOTNET_CLOSE_FUNCTION.data());
     this->m_errorWriterFuncPtr = LoadSymbol<hostfxr_set_error_writer_fn>(sharedLibrary, DOTNET_ERROR_WRITER.data());
     // Add logging for any errors in C#
-#if WIN32
+#if _WIN32
     this->m_errorWriterFuncPtr([](const char_t *message) {
         std::wstring wStrMessage = message;
         std::string strMessage = StringUtils::FromWString(wStrMessage);
@@ -57,50 +72,9 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     this->InitDotnetCore();
 }
 
-DotnetHost::DotnetHost(DotnetHost &&other) noexcept
-    : m_cmdLineFuncPtr(other.m_cmdLineFuncPtr), m_initFuncPtr(other.m_initFuncPtr),
-      m_getDelegateFuncPtr(other.m_getDelegateFuncPtr), m_runAppFuncPtr(other.m_runAppFuncPtr),
-      m_closeFuncPtr(other.m_closeFuncPtr), m_errorWriterFuncPtr(other.m_errorWriterFuncPtr),
-      m_functionGetterFuncPtr(other.m_functionGetterFuncPtr), m_hostFxrHandle(other.m_hostFxrHandle)
-{
-    other.m_cmdLineFuncPtr = nullptr;
-    other.m_initFuncPtr = nullptr;
-    other.m_getDelegateFuncPtr = nullptr;
-    other.m_runAppFuncPtr = nullptr;
-    other.m_closeFuncPtr = nullptr;
-    other.m_errorWriterFuncPtr = nullptr;
-    other.m_functionGetterFuncPtr = nullptr;
-    other.m_hostFxrHandle = nullptr;
-}
-
 DotnetHost::~DotnetHost()
 {
-    if (this->m_closeFuncPtr != nullptr)
-    {
-        this->m_closeFuncPtr(this->m_hostFxrHandle);
-    }
-}
-
-DotnetHost &DotnetHost::operator=(DotnetHost &&other) noexcept
-{
-    this->m_cmdLineFuncPtr = other.m_cmdLineFuncPtr;
-    this->m_initFuncPtr = other.m_initFuncPtr;
-    this->m_getDelegateFuncPtr = other.m_getDelegateFuncPtr;
-    this->m_runAppFuncPtr = other.m_runAppFuncPtr;
-    this->m_closeFuncPtr = other.m_closeFuncPtr;
-    this->m_errorWriterFuncPtr = other.m_errorWriterFuncPtr;
-    this->m_functionGetterFuncPtr = other.m_functionGetterFuncPtr;
-    this->m_hostFxrHandle = other.m_hostFxrHandle;
-
-    other.m_cmdLineFuncPtr = nullptr;
-    other.m_initFuncPtr = nullptr;
-    other.m_getDelegateFuncPtr = nullptr;
-    other.m_runAppFuncPtr = nullptr;
-    other.m_closeFuncPtr = nullptr;
-    other.m_errorWriterFuncPtr = nullptr;
-    other.m_functionGetterFuncPtr = nullptr;
-    other.m_hostFxrHandle = nullptr;
-    return *this;
+    this->m_closeFuncPtr(this->m_hostFxrHandle);
 }
 
 get_function_pointer_fn DotnetHost::GetFunctionGetterFuncPtr()
@@ -112,7 +86,7 @@ void DotnetHost::InitDotnetCore()
 {
     std::filesystem::path runtimeConfigPath = LibManager::GetCurrentExecutablePath();
     runtimeConfigPath /= RUNTIME_CONFIG_JSON.data();
-#if WIN32
+#if _WIN32
     std::wstring configStr = runtimeConfigPath.wstring();
     const char_t *runtimeConfig = configStr.data();
 #else
@@ -156,7 +130,7 @@ load_assembly_fn DotnetHost::GetLoadAssembly(void *hostFxrHandle)
 {
     // Get the load_assembly_and_get_function_pointer function pointer
     load_assembly_fn loadAssembly = nullptr;
-    m_getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void **>(&loadAssembly));
+    this->m_getDelegateFuncPtr(hostFxrHandle, hdt_load_assembly, reinterpret_cast<void **>(&loadAssembly));
     return loadAssembly;
 }
 

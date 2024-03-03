@@ -5,12 +5,13 @@
 //  Created by Leonidas Neftali Gonzalez Campos on 06/12/23.
 //
 #pragma once
-#include "core/log/Logger.hpp"
-#include "core/scripting/DotnetHost.hpp"
-#include "core/utils/LibManager.hpp"
-#include "core/utils/StringUtils.hpp"
+#include "DotnetHost.hpp"
+#include "Logger.hpp"
+#include "utils/LibManager.hpp"
+#include "utils/StringUtils.hpp"
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
+#include <cstddef>
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -29,10 +30,12 @@ template <class R, class... Types> using ReturnableCSMethod = R (*)(Types...);
 class ScriptingManager
 {
   public:
-    /// @brief Creates a new scripting manager to invoke C# methods
-    /// @param host The host connected to the C# runtime
-    /// @param targetAssembly The desired assembly this manager is going to invoke methods from, THIS SHOULD BE CONSTANT
-    /// WHEN POSSIBLE
+    /// <summary>
+    /// Creates a new scripting manager to invoke C# methods
+    /// </summary>
+    /// <param name="host">The host connected to the C# runtime</param>
+    /// <param name="m_targetAssembly">The desired assembly this manager is going to invoke methods from, THIS SHOULD BE
+    /// CONSTANT WHEN POSSIBLE</param>
     ScriptingManager(std::shared_ptr<DotnetHost> host, std::string_view targetAssembly);
 
     template <class R, class... Types>
@@ -77,6 +80,7 @@ class ScriptingManager
 
   private:
     std::string_view m_targetAssembly;
+    // This pointer to a host is shared with other scripting managers, hence the shared ptr nature
     std::shared_ptr<DotnetHost> m_host;
 
     std::string BuildFullClassPath(const char *targetAssembly, const char *targetNamespace,
@@ -84,7 +88,7 @@ class ScriptingManager
 
     template <class... Types> int GetMethodFromCS(const char *fullClassPath, const char *fnName, void **outMethod)
     {
-#if WIN32
+#if _WIN32
         std::wstring pathStr = StringUtils::ToWString(fullClassPath);
         const char_t *classPath = pathStr.data();
         std::wstring funcStr = StringUtils::ToWString(fnName);
@@ -95,7 +99,7 @@ class ScriptingManager
 #endif
         // Retrieve getter from the host
         get_function_pointer_fn functionGetter = this->m_host->GetFunctionGetterFuncPtr();
-
+        // NOLINTNEXTLINE (Unamaged callers does a C style cast)
         int rc = functionGetter(classPath, targetFunction, UNMANAGEDCALLERSONLY_METHOD, nullptr, nullptr, outMethod);
         return rc;
     }

@@ -1,10 +1,10 @@
-#include "core/utils/LibManager.hpp"
+#include "LibManager.hpp"
 
 #define MAX_PATH_LENGTH 260
 
 void *LibManager::LibraryOpen(const char *libraryPath)
 {
-#if WIN32
+#if _WIN32
     return LoadLibrary(libraryPath);
 #else
     return dlopen(libraryPath, RTLD_LAZY);
@@ -13,7 +13,7 @@ void *LibManager::LibraryOpen(const char *libraryPath)
 
 void *LibManager::DynamicLoadSymbol(void *handle, const char *symbol)
 {
-#if WIN32
+#if _WIN32
     HINSTANCE handleInstance = (HINSTANCE)handle;
     FARPROC processAddress = GetProcAddress(handleInstance, symbol);
     return (void *)(intptr_t)processAddress;
@@ -25,7 +25,7 @@ void *LibManager::DynamicLoadSymbol(void *handle, const char *symbol)
 std::filesystem::path LibManager::GetCurrentExecutablePath()
 {
     char buffer[MAX_PATH_LENGTH];
-#if WIN32
+#if _WIN32
     GetModuleFileName(nullptr, buffer, MAX_PATH_LENGTH);
     // Remove the last bit that contains the executable's name
     PathRemoveFileSpec(buffer);
@@ -33,7 +33,7 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
 #elif __APPLE__
     // Use the _NSGetExecutablePath method to get the path
     uint32_t pathLength = MAX_PATH_LENGTH;
-    int readPath = _NSGetExecutablePath(buffer, &pathLength);
+    int readPath = _NSGetExecutablePath((char *)buffer, &pathLength);
     if (readPath != 0)
     {
         LogError("The buffer did not allocate sufficient memory to get the executable's path")
