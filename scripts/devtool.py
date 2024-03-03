@@ -60,9 +60,10 @@ def check_ninja_installed():
 @click.option('--build-type', '-t', default='Release', help='Build type (Debug, Release, RelWithDebInfo, MinSizeRel)')
 @click.option('--build-dir', '-b', default='build', help='Build directory')
 @click.option('--no-echo', '-n', is_flag=True, help='Do not echo commands')
+@click.option('--verbose', '-v', is_flag=True, help='Shows all output', default=False)
 @click.option('--c-compiler', help='C compiler to use, if not specified, the default will be used')
 @click.option('--cxx-compiler', help='C++ compiler to use, if not specified, the default will be used')
-def configure(build_type: str, build_dir: str, no_echo: bool, c_compiler: str, cxx_compiler: str):
+def configure(build_type: str, build_dir: str, no_echo: bool, verbose: bool, c_compiler: str, cxx_compiler: str):
   """
   Configures the project using CMake.
   """
@@ -81,7 +82,10 @@ def configure(build_type: str, build_dir: str, no_echo: bool, c_compiler: str, c
   # Configure
   os.makedirs(build_dir, exist_ok=True)
   os.chdir(build_dir)
-  cmake_args = [f'-DCMAKE_BUILD_TYPE={build_type}']
+
+  cmake_args = ['..']
+  
+  cmake_args.append(f'-DCMAKE_BUILD_TYPE={build_type}')
   if is_ninja_installed:
     cmake_args.append('-GNinja')
     cmake_args.append('-DCMAKE_EXPORT_COMPILE_COMMANDS=ON')
@@ -93,7 +97,6 @@ def configure(build_type: str, build_dir: str, no_echo: bool, c_compiler: str, c
   # For OS X, use Xcode
   elif os.name == OS_MAC_ID:
     cmake_args.append('-GXcode')
-  cmake_args.append('..')
 
   if c_compiler:
     cmake_args.append(f'-DCMAKE_C_COMPILER={c_compiler}')
@@ -105,10 +108,13 @@ def configure(build_type: str, build_dir: str, no_echo: bool, c_compiler: str, c
   if vcpkg_root is None:
     click.echo('⚠️ VCPKG_ROOT environment variable is not set. Using default vcpkg directory.')
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    vcpkg_root = os.path.join(current_dir, 'vcpkg')
+    vcpkg_root = os.path.join(current_dir, '..', 'vcpkg')
   vcpkg_toolchain_file = os.path.join(vcpkg_root, 'scripts/buildsystems/vcpkg.cmake')
 
   cmake_args.append(f'-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain_file}')
+
+  if verbose:
+    click.echo(f'cmake {" ".join(cmake_args)}')
 
   ret = subprocess.call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
   if ret != 0:
