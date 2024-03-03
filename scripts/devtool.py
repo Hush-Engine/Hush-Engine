@@ -5,6 +5,7 @@ commands for adding new files, building, testing, etc.
 
 import datetime
 from sys import stderr, stdout
+import sys
 import click
 import jinja2
 import subprocess
@@ -84,7 +85,7 @@ def configure(build_type: str, build_dir: str, no_echo: bool, verbose: bool, c_c
   os.chdir(build_dir)
 
   cmake_args = ['..']
-  
+
   cmake_args.append(f'-DCMAKE_BUILD_TYPE={build_type}')
   if is_ninja_installed:
     cmake_args.append('-GNinja')
@@ -344,7 +345,7 @@ def tidy(verbose: bool, fix: bool):
   if exit_code != 0:
     message = 'clang-tidy found issues.'
     if fix:
-      message += ' clang-tidy fixed the issues.'
+      message += ' clang-tidy fixed some of the issues. Check the changes before committing.'
     if not verbose:
       message += ' Run with --verbose for more information.'
     raise click.ClickException(message)
@@ -418,6 +419,9 @@ def get_parent_dir(dir):
   return os.path.dirname(os.path.realpath(dir))
 
 if __name__ == '__main__':
+  sys.stdout.reconfigure(encoding="utf-8")
+  sys.stderr.reconfigure(encoding="utf-8")
+
   cli.add_command(configure)
   cli.add_command(build)
   cli.add_command(add)

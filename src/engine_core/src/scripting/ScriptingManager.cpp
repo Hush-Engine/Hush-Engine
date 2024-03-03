@@ -7,9 +7,11 @@
 
 #include "ScriptingManager.hpp"
 
+#include <utility>
+
 // TODO: Maybe make a version of this constructor that takes in a simple pointer (for local references)
 ScriptingManager::ScriptingManager(std::shared_ptr<DotnetHost> host, std::string_view targetAssembly)
-    : m_host(host), m_targetAssembly(targetAssembly)
+    : m_host(std::move(host)), m_targetAssembly(targetAssembly)
 {
 }
 
