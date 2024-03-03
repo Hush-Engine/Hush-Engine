@@ -67,13 +67,20 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.x
-      - name: Build dotnet
-        run: |
-          cd src/engine_core/assembly-test && dotnet publish -c ${{ matrix.build_type }}
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
         with:
           version: '1.11.1'
+      - name: Install Ubuntu dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev autopoint
+      - name: Build dotnet
+        run: |
+          cd src/engine_core/assembly-test && dotnet publish -c ${{ matrix.build_type }}
+      - name: Install python requirements
+        run: pip install -r requirements.txt
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.c_compiler == 'cl'
         with:
@@ -114,7 +121,7 @@ jobs:
             sudo rm ninja-linux.zip
       - name: Add scripts to path
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
-      
+
       - name: Configure the project
         run: devtool configure --c-compiler clang --cxx-compiler clang++ --build-type Debug
 
