@@ -14,13 +14,6 @@ constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
 constexpr std::string_view HOST_FXR_FIRST_PATH("host/fxr/");
-#if _WIN32
-constexpr std::string_view HOST_FXR_FILENAME("hostfxr.dll");
-#elif __linux__
-constexpr std::string_view HOST_FXR_FILENAME("libhostfxr.so");
-#elif __APPLE__
-constexpr std::string_view HOST_FXR_FILENAME("libhostfxr.dylib");
-#endif
 
 DotnetHost::DotnetHost(const char *dotnetPath)
 {

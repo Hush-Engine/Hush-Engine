@@ -3,9 +3,9 @@
 
 #include "log/Logger.hpp"
 
-#if _WIN32
+#if defined(_WIN32)
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
-#elif __APPLE__
+#elif defined(__APPLE__)
 constexpr std::string_view DOTNET_PATH = "/usr/local/share/dotnet";
 #else
 constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
@@ -35,6 +35,8 @@ void operator delete(void *p)
 
 int main()
 {
+    (void)ASSEMBLY_TEST;
+    (void)DOTNET_PATH;
     HushEngine engine;
 
     engine.Run();

@@ -22,7 +22,7 @@ set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlo
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)
-    target_compile_options(engine_core PRIVATE -Wall -Wextra)
+    target_compile_options(engine_core PRIVATE -Wall -Wextra -Wpedantic)
 elseif(WIN32)
     set_target_properties(engine_core PROPERTIES
         VS_GLOBAL_RunCodeAnalysis false

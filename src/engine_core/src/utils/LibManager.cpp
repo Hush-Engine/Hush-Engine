@@ -25,12 +25,12 @@ void *LibManager::DynamicLoadSymbol(void *handle, const char *symbol)
 std::filesystem::path LibManager::GetCurrentExecutablePath()
 {
     char buffer[MAX_PATH_LENGTH];
-#if _WIN32
+#if defined(_WIN32)
     GetModuleFileName(nullptr, buffer, MAX_PATH_LENGTH);
     // Remove the last bit that contains the executable's name
     PathRemoveFileSpec(buffer);
     return std::filesystem::path(buffer);
-#elif __APPLE__
+#elif defined(__APPLE__)
     // Use the _NSGetExecutablePath method to get the path
     uint32_t pathLength = MAX_PATH_LENGTH;
     int readPath = _NSGetExecutablePath((char *)buffer, &pathLength);

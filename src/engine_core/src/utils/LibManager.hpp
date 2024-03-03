@@ -5,7 +5,7 @@
 //  Created by Leonidas Neftali Gonzalez Campos on 13/12/23.
 //
 #pragma once
-#if _WIN32
+#ifdef _WIN32
 #include <Shlwapi.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -14,7 +14,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #endif
-#if __APPLE__
+#if defined(__APPLE__)
 // Header to get the current exe's path in Mac as well, yup, readlink does not seem to work here
 #include <mach-o/dyld.h>
 #endif
