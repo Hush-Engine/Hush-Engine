@@ -78,13 +78,8 @@ jobs:
         if: matrix.c_compiler == 'cl'
         with:
           arch: amd64
-      - uses: knicknic/os-specific-run@v1.0.3
-        name: Source the bootstrap script
-        with:
-          linux: |
-            source ./scripts/bootstrap.sh
-          windows: |
-            .\scripts\bootstrap.ps1
+      - name: Add scripts to path
+        run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       - name: Configure the project
         run: devtool configure -c-compiler ${{ matrix.c_compiler }} -cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
       # - name: Generate build files
@@ -117,9 +112,8 @@ jobs:
           wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O ninja-linux.zip && \
             sudo unzip ninja-linux.zip -d /usr/bin && \
             sudo rm ninja-linux.zip
-      - name: source devtool
-        run: >
-          source ./scripts/bootstrap.sh
+      - name: Add scripts to path
+        run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       
       - name: Configure the project
         run: devtool configure -c-compiler clang -cxx-compiler clang++ --build-type Debug
