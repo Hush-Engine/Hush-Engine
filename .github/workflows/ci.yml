@@ -78,21 +78,32 @@ jobs:
         if: matrix.c_compiler == 'cl'
         with:
           arch: amd64
-      - name: Generate build files
-        run: >
-          cmake -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }}
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: knicknic/os-specific-run@v1.0.3
+        name: Source the bootstrap script
+        with:
+          linux: |
+            source ./scripts/bootstrap.sh
+          windows: |
+            .\scripts\bootstrap.ps1
+      - name: Configure the project
+        run: devtool configure -c-compiler ${{ matrix.c_compiler }} -cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
+      # - name: Generate build files
+      #   run: >
+      #     cmake -B build -G Ninja
+      #     -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      #     -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+      #     -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }}
+      #     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Build
-        run: cmake --build build
+        run: devtool build
   clang-tidy:
     needs: build
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Install Ubuntu dependencies
         run: |
@@ -106,23 +117,19 @@ jobs:
           wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O ninja-linux.zip && \
             sudo unzip ninja-linux.zip -d /usr/bin && \
             sudo rm ninja-linux.zip
-
-      - name: Configure CMake
+      - name: source devtool
         run: >
-          cmake -B build
-          -G Ninja
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_C_COMPILER=clang
-          -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -S ${{ github.workspace }}
+          source ./scripts/bootstrap.sh
+      
+      - name: Configure the project
+        run: devtool configure -c-compiler clang -cxx-compiler clang++ --build-type Debug
 
       - name: Run clang tidy
         id: clang-tidy
         uses: mathiasvr/command-output@v2.0.0
         timeout-minutes: 40
         with:
-          run: source ./scripts/bootstrap.sh && devtool tidy -v
+          run: devtool tidy -v
       - name: Comment PR
         # Only execute if clang-tidy found errors
         if: ${{ failure() && github.event_name == 'pull_request' }}

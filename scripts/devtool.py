@@ -60,7 +60,9 @@ def check_ninja_installed():
 @click.option('--build-type', '-t', default='Release', help='Build type (Debug, Release, RelWithDebInfo, MinSizeRel)')
 @click.option('--build-dir', '-b', default='build', help='Build directory')
 @click.option('--no-echo', '-n', is_flag=True, help='Do not echo commands')
-def configure(build_type, build_dir, no_echo):
+@click.option('--c-compiler', help='C compiler to use, if not specified, the default will be used')
+@click.option('--cxx-compiler', help='C++ compiler to use, if not specified, the default will be used')
+def configure(build_type: str, build_dir: str, no_echo: bool, c_compiler: str, cxx_compiler: str):
   """
   Configures the project using CMake.
   """
@@ -93,8 +95,17 @@ def configure(build_type, build_dir, no_echo):
     cmake_args.append('-GXcode')
   cmake_args.append('..')
 
+  if c_compiler:
+    cmake_args.append(f'-DCMAKE_C_COMPILER={c_compiler}')
+  if cxx_compiler:
+    cmake_args.append(f'-DCMAKE_CXX_COMPILER={cxx_compiler}')
+
   # Add toolchain file for VCPKG
   vcpkg_root = os.environ.get('VCPKG_ROOT')
+  if vcpkg_root is None:
+    click.echo('⚠️ VCPKG_ROOT environment variable is not set. Using default vcpkg directory.')
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    vcpkg_root = os.path.join(current_dir, 'vcpkg')
   vcpkg_toolchain_file = os.path.join(vcpkg_root, 'scripts/buildsystems/vcpkg.cmake')
 
   cmake_args.append(f'-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain_file}')
