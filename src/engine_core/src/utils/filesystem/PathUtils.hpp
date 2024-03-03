@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "Logger.hpp"
 #include <filesystem>
 
 class PathUtils

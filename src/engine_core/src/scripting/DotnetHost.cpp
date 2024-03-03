@@ -1,8 +1,9 @@
 #include "DotnetHost.hpp"
 
-#include "Logger.hpp"
+#include "log/Logger.hpp"
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
+#include "utils/filesystem/PathUtils.hpp"
 
 constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
@@ -33,7 +34,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     bool appended = PathUtils::FindAndAppendSubDirectory(targetPath, targetPathSubstring);
     if (!appended)
     {
-        LOG_ERROR_LN("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
+        Hush::LogError("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
         return;
     }
 #if _WIN32
@@ -45,7 +46,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     void *sharedLibrary = LibManager::LibraryOpen(libPath);
     if (sharedLibrary == nullptr)
     {
-        LogError("Failed to load {}", libPath);
+        Hush::LogFormat(Hush::ELogLevel::Error, "Failed to load {}", libPath);
         return;
     }
     // TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
@@ -64,7 +65,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
         std::wstring wStrMessage = message;
         std::string strMessage = StringUtils::FromWString(wStrMessage);
         const char *cMessage = strMessage.c_str();
-        LogError("Received an error from C# runtime {}", cMessage);
+        Hush::LogFormat(Hush::ELogLevel::Error, "Received an error from C# runtime {}", cMessage);
     });
 #else
     this->m_errorWriterFuncPtr([](const char *message) { LogError("Received an error from C# runtime {}", message); });
@@ -97,15 +98,15 @@ void DotnetHost::InitDotnetCore()
     int rc = this->m_initFuncPtr(runtimeConfig, nullptr, &this->m_hostFxrHandle);
     if (rc != 0)
     {
-        LogError("Failed to initialize .NET core with error code {}", rc);
+        Hush::LogFormat(Hush::ELogLevel::Error, "Failed to initialize .NET core with error code {}", rc);
         return;
     }
-    LogTrace("Init .NET core succeeded!");
+    Hush::LogTrace("Init .NET core succeeded!");
     load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->m_hostFxrHandle);
 
     if (assemblyLoader == nullptr)
     {
-        LogError("Could not get load assembly ptr");
+        Hush::LogError("Could not get load assembly ptr");
         return;
     }
 
@@ -113,7 +114,7 @@ void DotnetHost::InitDotnetCore()
 
     if (this->m_functionGetterFuncPtr == nullptr)
     {
-        LogError("Could not get function ptr");
+        Hush::LogError("Could not get function ptr");
         return;
     }
     // Actually load the assembly
@@ -121,7 +122,7 @@ void DotnetHost::InitDotnetCore()
 
     if (!isAssemblyLoaded)
     {
-        LogError("Failed to load the assembly");
+        Hush::LogError("Failed to load the assembly");
         return;
     }
 }

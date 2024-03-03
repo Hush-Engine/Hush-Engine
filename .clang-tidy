@@ -28,10 +28,8 @@ Checks:
     -clang-analyzer-core.CallAndMessage
     -readability-magic-numbers
     -cppcoreguidelines-avoid-magic-numbers
-    -readability-function-cognitive-complexity
     -cppcoreguidelines-pro-type-reinterpret-cast
     -cppcoreguidelines-pro-type-vararg
-    -cppcoreguidelines-macro-usage
     -bugprone-reserved-identifier
     -bugprone-easily-swappable-parameters
 

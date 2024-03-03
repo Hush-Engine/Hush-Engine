@@ -11,7 +11,6 @@
 #include <coreclr/hostfxr.h>
 #include <cstddef>
 #include <cstdio>
-#include <filesystem/PathUtils.hpp>
 #include <filesystem>
 #include <string>
 #include <string_view>

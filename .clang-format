@@ -1,6 +1,7 @@
 ---
 Language: Cpp
 BasedOnStyle: Microsoft
+NamespaceIndentation: All
 ---
 Language: CSharp
 BasedOnStyle: Microsoft
