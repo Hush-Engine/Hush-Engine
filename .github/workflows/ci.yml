@@ -90,7 +90,9 @@ jobs:
         with:
           macos: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
           linux: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
-          windows: echo ${{ github.workspace }}/scripts >> $env:GITHUB_PATH
+          windows: |
+            echo ${{ github.workspace }}/scripts >> $env:GITHUB_PATH
+            echo "UTF-8" >> $env:PYTHONIOENCODING
       - name: Add scripts to path
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       - name: Configure the project
