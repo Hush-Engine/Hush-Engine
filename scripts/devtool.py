@@ -148,6 +148,8 @@ def build(build_dir, no_echo):
   ret = subprocess.call(['cmake', '--build', '.', f'-j{cpu_count}'], stdout=subprocess.DEVNULL if no_echo else None)
 
   click.echo('✅ Project built successfully.' if ret == 0 else '❌ Project build failed.', file=stdout if no_echo else stderr)
+  if ret != 0:
+    sys.exit(ret)
 
 
 def get_git_username():
