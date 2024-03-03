@@ -1,3 +1,5 @@
+include(cmake/deps.cmake)
+
 # Set the source files
 set(SOURCES
     src/main.cpp
@@ -28,23 +30,25 @@ add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src/utils)
 
+set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt)
+
 if (UNIX)
-add_link_options("-ldl")
-target_link_libraries(engine_core PUBLIC coreclr dl)
+    add_link_options("-ldl")
+    target_link_libraries(engine_core PUBLIC dl ${ENGINE_LIBS})
 elseif(WIN32)
-target_link_libraries(engine_core PUBLIC coreclr)
-set_target_properties(engine_core PROPERTIES
-    VS_GLOBAL_RunCodeAnalysis false
+    target_link_libraries(engine_core PUBLIC coreclr ${ENGINE_LIBS})
+    set_target_properties(engine_core PROPERTIES
+        VS_GLOBAL_RunCodeAnalysis false
 
-    # Use visual studio core guidelines
-    VS_GLOBAL_EnableMicrosoftCodeAnalysis false
-    #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
-    #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
+        # Use visual studio core guidelines
+        VS_GLOBAL_EnableMicrosoftCodeAnalysis false
+        #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
+        #VS_GLOBAL_CodeAnalysisRuleSet ${CMAKE_CURRENT_SOURCE_DIR}/foo.ruleset
 
-    # Use clangtidy
-    VS_GLOBAL_EnableClangTidyCodeAnalysis true
-    VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*" 
-)
+        # Use clangtidy
+        VS_GLOBAL_EnableClangTidyCodeAnalysis true
+        VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*" 
+    )
 endif()
 
 target_compile_features(engine_core PRIVATE cxx_std_17)
@@ -56,15 +60,3 @@ if (CMAKE_CONFIGURATION_TYPES)
 else()
     set(BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
-
-# Copy assembly-test.runtimeconfig.json to the output directory
-add_custom_command(TARGET engine_core POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.runtimeconfig.json
-        $<TARGET_FILE_DIR:engine_core>)
-
-# Copy assembly-test.dll to the output directory
-add_custom_command(TARGET engine_core POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.dll
-        $<TARGET_FILE_DIR:engine_core>)

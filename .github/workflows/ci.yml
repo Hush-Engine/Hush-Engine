@@ -58,6 +58,8 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up CMake ${{ matrix.c_compiler }} ${{ matrix.cxx_compiler }}
         uses: jwlawson/actions-setup-cmake@v1.14
         with:

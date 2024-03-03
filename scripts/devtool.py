@@ -82,6 +82,7 @@ def configure(build_type, build_dir, no_echo):
   cmake_args = [f'-DCMAKE_BUILD_TYPE={build_type}']
   if is_ninja_installed:
     cmake_args.append('-GNinja')
+    cmake_args.append('-DCMAKE_EXPORT_COMPILE_COMMANDS=ON')
   # For Windows, use Visual Studio 17 2022 or newer
   elif os.name == OS_WINDOWS_ID:
     cmake_args.append('-GVisual Studio 17 2022')
@@ -92,7 +93,15 @@ def configure(build_type, build_dir, no_echo):
     cmake_args.append('-GXcode')
   cmake_args.append('..')
 
-  ret = subprocess.check_call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
+  # Add toolchain file for VCPKG
+  vcpkg_root = os.environ.get('VCPKG_ROOT')
+  vcpkg_toolchain_file = os.path.join(vcpkg_root, 'scripts/buildsystems/vcpkg.cmake')
+
+  cmake_args.append(f'-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain_file}')
+
+  ret = subprocess.call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
+  if ret != 0:
+    raise click.ClickException('CMake configuration failed.')
 
   click.echo('✅ Project configured successfully.' if ret == 0 else '❌ Project configuration failed.', file=stdout if no_echo else stderr)
 
