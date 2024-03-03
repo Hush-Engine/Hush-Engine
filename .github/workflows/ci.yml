@@ -100,7 +100,7 @@ jobs:
       - name: Build
         run: devtool build
   clang-tidy:
-    needs: build
+    needs: format
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
