@@ -341,6 +341,9 @@ def tidy(verbose: bool, fix: bool):
   if fix:
     args.append('-fix')
 
+  if verbose:
+    click.echo(' '.join(args))
+
   click.echo('🛠️ Checking project for issues...')
   exit_code = subprocess.call(args, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
 

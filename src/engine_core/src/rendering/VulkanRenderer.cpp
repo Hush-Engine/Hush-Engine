@@ -5,8 +5,8 @@
 */
 
 #include "VulkanRenderer.hpp"
-#include "utils/Platform.hpp"
 #include "log/Logger.hpp"
+#include "utils/Platform.hpp"
 
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
@@ -46,7 +46,6 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext) : Hush::IRenderer(wind
     this->m_vulkanInstance = vkbInstance.instance;
     this->m_debugMessenger = vkbInstance.debug_messenger;
     volkLoadInstance(this->m_vulkanInstance);
-
 
     if (!SDL_Vulkan_CreateSurface(static_cast<SDL_Window *>(windowContext), this->m_vulkanInstance, &this->m_surface))
     {
