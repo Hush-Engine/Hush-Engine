@@ -37,7 +37,7 @@ elseif(WIN32)
         VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*"
     )
 
-    target_compile_options(engine_core PRIVATE /Wall /WX)
+    target_compile_options(engine_core PRIVATE /W4 /WX)
 endif()
 
 target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})
