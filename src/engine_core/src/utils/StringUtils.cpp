@@ -6,8 +6,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#if _WIN32
-using UTF8ToUTF16Convert = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
 std::wstring StringUtils::ToWString(const char *data)
 {
     int bytesToAlloc = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);

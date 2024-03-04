@@ -9,7 +9,6 @@
 // Let's tell SDL we got main covered
 #define SDL_MAIN_HANDLED
 
-#include "Logger.hpp"
 #include <SDL2/SDL.h>
 #include <input/InputManager.hpp>
 

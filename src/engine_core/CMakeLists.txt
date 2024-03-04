@@ -16,7 +16,6 @@ set(SOURCES
     src/utils/EnumUtils.hpp
     src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
-    src/Logger.hpp
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
     src/input/KeyStates.hpp
