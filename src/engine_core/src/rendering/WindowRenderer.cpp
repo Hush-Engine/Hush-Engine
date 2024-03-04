@@ -1,6 +1,11 @@
 #include "WindowRenderer.hpp"
 
 #include "log/Logger.hpp"
+#include "rendering/VulkanRenderer.hpp"
+
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <SDL2/SDL_vulkan.h>
+#include <volk.h>
 
 WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
@@ -10,12 +15,14 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
         return;
     }
     // Now create the window
-    uint32_t defaultFlag = 0;
+    uint32_t defaultFlag = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
     const int defaultWindowIndex = -1;
 
     this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                          DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
     this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
+
+    this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
 }
 
 void WindowRenderer::HandleEvents(bool *applicationRunning)
@@ -50,11 +57,11 @@ WindowRenderer::~WindowRenderer()
 
 bool WindowRenderer::InitSDLIfNotStarted() noexcept
 {
-    if (SDL_WasInit(SDL_INIT_EVERYTHING) == 0)
-    {
-        return true;
-    }
+    // if (SDL_WasInit(SDL_INIT_EVERYTHING) == 0)
+    // {
+    //     return true;
+    // }
     int rc = SDL_Init(SDL_INIT_EVERYTHING);
     SDL_SetMainReady();
-    return rc != 0;
+    return rc == 0;
 }

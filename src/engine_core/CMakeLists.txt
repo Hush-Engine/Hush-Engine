@@ -12,13 +12,14 @@ set(SOURCES
     src/rendering/WindowRenderer.cpp
     src/input/InputManager.cpp
     src/log/Logger.cpp
+    src/rendering/VulkanRenderer.cpp
 )
 
 add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src)
 
-set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog)
+set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap)
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)
@@ -40,7 +41,7 @@ elseif(WIN32)
     target_compile_options(engine_core PRIVATE /W4 /WX)
 endif()
 
-target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})
+target_link_libraries(engine_core PRIVATE ${ENGINE_LIBS})
 
 
 target_compile_features(engine_core PRIVATE cxx_std_17)
