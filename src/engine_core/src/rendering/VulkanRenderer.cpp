@@ -87,7 +87,12 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     LogFormat(ELogLevel::Info, "API version: {}", properties.apiVersion);
 }
 
-Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept : IRenderer(nullptr), m_windowContext(rhs.m_windowContext), m_vulkanInstance(rhs.m_vulkanInstance), m_vulkanPhysicalDevice(rhs.m_vulkanPhysicalDevice), m_debugMessenger(rhs.m_debugMessenger), m_device(rhs.m_device), m_surface(rhs.m_surface), m_swapChain(rhs.m_swapChain), m_swapchainImageFormat(rhs.m_swapchainImageFormat), m_swapchainImages(std::move(rhs.m_swapchainImages)), m_swapchainImageViews(std::move(rhs.m_swapchainImageViews)), m_swapChainExtent(rhs.m_swapChainExtent)
+Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept
+    : IRenderer(nullptr), m_windowContext(rhs.m_windowContext), m_vulkanInstance(rhs.m_vulkanInstance),
+      m_vulkanPhysicalDevice(rhs.m_vulkanPhysicalDevice), m_debugMessenger(rhs.m_debugMessenger),
+      m_device(rhs.m_device), m_surface(rhs.m_surface), m_swapChain(rhs.m_swapChain),
+      m_swapchainImageFormat(rhs.m_swapchainImageFormat), m_swapchainImages(std::move(rhs.m_swapchainImages)),
+      m_swapchainImageViews(std::move(rhs.m_swapchainImageViews)), m_swapChainExtent(rhs.m_swapChainExtent)
 {
     rhs.m_vulkanInstance = nullptr;
     rhs.m_vulkanPhysicalDevice = nullptr;

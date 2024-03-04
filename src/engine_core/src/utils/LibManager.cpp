@@ -26,9 +26,9 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
 {
     char buffer[MAX_PATH_LENGTH];
 #if defined(_WIN32)
-    GetModuleFileName(nullptr, static_cast<char*>(buffer), MAX_PATH_LENGTH);
+    GetModuleFileName(nullptr, static_cast<char *>(buffer), MAX_PATH_LENGTH);
     // Remove the last bit that contains the executable's name
-    PathRemoveFileSpec(static_cast<char*>(buffer));
+    PathRemoveFileSpec(static_cast<char *>(buffer));
     return {buffer};
 #elif defined(__APPLE__)
     // Use the _NSGetExecutablePath method to get the path
