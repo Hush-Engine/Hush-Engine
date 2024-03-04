@@ -20,14 +20,16 @@ std::wstring StringUtils::ToWString(const char *data)
 }
 std::string StringUtils::FromWString(std::wstring str)
 {
-    int bytesToAlloc = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+    int bytesToAlloc =
+        WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
     if (bytesToAlloc <= 0)
     {
         Hush::LogError("Failed to convert wide string to UTF8!");
         return {};
     }
     auto buffer = std::make_unique<char[]>(bytesToAlloc);
-    WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), buffer.get(), bytesToAlloc, nullptr, nullptr);
+    WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), buffer.get(), bytesToAlloc, nullptr,
+                        nullptr);
 
     return {buffer.get()};
 }
