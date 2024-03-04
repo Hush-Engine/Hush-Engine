@@ -53,10 +53,10 @@ WindowRenderer::~WindowRenderer()
 
 bool WindowRenderer::InitSDLIfNotStarted() noexcept
 {
-    // if (SDL_WasInit(SDL_INIT_EVERYTHING) == 0)
-    // {
-    //     return true;
-    // }
+    if (SDL_WasInit(SDL_INIT_EVERYTHING) != 0)
+    {
+        return true;
+    }
     int rc = SDL_Init(SDL_INIT_EVERYTHING);
     SDL_SetMainReady();
     return rc == 0;
