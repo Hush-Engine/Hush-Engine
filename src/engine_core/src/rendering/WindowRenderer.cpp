@@ -1,10 +1,12 @@
 #include "WindowRenderer.hpp"
 
+#include "log/Logger.hpp"
+
 WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
     if (!InitSDLIfNotStarted())
     {
-        LOG_ERROR_LN("SDL initialization failed with error %s!", SDL_GetError());
+        Hush::LogFormat(Hush::ELogLevel::Critical, "SDL initialization failed with error {}!", SDL_GetError());
         return;
     }
     // Now create the window
@@ -19,7 +21,7 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
 void WindowRenderer::HandleEvents(bool *applicationRunning)
 {
     SDL_Event event;
-    KeyCode code;
+    KeyCode code = 0;
     SDL_PollEvent(&event);
     switch (event.type)
     {
@@ -33,6 +35,8 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
     case SDL_KEYUP:
         code = event.key.keysym.scancode;
         InputManager::SendKeyEvent(code, EKeyState::Released);
+        break;
+    default:
         break;
     }
 }

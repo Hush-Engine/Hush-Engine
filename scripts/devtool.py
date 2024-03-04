@@ -5,6 +5,7 @@ commands for adding new files, building, testing, etc.
 
 import datetime
 from sys import stderr, stdout
+import sys
 import click
 import jinja2
 import subprocess
@@ -60,7 +61,10 @@ def check_ninja_installed():
 @click.option('--build-type', '-t', default='Release', help='Build type (Debug, Release, RelWithDebInfo, MinSizeRel)')
 @click.option('--build-dir', '-b', default='build', help='Build directory')
 @click.option('--no-echo', '-n', is_flag=True, help='Do not echo commands')
-def configure(build_type, build_dir, no_echo):
+@click.option('--verbose', '-v', is_flag=True, help='Shows all output', default=False)
+@click.option('--c-compiler', help='C compiler to use, if not specified, the default will be used')
+@click.option('--cxx-compiler', help='C++ compiler to use, if not specified, the default will be used')
+def configure(build_type: str, build_dir: str, no_echo: bool, verbose: bool, c_compiler: str, cxx_compiler: str):
   """
   Configures the project using CMake.
   """
@@ -79,9 +83,13 @@ def configure(build_type, build_dir, no_echo):
   # Configure
   os.makedirs(build_dir, exist_ok=True)
   os.chdir(build_dir)
-  cmake_args = [f'-DCMAKE_BUILD_TYPE={build_type}']
+
+  cmake_args = ['..']
+
+  cmake_args.append(f'-DCMAKE_BUILD_TYPE={build_type}')
   if is_ninja_installed:
     cmake_args.append('-GNinja')
+    cmake_args.append('-DCMAKE_EXPORT_COMPILE_COMMANDS=ON')
   # For Windows, use Visual Studio 17 2022 or newer
   elif os.name == OS_WINDOWS_ID:
     cmake_args.append('-GVisual Studio 17 2022')
@@ -90,9 +98,28 @@ def configure(build_type, build_dir, no_echo):
   # For OS X, use Xcode
   elif os.name == OS_MAC_ID:
     cmake_args.append('-GXcode')
-  cmake_args.append('..')
 
-  ret = subprocess.check_call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
+  if c_compiler:
+    cmake_args.append(f'-DCMAKE_C_COMPILER={c_compiler}')
+  if cxx_compiler:
+    cmake_args.append(f'-DCMAKE_CXX_COMPILER={cxx_compiler}')
+
+  # Add toolchain file for VCPKG
+  vcpkg_root = os.environ.get('VCPKG_ROOT')
+  if vcpkg_root is None:
+    click.echo('⚠️ VCPKG_ROOT environment variable is not set. Using default vcpkg directory.')
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    vcpkg_root = os.path.join(current_dir, '..', 'vcpkg')
+  vcpkg_toolchain_file = os.path.join(vcpkg_root, 'scripts/buildsystems/vcpkg.cmake')
+
+  cmake_args.append(f'-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain_file}')
+
+  if verbose:
+    click.echo(f'cmake {" ".join(cmake_args)}')
+
+  ret = subprocess.call(['cmake'] + cmake_args, stdout=subprocess.DEVNULL if no_echo else None)
+  if ret != 0:
+    raise click.ClickException('CMake configuration failed.')
 
   click.echo('✅ Project configured successfully.' if ret == 0 else '❌ Project configuration failed.', file=stdout if no_echo else stderr)
 
@@ -121,6 +148,8 @@ def build(build_dir, no_echo):
   ret = subprocess.call(['cmake', '--build', '.', f'-j{cpu_count}'], stdout=subprocess.DEVNULL if no_echo else None)
 
   click.echo('✅ Project built successfully.' if ret == 0 else '❌ Project build failed.', file=stdout if no_echo else stderr)
+  if ret != 0:
+    sys.exit(ret)
 
 
 def get_git_username():
@@ -318,7 +347,7 @@ def tidy(verbose: bool, fix: bool):
   if exit_code != 0:
     message = 'clang-tidy found issues.'
     if fix:
-      message += ' clang-tidy fixed the issues.'
+      message += ' clang-tidy fixed some of the issues. Check the changes before committing.'
     if not verbose:
       message += ' Run with --verbose for more information.'
     raise click.ClickException(message)
@@ -392,6 +421,9 @@ def get_parent_dir(dir):
   return os.path.dirname(os.path.realpath(dir))
 
 if __name__ == '__main__':
+  sys.stdout.reconfigure(encoding="utf-8")
+  sys.stderr.reconfigure(encoding="utf-8")
+
   cli.add_command(configure)
   cli.add_command(build)
   cli.add_command(add)

@@ -17,6 +17,13 @@ class HushEngine
     /// </summary>
     HushEngine() = default;
 
+    HushEngine(const HushEngine &) = delete;
+    HushEngine &operator=(const HushEngine &) = delete;
+
+    HushEngine(HushEngine &&) noexcept = default;
+
+    HushEngine &operator=(HushEngine &&) noexcept = default;
+
     ~HushEngine();
 
     /// <summary>
