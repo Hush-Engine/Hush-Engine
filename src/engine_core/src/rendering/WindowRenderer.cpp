@@ -3,10 +3,6 @@
 #include "log/Logger.hpp"
 #include "rendering/VulkanRenderer.hpp"
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <SDL2/SDL_vulkan.h>
-#include <volk.h>
-
 WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
     if (!InitSDLIfNotStarted())
