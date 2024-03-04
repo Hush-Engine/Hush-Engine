@@ -6,9 +6,10 @@
 //
 #pragma once
 #include "DotnetHost.hpp"
-#include "Logger.hpp"
+#include "log/Logger.hpp"
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
+
 #include <coreclr/coreclr_delegates.h>
 #include <coreclr/hostfxr.h>
 #include <cstddef>
@@ -52,7 +53,8 @@ class ScriptingManager
         if (rc != 0)
         {
             // TODO: Error handling
-            LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
+            Hush::LogFormat(Hush::ELogLevel::Error,
+                            "Failed to invoke C# method with name {}. Please verify the signature", fnName);
             return R();
         }
         return testDelegate(args...);
@@ -71,7 +73,9 @@ class ScriptingManager
         int rc = this->GetMethodFromCS(fullClassPath.c_str(), fnName, reinterpret_cast<void **>(&testDelegate));
         if (rc != 0)
         {
-            LOG_ERROR_LN("Failed to invoke C# method with name %s. Please verify the signature", fnName);
+            Hush::LogFormat(Hush::ELogLevel::Error,
+                            "Failed to invoke C# method with name {}. Please verify the signature, error code: {}",
+                            fnName, rc);
             return;
         }
         testDelegate(args...);

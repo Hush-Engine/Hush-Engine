@@ -1,7 +1,8 @@
 {
   "dependencies": [
     "fmt",
+    "magic-enum",
     "sdl2",
-    "magic-enum"
+    "spdlog"
   ]
 }

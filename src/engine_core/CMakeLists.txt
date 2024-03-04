@@ -3,40 +3,27 @@ include(cmake/deps.cmake)
 # Set the source files
 set(SOURCES
     src/main.cpp
-    src/HushEngine.hpp
     src/HushEngine.cpp
     src/scripting/ScriptingManager.cpp
-    src/scripting/ScriptingManager.hpp
-    src/scripting/DotnetHost.hpp
     src/scripting/DotnetHost.cpp
     src/utils/LibManager.cpp
-    src/utils/LibManager.hpp
     src/utils/StringUtils.cpp
-    src/utils/StringUtils.hpp
-    src/utils/EnumUtils.hpp
-    src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
-    src/Logger.hpp
-    src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
-    src/input/KeyStates.hpp
-    src/input/KeyData.hpp
-    src/input/KeyCode.hpp
-    src/input/InputManager.hpp
     src/input/InputManager.cpp
+    src/log/Logger.cpp
 )
 
 add_executable(engine_core ${SOURCES})
 
-target_include_directories(engine_core PRIVATE src src/utils)
+target_include_directories(engine_core PRIVATE src src)
 
-set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt)
+set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog)
 
 if (UNIX)
-    add_link_options("-ldl")
-    target_link_libraries(engine_core PUBLIC dl ${ENGINE_LIBS})
+    set(ENGINE_LIBS ${ENGINE_LIBS} dl)
+    target_compile_options(engine_core PRIVATE -Wall -Wextra -Wpedantic)
 elseif(WIN32)
-    target_link_libraries(engine_core PUBLIC coreclr ${ENGINE_LIBS})
     set_target_properties(engine_core PROPERTIES
         VS_GLOBAL_RunCodeAnalysis false
 
@@ -47,9 +34,14 @@ elseif(WIN32)
 
         # Use clangtidy
         VS_GLOBAL_EnableClangTidyCodeAnalysis true
-        VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*" 
+        VS_GLOBAL_ClangTidyChecks "-* \"\"--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy --header-filter=.*"
     )
+
+    target_compile_options(engine_core PRIVATE /W4 /WX)
 endif()
+
+target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})
+
 
 target_compile_features(engine_core PRIVATE cxx_std_17)
 #Copy the .NET runtime configuration

@@ -6,8 +6,6 @@
 
 #pragma once
 #include "KeyData.hpp"
-#include <Logger.hpp>
-#include <magic_enum.hpp>
 #include <map>
 
 class InputManager
@@ -19,5 +17,6 @@ class InputManager
 
   private:
     // TODO: Reserve memory for this map???
+    // NOLINTNEXTLINE
     static std::map<KeyCode, KeyData> S_KEY_DATA_BY_CODE;
 };

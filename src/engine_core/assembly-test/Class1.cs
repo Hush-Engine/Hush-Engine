@@ -18,8 +18,20 @@ public struct TestStruct
     public int b;
 }
 
+public enum LogLevel
+{
+    Trace,
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Critical
+}
+
 public class Class1
 {
+    public static unsafe delegate *unmanaged[Stdcall]<uint, char *, void> LogHandler;
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     public static void Func()
     {
@@ -88,8 +100,31 @@ public class Class1
             buffer[i] = (char)r.Next(65, 91);
         }
         string testedBuffer = buffer.ToString();
-        Console.WriteLine($"C# says that the resulting string is: {testedBuffer}");
+        LogMessage(LogLevel.Info, $"C# says that the resulting string is: {testedBuffer}");
         return testedBuffer.ToUnmanagedString();
+    }
+
+    [UnmanagedCallersOnly]
+    public static unsafe void DeallocateString(char *str)
+    {
+        Marshal.FreeHGlobal((IntPtr)str);
+    }
+
+    public static void LogMessage(LogLevel level, string message)
+    {
+        unsafe
+        {
+            uint logLevel = (uint)level;
+            char *unmanagedString = message.ToUnmanagedString();
+            LogHandler(logLevel, unmanagedString);
+            Marshal.FreeHGlobal((IntPtr)unmanagedString);
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    public static unsafe void SetLogHandler(delegate *unmanaged[Stdcall]<uint, char *, void> logHandler)
+    {
+        LogHandler = logHandler;
     }
 
     private static void HandleStruct(ref TestStruct testStruct)
