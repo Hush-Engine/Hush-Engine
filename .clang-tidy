@@ -89,6 +89,7 @@ CheckOptions:
     readability-identifier-naming.ProtectedVariableCase: camelBack
     readability-identifier-naming.PublicVariableCase: camelBack
     readability-identifier-naming.PrivateMemberPrefix: m_
+    readability-identifier-naming.ProtectedMemberPrefix: m_
     readability-identifier-naming.EnumPrefix: E
 
 

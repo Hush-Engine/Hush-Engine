@@ -33,6 +33,7 @@ namespace Hush
     void Log(ELogLevel logLevel, std::string_view message);
 
     /// @brief Logs a message with a given format
+    // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
     template <class F, class... Args> void LogFormat(ELogLevel logLevel, F format, Args &&...args)
     {
         std::string message = fmt::format(format, std::forward<Args>(args)...);

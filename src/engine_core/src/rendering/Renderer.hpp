@@ -14,15 +14,18 @@ namespace Hush
     class IRenderer
     {
       public:
-        IRenderer(void *windowContext) : m_windowContext(windowContext)
+        IRenderer(void *windowContext)
         {
+            (void)windowContext;
         }
+
+        IRenderer(const IRenderer &) = delete;
+        IRenderer &operator=(const IRenderer &) = delete;
+        IRenderer(IRenderer &&) = delete;
+        IRenderer &operator=(IRenderer &&) = delete;
 
         virtual ~IRenderer() = default;
 
         virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
-
-      protected:
-        void *m_windowContext;
     };
 } // namespace Hush

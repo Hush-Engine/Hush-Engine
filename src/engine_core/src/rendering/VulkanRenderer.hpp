@@ -21,6 +21,12 @@ namespace Hush
         /// @param windowContext opaque pointer to the window context
         VulkanRenderer(void *windowContext);
 
+        VulkanRenderer(const VulkanRenderer &) = delete;
+        VulkanRenderer &operator=(const VulkanRenderer &) = delete;
+
+        VulkanRenderer(VulkanRenderer &&rhs) noexcept;
+        VulkanRenderer &operator=(VulkanRenderer &&rhs) noexcept;
+
         ~VulkanRenderer() override;
 
         void CreateSwapChain(uint32_t width, uint32_t height) override;
@@ -30,17 +36,17 @@ namespace Hush
 
         void DestroySwapChain();
 
-      private:
-        VkInstance m_vulkanInstance;
-        VkPhysicalDevice m_vulkanPhysicalDevice;
-        VkDebugUtilsMessengerEXT m_debugMessenger;
-        VkDevice m_device;
-        VkSurfaceKHR m_surface;
+        void *m_windowContext;
+        VkInstance m_vulkanInstance = nullptr;
+        VkPhysicalDevice m_vulkanPhysicalDevice = nullptr;
+        VkDebugUtilsMessengerEXT m_debugMessenger = nullptr;
+        VkDevice m_device = nullptr;
+        VkSurfaceKHR m_surface{};
 
-        VkSwapchainKHR m_swapChain;
-        VkFormat m_swapchainImageFormat;
-        std::vector<VkImage> m_swapchainImages;
-        std::vector<VkImageView> m_swapchainImageViews;
-        VkExtent2D m_swapChainExtent;
+        VkSwapchainKHR m_swapChain{};
+        VkFormat m_swapchainImageFormat = VkFormat::VK_FORMAT_UNDEFINED;
+        std::vector<VkImage> m_swapchainImages{};
+        std::vector<VkImageView> m_swapchainImageViews{};
+        VkExtent2D m_swapChainExtent{};
     };
 } // namespace Hush

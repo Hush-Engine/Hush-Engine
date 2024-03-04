@@ -18,7 +18,8 @@
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
 
-Hush::VulkanRenderer::VulkanRenderer(void *windowContext) : Hush::IRenderer(windowContext)
+Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
+    : Hush::IRenderer(windowContext), m_windowContext(windowContext)
 {
     LogTrace("Initializing Vulkan");
     volkInitialize();
@@ -47,7 +48,8 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext) : Hush::IRenderer(wind
     this->m_debugMessenger = vkbInstance.debug_messenger;
     volkLoadInstance(this->m_vulkanInstance);
 
-    if (!SDL_Vulkan_CreateSurface(static_cast<SDL_Window *>(windowContext), this->m_vulkanInstance, &this->m_surface))
+    if (SDL_Vulkan_CreateSurface(static_cast<SDL_Window *>(windowContext), this->m_vulkanInstance, &this->m_surface) ==
+        SDL_FALSE)
     {
         LogFormat(ELogLevel::Error, "Cannot create vulkan surface, error: {}", SDL_GetError());
     }
@@ -55,12 +57,12 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext) : Hush::IRenderer(wind
     LogTrace("Initialized vulkan surface");
 
     VkPhysicalDeviceVulkan13Features vulkan13Features{};
-    vulkan13Features.dynamicRendering = true;
-    vulkan13Features.synchronization2 = true;
+    vulkan13Features.dynamicRendering = VK_TRUE;
+    vulkan13Features.synchronization2 = VK_TRUE;
 
     VkPhysicalDeviceVulkan12Features vulkan12Features{};
-    vulkan12Features.bufferDeviceAddress = true;
-    vulkan12Features.descriptorIndexing = true;
+    vulkan12Features.bufferDeviceAddress = VK_TRUE;
+    vulkan12Features.descriptorIndexing = VK_TRUE;
 
     vkb::PhysicalDeviceSelector selector{vkbInstance};
     vkb::PhysicalDevice vkbPhysicalDevice = selector.set_minimum_version(1, 3)
@@ -83,6 +85,51 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext) : Hush::IRenderer(wind
 
     LogFormat(ELogLevel::Info, "Device name: {}", properties.deviceName);
     LogFormat(ELogLevel::Info, "API version: {}", properties.apiVersion);
+}
+
+Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept : IRenderer(nullptr), m_windowContext(rhs.m_windowContext), m_vulkanInstance(rhs.m_vulkanInstance), m_vulkanPhysicalDevice(rhs.m_vulkanPhysicalDevice), m_debugMessenger(rhs.m_debugMessenger), m_device(rhs.m_device), m_surface(rhs.m_surface), m_swapChain(rhs.m_swapChain), m_swapchainImageFormat(rhs.m_swapchainImageFormat), m_swapchainImages(std::move(rhs.m_swapchainImages)), m_swapchainImageViews(std::move(rhs.m_swapchainImageViews)), m_swapChainExtent(rhs.m_swapChainExtent)
+{
+    rhs.m_vulkanInstance = nullptr;
+    rhs.m_vulkanPhysicalDevice = nullptr;
+    rhs.m_debugMessenger = nullptr;
+    rhs.m_device = nullptr;
+    rhs.m_surface = nullptr;
+    rhs.m_swapChain = nullptr;
+    rhs.m_swapchainImageFormat = VK_FORMAT_UNDEFINED;
+    rhs.m_swapchainImages.clear();
+    rhs.m_swapchainImageViews.clear();
+    rhs.m_swapChainExtent = VkExtent2D{};
+}
+
+Hush::VulkanRenderer &Hush::VulkanRenderer::operator=(VulkanRenderer &&rhs) noexcept
+{
+    if (this != &rhs)
+    {
+        this->m_windowContext = rhs.m_windowContext;
+        this->m_vulkanInstance = rhs.m_vulkanInstance;
+        this->m_vulkanPhysicalDevice = rhs.m_vulkanPhysicalDevice;
+        this->m_debugMessenger = rhs.m_debugMessenger;
+        this->m_device = rhs.m_device;
+        this->m_surface = rhs.m_surface;
+        this->m_swapChain = rhs.m_swapChain;
+        this->m_swapchainImageFormat = rhs.m_swapchainImageFormat;
+        this->m_swapchainImages = std::move(rhs.m_swapchainImages);
+        this->m_swapchainImageViews = std::move(rhs.m_swapchainImageViews);
+        this->m_swapChainExtent = rhs.m_swapChainExtent;
+
+        rhs.m_vulkanInstance = nullptr;
+        rhs.m_vulkanPhysicalDevice = nullptr;
+        rhs.m_debugMessenger = nullptr;
+        rhs.m_device = nullptr;
+        rhs.m_surface = nullptr;
+        rhs.m_swapChain = nullptr;
+        rhs.m_swapchainImageFormat = VK_FORMAT_UNDEFINED;
+        rhs.m_swapchainImages.clear();
+        rhs.m_swapchainImageViews.clear();
+        rhs.m_swapChainExtent = VkExtent2D{};
+    }
+
+    return *this;
 }
 
 Hush::VulkanRenderer::~VulkanRenderer()

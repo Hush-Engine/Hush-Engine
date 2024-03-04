@@ -337,9 +337,16 @@ def tidy(verbose: bool, fix: bool):
   if len(sources) == 0:
     raise click.ClickException('No source files found.')
 
-  args = [python_executable, WRAPPER_FILE, '-p', 'build', './src', '-quiet', '-header-filter=.*']
+  fix_str = ''
+  if os.name == OS_WINDOWS_ID:
+    args = ['clang-tidy', '-p', 'build', '--quiet', '--header-filter=.*'] + sources
+    fix_str = '--fix'
+  else:
+    args = [python_executable, WRAPPER_FILE, '-p', 'build', './src', '-quiet', '-header-filter=.*']
+    fix_str = '-fix'
+
   if fix:
-    args.append('-fix')
+    args.append(fix_str)
 
   if verbose:
     click.echo(' '.join(args))
