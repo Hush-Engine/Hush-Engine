@@ -83,8 +83,8 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(this->m_vulkanPhysicalDevice, &properties);
 
-    LogFormat(ELogLevel::Info, "Device name: {}", properties.deviceName);
-    LogFormat(ELogLevel::Info, "API version: {}", properties.apiVersion);
+    LogFormat(ELogLevel::Debug, "Device name: {}", properties.deviceName);
+    LogFormat(ELogLevel::Debug, "API version: {}", properties.apiVersion);
 }
 
 Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept
@@ -141,9 +141,27 @@ Hush::VulkanRenderer::~VulkanRenderer()
 {
     this->DestroySwapChain();
 
-    vkDestroySurfaceKHR(this->m_vulkanInstance, this->m_surface, nullptr);
-    vkDestroyDevice(this->m_device, nullptr);
-    vkDestroyInstance(this->m_vulkanInstance, nullptr);
+    if (this->m_surface != nullptr)
+    {
+        vkDestroySurfaceKHR(this->m_vulkanInstance, this->m_surface, nullptr);
+    }
+
+    if (this->m_debugMessenger != nullptr)
+    {
+        vkb::destroy_debug_utils_messenger(this->m_vulkanInstance, this->m_debugMessenger, nullptr);
+    }
+
+    if (this->m_device != nullptr)
+    {
+        vkDestroyDevice(this->m_device, nullptr);
+    }
+
+    if (this->m_vulkanInstance != nullptr)
+    {
+        vkDestroyInstance(this->m_vulkanInstance, nullptr);
+    }
+
+    LogTrace("Vulkan resources destroyed");
 }
 
 void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)

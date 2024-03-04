@@ -11,6 +11,8 @@
 #include <fmt/format.h>
 #include <string_view>
 
+// NOLINTBEGIN(cppcoreguidelines-missing-std-forward)
+
 namespace Hush
 {
     // TODO: with C++20 we can use source_location to get the line where the message happened, should we raise the C++
@@ -33,7 +35,6 @@ namespace Hush
     void Log(ELogLevel logLevel, std::string_view message);
 
     /// @brief Logs a message with a given format
-    // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
     template <class F, class... Args> void LogFormat(ELogLevel logLevel, F format, Args &&...args)
     {
         std::string message = fmt::format(format, std::forward<Args>(args)...);
@@ -82,3 +83,5 @@ namespace Hush
         Log(ELogLevel::Critical, message);
     }
 } // namespace Hush
+
+// NOLINTEND(cppcoreguidelines-missing-std-forward)
