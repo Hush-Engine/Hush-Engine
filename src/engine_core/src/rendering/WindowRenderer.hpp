@@ -9,12 +9,14 @@
 // Let's tell SDL we got main covered
 #define SDL_MAIN_HANDLED
 
-#include "Logger.hpp"
 #include <SDL2/SDL.h>
 #include <input/InputManager.hpp>
+#include <memory>
 
-constexpr int DEFAULT_WINDOW_HEIGHT = 1080;
-constexpr int DEFAULT_WINDOW_WIDTH = 1920;
+#include "Renderer.hpp"
+
+constexpr int DEFAULT_WINDOW_HEIGHT = 720;
+constexpr int DEFAULT_WINDOW_WIDTH = 1280;
 
 class WindowRenderer
 {
@@ -29,7 +31,7 @@ class WindowRenderer
 
     WindowRenderer &operator=(WindowRenderer &&) = default;
 
-    void HandleEvents(bool *shouldQuit);
+    void HandleEvents(bool *applicationRunning);
 
     ~WindowRenderer();
 
@@ -41,6 +43,8 @@ class WindowRenderer
     SDL_Window *m_windowPtr = nullptr;
 
     SDL_Renderer *m_rendererPtr = nullptr;
+
+    std::unique_ptr<Hush::IRenderer> m_windowRenderer;
 
     bool InitSDLIfNotStarted() noexcept;
 

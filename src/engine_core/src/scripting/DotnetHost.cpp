@@ -1,8 +1,9 @@
 #include "DotnetHost.hpp"
 
-#include "Logger.hpp"
+#include "log/Logger.hpp"
 #include "utils/LibManager.hpp"
 #include "utils/StringUtils.hpp"
+#include "utils/filesystem/PathUtils.hpp"
 
 constexpr std::string_view DOTNET_CMD("hostfxr_initialize_for_dotnet_command_line");
 constexpr std::string_view DOTNET_RUNTIME_INIT_CONFIG("hostfxr_initialize_for_runtime_config");
@@ -12,15 +13,7 @@ constexpr std::string_view DOTNET_CLOSE_FUNCTION("hostfxr_close");
 constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
-
-#define HOST_FXR_FIRST_PATH "host/fxr/"
-#if _WIN32
-#define HOST_FXR_FILENAME "hostfxr.dll"
-#elif __linux__
-#define HOST_FXR_FILENAME "libhostfxr.so"
-#elif __APPLE__
-#define HOST_FXR_FILENAME "libhostfxr.dylib"
-#endif
+constexpr std::string_view HOST_FXR_FIRST_PATH("host/fxr/");
 
 DotnetHost::DotnetHost(const char *dotnetPath)
 {
@@ -33,7 +26,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     bool appended = PathUtils::FindAndAppendSubDirectory(targetPath, targetPathSubstring);
     if (!appended)
     {
-        LOG_ERROR_LN("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
+        Hush::LogError("No valid host was found for a .NET 8 version, make sure you have .NET 8 installed");
         return;
     }
 #if _WIN32
@@ -45,7 +38,7 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     void *sharedLibrary = LibManager::LibraryOpen(libPath);
     if (sharedLibrary == nullptr)
     {
-        LOG_ERROR_LN("Failed to load %s", libPath);
+        Hush::LogFormat(Hush::ELogLevel::Error, "Failed to load {}", libPath);
         return;
     }
     // TODO: See which of these can stop being cached and just pass them as params to the initdotnetcore
@@ -64,11 +57,12 @@ DotnetHost::DotnetHost(const char *dotnetPath)
         std::wstring wStrMessage = message;
         std::string strMessage = StringUtils::FromWString(wStrMessage);
         const char *cMessage = strMessage.c_str();
-        LOG_ERROR_LN("Received an error from C# runtime %s", cMessage);
+        Hush::LogFormat(Hush::ELogLevel::Error, "Received an error from C# runtime {}", cMessage);
     });
 #else
-    this->m_errorWriterFuncPtr(
-        [](const char *message) { LOG_ERROR_LN("Received an error from C# runtime %s", message); });
+    this->m_errorWriterFuncPtr([](const char *message) {
+        Hush::LogFormat(Hush::ELogLevel::Error, "Received an error from C# runtime {}", message);
+    });
 #endif
     this->InitDotnetCore();
 }
@@ -98,15 +92,15 @@ void DotnetHost::InitDotnetCore()
     int rc = this->m_initFuncPtr(runtimeConfig, nullptr, &this->m_hostFxrHandle);
     if (rc != 0)
     {
-        LOG_ERROR_LN("Init failed");
+        Hush::LogFormat(Hush::ELogLevel::Error, "Failed to initialize .NET core with error code {}", rc);
         return;
     }
-    LOG_INFO_LN("Init .NET core succeeded!");
+    Hush::LogTrace("Init .NET core succeeded!");
     load_assembly_fn assemblyLoader = this->GetLoadAssembly(this->m_hostFxrHandle);
 
     if (assemblyLoader == nullptr)
     {
-        LOG_ERROR_LN("Could not get load assembly ptr");
+        Hush::LogError("Could not get load assembly ptr");
         return;
     }
 
@@ -114,7 +108,7 @@ void DotnetHost::InitDotnetCore()
 
     if (this->m_functionGetterFuncPtr == nullptr)
     {
-        LOG_ERROR_LN("Get function ptr failed");
+        Hush::LogError("Could not get function ptr");
         return;
     }
     // Actually load the assembly
@@ -122,7 +116,7 @@ void DotnetHost::InitDotnetCore()
 
     if (!isAssemblyLoaded)
     {
-        LOG_ERROR_LN("Failed to load the assembly");
+        Hush::LogError("Failed to load the assembly");
         return;
     }
 }

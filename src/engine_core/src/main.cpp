@@ -1,9 +1,11 @@
 #include "HushEngine.hpp"
 #include <memory>
 
-#if _WIN32
+#include "log/Logger.hpp"
+
+#if defined(_WIN32)
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
-#elif __APPLE__
+#elif defined(__APPLE__)
 constexpr std::string_view DOTNET_PATH = "/usr/local/share/dotnet";
 #else
 constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
@@ -17,14 +19,14 @@ static int allocCntr = 0;
 void *operator new(size_t size)
 {
     allocCntr++;
-    LOG_DEBUG_LN("Allocated %zu bytes, current count: %d", size, allocCntr);
+    Hush::LogFormat(Hush::ELogLevel::Debug, "Allocated {} bytes, current count: {}", size, allocCntr);
     return malloc(size);
 }
 
 void operator delete(void *p)
 {
     allocCntr--;
-    LOG_DEBUG_LN("Deallocating a pointer, current count: %d", allocCntr);
+    Hush::LogFormat(Hush::ELogLevel::Debug, "Deallocating a pointer, current count: {}", allocCntr);
     free(p);
 }
 
@@ -32,6 +34,8 @@ void operator delete(void *p)
 
 int main()
 {
+    (void)ASSEMBLY_TEST;
+    (void)DOTNET_PATH;
     HushEngine engine;
 
     engine.Run();

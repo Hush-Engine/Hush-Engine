@@ -28,16 +28,14 @@ Checks:
     -clang-analyzer-core.CallAndMessage
     -readability-magic-numbers
     -cppcoreguidelines-avoid-magic-numbers
-    -readability-function-cognitive-complexity
     -cppcoreguidelines-pro-type-reinterpret-cast
     -cppcoreguidelines-pro-type-vararg
-    -cppcoreguidelines-macro-usage
     -bugprone-reserved-identifier
     -bugprone-easily-swappable-parameters
 
 
 CheckOptions:
-    readability-identifier-naming.NamespaceCase: lower_case
+    readability-identifier-naming.NamespaceCase: CamelCase
     readability-identifier-naming.ClassCase: CamelCase
     readability-identifier-naming.StructCase: CamelCase
     readability-identifier-naming.FunctionCase: CamelCase
@@ -91,6 +89,7 @@ CheckOptions:
     readability-identifier-naming.ProtectedVariableCase: camelBack
     readability-identifier-naming.PublicVariableCase: camelBack
     readability-identifier-naming.PrivateMemberPrefix: m_
+    readability-identifier-naming.ProtectedMemberPrefix: m_
     readability-identifier-naming.EnumPrefix: E
 
 
@@ -101,4 +100,4 @@ WarningsAsErrors: >
     cppcoreguidelines-*,
     readability-*,
 
-    readability-identifier-naming
+    -cppcoreguidelines-avoid-non-const-global-variables,
