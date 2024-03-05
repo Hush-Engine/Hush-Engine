@@ -14,7 +14,6 @@ constexpr std::string_view DOTNET_PATH = "/usr/share/dotnet";
 constexpr std::string_view ASSEMBLY_TEST = "assembly-test";
 
 #if DEBUG
-
 static int allocCntr = 0;
 
 void *operator new(size_t size)
