@@ -6,7 +6,6 @@
 
 #pragma once
 #include "KeyData.hpp"
-#include <magic_enum.hpp>
 #include <map>
 
 class InputManager

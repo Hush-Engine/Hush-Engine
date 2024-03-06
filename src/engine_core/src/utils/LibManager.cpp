@@ -14,9 +14,9 @@ void *LibManager::LibraryOpen(const char *libraryPath)
 void *LibManager::DynamicLoadSymbol(void *handle, const char *symbol)
 {
 #if _WIN32
-    HINSTANCE handleInstance = (HINSTANCE)handle;
+    auto *handleInstance = static_cast<HINSTANCE>(handle);
     FARPROC processAddress = GetProcAddress(handleInstance, symbol);
-    return (void *)(intptr_t)processAddress;
+    return static_cast<void *>(processAddress);
 #else
     return dlsym(handle, symbol);
 #endif
@@ -26,10 +26,10 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
 {
     char buffer[MAX_PATH_LENGTH];
 #if defined(_WIN32)
-    GetModuleFileName(nullptr, buffer, MAX_PATH_LENGTH);
+    GetModuleFileName(nullptr, static_cast<char *>(buffer), MAX_PATH_LENGTH);
     // Remove the last bit that contains the executable's name
-    PathRemoveFileSpec(buffer);
-    return std::filesystem::path(buffer);
+    PathRemoveFileSpec(static_cast<char *>(buffer));
+    return {buffer};
 #elif defined(__APPLE__)
     // Use the _NSGetExecutablePath method to get the path
     uint32_t pathLength = MAX_PATH_LENGTH;

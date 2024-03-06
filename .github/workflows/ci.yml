@@ -2,9 +2,9 @@ name: CI checks
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 jobs:
   format:
@@ -67,9 +67,6 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.x
-      - name: Build dotnet
-        run: |
-          cd src/engine_core/assembly-test && dotnet publish -c ${{ matrix.build_type }}
       - name: Set up Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
         with:

@@ -13,16 +13,20 @@ set(SOURCES
     src/utils/LibManager.hpp
     src/utils/StringUtils.cpp
     src/utils/StringUtils.hpp
-    src/utils/EnumUtils.hpp
+    src/utils/Platform.hpp
     src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
+    src/rendering/Renderer.hpp
+    src/rendering/VulkanRenderer.hpp
+    src/rendering/VulkanRenderer.cpp
     src/input/KeyStates.hpp
     src/input/KeyData.hpp
     src/input/KeyCode.hpp
     src/input/InputManager.hpp
     src/input/InputManager.cpp
+    src/log/Logger.hpp
     src/log/Logger.cpp
 )
 
@@ -30,14 +34,14 @@ add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src)
 
+set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap)
 
-set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog)
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)
     target_compile_options(engine_core PRIVATE -Wall -Wextra -Wpedantic)
     target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})
 elseif(WIN32)
-target_link_libraries(engine_core PUBLIC coreclr)
+    target_link_libraries(engine_core PUBLIC coreclr)
     set_target_properties(engine_core PROPERTIES
         VS_GLOBAL_RunCodeAnalysis false
 
@@ -57,6 +61,7 @@ endif()
 
 
 
+
 target_compile_features(engine_core PRIVATE cxx_std_17)
 #Copy the .NET runtime configuration
 set(RUNTIME_CONFIG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assembly-test/bin)
@@ -66,15 +71,3 @@ if (CMAKE_CONFIGURATION_TYPES)
 else()
     set(BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
-
-# Copy assembly-test.runtimeconfig.json to the output directory
-add_custom_command(TARGET engine_core POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.runtimeconfig.json
-        $<TARGET_FILE_DIR:engine_core>)
-
-# Copy assembly-test.dll to the output directory
-add_custom_command(TARGET engine_core POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        ${RUNTIME_CONFIG_SOURCE_DIR}/${BUILD_TYPE}/net8.0/assembly-test.dll
-        $<TARGET_FILE_DIR:engine_core>)

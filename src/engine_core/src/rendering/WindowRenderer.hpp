@@ -11,9 +11,12 @@
 
 #include <SDL2/SDL.h>
 #include <input/InputManager.hpp>
+#include <memory>
 
-constexpr int DEFAULT_WINDOW_HEIGHT = 1080;
-constexpr int DEFAULT_WINDOW_WIDTH = 1920;
+#include "Renderer.hpp"
+
+constexpr int DEFAULT_WINDOW_HEIGHT = 720;
+constexpr int DEFAULT_WINDOW_WIDTH = 1280;
 
 class WindowRenderer
 {
@@ -40,6 +43,8 @@ class WindowRenderer
     SDL_Window *m_windowPtr = nullptr;
 
     SDL_Renderer *m_rendererPtr = nullptr;
+
+    std::unique_ptr<Hush::IRenderer> m_windowRenderer;
 
     bool InitSDLIfNotStarted() noexcept;
 
