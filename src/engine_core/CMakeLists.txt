@@ -21,9 +21,11 @@ set(SOURCES
     src/rendering/Renderer.hpp
     src/rendering/VulkanRenderer.hpp
     src/rendering/VulkanRenderer.cpp
-    src/input/KeyStates.hpp
-    src/input/KeyData.hpp
-    src/input/KeyCode.hpp
+    src/input/definitions/KeyStates.hpp
+    src/input/definitions/KeyData.hpp
+    src/input/definitions/KeyCode.hpp
+    src/input/definitions/MouseButton.hpp
+    src/input/definitions/MouseData.hpp
     src/input/InputManager.hpp
     src/input/InputManager.cpp
     src/log/Logger.hpp

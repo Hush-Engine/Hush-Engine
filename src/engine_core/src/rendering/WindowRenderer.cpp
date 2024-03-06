@@ -44,6 +44,12 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
         code = event.key.keysym.scancode;
         InputManager::SendKeyEvent(code, EKeyState::Released);
         break;
+    case SDL_MOUSEBUTTONDOWN:
+        InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Pressed);
+        break;
+    case SDL_MOUSEBUTTONUP:
+        InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Released);
+        break;
     default:
         break;
     }
