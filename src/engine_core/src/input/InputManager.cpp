@@ -7,7 +7,7 @@
 // NOLINTNEXTLINE
 std::map<KeyCode, KeyData> InputManager::S_KEY_DATA_BY_CODE = {};
 
-bool InputManager::IsKeyDown(KeyCode key)   
+bool InputManager::IsKeyDown(KeyCode key)
 {
     // Just to avoid the warning
     (void)key;

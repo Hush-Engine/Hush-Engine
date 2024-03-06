@@ -16,7 +16,8 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
 
     this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                          DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
-    if (this->m_windowPtr == nullptr) {
+    if (this->m_windowPtr == nullptr)
+    {
         Hush::LogError("SDL window creation failed!");
         return;
     }

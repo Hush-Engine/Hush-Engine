@@ -27,7 +27,6 @@
 #error "Platform not supported"
 #endif
 
-
 namespace Hush
 {
     /// @brief Enum representing the current platform
