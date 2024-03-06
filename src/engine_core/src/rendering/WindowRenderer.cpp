@@ -16,6 +16,11 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
 
     this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                          DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+    if (this->m_windowPtr == nullptr)
+    {
+        Hush::LogError("SDL window creation failed!");
+        return;
+    }
     this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
     this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);

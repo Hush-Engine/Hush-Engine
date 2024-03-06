@@ -22,8 +22,11 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     : Hush::IRenderer(windowContext), m_windowContext(windowContext)
 {
     LogTrace("Initializing Vulkan");
-    volkInitialize();
-
+    VkResult rc = volkInitialize();
+    if (rc != VkResult::VK_SUCCESS)
+    {
+        Hush::LogError("Error initializing Vulkan renderer!");
+    }
     // Simplify vulkan creation with VkBootstrap
     // TODO: we might use the vulkan API without another dependency in the future???
     vkb::InstanceBuilder builder{};
@@ -47,9 +50,9 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     this->m_vulkanInstance = vkbInstance.instance;
     this->m_debugMessenger = vkbInstance.debug_messenger;
     volkLoadInstance(this->m_vulkanInstance);
-
-    if (SDL_Vulkan_CreateSurface(static_cast<SDL_Window *>(windowContext), this->m_vulkanInstance, &this->m_surface) ==
-        SDL_FALSE)
+    auto *sdlWindowContext = static_cast<SDL_Window *>(windowContext);
+    SDL_bool createSurfaceResult = SDL_Vulkan_CreateSurface(sdlWindowContext, this->m_vulkanInstance, &this->m_surface);
+    if (createSurfaceResult == SDL_FALSE)
     {
         LogFormat(ELogLevel::Error, "Cannot create vulkan surface, error: {}", SDL_GetError());
     }
