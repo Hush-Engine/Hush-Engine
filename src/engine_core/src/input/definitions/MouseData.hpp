@@ -5,3 +5,14 @@
 */
 
 #pragma once
+#include "MouseButton.hpp"
+#include "KeyStates.hpp"
+#include <map>
+
+struct MouseData
+{
+    std::map<EMouseButton, EKeyState> mouseButtonMap{};
+    int positionX;
+    int positionY;
+
+};
