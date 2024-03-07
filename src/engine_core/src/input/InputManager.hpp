@@ -42,7 +42,7 @@ class InputManager
 
     static void ResetMouseAcceleration();
 
-private:
+  private:
     // TODO: Reserve memory for this map???
     // NOLINTNEXTLINE
     static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
