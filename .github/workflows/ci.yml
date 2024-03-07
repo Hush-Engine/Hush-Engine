@@ -96,7 +96,7 @@ jobs:
       - name: Add scripts to path
         run: echo ${{ github.workspace }}/scripts >> $GITHUB_PATH
       - name: Configure the project
-        run: devtool configure --c-compiler ${{ matrix.c_compiler }} --cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }}
+        run: devtool configure --c-compiler ${{ matrix.c_compiler }} --cxx-compiler ${{ matrix.cxx_compiler }} --build-type ${{ matrix.build_type }} -v
       - name: Build
         run: devtool build
   clang-tidy:
