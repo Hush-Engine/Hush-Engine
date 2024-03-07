@@ -20,4 +20,3 @@ enum class EMouseButton : MouseButton
     X1 = 4U,
     X2 = 5U
 };
-

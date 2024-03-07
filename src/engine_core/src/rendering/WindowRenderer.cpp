@@ -50,6 +50,9 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
     case SDL_MOUSEBUTTONUP:
         InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Released);
         break;
+    case SDL_MOUSEMOTION:
+        InputManager::SendMouseMovementEvent(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
+        break;
     default:
         break;
     }
