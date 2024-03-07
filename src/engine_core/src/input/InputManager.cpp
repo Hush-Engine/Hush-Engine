@@ -4,7 +4,7 @@
 
 // TODO: Populate the map in the stack with all enums
 // NOLINTNEXTLINE
-std::map<EKeyCode, KeyData> InputManager::S_KEY_DATA_BY_CODE = {};
+std::unordered_map<EKeyCode, KeyData> InputManager::S_KEY_DATA_BY_CODE = {};
 // NOLINTNEXTLINE
 MouseData InputManager::S_MOUSE_DATA = {};
 

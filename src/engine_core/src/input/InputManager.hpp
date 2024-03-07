@@ -9,7 +9,7 @@
 #include "definitions/MouseButton.hpp"
 #include "definitions/MouseData.hpp"
 #include <glm/vec2.hpp>
-#include <map>
+#include <unordered_map>
 
 class InputManager
 {
@@ -58,7 +58,7 @@ class InputManager
   private:
     // TODO: Reserve memory for this map???
     // NOLINTNEXTLINE
-    static std::map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
+    static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
 
     // NOLINTNEXTLINE
     static MouseData S_MOUSE_DATA;
