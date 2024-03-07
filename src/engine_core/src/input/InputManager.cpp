@@ -63,9 +63,16 @@ void InputManager::SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t ac
 {
     S_MOUSE_DATA.positionX = posX;
     S_MOUSE_DATA.positionY = posY;
-    (void)accelerationX;
-    (void)accelerationY;
-    Hush::LogFormat(Hush::ELogLevel::Info, "Mouse pos: ({}, {})", S_MOUSE_DATA.positionX, S_MOUSE_DATA.positionY);
+    S_MOUSE_DATA.accelerationX = accelerationX;
+    S_MOUSE_DATA.accelerationY = accelerationY;
+    Hush::LogFormat(Hush::ELogLevel::Info, "Mouse pos: ({}, {})\nMouse Acceleration: ({}, {})", S_MOUSE_DATA.positionX,
+                    S_MOUSE_DATA.positionY, S_MOUSE_DATA.accelerationX, S_MOUSE_DATA.accelerationY);
+}
+
+void InputManager::ResetMouseAcceleration()
+{
+    S_MOUSE_DATA.accelerationX = 0;
+    S_MOUSE_DATA.accelerationY = 0;
 }
 
 void InputManager::UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState)

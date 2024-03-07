@@ -30,6 +30,7 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
 {
     SDL_Event event;
     KeyCode code = 0;
+    InputManager::ResetMouseAcceleration();
     SDL_PollEvent(&event);
     switch (event.type)
     {

@@ -52,6 +52,8 @@ class InputManager
 
     static void SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX, int32_t accelerationY);
 
+    static void ResetMouseAcceleration();
+
 #pragma endregion
   private:
     // TODO: Reserve memory for this map???
