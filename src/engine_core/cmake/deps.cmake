@@ -15,3 +15,6 @@ find_package(volk CONFIG REQUIRED)
 
 # vcpkg bootstrap
 find_package(vk-bootstrap CONFIG REQUIRED)
+
+#glm
+find_package(glm CONFIG REQUIRED)

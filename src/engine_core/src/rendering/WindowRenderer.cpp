@@ -30,6 +30,7 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
 {
     SDL_Event event;
     KeyCode code = 0;
+    InputManager::ResetMouseAcceleration();
     SDL_PollEvent(&event);
     switch (event.type)
     {
@@ -43,6 +44,15 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
     case SDL_KEYUP:
         code = event.key.keysym.scancode;
         InputManager::SendKeyEvent(code, EKeyState::Released);
+        break;
+    case SDL_MOUSEBUTTONDOWN:
+        InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Pressed);
+        break;
+    case SDL_MOUSEBUTTONUP:
+        InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Released);
+        break;
+    case SDL_MOUSEMOTION:
+        InputManager::SendMouseMovementEvent(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
         break;
     default:
         break;

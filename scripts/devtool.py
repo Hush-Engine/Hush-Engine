@@ -105,11 +105,8 @@ def configure(build_type: str, build_dir: str, no_echo: bool, verbose: bool, c_c
     cmake_args.append(f'-DCMAKE_CXX_COMPILER={cxx_compiler}')
 
   # Add toolchain file for VCPKG
-  vcpkg_root = os.environ.get('VCPKG_ROOT')
-  if vcpkg_root is None:
-    click.echo('⚠️ VCPKG_ROOT environment variable is not set. Using default vcpkg directory.')
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    vcpkg_root = os.path.join(current_dir, '..', 'vcpkg')
+  current_dir = os.path.dirname(os.path.realpath(__file__))
+  vcpkg_root = os.path.join(current_dir, '..', 'vcpkg')
   vcpkg_toolchain_file = os.path.join(vcpkg_root, 'scripts/buildsystems/vcpkg.cmake')
 
   cmake_args.append(f'-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain_file}')
