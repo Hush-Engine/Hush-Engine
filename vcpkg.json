@@ -1,15 +1,18 @@
 {
   "dependencies": [
     "fmt",
+    "glm",
     "magic-enum",
     {
       "name": "sdl2",
-      "features": ["vulkan"]
+      "features": [
+        "vulkan"
+      ]
     },
     "spdlog",
     "vk-bootstrap",
     "volk",
     "vulkan-headers",
-    "glm"
+    "expected-lite"
   ]
 }
