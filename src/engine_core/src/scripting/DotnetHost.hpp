@@ -15,8 +15,8 @@
 #include <string>
 #include <string_view>
 
-
-namespace Hush {
+namespace Hush
+{
     /// <summary>
     /// hold references to all .NET function pointers with a valid initialization, to pass onto <see
     /// cref="ScriptingManager"/>
@@ -62,4 +62,4 @@ namespace Hush {
 
         template <class T> T LoadSymbol(void *sharedLibrary, const char *name);
     };
-}
+} // namespace Hush

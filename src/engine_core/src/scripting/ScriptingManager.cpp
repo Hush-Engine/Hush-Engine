@@ -18,7 +18,7 @@ Hush::ScriptingManager::ScriptingManager(std::shared_ptr<Hush::DotnetHost> host,
 }
 
 std::string Hush::ScriptingManager::BuildFullClassPath(const char *targetAssembly, const char *targetNamespace,
-                                                 const char *targetClass) const
+                                                       const char *targetClass) const
 {
     // Allocate memory to concatenate the string
     const int maxAssemblyDecl = 2048; // Dedicate 2MBs to the target

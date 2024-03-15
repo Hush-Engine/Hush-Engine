@@ -10,7 +10,8 @@
 #include "definitions/MouseData.hpp"
 #include <glm/vec2.hpp>
 #include <unordered_map>
-namespace Hush {
+namespace Hush
+{
     class InputManager
     {
       public:
@@ -56,4 +57,4 @@ namespace Hush {
 
         static bool MouseMapContains(EMouseButton button);
     };
-}
+} // namespace Hush

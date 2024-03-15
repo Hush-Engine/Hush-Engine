@@ -42,4 +42,4 @@ namespace Hush
         static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
     };
 
-}
+} // namespace Hush

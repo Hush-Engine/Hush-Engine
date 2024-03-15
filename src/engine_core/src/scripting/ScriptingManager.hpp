@@ -27,7 +27,8 @@ template <class... Types> using VoidCSMethod = void (*)(Types...);
 /// @tparam ...Types Types of the C# arguments list
 template <class R, class... Types> using ReturnableCSMethod = R (*)(Types...);
 
-namespace Hush {
+namespace Hush
+{
     /// @brief Class for bridging with .NET using hostfxr
     class ScriptingManager
     {
@@ -110,4 +111,4 @@ namespace Hush {
             return rc;
         }
     };
-}
+} // namespace Hush
