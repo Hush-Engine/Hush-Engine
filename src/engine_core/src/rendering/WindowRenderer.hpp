@@ -17,41 +17,44 @@
 
 constexpr int DEFAULT_WINDOW_HEIGHT = 720;
 constexpr int DEFAULT_WINDOW_WIDTH = 1280;
-
-class WindowRenderer
+namespace Hush
 {
-  public:
-    WindowRenderer(const char *windowName) noexcept;
-
-    WindowRenderer(WindowRenderer &&other) = default;
-
-    WindowRenderer(const WindowRenderer &other) = default;
-
-    WindowRenderer &operator=(const WindowRenderer &) = default;
-
-    WindowRenderer &operator=(WindowRenderer &&) = default;
-
-    void HandleEvents(bool *applicationRunning);
-
-    ~WindowRenderer();
-
-  private:
-    /// <summary>
-    /// Pointer that represents the unique instance of an SDL window associated with this context
-    /// (This is declared as a raw pointer for compatibility with C)
-    /// </summary>
-    SDL_Window *m_windowPtr = nullptr;
-
-    SDL_Renderer *m_rendererPtr = nullptr;
-
-    std::unique_ptr<Hush::IRenderer> m_windowRenderer;
-
-    bool InitSDLIfNotStarted() noexcept;
-
-    constexpr uint32_t GetInitialRendererFlags()
+    class WindowRenderer
     {
-        return SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_SHOWN |
-               SDL_WindowFlags::SDL_WINDOW_MOUSE_GRABBED | SDL_WindowFlags::SDL_WINDOW_MOUSE_CAPTURE |
-               SDL_WindowFlags::SDL_WINDOW_RESIZABLE;
-    }
-};
+      public:
+        WindowRenderer(const char *windowName) noexcept;
+
+        WindowRenderer(WindowRenderer &&other) = default;
+
+        WindowRenderer(const WindowRenderer &other) = default;
+
+        WindowRenderer &operator=(const WindowRenderer &) = default;
+
+        WindowRenderer &operator=(WindowRenderer &&) = default;
+
+        void HandleEvents(bool *applicationRunning);
+
+        ~WindowRenderer();
+
+      private:
+        /// <summary>
+        /// Pointer that represents the unique instance of an SDL window associated with this context
+        /// (This is declared as a raw pointer for compatibility with C)
+        /// </summary>
+        SDL_Window *m_windowPtr = nullptr;
+
+        SDL_Renderer *m_rendererPtr = nullptr;
+
+        std::unique_ptr<Hush::IRenderer> m_windowRenderer;
+
+        bool InitSDLIfNotStarted() noexcept;
+
+        constexpr uint32_t GetInitialRendererFlags()
+        {
+            return SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_SHOWN |
+                   SDL_WindowFlags::SDL_WINDOW_MOUSE_GRABBED | SDL_WindowFlags::SDL_WINDOW_MOUSE_CAPTURE |
+                   SDL_WindowFlags::SDL_WINDOW_RESIZABLE;
+        }
+    };
+
+}

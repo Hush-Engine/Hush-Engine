@@ -8,35 +8,38 @@
 #include "rendering/WindowRenderer.hpp"
 #include "scripting/DotnetHost.hpp"
 #include <string_view>
-
-class HushEngine
+namespace Hush
 {
-  public:
-    /// <summary>
-    /// Initializes the HushEngine with all its properties
-    /// </summary>
-    HushEngine() = default;
+    class HushEngine
+    {
+      public:
+        /// <summary>
+        /// Initializes the HushEngine with all its properties
+        /// </summary>
+        HushEngine() = default;
 
-    HushEngine(const HushEngine &) = delete;
-    HushEngine &operator=(const HushEngine &) = delete;
+        HushEngine(const HushEngine &) = delete;
+        HushEngine &operator=(const HushEngine &) = delete;
 
-    HushEngine(HushEngine &&) noexcept = default;
+        HushEngine(HushEngine &&) noexcept = default;
 
-    HushEngine &operator=(HushEngine &&) noexcept = default;
+        HushEngine &operator=(HushEngine &&) noexcept = default;
 
-    ~HushEngine();
+        ~HushEngine();
 
-    /// <summary>
-    /// Starts running the engine with UI components
-    /// </summary>
-    void Run();
+        /// <summary>
+        /// Starts running the engine with UI components
+        /// </summary>
+        void Run();
 
-    /// <summary>
-    /// Disposes of the HushEngine
-    /// </summary>
-    void Quit();
+        /// <summary>
+        /// Disposes of the HushEngine
+        /// </summary>
+        void Quit();
 
-  private:
-    bool m_isApplicationRunning = false;
-    static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
-};
+      private:
+        bool m_isApplicationRunning = false;
+        static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
+    };
+
+}
