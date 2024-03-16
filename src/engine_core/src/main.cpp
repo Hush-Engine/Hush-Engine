@@ -35,10 +35,9 @@ void operator delete(void *p)
 
 int main()
 {
-    Hush::LogInfo("Test");
     (void)ASSEMBLY_TEST;
     (void)DOTNET_PATH;
-    HushEngine engine;
+    Hush::HushEngine engine;
 
     engine.Run();
 

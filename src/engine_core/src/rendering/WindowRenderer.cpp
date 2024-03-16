@@ -3,7 +3,7 @@
 #include "log/Logger.hpp"
 #include "rendering/VulkanRenderer.hpp"
 
-WindowRenderer::WindowRenderer(const char *windowName) noexcept
+Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
     if (!InitSDLIfNotStarted())
     {
@@ -26,7 +26,7 @@ WindowRenderer::WindowRenderer(const char *windowName) noexcept
     this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
 }
 
-void WindowRenderer::HandleEvents(bool *applicationRunning)
+void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 {
     SDL_Event event;
     KeyCode code = 0;
@@ -59,14 +59,14 @@ void WindowRenderer::HandleEvents(bool *applicationRunning)
     }
 }
 
-WindowRenderer::~WindowRenderer()
+Hush::WindowRenderer::~WindowRenderer()
 {
     SDL_DestroyWindow(this->m_windowPtr);
     SDL_DestroyRenderer(this->m_rendererPtr);
     SDL_Quit();
 }
 
-bool WindowRenderer::InitSDLIfNotStarted() noexcept
+bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 {
     if (SDL_WasInit(SDL_INIT_EVERYTHING) != 0)
     {
