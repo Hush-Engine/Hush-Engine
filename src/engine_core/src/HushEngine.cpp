@@ -1,14 +1,15 @@
 #include "HushEngine.hpp"
 
-HushEngine::~HushEngine()
+Hush::HushEngine::~HushEngine()
 {
     this->Quit();
 }
 
-void HushEngine::Run()
+void Hush::HushEngine::Run()
 {
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
+    //Link our renderer with our ImGui implementation (main panel)
     while (this->m_isApplicationRunning)
     {
         // TODO: Delta time calculations
@@ -17,7 +18,7 @@ void HushEngine::Run()
     }
 }
 
-void HushEngine::Quit()
+void Hush::HushEngine::Quit()
 {
     this->m_isApplicationRunning = false;
 }
