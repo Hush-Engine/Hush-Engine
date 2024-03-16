@@ -30,7 +30,6 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     // Simplify vulkan creation with VkBootstrap
     // TODO: we might use the vulkan API without another dependency in the future???
     vkb::InstanceBuilder builder{};
-
     vkb::Result<vkb::Instance> instanceResult =
         builder.set_app_name("Hush Engine")
             .request_validation_layers(true)
@@ -188,6 +187,26 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     this->m_swapChain = vkbSwapChain.swapchain;
     this->m_swapchainImages = vkbSwapChain.get_images().value();
     this->m_swapchainImageViews = vkbSwapChain.get_image_views().value();
+}
+
+VkInstance Hush::VulkanRenderer::GetVulkanInstance() const noexcept
+{
+    return this->m_vulkanInstance;
+}
+
+VkDevice Hush::VulkanRenderer::GetVulkanDevice() const noexcept
+{
+    return this->m_device;
+}
+
+VkPhysicalDevice Hush::VulkanRenderer::GetVulkanPhysicalDevice() const noexcept
+{
+    return this->m_vulkanPhysicalDevice;
+}
+
+VkQueue Hush::VulkanRenderer::GetVulkanQueue() const noexcept
+{
+    return this->
 }
 
 void Hush::VulkanRenderer::DestroySwapChain()

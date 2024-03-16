@@ -32,6 +32,8 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
     KeyCode code = 0;
     InputManager::ResetMouseAcceleration();
     SDL_PollEvent(&event);
+    //Forward event to the renderer
+
     switch (event.type)
     {
     case SDL_QUIT:

@@ -37,10 +37,8 @@ namespace Hush
         ~WindowRenderer();
 
       private:
-        /// <summary>
-        /// Pointer that represents the unique instance of an SDL window associated with this context
+        /// @brief Pointer that represents the unique instance of an SDL window associated with this context
         /// (This is declared as a raw pointer for compatibility with C)
-        /// </summary>
         SDL_Window *m_windowPtr = nullptr;
 
         SDL_Renderer *m_rendererPtr = nullptr;

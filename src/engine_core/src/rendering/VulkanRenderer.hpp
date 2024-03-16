@@ -31,6 +31,16 @@ namespace Hush
 
         void CreateSwapChain(uint32_t width, uint32_t height) override;
 
+        /* CONSTANT GETTERS */
+
+        [[nodiscard]] VkInstance GetVulkanInstance() const noexcept;
+
+        [[nodiscard]] VkDevice GetVulkanDevice() const noexcept;
+        
+        [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
+
+        [[nodiscard]] VkQueue GetVulkanQueue() const noexcept;
+        
       private:
         void InitVulkan();
 
