@@ -1,4 +1,5 @@
 #include "HushEngine.hpp"
+#include "utils/Assertions.hpp"
 #include <memory>
 
 #include "log/Logger.hpp"

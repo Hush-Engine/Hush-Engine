@@ -12,11 +12,11 @@
 namespace Hush
 {
     class VulkanImGuiForwarder : public IImGuiForwarder {
-
+    public:
         void SetupImGui(const IRenderer &renderer) override;
 
     private:
-        constexpr bool IsCorrectRendererType(const IRenderer &renderer);
+        bool IsCorrectRendererType(const IRenderer &renderer);
 
         [[ nodiscard ]] ImGui_ImplVulkan_InitInfo CreateInitData(const VulkanRenderer& vulkanRenderer) const noexcept;
     

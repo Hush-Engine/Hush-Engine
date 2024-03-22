@@ -24,6 +24,9 @@ namespace Hush
         
         IImGuiForwarder &operator=(IImGuiForwarder &&) = default;
         
-        virtual void SetupImGui(const IRenderer &renderer){};
+        virtual void SetupImGui(const IRenderer &renderer)
+        {
+            (void)renderer;
+        };
     };
 }

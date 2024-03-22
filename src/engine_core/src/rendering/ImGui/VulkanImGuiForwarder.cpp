@@ -24,12 +24,12 @@ void Hush::VulkanImGuiForwarder::SetupImGui(const IRenderer &renderer)
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     ImGui_ImplVulkan_InitInfo initData = this->CreateInitData(vulkanRenderer);
-    ImGui_ImplVulkan_Init(&initData, nullptr);
+    ImGui_ImplVulkan_Init(&initData, vulkanRenderer.GetVulkanRenderPass());
 }
 
-constexpr bool Hush::VulkanImGuiForwarder::IsCorrectRendererType(const IRenderer &renderer)
+bool Hush::VulkanImGuiForwarder::IsCorrectRendererType(const IRenderer &renderer)
 {
-    return std::is_same<decltype(renderer), VulkanRenderer>::value;
+    return typeid(renderer) == typeid(VulkanRenderer);
 }
 
 ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
@@ -40,11 +40,13 @@ ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
     initData.PhysicalDevice = vulkanRenderer.GetVulkanPhysicalDevice();
     initData.Device = vulkanRenderer.GetVulkanDevice();
     //TODO? Queue for initialization: initData.Queue = _graphicsQueue;
+    initData.Queue = vulkanRenderer.GetGraphicsQueue();
     initData.DescriptorPool = this->CreateImGuiPool(initData.Device);
     //?? Why 3, idk
     initData.MinImageCount = 3;
     initData.ImageCount = 3;
     initData.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    return initData;
 }
 
 VkDescriptorPool Hush::VulkanImGuiForwarder::CreateImGuiPool(VkDevice device) const noexcept
@@ -65,7 +67,7 @@ VkDescriptorPool Hush::VulkanImGuiForwarder::CreateImGuiPool(VkDevice device) co
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.maxSets = 1000;
-    poolInfo.poolSizeCount = std::size(poolSizes);
+    poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
     poolInfo.pPoolSizes = poolSizes;
 
     VkDescriptorPool imguiPool = {};

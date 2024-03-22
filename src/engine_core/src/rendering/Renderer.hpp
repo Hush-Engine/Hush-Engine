@@ -27,5 +27,8 @@ namespace Hush
         virtual ~IRenderer() = default;
 
         virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
+
+        [[nodiscard]] virtual void *GetRenderPass() const noexcept = 0;
+
     };
 } // namespace Hush

@@ -17,16 +17,15 @@
 #endif
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
+#include "utils/Assertions.hpp"
 
 Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     : Hush::IRenderer(windowContext), m_windowContext(windowContext)
 {
     LogTrace("Initializing Vulkan");
     VkResult rc = volkInitialize();
-    if (rc != VkResult::VK_SUCCESS)
-    {
-        Hush::LogError("Error initializing Vulkan renderer!");
-    }
+    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Error initializing Vulkan renderer, error: {}!", static_cast<int>(rc));
+    
     // Simplify vulkan creation with VkBootstrap
     // TODO: we might use the vulkan API without another dependency in the future???
     vkb::InstanceBuilder builder{};
@@ -37,10 +36,7 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
             .require_api_version(1, 3, 0)
             .build();
 
-    if (!instanceResult)
-    {
-        LogFormat(ELogLevel::Critical, "Cannot load instance: {}", instanceResult.error().message());
-    }
+    HUSH_ASSERT(instanceResult, "Cannot load instance: {}", instanceResult.error().message());
 
     vkb::Instance vkbInstance = instanceResult.value();
 
@@ -50,11 +46,9 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     this->m_debugMessenger = vkbInstance.debug_messenger;
     volkLoadInstance(this->m_vulkanInstance);
     auto *sdlWindowContext = static_cast<SDL_Window *>(windowContext);
+    //Creates the Vulkan Surface from the SDL window context
     SDL_bool createSurfaceResult = SDL_Vulkan_CreateSurface(sdlWindowContext, this->m_vulkanInstance, &this->m_surface);
-    if (createSurfaceResult == SDL_FALSE)
-    {
-        LogFormat(ELogLevel::Error, "Cannot create vulkan surface, error: {}", SDL_GetError());
-    }
+    HUSH_ASSERT(createSurfaceResult == SDL_TRUE, "Cannot create vulkan surface, error: {}!", SDL_GetError());
 
     LogTrace("Initialized vulkan surface");
 
@@ -85,6 +79,11 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(this->m_vulkanPhysicalDevice, &properties);
 
+    //Get the queue
+    vkb::Result<VkQueue> queueResult = vkbDevice.get_queue(vkb::QueueType::graphics);
+    HUSH_ASSERT(queueResult, "Queue could not be gathered from Vulkan, error: {}!", queueResult.error().message());
+    this->m_graphicsQueue = queueResult.value();
+
     LogFormat(ELogLevel::Debug, "Device name: {}", properties.deviceName);
     LogFormat(ELogLevel::Debug, "API version: {}", properties.apiVersion);
 }
@@ -106,6 +105,8 @@ Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept
     rhs.m_swapchainImages.clear();
     rhs.m_swapchainImageViews.clear();
     rhs.m_swapChainExtent = VkExtent2D{};
+
+    this->CreateRenderPass();
 }
 
 Hush::VulkanRenderer &Hush::VulkanRenderer::operator=(VulkanRenderer &&rhs) noexcept
@@ -187,6 +188,8 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     this->m_swapChain = vkbSwapChain.swapchain;
     this->m_swapchainImages = vkbSwapChain.get_images().value();
     this->m_swapchainImageViews = vkbSwapChain.get_image_views().value();
+
+    this->CreateRenderPass();
 }
 
 VkInstance Hush::VulkanRenderer::GetVulkanInstance() const noexcept
@@ -204,9 +207,19 @@ VkPhysicalDevice Hush::VulkanRenderer::GetVulkanPhysicalDevice() const noexcept
     return this->m_vulkanPhysicalDevice;
 }
 
-VkQueue Hush::VulkanRenderer::GetVulkanQueue() const noexcept
+VkRenderPass Hush::VulkanRenderer::GetVulkanRenderPass() const noexcept
 {
-    return this->
+    return this->m_renderPass;
+}
+
+void *Hush::VulkanRenderer::GetRenderPass() const noexcept
+{
+    return this->m_renderPass;
+}
+
+VkQueue Hush::VulkanRenderer::GetGraphicsQueue() const noexcept
+{
+    return this->m_graphicsQueue;
 }
 
 void Hush::VulkanRenderer::DestroySwapChain()
@@ -218,4 +231,58 @@ void Hush::VulkanRenderer::DestroySwapChain()
         vkDestroyImageView(this->m_device, imageView, nullptr);
     }
     this->m_swapchainImageViews.clear();
+}
+
+void Hush::VulkanRenderer::CreateRenderPass()
+{
+    // Create a new render pass
+    VkAttachmentDescription colorAttachmentDesc = {};
+    // Color attachment
+    colorAttachmentDesc.format = VK_FORMAT_B8G8R8A8_UNORM;
+    colorAttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    // Subpass
+    VkAttachmentReference colorReference = {};
+    colorReference.attachment = 0;
+    colorReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthReference = {};
+    depthReference.attachment = 1;
+    depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpassDescription = {};
+    subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescription.colorAttachmentCount = 1;
+    subpassDescription.pColorAttachments = &colorReference;
+    subpassDescription.inputAttachmentCount = 0;
+    subpassDescription.pInputAttachments = nullptr;
+    subpassDescription.preserveAttachmentCount = 0;
+    subpassDescription.pPreserveAttachments = nullptr;
+    subpassDescription.pResolveAttachments = nullptr;
+
+    // Dependency
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachmentDesc;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpassDescription;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
+
+    vkCreateRenderPass(this->m_device, &renderPassInfo, nullptr, &this->m_renderPass);
 }

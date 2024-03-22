@@ -22,7 +22,7 @@ namespace Hush
         void OnRenderPass() override;
 
     private:
-        std::unique_ptr<ImGuiContext> m_uiContext = nullptr;
+        ImGuiContext* m_uiContext = nullptr;
 
     };
 }

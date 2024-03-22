@@ -14,6 +14,7 @@ set(SOURCES
     src/utils/StringUtils.cpp
     src/utils/StringUtils.hpp
     src/utils/Platform.hpp
+    src/utils/Assertions.hpp
     src/utils/filesystem/PathUtils.hpp
     src/utils/filesystem/PathUtils.cpp
     src/rendering/WindowRenderer.hpp
@@ -21,6 +22,9 @@ set(SOURCES
     src/rendering/Renderer.hpp
     src/rendering/VulkanRenderer.hpp
     src/rendering/VulkanRenderer.cpp
+    src/rendering/imgui/IImGuiForwarder.hpp
+    src/rendering/imgui/VulkanImGuiForwarder.hpp
+    src/rendering/imgui/VulkanImGuiForwarder.cpp
     src/input/definitions/KeyStates.hpp
     src/input/definitions/KeyData.hpp
     src/input/definitions/KeyCode.hpp
@@ -28,6 +32,10 @@ set(SOURCES
     src/input/definitions/MouseData.hpp
     src/input/InputManager.hpp
     src/input/InputManager.cpp
+    src/editor/IEditorPanel.hpp
+    src/editor/ScenePanel.hpp
+    src/editor/MainPanel.hpp
+    src/editor/MainPanel.cpp
     src/log/Logger.hpp
     src/log/Logger.cpp
 )
@@ -36,7 +44,8 @@ add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src)
 
-set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
+#set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
+set(ENGINE_LIBS coreclr)
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)

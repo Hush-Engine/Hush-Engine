@@ -39,12 +39,18 @@ namespace Hush
         
         [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
 
-        [[nodiscard]] VkQueue GetVulkanQueue() const noexcept;
+        [[nodiscard]] VkRenderPass GetVulkanRenderPass() const noexcept;
+        
+        [[nodiscard]] void* GetRenderPass() const noexcept override;
+
+        [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
         
       private:
         void InitVulkan();
 
         void DestroySwapChain();
+
+        void CreateRenderPass();
 
         void *m_windowContext;
         VkInstance m_vulkanInstance = nullptr;
@@ -52,6 +58,8 @@ namespace Hush
         VkDebugUtilsMessengerEXT m_debugMessenger = nullptr;
         VkDevice m_device = nullptr;
         VkSurfaceKHR m_surface{};
+        VkRenderPass m_renderPass = nullptr;
+        VkQueue m_graphicsQueue = nullptr;
 
         VkSwapchainKHR m_swapChain{};
         VkFormat m_swapchainImageFormat = VkFormat::VK_FORMAT_UNDEFINED;

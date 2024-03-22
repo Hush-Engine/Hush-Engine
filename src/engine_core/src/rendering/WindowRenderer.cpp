@@ -2,6 +2,7 @@
 
 #include "log/Logger.hpp"
 #include "rendering/VulkanRenderer.hpp"
+#include "utils/Assertions.hpp"
 
 Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
@@ -24,6 +25,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
     this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
     this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
+    this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 }
 
 void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
@@ -66,6 +68,11 @@ Hush::WindowRenderer::~WindowRenderer()
     SDL_DestroyWindow(this->m_windowPtr);
     SDL_DestroyRenderer(this->m_rendererPtr);
     SDL_Quit();
+}
+
+Hush::IRenderer *Hush::WindowRenderer::GetWindowRenderer() noexcept
+{
+    return this->m_windowRenderer.get();
 }
 
 bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
