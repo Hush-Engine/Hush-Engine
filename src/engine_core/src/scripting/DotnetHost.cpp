@@ -15,7 +15,7 @@ constexpr std::string_view DOTNET_ERROR_WRITER("hostfxr_set_error_writer");
 constexpr std::string_view RUNTIME_CONFIG_JSON("assembly-test.runtimeconfig.json");
 constexpr std::string_view HOST_FXR_FIRST_PATH("host/fxr/");
 
-DotnetHost::DotnetHost(const char *dotnetPath)
+Hush::DotnetHost::DotnetHost(const char *dotnetPath)
 {
     // We want to find a substring in the path that will lead us to a supported version of .NET hostfxr
     // for now we will do the first subdir that contains this given substr
@@ -67,17 +67,17 @@ DotnetHost::DotnetHost(const char *dotnetPath)
     this->InitDotnetCore();
 }
 
-DotnetHost::~DotnetHost()
+Hush::DotnetHost::~DotnetHost()
 {
     this->m_closeFuncPtr(this->m_hostFxrHandle);
 }
 
-get_function_pointer_fn DotnetHost::GetFunctionGetterFuncPtr()
+get_function_pointer_fn Hush::DotnetHost::GetFunctionGetterFuncPtr()
 {
     return this->m_functionGetterFuncPtr;
 }
 
-void DotnetHost::InitDotnetCore()
+void Hush::DotnetHost::InitDotnetCore()
 {
     std::filesystem::path runtimeConfigPath = LibManager::GetCurrentExecutablePath();
     runtimeConfigPath /= RUNTIME_CONFIG_JSON.data();
@@ -121,7 +121,7 @@ void DotnetHost::InitDotnetCore()
     }
 }
 
-load_assembly_fn DotnetHost::GetLoadAssembly(void *hostFxrHandle)
+load_assembly_fn Hush::DotnetHost::GetLoadAssembly(void *hostFxrHandle)
 {
     // Get the load_assembly_and_get_function_pointer function pointer
     load_assembly_fn loadAssembly = nullptr;
@@ -129,21 +129,21 @@ load_assembly_fn DotnetHost::GetLoadAssembly(void *hostFxrHandle)
     return loadAssembly;
 }
 
-get_function_pointer_fn DotnetHost::GetFunctionPtr(void *hostFxrHandle)
+get_function_pointer_fn Hush::DotnetHost::GetFunctionPtr(void *hostFxrHandle)
 {
     get_function_pointer_fn getFunctionPointer = nullptr;
     m_getDelegateFuncPtr(hostFxrHandle, hdt_get_function_pointer, reinterpret_cast<void **>(&getFunctionPointer));
     return getFunctionPointer;
 }
 
-bool DotnetHost::LoadAssemblyFromPath(load_assembly_fn assemblyLoader)
+bool Hush::DotnetHost::LoadAssemblyFromPath(load_assembly_fn assemblyLoader)
 {
     std::filesystem::path assemblyPath = LibManager::GetCurrentExecutablePath() / "assembly-test.dll";
     int rc = assemblyLoader(assemblyPath.c_str(), nullptr, nullptr);
     return rc == 0;
 }
 
-template <class T> T DotnetHost::LoadSymbol(void *sharedLibrary, const char *name)
+template <class T> T Hush::DotnetHost::LoadSymbol(void *sharedLibrary, const char *name)
 {
     void *libraryPtr = LibManager::DynamicLoadSymbol(sharedLibrary, name);
     return reinterpret_cast<T>(libraryPtr);

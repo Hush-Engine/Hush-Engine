@@ -1,11 +1,11 @@
 #include "HushEngine.hpp"
 
-HushEngine::~HushEngine()
+Hush::HushEngine::~HushEngine()
 {
     this->Quit();
 }
 
-void HushEngine::Run()
+void Hush::HushEngine::Run()
 {
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
@@ -17,7 +17,7 @@ void HushEngine::Run()
     }
 }
 
-void HushEngine::Quit()
+void Hush::HushEngine::Quit()
 {
     this->m_isApplicationRunning = false;
 }
