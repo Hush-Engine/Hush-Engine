@@ -1,5 +1,5 @@
 # fmt
-find_package(fmt REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 # magic-enum
 find_package(magic_enum CONFIG REQUIRED)
@@ -18,3 +18,6 @@ find_package(vk-bootstrap CONFIG REQUIRED)
 
 #glm
 find_package(glm CONFIG REQUIRED)
+
+# Expected
+find_package(expected-lite CONFIG REQUIRED)
