@@ -40,8 +40,6 @@ namespace Hush
         [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
 
         [[nodiscard]] VkRenderPass GetVulkanRenderPass() const noexcept;
-        
-        [[nodiscard]] void* GetRenderPass() const noexcept override;
 
         [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
         
