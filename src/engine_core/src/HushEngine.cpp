@@ -10,9 +10,9 @@ void Hush::HushEngine::Run()
 {
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
-    //Link our renderer with our ImGui implementation
+    // Link our renderer with our ImGui implementation
     VulkanImGuiForwarder uiLinker;
-    IRenderer* rendererImpl = mainRenderer.GetWindowRenderer();
+    IRenderer *rendererImpl = mainRenderer.GetWindowRenderer();
     uiLinker.SetupImGui(*rendererImpl);
     while (this->m_isApplicationRunning)
     {

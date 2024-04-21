@@ -11,22 +11,22 @@ namespace Hush
 {
     class IImGuiForwarder
     {
-    public:
+      public:
         IImGuiForwarder() = default;
-        
+
         virtual ~IImGuiForwarder() = default;
-        
+
         IImGuiForwarder(const IImGuiForwarder &) = default;
-        
+
         IImGuiForwarder(IImGuiForwarder &&) = default;
-        
+
         IImGuiForwarder &operator=(const IImGuiForwarder &) = default;
-        
+
         IImGuiForwarder &operator=(IImGuiForwarder &&) = default;
-        
+
         virtual void SetupImGui(const IRenderer &renderer)
         {
             (void)renderer;
         };
     };
-}
+} // namespace Hush

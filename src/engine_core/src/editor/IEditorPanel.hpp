@@ -7,15 +7,16 @@
 #pragma once
 #include "../rendering/Renderer.hpp"
 
-namespace Hush {
+namespace Hush
+{
 
     class IEditorPanel
     {
-    public:
+      public:
         IEditorPanel() noexcept = default;
-        
+
         IEditorPanel(const IEditorPanel &other) = default;
-        
+
         IEditorPanel(IEditorPanel &&other) = default;
 
         IEditorPanel &operator=(const IEditorPanel &) = default;
@@ -25,7 +26,6 @@ namespace Hush {
         virtual ~IEditorPanel() = default;
 
         virtual void OnRenderPass(){};
-
     };
 
-}
+} // namespace Hush

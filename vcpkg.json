@@ -13,7 +13,7 @@
     "glm",
     {
       "name": "imgui",
-      "features": [ "vulkan-binding" ]
+      "features": [ "vulkan-binding", "sdl2-binding" ]
     }
   ]
 }

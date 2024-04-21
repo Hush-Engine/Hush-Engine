@@ -36,7 +36,7 @@ namespace Hush
 
         ~WindowRenderer();
 
-        IRenderer* GetWindowRenderer() noexcept;
+        IRenderer *GetWindowRenderer() noexcept;
 
       private:
         /// @brief Pointer that represents the unique instance of an SDL window associated with this context

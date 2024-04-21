@@ -7,10 +7,10 @@
 #pragma once
 #include "IEditorPanel.hpp"
 
-namespace Hush {
-    class ScenePanel : IEditorPanel {
-    public:
-
-        
+namespace Hush
+{
+    class ScenePanel : IEditorPanel
+    {
+      public:
     };
-}
+} // namespace Hush

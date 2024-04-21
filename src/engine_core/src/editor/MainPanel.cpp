@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
 
-Hush::MainPanel::MainPanel(const IRenderer& renderer) noexcept
+Hush::MainPanel::MainPanel(const IRenderer &renderer) noexcept
 {
     (void)renderer;
 }
@@ -15,6 +15,6 @@ Hush::MainPanel::~MainPanel()
 
 void Hush::MainPanel::OnRenderPass()
 {
-	//First, make the menu bar
+    // First, make the menu bar
     ImGui::BeginMainMenuBar();
 }

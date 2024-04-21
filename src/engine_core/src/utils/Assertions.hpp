@@ -8,27 +8,27 @@
 #include "Platform.hpp"
 #include "log/Logger.hpp"
 
-#ifdef HUSH_PLATFORM_WIN
-    #include <windows.h>
-    #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-        #define HUSH_DEBUG_BREAK __debugbreak()
-    #elif defined(__ARMCC_VERSION)
-        #define __breakpoint(42)
-    #endif
+#if HUSH_PLATFORM_WIN
+#include <windows.h>
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#define HUSH_DEBUG_BREAK __debugbreak()
+#elif defined(__ARMCC_VERSION)
+#define __breakpoint(42)
+#endif
 #else
-    #include <signal.h>
-    #ifdef SIGTRAP
-        #define HUSH_DEBUG_BREAK raise(SIGTRAP)
-    #else
-        #define HUSH_DEBUG_BREAK raise(SIGABRT)
-    #endif
+#include <signal.h>
+#ifdef SIGTRAP
+#define HUSH_DEBUG_BREAK raise(SIGTRAP)
+#else
+#define HUSH_DEBUG_BREAK raise(SIGABRT)
+#endif
 #endif
 
-//TODO: Add debug condition
-//NOLINTNEXTLINE
-#define HUSH_ASSERT(condition, fmtFormat, ...)                                                                                    \
+// TODO: Add debug condition
+// NOLINTNEXTLINE
+#define HUSH_ASSERT(condition, fmtFormat, ...)                                                                         \
     if (!condition)                                                                                                    \
     {                                                                                                                  \
-        Hush::LogFormat(Hush::ELogLevel::Critical, "Assertion error! " fmtFormat, ##__VA_ARGS__);                                  \
+        Hush::LogFormat(Hush::ELogLevel::Critical, "Assertion error! " fmtFormat, ##__VA_ARGS__);                      \
         HUSH_DEBUG_BREAK;                                                                                              \
     }
