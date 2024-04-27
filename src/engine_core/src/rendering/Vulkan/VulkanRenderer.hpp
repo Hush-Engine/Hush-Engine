@@ -74,6 +74,8 @@ namespace Hush
 
         [[nodiscard]] VkFormat GetSwapchainImageFormat() const noexcept;
 
+        [[nodiscard]] void *GetWindowContext() const noexcept override;
+
       private:
         void Configure(vkb::Instance vkbInstance);
 

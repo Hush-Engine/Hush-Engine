@@ -29,5 +29,7 @@ namespace Hush
         virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
 
         virtual void Draw() = 0;
+
+        [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
     };
 } // namespace Hush

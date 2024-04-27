@@ -1,7 +1,7 @@
 #include "WindowRenderer.hpp"
 
 #include "log/Logger.hpp"
-#include "rendering/VulkanRenderer.hpp"
+#include "rendering/Vulkan/VulkanRenderer.hpp"
 #include "utils/Assertions.hpp"
 
 Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept

@@ -45,6 +45,7 @@ class VkUtilsFactory
         commandPoolInfo.pNext = nullptr;
         commandPoolInfo.flags = flags;
         commandPoolInfo.queueFamilyIndex = queueFamilyIndex;
+        return commandPoolInfo;
     }
 
     static VkCommandBufferAllocateInfo CreateCommandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1u)
@@ -55,6 +56,7 @@ class VkUtilsFactory
         cmdAllocInfo.commandPool = pool;
         cmdAllocInfo.commandBufferCount = count;
         cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        return cmdAllocInfo;
     }
 
     static VkCommandBufferBeginInfo CreateCommandBufferBeginInfo(VkCommandBufferUsageFlags flags = 0u)

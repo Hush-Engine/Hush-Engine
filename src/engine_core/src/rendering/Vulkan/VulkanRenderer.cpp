@@ -148,13 +148,13 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
     VkResult rc{};
 
     //Initialize the immediate command structures
-    rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_immidiateCommandPool);
+    rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_immediateCommandPool);
     HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating immediate command pool failed with code {}",
                 static_cast<int>(rc));
 
     // allocate the command buffer for immediate submits
-    VkCommandBufferAllocateInfo cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_immidiateCommandPool);
-    rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_immidiateCommandBuffer);
+    VkCommandBufferAllocateInfo cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_immediateCommandPool);
+    rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_immediateCommandBuffer);
     HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Allocating immidiate command buffers failed with code {}",
                 static_cast<int>(rc));
 
@@ -165,7 +165,7 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
         HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating command pool failed with code: {}", static_cast<int>(rc));
 
         // allocate the default command buffer that we will use for rendering
-        VkCommandBufferAllocateInfo cmdAllocInfo =
+        cmdAllocInfo =
             VkUtilsFactory::CreateCommandBufferAllocateInfo(currFrame.commandPool);
         rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &currFrame.mainCommandBuffer);
         HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Allocating command buffers failed with code: {}",
@@ -429,6 +429,11 @@ void Hush::VulkanRenderer::DestroySwapChain()
         vkDestroyImageView(this->m_device, imageView, nullptr);
     }
     this->m_swapchainImageViews.clear();
+}
+
+void *Hush::VulkanRenderer::GetWindowContext() const noexcept
+{
+    return this->m_windowContext;
 }
 
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,

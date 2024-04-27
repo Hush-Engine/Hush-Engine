@@ -20,11 +20,13 @@ set(SOURCES
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
     src/rendering/Renderer.hpp
-    src/rendering/VulkanRenderer.hpp
-    src/rendering/VulkanRenderer.cpp
-    src/rendering/imgui/IImGuiForwarder.hpp
-    src/rendering/imgui/VulkanImGuiForwarder.hpp
-    src/rendering/imgui/VulkanImGuiForwarder.cpp
+    src/rendering/Vulkan/FrameData.hpp
+    src/rendering/Vulkan/VkUtilsFactory.hpp
+    src/rendering/Vulkan/VulkanRenderer.hpp
+    src/rendering/Vulkan/VulkanRenderer.cpp
+    src/rendering/Imgui/IImGuiForwarder.hpp
+    src/rendering/Imgui/VulkanImGuiForwarder.hpp
+    src/rendering/Imgui/VulkanImGuiForwarder.cpp
     src/input/definitions/KeyStates.hpp
     src/input/definitions/KeyData.hpp
     src/input/definitions/KeyCode.hpp
@@ -33,9 +35,6 @@ set(SOURCES
     src/input/InputManager.hpp
     src/input/InputManager.cpp
     src/editor/IEditorPanel.hpp
-    src/editor/ScenePanel.hpp
-    src/editor/MainPanel.hpp
-    src/editor/MainPanel.cpp
     src/log/Logger.hpp
     src/log/Logger.cpp
 )
@@ -44,8 +43,8 @@ add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src)
 
-#set(ENGINE_LIBS coreclr SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
-set(ENGINE_LIBS coreclr)
+#set(ENGINE_LIBS coreclr imgui SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
+set(ENGINE_LIBS coreclr imgui)
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)

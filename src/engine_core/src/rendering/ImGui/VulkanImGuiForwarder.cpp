@@ -1,21 +1,15 @@
 #include "VulkanImGuiForwarder.hpp"
 #include "../../log/Logger.hpp"
 #include "../Vulkan/VulkanRenderer.hpp"
-#include <imgui.h>
-#include <imgui_impl_vulkan.h>
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
 #include <volk.h>
 
-void Hush::VulkanImGuiForwarder::SetupImGui(const IRenderer &renderer)
+void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
 {
-    // Validate type checks
-    if (!IsCorrectRendererType(renderer))
-    {
-        Hush::LogError(
-            "Tried to setup Dear ImGui with a renderer that does not match the target graphics API (Vulkan)");
-        return;
-    }
     // Cast the renderer to a Vulkan renderer
-    const auto &vulkanRenderer = dynamic_cast<const VulkanRenderer &>(renderer);
+    auto* vulkanRenderer = dynamic_cast<VulkanRenderer*>(renderer);
     // Setup the code here for ImGui
 
     IMGUI_CHECKVERSION();
@@ -24,30 +18,25 @@ void Hush::VulkanImGuiForwarder::SetupImGui(const IRenderer &renderer)
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     ImGui_ImplVulkan_InitInfo initData = this->CreateInitData(vulkanRenderer);
-    ImGui_SDL2
-    ImGui_ImplVulkan_Init(&initData, VK_NULL_HANDLE);
-}
-
-bool Hush::VulkanImGuiForwarder::IsCorrectRendererType(const IRenderer &renderer)
-{
-    return typeid(renderer) == typeid(VulkanRenderer);
+    auto *sdlWindow = static_cast<SDL_Window *>(vulkanRenderer->GetWindowContext());
+    HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!");
+    HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");
+    ImGui_ImplVulkan_Init(&initData);
 }
 
 ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
-    const VulkanRenderer &vulkanRenderer) const noexcept
+    VulkanRenderer* vulkanRenderer) const noexcept
 {
     ImGui_ImplVulkan_InitInfo initData = {};
-    initData.Instance = vulkanRenderer.GetVulkanInstance();
-    initData.PhysicalDevice = vulkanRenderer.GetVulkanPhysicalDevice();
-    initData.Device = vulkanRenderer.GetVulkanDevice();
-    // TODO? Queue for initialization: initData.Queue = _graphicsQueue;
-    initData.Queue = vulkanRenderer.GetGraphicsQueue();
+    initData.Instance = vulkanRenderer->GetVulkanInstance();
+    initData.PhysicalDevice = vulkanRenderer->GetVulkanPhysicalDevice();
+    initData.Device = vulkanRenderer->GetVulkanDevice();
+    initData.Queue = vulkanRenderer->GetGraphicsQueue();
     initData.DescriptorPool = this->CreateImGuiPool(initData.Device);
     //?? Why 3, idk
     initData.MinImageCount = 3;
     initData.ImageCount = 3;
     initData.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    initData.ColorAttachmentFormat = vulkanRenderer.GetSwapchainImageFormat();
     initData.UseDynamicRendering = true;
     return initData;
 }
