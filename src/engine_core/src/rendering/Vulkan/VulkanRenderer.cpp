@@ -25,10 +25,6 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
 {
     LogTrace("Initializing Vulkan");
 
-    // Validate the window context
-    bool isInstanceOfSdl = TypeUtils::IsInstanceOf<SDL_Window *, void *>(windowContext);
-    HUSH_ASSERT(isInstanceOfSdl, "Window pointer is not of type SDL_Window*");
-
     VkResult rc = volkInitialize();
     HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Error initializing Vulkan renderer, error: {}!", static_cast<int>(rc));
 

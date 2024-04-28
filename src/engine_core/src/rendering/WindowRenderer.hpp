@@ -9,8 +9,8 @@
 // Let's tell SDL we got main covered
 #define SDL_MAIN_HANDLED
 
-#include <SDL2/SDL.h>
 #include <input/InputManager.hpp>
+#include <SDL2/SDL.h>
 #include <memory>
 
 #include "Renderer.hpp"
@@ -36,7 +36,7 @@ namespace Hush
 
         ~WindowRenderer();
 
-        IRenderer *GetWindowRenderer() noexcept;
+        IRenderer *GetInternalRenderer() noexcept;
 
       private:
         /// @brief Pointer that represents the unique instance of an SDL window associated with this context

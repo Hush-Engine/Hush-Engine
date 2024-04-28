@@ -19,6 +19,7 @@ set(SOURCES
     src/utils/filesystem/PathUtils.cpp
     src/rendering/WindowRenderer.hpp
     src/rendering/WindowRenderer.cpp
+    src/rendering/WindowManager.hpp
     src/rendering/Renderer.hpp
     src/rendering/Vulkan/FrameData.hpp
     src/rendering/Vulkan/VkUtilsFactory.hpp

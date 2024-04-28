@@ -19,6 +19,8 @@ namespace Hush
       private:
         [[nodiscard]] ImGui_ImplVulkan_InitInfo CreateInitData(VulkanRenderer* vulkanRenderer) const noexcept;
 
+        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char *functionName, void *userData);
+
         VkDescriptorPool CreateImGuiPool(VkDevice device) const noexcept;
     };
 } // namespace Hush

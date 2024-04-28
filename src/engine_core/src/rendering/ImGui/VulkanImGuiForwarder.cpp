@@ -5,6 +5,7 @@
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 #include <volk.h>
+#include <rendering/WindowManager.hpp>
 
 void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
 {
@@ -19,9 +20,13 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     ImGui_ImplVulkan_InitInfo initData = this->CreateInitData(vulkanRenderer);
     auto *sdlWindow = static_cast<SDL_Window *>(vulkanRenderer->GetWindowContext());
+    //Load vulkan functions
+    HUSH_ASSERT(ImGui_ImplVulkan_LoadFunctions(CustomVulkanFunctionLoader), "Loading vulkan functions to imgui failed");
+
     HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!");
+
+    //Get the rendering functions
     HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");
-    ImGui_ImplVulkan_Init(&initData);
 }
 
 ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
@@ -39,6 +44,15 @@ ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
     initData.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     initData.UseDynamicRendering = true;
     return initData;
+}
+
+PFN_vkVoidFunction Hush::VulkanImGuiForwarder::CustomVulkanFunctionLoader(const char *functionName, void *userData)
+{
+    auto *mainVulkanRenderer = dynamic_cast<VulkanRenderer *>(WindowManager::GetMainWindow()->GetInternalRenderer());
+    VkInstance mainWindowInstance = mainVulkanRenderer->GetVulkanInstance();
+    PFN_vkVoidFunction result = vkGetInstanceProcAddr(mainWindowInstance, functionName);
+    (void)userData; //Ignore user data
+    return result;
 }
 
 VkDescriptorPool Hush::VulkanImGuiForwarder::CreateImGuiPool(VkDevice device) const noexcept

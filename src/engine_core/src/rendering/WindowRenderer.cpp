@@ -70,7 +70,7 @@ Hush::WindowRenderer::~WindowRenderer()
     SDL_Quit();
 }
 
-Hush::IRenderer *Hush::WindowRenderer::GetWindowRenderer() noexcept
+Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
 {
     return this->m_windowRenderer.get();
 }

@@ -10,10 +10,6 @@
     "vk-bootstrap",
     "volk",
     "vulkan-headers",
-    "glm",
-    {
-      "name": "imgui",
-      "features": [ "vulkan-binding", "sdl2-binding" ]
-    }
+    "glm"
   ]
 }
