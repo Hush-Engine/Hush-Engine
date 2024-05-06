@@ -1,6 +1,7 @@
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg
-[submodule ".\\third_party\\imgui\\include\\imgui"]
-	path = .\\third_party\\imgui\\include\\imgui
+
+[submodule "imgui"]
+	path = third_party/imgui/include/imgui
 	url = https://github.com/Hush-Engine/imgui.git
