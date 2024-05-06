@@ -240,8 +240,10 @@ void Hush::VulkanRenderer::Draw()
     this->m_frameNumber++;
 }
 
-void Hush::VulkanRenderer::Begin()
+void Hush::VulkanRenderer::InitRendering()
 {
+    this->InitializeCommands();
+    this->CreateSyncObjects();
 }
 
 void Hush::VulkanRenderer::Dispose()
@@ -386,9 +388,9 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     LogFormat(ELogLevel::Debug, "API version: {}", properties.apiVersion);
 }
 
-VkFormat Hush::VulkanRenderer::GetSwapchainImageFormat() const noexcept
+VkFormat* Hush::VulkanRenderer::GetSwapchainImageFormat() noexcept
 {
-    return this->m_swapchainImageFormat;
+    return &this->m_swapchainImageFormat;
 }
 
 void Hush::VulkanRenderer::CreateSyncObjects()

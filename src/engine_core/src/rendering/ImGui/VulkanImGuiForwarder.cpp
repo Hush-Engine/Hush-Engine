@@ -43,6 +43,13 @@ ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
     initData.ImageCount = 3;
     initData.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     initData.UseDynamicRendering = true;
+
+    // dynamic rendering parameters for imgui to use
+    initData.PipelineRenderingCreateInfo = {};
+    initData.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    initData.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    initData.PipelineRenderingCreateInfo.pColorAttachmentFormats = vulkanRenderer->GetSwapchainImageFormat();
+
     return initData;
 }
 

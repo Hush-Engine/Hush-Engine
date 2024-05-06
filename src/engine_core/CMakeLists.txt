@@ -25,6 +25,8 @@ set(SOURCES
     src/rendering/Vulkan/VkUtilsFactory.hpp
     src/rendering/Vulkan/VulkanRenderer.hpp
     src/rendering/Vulkan/VulkanRenderer.cpp
+    src/rendering/Vulkan/VulkanPipelineBuilder.hpp
+    src/rendering/Vulkan/VulkanPipelineBuilder.cpp
     src/rendering/Imgui/IImGuiForwarder.hpp
     src/rendering/Imgui/VulkanImGuiForwarder.hpp
     src/rendering/Imgui/VulkanImGuiForwarder.cpp

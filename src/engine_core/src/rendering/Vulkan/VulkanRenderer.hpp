@@ -48,11 +48,11 @@ namespace Hush
 
         void CreateSwapChain(uint32_t width, uint32_t height) override;
 
+        void InitRendering() override;
+
         void InitializeCommands() noexcept;
 
         void Draw() override;
-
-        void Begin();
 
         void Dispose();
         
@@ -72,7 +72,7 @@ namespace Hush
 
         [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
 
-        [[nodiscard]] VkFormat GetSwapchainImageFormat() const noexcept;
+        VkFormat* GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
 
