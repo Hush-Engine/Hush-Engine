@@ -5,8 +5,8 @@
 */
 
 #pragma once
-#include "../Vulkan/VulkanRenderer.hpp"
-#include "IImGuiForwarder.hpp"
+#include "rendering/Vulkan/VulkanRenderer.hpp"
+#include "rendering/ImGui/IImGuiForwarder.hpp"
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 namespace Hush
@@ -16,10 +16,10 @@ namespace Hush
       public:
         void SetupImGui(IRenderer* renderer) override;
 
+        void RenderFrame(VkCommandBuffer cmd);
+
       private:
         [[nodiscard]] ImGui_ImplVulkan_InitInfo CreateInitData(VulkanRenderer* vulkanRenderer) const noexcept;
-
-        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char *functionName, void *userData);
 
         VkDescriptorPool CreateImGuiPool(VkDevice device) const noexcept;
     };

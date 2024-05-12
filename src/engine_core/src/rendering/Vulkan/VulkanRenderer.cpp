@@ -7,6 +7,7 @@
 #include "VulkanRenderer.hpp"
 #include "log/Logger.hpp"
 #include "utils/Platform.hpp"
+#include "rendering/WindowManager.hpp"
 
 #include <SDL2/SDL_vulkan.h>
 
@@ -19,6 +20,16 @@
 #include "utils/Assertions.hpp"
 #include <utils/typeutils/TypeUtils.hpp>
 #include <volk.h>
+#include "rendering/ImGui/VulkanImGuiForwarder.hpp"
+
+PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
+{
+    auto *mainVulkanRenderer = dynamic_cast<VulkanRenderer *>(WindowManager::GetMainWindow()->GetInternalRenderer());
+    VkInstance mainWindowInstance = mainVulkanRenderer->GetVulkanInstance();
+    PFN_vkVoidFunction result = vkGetInstanceProcAddr(mainWindowInstance, functionName);
+    (void)userData; // Ignore user data
+    return result;
+}
 
 Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     : Hush::IRenderer(windowContext), m_windowContext(windowContext)
@@ -26,7 +37,7 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     LogTrace("Initializing Vulkan");
 
     VkResult rc = volkInitialize();
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Error initializing Vulkan renderer, error: {}!", static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Error initializing Vulkan renderer!");
 
     // Simplify vulkan creation with VkBootstrap
     // TODO: we might use the vulkan API without another dependency in the future???
@@ -145,28 +156,32 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
 
     //Initialize the immediate command structures
     rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_immediateCommandPool);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating immediate command pool failed with code {}",
-                static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Creating immediate command pool failed!");
 
     // allocate the command buffer for immediate submits
     VkCommandBufferAllocateInfo cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_immediateCommandPool);
     rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_immediateCommandBuffer);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Allocating immidiate command buffers failed with code {}",
-                static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Allocating immidiate command buffers failed!");
 
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
-        FrameData currFrame = this->m_frames.at(i);
-        rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &currFrame.commandPool);
-        HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating command pool failed with code: {}", static_cast<int>(rc));
+        //Get a REFERENCE to the current frame
+        FrameData* currFrame = &this->m_frames.at(i);
+        rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &currFrame->commandPool);
+        HUSH_VK_ASSERT(rc, "Creating command pool failed!");
 
         // allocate the default command buffer that we will use for rendering
         cmdAllocInfo =
-            VkUtilsFactory::CreateCommandBufferAllocateInfo(currFrame.commandPool);
-        rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &currFrame.mainCommandBuffer);
-        HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Allocating command buffers failed with code: {}",
-                    static_cast<int>(rc));
+            VkUtilsFactory::CreateCommandBufferAllocateInfo(currFrame->commandPool);
+        rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &currFrame->mainCommandBuffer);
+        HUSH_VK_ASSERT(rc, "Allocating command buffers failed!");
     }
+}
+
+void Hush::VulkanRenderer::InitImGui()
+{
+    this->m_uiForwarder = std::make_unique<VulkanImGuiForwarder>();
+    this->m_uiForwarder->SetupImGui(this);
 }
 
 void Hush::VulkanRenderer::Draw()
@@ -178,33 +193,33 @@ void Hush::VulkanRenderer::Draw()
     {
         return;
     }
-    FrameData currentFrame = this->GetCurrentFrame();
+    FrameData& currentFrame = this->GetCurrentFrame();
     const uint32_t fenceTargetCount = 1u;
     // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
     VkResult rc =
         vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, VK_TRUE, VK_OPERATION_TIMEOUT_NS);
     HUSH_VK_ASSERT(rc, "Fence wait failed!");
-    rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Fence reset failed with code: {}", static_cast<int>(rc));
 
     // Request an image from the swapchain
     uint32_t swapchainImageIndex = 0u;
     rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
                                currentFrame.swapchainSemaphore, nullptr, &swapchainImageIndex);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Image request from the swapchain failed with code: {}",
-                static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
+
+    rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
+    HUSH_VK_ASSERT(rc, "Fence reset failed!");
 
     // Get the command buffer and reset it
     VkCommandBuffer cmd = currentFrame.mainCommandBuffer;
     // Reset the command buffer
     rc = vkResetCommandBuffer(cmd, 0u);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Reset command buffer failed with code: {}", static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Reset command buffer failed!");
 
     // Begin recording
     VkCommandBufferBeginInfo cmdBeginInfo = VkUtilsFactory::CreateCommandBufferBeginInfo(
         VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     rc = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
-    HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Begin command buffer failed with code: {}", static_cast<int>(rc));
+    HUSH_VK_ASSERT(rc, "Begin command buffer failed!");
 
     /**** Set up dynamic rendering objects ****/
 
@@ -226,12 +241,16 @@ void Hush::VulkanRenderer::Draw()
     renderingInfo.pColorAttachments = &colorAttachmentInfo;
 
     // Begin dynamic rendering
-    vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+    vkCmdBeginRendering(cmd, &renderingInfo);
 
     // Record your rendering commands here
+    /* VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateColorAttachmentInfo(
+        this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
+    this->m_uiForwarder->RenderFrame();*/
 
     // End dynamic rendering
-    vkCmdEndRenderingKHR(cmd);
+    vkCmdEndRendering(cmd);
 
     // End recording
     rc = vkEndCommandBuffer(cmd);
@@ -404,16 +423,14 @@ void Hush::VulkanRenderer::CreateSyncObjects()
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
         rc = vkCreateFence(this->m_device, &fenceInfo, nullptr, &this->m_frames.at(i).renderFence);
-        HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating fence failed with code: {}!", static_cast<int>(rc));
+        HUSH_VK_ASSERT(rc, "Creating fence failed!");
 
         // Create the semaphores
         rc = vkCreateSemaphore(this->m_device, &semaphoreInfo, nullptr, &this->m_frames.at(i).swapchainSemaphore);
-        HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating swapchain semaphore failed with code: {}!",
-                    static_cast<int>(rc));
+        HUSH_VK_ASSERT(rc, "Creating swapchain semaphore failed!");
 
         rc = vkCreateSemaphore(this->m_device, &semaphoreInfo, nullptr, &this->m_frames.at(i).renderSemaphore);
-        HUSH_ASSERT(rc == VkResult::VK_SUCCESS, "Creating render semaphore failed with code: {}!",
-                    static_cast<int>(rc));
+        HUSH_VK_ASSERT(rc, "Creating render semaphore failed!");
         // TODO: Create the present semaphore as well
     }
 }

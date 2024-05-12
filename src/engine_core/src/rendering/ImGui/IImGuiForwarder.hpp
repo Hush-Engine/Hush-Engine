@@ -5,7 +5,7 @@
 */
 
 #pragma once
-#include "../Renderer.hpp"
+#include "rendering/Renderer.hpp"
 
 namespace Hush
 {
@@ -24,9 +24,6 @@ namespace Hush
 
         IImGuiForwarder &operator=(IImGuiForwarder &&) = default;
 
-        virtual void SetupImGui(IRenderer* renderer)
-        {
-            (void)renderer;
-        };
+        virtual void SetupImGui(IRenderer *renderer) = 0;
     };
 } // namespace Hush

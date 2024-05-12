@@ -28,6 +28,8 @@ namespace Hush
 
         virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
 
+        virtual void InitImGui() = 0;
+
         virtual void Draw() = 0;
 
         /// @brief Initializes all the internal structures needed to begin rendering, call after a swapchain has been created!

@@ -1,3 +1,10 @@
+#Debugging stuff
+function(print_files collection)
+    foreach(file ${collection})
+        message("\t${file}")
+    endforeach()
+endfunction()
+
 cmake_minimum_required(VERSION 3.26)
 
 project(test)

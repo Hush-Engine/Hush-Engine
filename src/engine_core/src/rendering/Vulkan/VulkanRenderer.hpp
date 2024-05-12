@@ -5,14 +5,14 @@
 */
 
 #pragma once
-
-#include "../Renderer.hpp"
-#include "../../utils/Assertions.hpp"
+#include "rendering/Renderer.hpp"
+#include "utils/Assertions.hpp"
+#include <magic_enum.hpp>
 
 #ifndef HUSH_VULKAN_IMPL
 #define HUSH_VULKAN_IMPL
 //NOLINTNEXTLINE
-#define HUSH_VK_ASSERT(result, message) HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, static_cast<int>(result))
+#define HUSH_VK_ASSERT(result, message) HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, magic_enum::enum_name(result))
 #endif
 
 #define VK_NO_PROTOTYPES
@@ -31,9 +31,11 @@ constexpr uint32_t VK_OPERATION_TIMEOUT_NS = 1'000'000'000; // This is one secon
 
 namespace Hush
 {
+    class VulkanImGuiForwarder;
     class VulkanRenderer final : public IRenderer
     {
       public:
+        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char *functionName, void *userData);
         /// @brief Creates a new vulkan renderer from a given window context
         /// @param windowContext opaque pointer to the window context
         VulkanRenderer(void *windowContext);
@@ -51,6 +53,8 @@ namespace Hush
         void InitRendering() override;
 
         void InitializeCommands() noexcept;
+
+        void InitImGui() override;
 
         void Draw() override;
 
@@ -112,5 +116,6 @@ namespace Hush
         // Frame counter
         //(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
         int m_frameNumber = 0;
+        std::unique_ptr<VulkanImGuiForwarder> m_uiForwarder;
     };
 } // namespace Hush

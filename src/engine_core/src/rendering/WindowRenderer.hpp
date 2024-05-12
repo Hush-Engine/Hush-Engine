@@ -13,7 +13,7 @@
 #include <SDL2/SDL.h>
 #include <memory>
 
-#include "Renderer.hpp"
+#include "rendering/Renderer.hpp"
 
 constexpr int DEFAULT_WINDOW_HEIGHT = 720;
 constexpr int DEFAULT_WINDOW_WIDTH = 1280;

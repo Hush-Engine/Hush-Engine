@@ -1,42 +1,27 @@
 include(cmake/deps.cmake)
-
+message("****COMPILING ENGINE SOURCE****")
 # Set the source files
+message("Getting scripting module...")
+file(GLOB_RECURSE SCRIPTING_SRC "src/scripting/*.hpp" "src/scripting/*.cpp")
+print_files("${SCRIPTING_SRC}")
+message("Getting utils module...")
+file(GLOB_RECURSE UTILS_SRC "src/utils/*.hpp" "src/utils/*.cpp")
+print_files("${UTILS_SRC}")
+message("Getting rendering module...")
+file(GLOB_RECURSE RENDERING_SRC "src/rendering/*.hpp" "src/rendering/*.cpp")
+print_files("${RENDERING_SRC}")
+message("Getting input module...")
+file(GLOB_RECURSE INPUT_SRC "src/input/*.hpp" "src/input/*.cpp")
+print_files("${INPUT_SRC}")
+
 set(SOURCES
     src/main.cpp
     src/HushEngine.hpp
     src/HushEngine.cpp
-    src/scripting/ScriptingManager.cpp
-    src/scripting/ScriptingManager.hpp
-    src/scripting/DotnetHost.hpp
-    src/scripting/DotnetHost.cpp
-    src/utils/LibManager.cpp
-    src/utils/LibManager.hpp
-    src/utils/StringUtils.cpp
-    src/utils/StringUtils.hpp
-    src/utils/Platform.hpp
-    src/utils/Assertions.hpp
-    src/utils/filesystem/PathUtils.hpp
-    src/utils/filesystem/PathUtils.cpp
-    src/rendering/WindowRenderer.hpp
-    src/rendering/WindowRenderer.cpp
-    src/rendering/WindowManager.hpp
-    src/rendering/Renderer.hpp
-    src/rendering/Vulkan/FrameData.hpp
-    src/rendering/Vulkan/VkUtilsFactory.hpp
-    src/rendering/Vulkan/VulkanRenderer.hpp
-    src/rendering/Vulkan/VulkanRenderer.cpp
-    src/rendering/Vulkan/VulkanPipelineBuilder.hpp
-    src/rendering/Vulkan/VulkanPipelineBuilder.cpp
-    src/rendering/Imgui/IImGuiForwarder.hpp
-    src/rendering/Imgui/VulkanImGuiForwarder.hpp
-    src/rendering/Imgui/VulkanImGuiForwarder.cpp
-    src/input/definitions/KeyStates.hpp
-    src/input/definitions/KeyData.hpp
-    src/input/definitions/KeyCode.hpp
-    src/input/definitions/MouseButton.hpp
-    src/input/definitions/MouseData.hpp
-    src/input/InputManager.hpp
-    src/input/InputManager.cpp
+    ${SCRIPTING_SRC}
+    ${UTILS_SRC}
+    ${RENDERING_SRC}
+    ${INPUT_SRC}
     src/editor/IEditorPanel.hpp
     src/log/Logger.hpp
     src/log/Logger.cpp

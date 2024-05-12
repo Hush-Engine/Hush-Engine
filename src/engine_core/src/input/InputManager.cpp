@@ -1,6 +1,5 @@
 #include "InputManager.hpp"
 #include "log/Logger.hpp"
-#include <magic_enum.hpp>
 
 // TODO: Populate the map in the stack with all enums
 // NOLINTNEXTLINE

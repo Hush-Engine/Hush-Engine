@@ -5,7 +5,7 @@
 */
 
 #pragma once
-#include "../rendering/Renderer.hpp"
+#include "rendering/Renderer.hpp"
 
 namespace Hush
 {
