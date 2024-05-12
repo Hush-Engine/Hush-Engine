@@ -34,6 +34,8 @@ namespace Hush
 
         /// @brief Initializes all the internal structures needed to begin rendering, call after a swapchain has been created!
         virtual void InitRendering() = 0;
+        
+        virtual void NewUIFrame() const noexcept = 0;
 
         [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
     };

@@ -58,6 +58,8 @@ namespace Hush
 
         void Draw() override;
 
+        void NewUIFrame() const noexcept override;
+
         void Dispose();
         
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
@@ -79,6 +81,7 @@ namespace Hush
         VkFormat* GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
+
 
       private:
         void Configure(vkb::Instance vkbInstance);

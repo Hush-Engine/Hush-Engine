@@ -30,8 +30,16 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
     HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");
 }
 
+void Hush::VulkanImGuiForwarder::NewFrame()
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+}
+
 void Hush::VulkanImGuiForwarder::RenderFrame(VkCommandBuffer cmd)
 {
+    ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 }
 

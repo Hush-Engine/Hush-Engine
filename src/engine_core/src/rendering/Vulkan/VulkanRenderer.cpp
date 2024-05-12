@@ -230,24 +230,15 @@ void Hush::VulkanRenderer::Draw()
         VkUtilsFactory::CreateColorAttachmentInfo(this->m_swapchainImageViews.at(swapchainImageIndex), clearValue);
 
     // Init
-    VkRenderingInfoKHR renderingInfo = {};
-    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-    renderingInfo.renderArea.offset.x = 0;
-    renderingInfo.renderArea.offset.y = 0;
-    renderingInfo.renderArea.extent.width = this->m_width;
-    renderingInfo.renderArea.extent.height = this->m_height;
-    renderingInfo.layerCount = 1;
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachments = &colorAttachmentInfo;
-
+    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingInfo renderingInfo = VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
+    
     // Begin dynamic rendering
     vkCmdBeginRendering(cmd, &renderingInfo);
 
     // Record your rendering commands here
-    /* VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateColorAttachmentInfo(
-        this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    VkRenderingInfo renderInfo = vkinit::rendering_info(_windowExtent, &colorAttachment, nullptr);
-    this->m_uiForwarder->RenderFrame();*/
+    this->m_uiForwarder->RenderFrame(cmd);
+    
 
     // End dynamic rendering
     vkCmdEndRendering(cmd);
@@ -257,6 +248,11 @@ void Hush::VulkanRenderer::Draw()
     HUSH_VK_ASSERT(rc, "End command buffer failed!");
 
     this->m_frameNumber++;
+}
+
+void Hush::VulkanRenderer::NewUIFrame() const noexcept
+{
+    this->m_uiForwarder->NewFrame();
 }
 
 void Hush::VulkanRenderer::InitRendering()

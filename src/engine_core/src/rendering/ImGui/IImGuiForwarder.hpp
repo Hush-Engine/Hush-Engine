@@ -25,5 +25,7 @@ namespace Hush
         IImGuiForwarder &operator=(IImGuiForwarder &&) = default;
 
         virtual void SetupImGui(IRenderer *renderer) = 0;
+        
+        virtual void NewFrame() = 0;
     };
 } // namespace Hush

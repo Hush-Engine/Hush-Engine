@@ -16,6 +16,8 @@ namespace Hush
       public:
         void SetupImGui(IRenderer* renderer) override;
 
+        void NewFrame() override;
+
         void RenderFrame(VkCommandBuffer cmd);
 
       private:
