@@ -39,6 +39,7 @@ void Hush::VulkanImGuiForwarder::NewFrame()
 
 void Hush::VulkanImGuiForwarder::RenderFrame(VkCommandBuffer cmd)
 {
+    ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 }

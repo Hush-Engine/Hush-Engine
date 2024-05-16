@@ -6,6 +6,7 @@
 
 #pragma once
 #include <vulkan/vulkan.h>
+#include "rendering/Vulkan/VulkanDeletionQueue.hpp"
 
 /// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
 /// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)
@@ -22,4 +23,5 @@ struct FrameData
 
     VkCommandBuffer mainCommandBuffer;
     VkCommandPool commandPool;
+    VulkanDeletionQueue deletionQueue;
 };

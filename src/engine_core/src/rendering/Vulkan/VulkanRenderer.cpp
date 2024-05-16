@@ -45,6 +45,7 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     vkb::Result<vkb::Instance> instanceResult =
         builder.set_app_name("Hush Engine")
             .request_validation_layers(true)
+            .enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
             // TODO: We might use a lower version for some platforms such as Android
             .require_api_version(1, 3, 0)
             .build();
@@ -65,6 +66,7 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
     LogTrace("Initialized vulkan surface");
     // Configure our renderer with the proper extensions / device properties, etc.
     this->Configure(vkbInstance);
+    this->LoadDebugMessenger();
 }
 
 Hush::VulkanRenderer::VulkanRenderer(VulkanRenderer &&rhs) noexcept
@@ -163,18 +165,21 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
     rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_immediateCommandBuffer);
     HUSH_VK_ASSERT(rc, "Allocating immidiate command buffers failed!");
 
+    this->m_mainDeletionQueue.PushFunction([=]() { vkDestroyCommandPool(m_device, m_immediateCommandPool, nullptr); });
+
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
         //Get a REFERENCE to the current frame
-        FrameData* currFrame = &this->m_frames.at(i);
-        rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &currFrame->commandPool);
+        rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_frames.at(i).commandPool);
         HUSH_VK_ASSERT(rc, "Creating command pool failed!");
 
         // allocate the default command buffer that we will use for rendering
-        cmdAllocInfo =
-            VkUtilsFactory::CreateCommandBufferAllocateInfo(currFrame->commandPool);
-        rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &currFrame->mainCommandBuffer);
+        cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_frames.at(i).commandPool);
+        rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_frames.at(i).mainCommandBuffer);
         HUSH_VK_ASSERT(rc, "Allocating command buffers failed!");
+        this->m_mainDeletionQueue.PushFunction([=]() { 
+            vkDestroyCommandPool(m_device, m_frames.at(i).commandPool, nullptr);
+        });
     }
 }
 
@@ -200,6 +205,8 @@ void Hush::VulkanRenderer::Draw()
         vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, VK_TRUE, VK_OPERATION_TIMEOUT_NS);
     HUSH_VK_ASSERT(rc, "Fence wait failed!");
 
+    //Flush the frame
+ 
     // Request an image from the swapchain
     uint32_t swapchainImageIndex = 0u;
     rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
@@ -352,7 +359,6 @@ FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
 
 FrameData &Hush::VulkanRenderer::GetLastFrame() noexcept
 {
-    // TODO: insert return statement here
     return this->m_frames.at((this->m_frameNumber - 1) % FRAME_OVERLAP);
 }
 
@@ -411,11 +417,16 @@ VkFormat* Hush::VulkanRenderer::GetSwapchainImageFormat() noexcept
 void Hush::VulkanRenderer::CreateSyncObjects()
 {
     // Create our sync objects and see if we were succesful
-    VkUtilsFactory utilsFactory;
-    VkFenceCreateInfo fenceInfo = utilsFactory.CreateFenceInfo(VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT);
-    VkSemaphoreCreateInfo semaphoreInfo = utilsFactory.CreateSemaphoreInfo();
+    VkFenceCreateInfo fenceInfo = VkUtilsFactory::CreateFenceInfo(VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo semaphoreInfo = VkUtilsFactory::CreateSemaphoreInfo();
 
-    VkResult rc{};
+    VkResult rc = vkCreateFence(this->m_device, &fenceInfo, nullptr, &this->m_immediateFence);
+    HUSH_VK_ASSERT(rc, "Immediate fence creation failed!");
+
+    this->m_mainDeletionQueue.PushFunction([=]() { 
+        vkDestroyFence(m_device, m_immediateFence, nullptr);
+    });
+
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
         rc = vkCreateFence(this->m_device, &fenceInfo, nullptr, &this->m_frames.at(i).renderFence);
@@ -427,7 +438,12 @@ void Hush::VulkanRenderer::CreateSyncObjects()
 
         rc = vkCreateSemaphore(this->m_device, &semaphoreInfo, nullptr, &this->m_frames.at(i).renderSemaphore);
         HUSH_VK_ASSERT(rc, "Creating render semaphore failed!");
-        // TODO: Create the present semaphore as well
+        
+        this->m_mainDeletionQueue.PushFunction([=]() {
+            vkDestroyFence(m_device, m_frames.at(i).renderFence, nullptr);
+            vkDestroySemaphore(m_device, m_frames.at(i).swapchainSemaphore, nullptr);
+            vkDestroySemaphore(m_device, m_frames.at(i).renderSemaphore, nullptr);
+        });
     }
 }
 
@@ -465,4 +481,23 @@ VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
     info.pCommandBufferInfos = cmd;
 
     return info;
+}
+
+void Hush::VulkanRenderer::LoadDebugMessenger()
+{
+    VkDebugUtilsMessengerCreateInfoEXT createInfo = VkUtilsFactory::CreateDebugMessengerInfo(LogDebugMessage);
+    VkResult rc = vkCreateDebugUtilsMessengerEXT(this->m_vulkanInstance, &createInfo, nullptr, &this->m_debugMessenger);
+    HUSH_VK_ASSERT(rc, "Failed to create debug utils messenger!");
+}
+
+uint32_t Hush::VulkanRenderer::LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                               VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                               const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                                               void *pUserData)
+{
+    Hush::LogWarn(pCallbackData->pMessage);
+    (void)messageSeverity;
+    (void)messageTypes;
+    (void)pUserData;
+    return 0;
 }

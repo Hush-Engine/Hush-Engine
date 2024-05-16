@@ -22,6 +22,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <functional>
+#include "rendering/Vulkan/VulkanDeletionQueue.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -93,6 +94,12 @@ namespace Hush
         VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo *cmd, VkSemaphoreSubmitInfo *signalSemaphoreInfo,
                                  VkSemaphoreSubmitInfo *waitSemaphoreInfo);
 
+        void LoadDebugMessenger();
+
+        static uint32_t LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                  VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                  const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
+
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;
@@ -120,5 +127,7 @@ namespace Hush
         //(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
         int m_frameNumber = 0;
         std::unique_ptr<VulkanImGuiForwarder> m_uiForwarder;
+
+        VulkanDeletionQueue m_mainDeletionQueue;
     };
 } // namespace Hush
