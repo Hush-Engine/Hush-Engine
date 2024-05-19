@@ -22,7 +22,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <functional>
-#include "rendering/Vulkan/VulkanDeletionQueue.hpp"
+#include "VkTypes.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -58,6 +58,8 @@ namespace Hush
         void InitImGui() override;
 
         void Draw() override;
+
+        void BackupDraw();
 
         void NewUIFrame() const noexcept override;
 
@@ -100,6 +102,10 @@ namespace Hush
                                   VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                   const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
+        void InitVmaAllocator(VmaAllocator allocator);
+
+        void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;
@@ -120,14 +126,17 @@ namespace Hush
         VkExtent2D m_swapChainExtent{};
         uint32_t m_width = 0u;
         uint32_t m_height = 0u;
+        // draw resources
+        AllocatedImage m_drawImage{};
 
         // Frame related data
         std::array<FrameData, FRAME_OVERLAP> m_frames{};
         // Frame counter
         //(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
         int m_frameNumber = 0;
-        std::unique_ptr<VulkanImGuiForwarder> m_uiForwarder;
+        std::unique_ptr<VulkanImGuiForwarder> m_uiForwarder = nullptr;
 
-        VulkanDeletionQueue m_mainDeletionQueue;
+        VulkanDeletionQueue m_mainDeletionQueue{};
+        VmaAllocator m_allocator = nullptr; // vma lib allocator
     };
 } // namespace Hush

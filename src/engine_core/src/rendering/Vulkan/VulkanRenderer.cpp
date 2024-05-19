@@ -148,6 +148,42 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     this->m_swapChain = vkbSwapChain.swapchain;
     this->m_swapchainImages = vkbSwapChain.get_images().value();
     this->m_swapchainImageViews = vkbSwapChain.get_image_views().value();
+//> Init_Swapchain
+    // draw image size will match the window
+    VkExtent3D drawImageExtent = {this->m_width, this->m_height, 1};
+
+    // hardcoding the draw format to 32 bit float
+    this->m_drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    this->m_drawImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags drawImageUsages{};
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo rimgInfo = VkUtilsFactory::CreateImageCreateInfo(this->m_drawImage.imageFormat, drawImageUsages, drawImageExtent);
+
+    // for the draw image, we want to allocate it from gpu local memory
+    VmaAllocationCreateInfo rimgAllocInfo = {};
+    rimgAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    rimgAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    // allocate and create the image
+    vmaCreateImage(this->m_allocator, &rimgInfo, &rimgAllocInfo, &this->m_drawImage.image, &this->m_drawImage.allocation, nullptr);
+
+    // build a image-view for the draw image to use for rendering
+    VkImageViewCreateInfo rview_info = VkUtilsFactory::CreateImageViewCreateInfo(this->m_drawImage.imageFormat, this->m_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rview_info, nullptr, &this->m_drawImage.imageView), "Failed to create image view");
+
+    // add to deletion queues
+    this->m_mainDeletionQueue.PushFunction([=]() {
+        vkDestroyImageView(m_device, m_drawImage.imageView, nullptr);
+        vmaDestroyImage(m_allocator, m_drawImage.image, m_drawImage.allocation);
+    });
+//< Init_Swapchain
+
 }
 
 void Hush::VulkanRenderer::InitializeCommands() noexcept
@@ -191,6 +227,111 @@ void Hush::VulkanRenderer::InitImGui()
 
 void Hush::VulkanRenderer::Draw()
 {
+    // wait until the gpu has finished rendering the last frame. Timeout of 1 second
+    HUSH_VK_ASSERT(vkWaitForFences(this->m_device, 1, &GetCurrentFrame().renderFence, true, VK_OPERATION_TIMEOUT_NS),
+                   "Wait fences failed");
+
+    GetCurrentFrame().deletionQueue.Flush();
+
+    // request image from the swapchain
+    uint32_t swapchainImageIndex;
+
+    VkResult e = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
+                                       GetCurrentFrame().swapchainSemaphore, nullptr, &swapchainImageIndex);
+    if (e == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        LogError("Needs to rebuild swapchain");
+        return;
+    }
+
+    HUSH_VK_ASSERT(vkResetFences(this->m_device, 1, &GetCurrentFrame().renderFence), "Reset fences failed");
+
+    // now that we are sure that the commands finished executing, we can safely reset the command buffer to begin
+    // recording again.
+    HUSH_VK_ASSERT(vkResetCommandBuffer(GetCurrentFrame().mainCommandBuffer, 0), "Reset command buffer failed");
+
+    // naming it cmd for shorter writing
+    VkCommandBuffer cmd = GetCurrentFrame().mainCommandBuffer;
+
+    // begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know
+    // that
+    VkCommandBufferBeginInfo cmdBeginInfo =
+        VkUtilsFactory::CreateCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    //> draw_first
+
+    HUSH_VK_ASSERT(vkBeginCommandBuffer(cmd, &cmdBeginInfo), "Begin command buffer failed");
+
+    // transition our main draw image into general layout so we can write into it
+    // we will overwrite it all so we dont care about what was the older layout
+    TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    draw_background(cmd);
+
+    // transition the draw image and the swapchain image into their correct transfer layouts
+    vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //< draw_first
+    //> imgui_draw
+    // execute a copy from the draw image into the swapchain
+    vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], _drawExtent,
+                                _swapchainExtent);
+
+    // set swapchain image layout to Attachment Optimal so we can draw it
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    // draw imgui into the swapchain image
+    draw_imgui(cmd, _swapchainImageViews[swapchainImageIndex]);
+
+    // set swapchain image layout to Present so we can draw it
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    // finalize the command buffer (we can no longer add commands, but it can now be executed)
+    HUSH_VK_ASSERT(vkEndCommandBuffer(cmd));
+    //< imgui_draw
+
+    // prepare the submission to the queue.
+    // we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
+    // we will signal the _renderSemaphore, to signal that rendering has finished
+
+    VkCommandBufferSubmitInfo cmdinfo = vkinit::command_buffer_submit_info(cmd);
+
+    VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+                                                                   get_current_frame()._swapchainSemaphore);
+    VkSemaphoreSubmitInfo signalInfo =
+        vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, get_current_frame()._renderSemaphore);
+
+    VkSubmitInfo2 submit = vkinit::submit_info(&cmdinfo, &signalInfo, &waitInfo);
+
+    // submit command buffer to the queue and execute it.
+    //  _renderFence will now block until the graphic commands finish execution
+    HUSH_VK_ASSERT(vkQueueSubmit2(_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
+
+    // prepare present
+    //  this will put the image we just rendered to into the visible window.
+    //  we want to wait on the _renderSemaphore for that,
+    //  as its necessary that drawing commands have finished before the image is displayed to the user
+    VkPresentInfoKHR presentInfo = vkinit::present_info();
+
+    presentInfo.pSwapchains = &_swapchain;
+    presentInfo.swapchainCount = 1;
+
+    presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
+    presentInfo.waitSemaphoreCount = 1;
+
+    presentInfo.pImageIndices = &swapchainImageIndex;
+
+    VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+
+    // increase the number of frames drawn
+    this->m_frameNumber++;
+}
+
+void Hush::VulkanRenderer::BackupDraw()
+{
     auto *sdlWindowContext = static_cast<SDL_Window *>(this->m_windowContext);
     // Skip rendering if the window is minimized
     uint32_t minimizedFlagResult = SDL_GetWindowFlags(sdlWindowContext) & SDL_WINDOW_MINIMIZED;
@@ -198,15 +339,15 @@ void Hush::VulkanRenderer::Draw()
     {
         return;
     }
-    FrameData& currentFrame = this->GetCurrentFrame();
+    FrameData &currentFrame = this->GetCurrentFrame();
     const uint32_t fenceTargetCount = 1u;
     // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
     VkResult rc =
-        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, VK_TRUE, VK_OPERATION_TIMEOUT_NS);
+        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
     HUSH_VK_ASSERT(rc, "Fence wait failed!");
 
-    //Flush the frame
- 
+    // Flush the frame
+
     // Request an image from the swapchain
     uint32_t swapchainImageIndex = 0u;
     rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
@@ -233,19 +374,22 @@ void Hush::VulkanRenderer::Draw()
     // Create our color attachment
     VkClearValue clearValue = {};
     clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
-    VkRenderingAttachmentInfoKHR colorAttachmentInfo =
-        VkUtilsFactory::CreateColorAttachmentInfo(this->m_swapchainImageViews.at(swapchainImageIndex), clearValue);
 
     // Init
-    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    VkRenderingInfo renderingInfo = VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
-    
+    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
+        this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderingInfo =
+        VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
+
+    VkExtent2D drawExtent{this->m_width, this->m_height};
+
+    TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     // Begin dynamic rendering
     vkCmdBeginRendering(cmd, &renderingInfo);
 
     // Record your rendering commands here
     this->m_uiForwarder->RenderFrame(cmd);
-    
 
     // End dynamic rendering
     vkCmdEndRendering(cmd);
@@ -270,12 +414,14 @@ void Hush::VulkanRenderer::InitRendering()
 
 void Hush::VulkanRenderer::Dispose()
 {
-    this->DestroySwapChain();
     if (this->m_device != nullptr)
     {
         vkDeviceWaitIdle(this->m_device);
+
+        this->m_mainDeletionQueue.Flush();
         for (int i = 0; i < FRAME_OVERLAP; i++)
         {
+            this->m_frames.at(i).deletionQueue.Flush();
             // Delete any command pools
             vkDestroyCommandPool(this->m_device, this->m_frames.at(i).commandPool, nullptr);
             // Destroy the sync objects
@@ -283,6 +429,7 @@ void Hush::VulkanRenderer::Dispose()
             vkDestroySemaphore(this->m_device, this->m_frames.at(i).renderSemaphore, nullptr);
             vkDestroySemaphore(this->m_device, this->m_frames.at(i).swapchainSemaphore, nullptr);
         }
+        this->DestroySwapChain();
         vkDestroyDevice(this->m_device, nullptr);
     }
 
@@ -405,6 +552,9 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     this->m_graphicsQueue = queueResult.value();
     this->m_graphicsQueueFamily = queueIndexResult.value();
 
+    //Initialize our allocator
+    this->InitVmaAllocator(this->m_allocator);
+
     LogFormat(ELogLevel::Debug, "Device name: {}", properties.deviceName);
     LogFormat(ELogLevel::Debug, "API version: {}", properties.apiVersion);
 }
@@ -500,4 +650,47 @@ uint32_t Hush::VulkanRenderer::LogDebugMessage(VkDebugUtilsMessageSeverityFlagBi
     (void)messageTypes;
     (void)pUserData;
     return 0;
+}
+
+void Hush::VulkanRenderer::InitVmaAllocator(VmaAllocator allocator)
+{
+    // initialize the memory allocator
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = this->m_vulkanPhysicalDevice;
+    allocatorInfo.device = this->m_device;
+    allocatorInfo.instance = this->m_vulkanInstance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+    this->m_mainDeletionQueue.PushFunction([&]() { vmaDestroyAllocator(_allocator); });
+}
+
+void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
+                                           VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 imageBarrier{};
+    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    imageBarrier.pNext = nullptr;
+
+    imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+    imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+    imageBarrier.oldLayout = currentLayout;
+    imageBarrier.newLayout = newLayout;
+
+    VkImageAspectFlags aspectMask =
+        (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBarrier.subresourceRange = VkUtilsFactory::ImageSubResourceRange(aspectMask);
+    imageBarrier.image = image;
+
+    VkDependencyInfo depInfo{};
+    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    depInfo.pNext = nullptr;
+
+    depInfo.imageMemoryBarrierCount = 1;
+    depInfo.pImageMemoryBarriers = &imageBarrier;
+
+    vkCmdPipelineBarrier2(cmd, &depInfo);
 }
