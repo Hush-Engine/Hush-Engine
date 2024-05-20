@@ -236,4 +236,19 @@ class VkUtilsFactory
         return info;
     }
 
+    static VkPresentInfoKHR CreatePresentInfo()
+    {
+        VkPresentInfoKHR info = {};
+        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        info.pNext = nullptr;
+
+        info.swapchainCount = 0;
+        info.pSwapchains = nullptr;
+        info.pWaitSemaphores = nullptr;
+        info.waitSemaphoreCount = 0;
+        info.pImageIndices = nullptr;
+
+        return info;
+    }
+
 };

@@ -16,13 +16,17 @@
 #endif
 
 #define VK_NO_PROTOTYPES
-#include "FrameData.hpp"
+
 #include <VkBootstrap.h>
 #include <array>
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <functional>
+#include "FrameData.hpp"
+#include "vk_mem_alloc.hpp"
+#include "VulkanDeletionQueue.hpp"
 #include "VkTypes.hpp"
+#include "rendering/ImGui/IImGuiForwarder.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -32,7 +36,7 @@ constexpr uint32_t VK_OPERATION_TIMEOUT_NS = 1'000'000'000; // This is one secon
 
 namespace Hush
 {
-    class VulkanImGuiForwarder;
+
     class VulkanRenderer final : public IRenderer
     {
       public:
@@ -58,8 +62,6 @@ namespace Hush
         void InitImGui() override;
 
         void Draw() override;
-
-        void BackupDraw();
 
         void NewUIFrame() const noexcept override;
 
@@ -102,9 +104,12 @@ namespace Hush
                                   VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                   const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
-        void InitVmaAllocator(VmaAllocator allocator);
+        void InitVmaAllocator();
 
         void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+
+        void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
+                              VkExtent2D dstSize);
 
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
@@ -134,7 +139,7 @@ namespace Hush
         // Frame counter
         //(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
         int m_frameNumber = 0;
-        std::unique_ptr<VulkanImGuiForwarder> m_uiForwarder = nullptr;
+        std::unique_ptr<IImGuiForwarder> m_uiForwarder = nullptr;
 
         VulkanDeletionQueue m_mainDeletionQueue{};
         VmaAllocator m_allocator = nullptr; // vma lib allocator

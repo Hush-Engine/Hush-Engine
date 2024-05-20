@@ -3,8 +3,20 @@
     \date 2024-05-19
     \brief Memory allocation utilities from github
 */
-
 #pragma once
+// Disable all warnings
+#ifdef _MSC_VER
+// MSVC
+#pragma warning(push, 0)
+#elif defined(__clang__)
+// Clang
+#pragma clang system_header
+#elif defined(__GNUC__) || defined(__GNUG__)
+// GCC
+#pragma GCC system_header
+#endif
+
+
 //
 // Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
@@ -19856,3 +19868,8 @@ Features deliberately excluded from the scope of this library:
 -# This is a C++ library with C interface. **Bindings or ports to any other programming languages** are welcome as
 external projects but are not going to be included into this repository.
 */
+
+#ifdef _MSC_VER
+// MSVC
+#pragma warning(pop)
+#endif

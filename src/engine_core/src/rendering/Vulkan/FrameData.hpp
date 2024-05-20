@@ -1,12 +1,12 @@
 /*! \file FrameData.hpp
-    \author Leonidas Gonzalez
-    \date 2024-04-06
-    \brief Contains the definition of the frame data structure to pass in Vulkan's dynamic rendering
+    \author Kyn21kx
+    \date 2024-05-20
+    \brief Frame data to be passed to vulkan's dynamic rendering
 */
 
 #pragma once
 #include <vulkan/vulkan.h>
-#include "rendering/Vulkan/VulkanDeletionQueue.hpp"
+#include "VulkanDeletionQueue.hpp"
 
 /// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
 /// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)

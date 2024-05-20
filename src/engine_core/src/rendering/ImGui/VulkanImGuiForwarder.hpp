@@ -5,12 +5,12 @@
 */
 
 #pragma once
-#include "rendering/Vulkan/VulkanRenderer.hpp"
 #include "rendering/ImGui/IImGuiForwarder.hpp"
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 namespace Hush
 {
+    class VulkanRenderer;
     class VulkanImGuiForwarder : public IImGuiForwarder
     {
       public:
