@@ -18,6 +18,8 @@ namespace Hush
 
         void NewFrame() override;
 
+        void HandleEvent(const SDL_Event *event) noexcept override;
+
         void RenderFrame(VkCommandBuffer cmd);
 
       private:

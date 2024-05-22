@@ -37,6 +37,11 @@ void Hush::VulkanImGuiForwarder::NewFrame()
     ImGui::NewFrame();
 }
 
+void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept
+{
+    ImGui_ImplSDL2_ProcessEvent(event);
+}
+
 void Hush::VulkanImGuiForwarder::RenderFrame(VkCommandBuffer cmd)
 {
     ImGui::EndFrame();

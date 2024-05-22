@@ -1,6 +1,7 @@
 #include "HushEngine.hpp"
 #include <rendering/WindowManager.hpp>
 #include <imgui/imgui.h>
+#include <spdlog/details/os-inl.h>
 
 Hush::HushEngine::~HushEngine()
 {
@@ -17,8 +18,14 @@ void Hush::HushEngine::Run()
     while (this->m_isApplicationRunning)
     {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-        // TODO: Delta time calculations
         mainRenderer.HandleEvents(&this->m_isApplicationRunning);
+        
+        if (!rendererImpl->IsRendering())
+        {
+            // Arbitrary sleep to avoid taking all CPU usage
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
         rendererImpl->NewUIFrame();
 
         ImGui::Begin("Test");
@@ -32,7 +39,6 @@ void Hush::HushEngine::Run()
         std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         (void)elapsed;
-        SDL_Delay(1000 / 60);
     }
 }
 

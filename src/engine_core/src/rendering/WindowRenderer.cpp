@@ -70,6 +70,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
     default:
         break;
     }
+    this->m_windowRenderer->HandleEvent(&event);
 }
 
 Hush::WindowRenderer::~WindowRenderer()

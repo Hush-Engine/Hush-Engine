@@ -27,5 +27,7 @@ namespace Hush
         virtual void SetupImGui(IRenderer *renderer) = 0;
         
         virtual void NewFrame() = 0;
+
+        virtual void HandleEvent(const SDL_Event *) noexcept = 0;
     };
 } // namespace Hush

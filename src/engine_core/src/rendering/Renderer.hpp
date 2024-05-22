@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <SDL2/SDL.h>
 
 namespace Hush
 {
@@ -37,6 +38,9 @@ namespace Hush
         
         virtual void NewUIFrame() const noexcept = 0;
 
+        virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
+
         [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
+        [[nodiscard]] virtual bool IsRendering() const noexcept = 0;
     };
 } // namespace Hush

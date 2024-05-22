@@ -65,6 +65,8 @@ namespace Hush
 
         void NewUIFrame() const noexcept override;
 
+        void HandleEvent(const SDL_Event *event) noexcept override;
+
         void Dispose();
         
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
@@ -86,6 +88,8 @@ namespace Hush
         VkFormat* GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
+
+        [[nodiscard]] bool IsRendering() const noexcept override;
 
 
       private:
@@ -143,5 +147,6 @@ namespace Hush
 
         VulkanDeletionQueue m_mainDeletionQueue{};
         VmaAllocator m_allocator = nullptr; // vma lib allocator
+        bool m_isRendering = true;
     };
 } // namespace Hush

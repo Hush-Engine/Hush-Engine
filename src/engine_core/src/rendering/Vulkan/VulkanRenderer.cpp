@@ -232,13 +232,6 @@ void Hush::VulkanRenderer::InitImGui()
 
 void Hush::VulkanRenderer::Draw()
 {
-    auto *sdlWindowContext = static_cast<SDL_Window *>(this->m_windowContext);
-    // Skip rendering if the window is minimized
-    uint32_t minimizedFlagResult = SDL_GetWindowFlags(sdlWindowContext) & SDL_WINDOW_MINIMIZED;
-    if (minimizedFlagResult == 1u)
-    {
-        return;
-    }
     FrameData &currentFrame = this->GetCurrentFrame();
     // wait until the gpu has finished rendering the last frame. Timeout of 1 second
     const uint32_t fenceTargetCount = 1u;
@@ -279,8 +272,7 @@ void Hush::VulkanRenderer::Draw()
                            this->m_swapChainExtent);
 
     // set swapchain image layout to Attachment Optimal so we can draw it
-    this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    //this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
     vkCmdBeginRendering(cmd, &renderingInfo);
     // draw imgui into the swapchain image
@@ -337,6 +329,24 @@ void Hush::VulkanRenderer::Draw()
 void Hush::VulkanRenderer::NewUIFrame() const noexcept
 {
     this->m_uiForwarder->NewFrame();
+}
+
+void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
+{
+    if (event->type == SDL_WINDOWEVENT)
+    {
+        switch (event->window.event)
+        {
+            case SDL_WINDOWEVENT_MINIMIZED:
+                this->m_isRendering = false;
+                break;
+            case SDL_WINDOWEVENT_RESTORED:
+                this->m_isRendering = true;
+                break;
+        }
+    }
+    
+    this->m_uiForwarder->HandleEvent(event);
 }
 
 void Hush::VulkanRenderer::InitRendering()
@@ -544,6 +554,11 @@ void Hush::VulkanRenderer::DestroySwapChain()
 void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 {
     return this->m_windowContext;
+}
+
+bool Hush::VulkanRenderer::IsRendering() const noexcept
+{
+    return this->m_isRendering;
 }
 
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
