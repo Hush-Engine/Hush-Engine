@@ -2,10 +2,9 @@
 #include <imgui/imgui.h>
 #include <utils/Assertions.hpp>
 
-constexpr ImGuiWindowFlags DOCK_BASE_FLAGS = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking |
-                                          ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                                          ImGuiWindowFlags_NoMove |ImGuiWindowFlags_NoBringToFrontOnFocus | 
-                                          ImGuiWindowFlags_NoNavFocus; 
+constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
+    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 void Hush::HierarchyPanel::OnRender()
 {
@@ -13,7 +12,7 @@ void Hush::HierarchyPanel::OnRender()
     ImGui::SetNextWindowViewport(mainViewport->ID);
     if (ImGui::Begin("Hierarchy"))
     {
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO &io = ImGui::GetIO();
         (void)io;
         ImGui::Text("Camera");
         ImGui::Text("Directional Light");

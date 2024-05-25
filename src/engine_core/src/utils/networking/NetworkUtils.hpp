@@ -13,25 +13,24 @@ namespace Hush::Networking
 {
 
 #if defined(HUSH_PLATFORM_WIN)
-    template <uint32_t N>
-    constexpr auto SystemOpenURL(const char (&url)[N])
+    template <uint32_t N> constexpr auto SystemOpenURL(const char (&url)[N])
     {
         const char *cmd = StringUtils::CompileTimeConcat("start ", url).data();
         return system(cmd);
-}
+    }
 #elif defined(HUSH_PLATFORM_OSX)
     constexpr auto SystemOpenURL(const char (&url)[N])
     {
-    const char *cmd = StringUtils::CompileTimeConcat("open ", url).data();
-    return system(cmd);
-}
+        const char *cmd = StringUtils::CompileTimeConcat("open ", url).data();
+        return system(cmd);
+    }
 #elif defined(HUSH_PLATFORM_LINUX)
     constexpr auto SystemOpenURL(const char (&url)[N])
     {
-    const char *cmd = StringUtils::CompileTimeConcat("xdg-open ", url).data();
-    return system(cmd);
-}
+        const char *cmd = StringUtils::CompileTimeConcat("xdg-open ", url).data();
+        return system(cmd);
+    }
 #else
 #error "Unknown compiler"
 #endif
-}
+} // namespace Hush::Networking

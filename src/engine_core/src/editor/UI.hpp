@@ -5,10 +5,10 @@
 */
 
 #pragma once
-#include "utils/typeutils/TypeUtils.hpp"
 #include "editor/IEditorPanel.hpp"
-#include <unordered_map>
+#include "utils/typeutils/TypeUtils.hpp"
 #include <memory>
+#include <unordered_map>
 
 namespace Hush
 {
@@ -20,7 +20,6 @@ namespace Hush
         static void InitializePanels();
 
       private:
-
         template <class T> static std::unique_ptr<T> CreatePanel()
         {
             return std::make_unique<T>();

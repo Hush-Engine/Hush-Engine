@@ -16,7 +16,6 @@
 #pragma GCC system_header
 #endif
 
-
 //
 // Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //

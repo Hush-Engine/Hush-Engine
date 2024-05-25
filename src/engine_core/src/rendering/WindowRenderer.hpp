@@ -9,8 +9,8 @@
 // Let's tell SDL we got main covered
 #define SDL_MAIN_HANDLED
 
-#include <input/InputManager.hpp>
 #include <SDL2/SDL.h>
+#include <input/InputManager.hpp>
 #include <memory>
 
 #include "rendering/Renderer.hpp"

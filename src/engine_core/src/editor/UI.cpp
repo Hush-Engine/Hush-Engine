@@ -2,7 +2,6 @@
 #include "HierarchyPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 
-
 std::vector<std::unique_ptr<Hush::IEditorPanel>> Hush::UI::S_ACTIVE_PANELS;
 
 void Hush::UI::DrawPanels()

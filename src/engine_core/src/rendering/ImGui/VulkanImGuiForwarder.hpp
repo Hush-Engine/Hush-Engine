@@ -14,17 +14,18 @@ namespace Hush
     class VulkanImGuiForwarder final : public IImGuiForwarder
     {
       public:
-        void SetupImGui(IRenderer* renderer) override;
+        void SetupImGui(IRenderer *renderer) override;
 
         void NewFrame() override;
 
         void HandleEvent(const SDL_Event *event) noexcept override;
-        
+
         void Dispose() noexcept override;
 
         void RenderFrame(VkCommandBuffer cmd);
+
       private:
-        [[nodiscard]] ImGui_ImplVulkan_InitInfo CreateInitData(VulkanRenderer* vulkanRenderer) const noexcept;
+        [[nodiscard]] ImGui_ImplVulkan_InitInfo CreateInitData(VulkanRenderer *vulkanRenderer) const noexcept;
 
         VkDescriptorPool CreateImGuiPool(VkDevice device) const noexcept;
     };

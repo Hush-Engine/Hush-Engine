@@ -1,8 +1,8 @@
 #include "HushEngine.hpp"
-#include <rendering/WindowManager.hpp>
-#include <imgui/imgui.h>
-#include <spdlog/details/os-inl.h>
 #include <editor/UI.hpp>
+#include <imgui/imgui.h>
+#include <rendering/WindowManager.hpp>
+#include <spdlog/details/os-inl.h>
 
 Hush::HushEngine::~HushEngine()
 {
@@ -14,16 +14,16 @@ void Hush::HushEngine::Run()
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
     IRenderer *rendererImpl = mainRenderer.GetInternalRenderer();
-    
-    //Initialize any static resources we need
+
+    // Initialize any static resources we need
     UI::InitializePanels();
 
     while (this->m_isApplicationRunning)
     {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
         mainRenderer.HandleEvents(&this->m_isApplicationRunning);
-        
-        //TODO: Change this to the window renderer
+
+        // TODO: Change this to the window renderer
         if (!mainRenderer.IsActive())
         {
             // Arbitrary sleep to avoid taking all CPU usage

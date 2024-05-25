@@ -7,8 +7,8 @@
 #define VMA_IMPLEMENTATION
 #include "VulkanRenderer.hpp"
 #include "log/Logger.hpp"
-#include "utils/Platform.hpp"
 #include "rendering/WindowManager.hpp"
+#include "utils/Platform.hpp"
 
 #include "rendering/Vulkan/VkTypes.hpp"
 
@@ -20,12 +20,11 @@
 #endif
 #define VOLK_IMPLEMENTATION
 #include "VkUtilsFactory.hpp"
+#include "rendering/ImGui/VulkanImGuiForwarder.hpp"
 #include "utils/Assertions.hpp"
+#include "vk_mem_alloc.hpp"
 #include <utils/typeutils/TypeUtils.hpp>
 #include <volk.h>
-#include "rendering/ImGui/VulkanImGuiForwarder.hpp"
-#include "vk_mem_alloc.hpp"
-
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -153,7 +152,7 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     this->m_swapChain = vkbSwapChain.swapchain;
     this->m_swapchainImages = vkbSwapChain.get_images().value();
     this->m_swapchainImageViews = vkbSwapChain.get_image_views().value();
-//> Init_Swapchain
+    //> Init_Swapchain
     // draw image size will match the window
     VkExtent3D drawImageExtent = {this->m_width, this->m_height, 1};
 
@@ -167,7 +166,8 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
     drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    VkImageCreateInfo rimgInfo = VkUtilsFactory::CreateImageCreateInfo(this->m_drawImage.imageFormat, drawImageUsages, drawImageExtent);
+    VkImageCreateInfo rimgInfo =
+        VkUtilsFactory::CreateImageCreateInfo(this->m_drawImage.imageFormat, drawImageUsages, drawImageExtent);
 
     // for the draw image, we want to allocate it from gpu local memory
     VmaAllocationCreateInfo rimgAllocInfo = {};
@@ -175,20 +175,22 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
     rimgAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     // allocate and create the image
-    vmaCreateImage(this->m_allocator, &rimgInfo, &rimgAllocInfo, &this->m_drawImage.image, &this->m_drawImage.allocation, nullptr);
+    vmaCreateImage(this->m_allocator, &rimgInfo, &rimgAllocInfo, &this->m_drawImage.image,
+                   &this->m_drawImage.allocation, nullptr);
 
     // build a image-view for the draw image to use for rendering
-    VkImageViewCreateInfo rview_info = VkUtilsFactory::CreateImageViewCreateInfo(this->m_drawImage.imageFormat, this->m_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageViewCreateInfo rview_info = VkUtilsFactory::CreateImageViewCreateInfo(
+        this->m_drawImage.imageFormat, this->m_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rview_info, nullptr, &this->m_drawImage.imageView), "Failed to create image view");
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rview_info, nullptr, &this->m_drawImage.imageView),
+                   "Failed to create image view");
 
     // add to deletion queues
     this->m_mainDeletionQueue.PushFunction([=]() {
         vkDestroyImageView(m_device, m_drawImage.imageView, nullptr);
         vmaDestroyImage(m_allocator, m_drawImage.image, m_drawImage.allocation);
     });
-//< Init_Swapchain
-
+    //< Init_Swapchain
 }
 
 void Hush::VulkanRenderer::InitializeCommands() noexcept
@@ -197,12 +199,13 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
         this->m_graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     VkResult rc{};
 
-    //Initialize the immediate command structures
+    // Initialize the immediate command structures
     rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_immediateCommandPool);
     HUSH_VK_ASSERT(rc, "Creating immediate command pool failed!");
 
     // allocate the command buffer for immediate submits
-    VkCommandBufferAllocateInfo cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_immediateCommandPool);
+    VkCommandBufferAllocateInfo cmdAllocInfo =
+        VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_immediateCommandPool);
     rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_immediateCommandBuffer);
     HUSH_VK_ASSERT(rc, "Allocating immidiate command buffers failed!");
 
@@ -210,7 +213,7 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
 
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
-        //Get a REFERENCE to the current frame
+        // Get a REFERENCE to the current frame
         rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_frames.at(i).commandPool);
         HUSH_VK_ASSERT(rc, "Creating command pool failed!");
 
@@ -218,9 +221,8 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
         cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_frames.at(i).commandPool);
         rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_frames.at(i).mainCommandBuffer);
         HUSH_VK_ASSERT(rc, "Allocating command buffers failed!");
-        this->m_mainDeletionQueue.PushFunction([=]() { 
-            vkDestroyCommandPool(m_device, m_frames.at(i).commandPool, nullptr);
-        });
+        this->m_mainDeletionQueue.PushFunction(
+            [=]() { vkDestroyCommandPool(m_device, m_frames.at(i).commandPool, nullptr); });
     }
 }
 
@@ -264,15 +266,18 @@ void Hush::VulkanRenderer::Draw()
     rc = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
     HUSH_VK_ASSERT(rc, "Begin command buffer failed!");
 
-    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo renderingInfo = VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
+    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
+        this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderingInfo =
+        VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
     // execute a copy from the draw image into the swapchain
     VkExtent2D drawExtent = {this->m_width, this->m_height};
     this->CopyImageToImage(cmd, this->m_drawImage.image, this->m_swapchainImages.at(swapchainImageIndex), drawExtent,
                            this->m_swapChainExtent);
 
     // set swapchain image layout to Attachment Optimal so we can draw it
-    //this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    // this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
     vkCmdBeginRendering(cmd, &renderingInfo);
     // draw imgui into the swapchain image
@@ -293,8 +298,9 @@ void Hush::VulkanRenderer::Draw()
 
     VkCommandBufferSubmitInfo cmdinfo = VkUtilsFactory::CreateCommandBufferSubmitInfo(cmd);
 
-    VkSemaphoreSubmitInfo waitInfo = VkUtilsFactory::CreateSemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, currentFrame.swapchainSemaphore);
-    
+    VkSemaphoreSubmitInfo waitInfo = VkUtilsFactory::CreateSemaphoreSubmitInfo(
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, currentFrame.swapchainSemaphore);
+
     VkSemaphoreSubmitInfo signalInfo =
         VkUtilsFactory::CreateSemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, currentFrame.renderSemaphore);
 
@@ -332,7 +338,7 @@ void Hush::VulkanRenderer::NewUIFrame() const noexcept
 }
 
 void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
-{    
+{
     this->m_uiForwarder->HandleEvent(event);
 }
 
@@ -388,14 +394,15 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
 {
     VkResult rc = vkResetFences(this->m_device, 1u, &this->m_immediateFence);
     HUSH_VK_ASSERT(rc, "Failed to reset immediate fence!");
-    
+
     rc = vkResetCommandBuffer(this->m_immediateCommandBuffer, 0);
     HUSH_VK_ASSERT(rc, "Failed to reset immediate command buffer!");
-    
-    VkCommandBufferBeginInfo cmdBeginInfo = VkUtilsFactory::CreateCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    VkCommandBufferBeginInfo cmdBeginInfo =
+        VkUtilsFactory::CreateCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     rc = vkBeginCommandBuffer(this->m_immediateCommandBuffer, &cmdBeginInfo);
     HUSH_VK_ASSERT(rc, "Failed to initialize immediate command buffer!");
-    
+
     function(this->m_immediateCommandBuffer);
 
     rc = vkEndCommandBuffer(this->m_immediateCommandBuffer);
@@ -485,14 +492,14 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     this->m_graphicsQueue = queueResult.value();
     this->m_graphicsQueueFamily = queueIndexResult.value();
 
-    //Initialize our allocator
+    // Initialize our allocator
     this->InitVmaAllocator();
 
     LogFormat(ELogLevel::Debug, "Device name: {}", properties.deviceName);
     LogFormat(ELogLevel::Debug, "API version: {}", properties.apiVersion);
 }
 
-VkFormat* Hush::VulkanRenderer::GetSwapchainImageFormat() noexcept
+VkFormat *Hush::VulkanRenderer::GetSwapchainImageFormat() noexcept
 {
     return &this->m_swapchainImageFormat;
 }
@@ -506,9 +513,7 @@ void Hush::VulkanRenderer::CreateSyncObjects()
     VkResult rc = vkCreateFence(this->m_device, &fenceInfo, nullptr, &this->m_immediateFence);
     HUSH_VK_ASSERT(rc, "Immediate fence creation failed!");
 
-    this->m_mainDeletionQueue.PushFunction([=]() { 
-        vkDestroyFence(m_device, m_immediateFence, nullptr);
-    });
+    this->m_mainDeletionQueue.PushFunction([=]() { vkDestroyFence(m_device, m_immediateFence, nullptr); });
 
     for (int i = 0; i < FRAME_OVERLAP; i++)
     {
@@ -521,7 +526,7 @@ void Hush::VulkanRenderer::CreateSyncObjects()
 
         rc = vkCreateSemaphore(this->m_device, &semaphoreInfo, nullptr, &this->m_frames.at(i).renderSemaphore);
         HUSH_VK_ASSERT(rc, "Creating render semaphore failed!");
-        
+
         this->m_mainDeletionQueue.PushFunction([=]() {
             vkDestroyFence(m_device, m_frames.at(i).renderFence, nullptr);
             vkDestroySemaphore(m_device, m_frames.at(i).swapchainSemaphore, nullptr);
@@ -589,11 +594,9 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 {
     // Fetch the Vulkan functions using the Vulkan loader
     auto fpGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
-        vkGetInstanceProcAddr(this->m_vulkanInstance, "vkGetInstanceProcAddr")
-    );
-    auto fpGetDeviceProcAddr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
-        vkGetDeviceProcAddr(this->m_device, "vkGetDeviceProcAddr")
-    );
+        vkGetInstanceProcAddr(this->m_vulkanInstance, "vkGetInstanceProcAddr"));
+    auto fpGetDeviceProcAddr =
+        reinterpret_cast<PFN_vkGetDeviceProcAddr>(vkGetDeviceProcAddr(this->m_device, "vkGetDeviceProcAddr"));
 
     // Fill in the VmaVulkanFunctions struct
     VmaVulkanFunctions vulkanFunctions{};
@@ -668,7 +671,7 @@ void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source,
     blitRegion.dstSubresource.mipLevel = 0;
 
     VkBlitImageInfo2 blitInfo{};
-    
+
     blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
     blitInfo.pNext = nullptr;
     blitInfo.dstImage = destination;

@@ -11,22 +11,23 @@
 
 #ifndef HUSH_VULKAN_IMPL
 #define HUSH_VULKAN_IMPL
-//NOLINTNEXTLINE
-#define HUSH_VK_ASSERT(result, message) HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, magic_enum::enum_name(result))
+// NOLINTNEXTLINE
+#define HUSH_VK_ASSERT(result, message)                                                                                \
+    HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, magic_enum::enum_name(result))
 #endif
 
 #define VK_NO_PROTOTYPES
 
+#include "FrameData.hpp"
+#include "VkTypes.hpp"
+#include "VulkanDeletionQueue.hpp"
+#include "rendering/ImGui/IImGuiForwarder.hpp"
+#include "vk_mem_alloc.hpp"
 #include <VkBootstrap.h>
 #include <array>
+#include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <functional>
-#include "FrameData.hpp"
-#include "vk_mem_alloc.hpp"
-#include "VulkanDeletionQueue.hpp"
-#include "VkTypes.hpp"
-#include "rendering/ImGui/IImGuiForwarder.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -68,7 +69,7 @@ namespace Hush
         void HandleEvent(const SDL_Event *event) noexcept override;
 
         void Dispose();
-        
+
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
         FrameData &GetCurrentFrame() noexcept;
@@ -85,10 +86,9 @@ namespace Hush
 
         [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
 
-        VkFormat* GetSwapchainImageFormat() noexcept;
+        VkFormat *GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
-
 
       private:
         void Configure(vkb::Instance vkbInstance);
@@ -103,8 +103,8 @@ namespace Hush
         void LoadDebugMessenger();
 
         static uint32_t LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                  VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                                  const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
+                                        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
         void InitVmaAllocator();
 

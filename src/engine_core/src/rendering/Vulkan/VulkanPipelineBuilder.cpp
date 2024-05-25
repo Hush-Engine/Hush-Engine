@@ -31,8 +31,8 @@ void Hush::VulkanPipelineBuilder::Clear()
     this->m_shaderStages.clear();
 }
 
-
-VkPipeline Hush::VulkanPipelineBuilder::Build(VkDevice device) //Code from https://vkguide.dev/docs/new_chapter_3/building_pipeline/
+VkPipeline Hush::VulkanPipelineBuilder::Build(
+    VkDevice device) // Code from https://vkguide.dev/docs/new_chapter_3/building_pipeline/
 {
     // make viewport state from our stored viewport and scissor.
     // at the moment we wont support multiple viewports or scissors
@@ -58,7 +58,7 @@ VkPipeline Hush::VulkanPipelineBuilder::Build(VkDevice device) //Code from https
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-     // build the actual pipeline
+    // build the actual pipeline
     // we now use all of the info structs we have been writing into into this one
     // to create the pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -95,5 +95,4 @@ VkPipeline Hush::VulkanPipelineBuilder::Build(VkDevice device) //Code from https
         return VK_NULL_HANDLE;
     }
     return newPipeline;
-
 }

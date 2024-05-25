@@ -5,8 +5,8 @@
 */
 
 #pragma once
-#include <vulkan/vulkan.h>
 #include <vector>
+#include <vulkan/vulkan.h>
 namespace Hush
 {
     class VulkanPipelineBuilder
@@ -30,4 +30,4 @@ namespace Hush
         VkPipelineRenderingCreateInfo m_renderInfo;
         VkFormat m_colorAttachmentformat;
     };
-}
+} // namespace Hush

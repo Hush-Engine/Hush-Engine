@@ -1,17 +1,17 @@
 #include "VulkanImGuiForwarder.hpp"
 #include "log/Logger.hpp"
 #include "rendering/Vulkan/VulkanRenderer.hpp"
-#include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
-#include <volk.h>
-#include <rendering/WindowManager.hpp>
+#include <imgui/imgui.h>
 #include <rendering/Vulkan/VkUtilsFactory.hpp>
+#include <rendering/WindowManager.hpp>
+#include <volk.h>
 
 void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
 {
     // Cast the renderer to a Vulkan renderer
-    auto* vulkanRenderer = dynamic_cast<VulkanRenderer*>(renderer);
+    auto *vulkanRenderer = dynamic_cast<VulkanRenderer *>(renderer);
     // Setup the code here for ImGui
 
     IMGUI_CHECKVERSION();
@@ -21,12 +21,13 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable; // Enable Keyboard Controls
     ImGui_ImplVulkan_InitInfo initData = this->CreateInitData(vulkanRenderer);
     auto *sdlWindow = static_cast<SDL_Window *>(vulkanRenderer->GetWindowContext());
-    //Load vulkan functions
-    HUSH_ASSERT(ImGui_ImplVulkan_LoadFunctions(VulkanRenderer::CustomVulkanFunctionLoader), "Loading vulkan functions to imgui failed");
+    // Load vulkan functions
+    HUSH_ASSERT(ImGui_ImplVulkan_LoadFunctions(VulkanRenderer::CustomVulkanFunctionLoader),
+                "Loading vulkan functions to imgui failed");
 
     HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!");
 
-    //Get the rendering functions
+    // Get the rendering functions
     HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");
 }
 
@@ -55,8 +56,7 @@ void Hush::VulkanImGuiForwarder::RenderFrame(VkCommandBuffer cmd)
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 }
 
-ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(
-    VulkanRenderer* vulkanRenderer) const noexcept
+ImGui_ImplVulkan_InitInfo Hush::VulkanImGuiForwarder::CreateInitData(VulkanRenderer *vulkanRenderer) const noexcept
 {
     ImGui_ImplVulkan_InitInfo initData = {};
     initData.Instance = vulkanRenderer->GetVulkanInstance();
@@ -98,7 +98,7 @@ VkDescriptorPool Hush::VulkanImGuiForwarder::CreateImGuiPool(VkDevice device) co
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.maxSets = 1000;
     poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
-    poolInfo.pPoolSizes = static_cast<VkDescriptorPoolSize*>(poolSizes);
+    poolInfo.pPoolSizes = static_cast<VkDescriptorPoolSize *>(poolSizes);
 
     VkDescriptorPool imguiPool = {};
     VkResult rc = vkCreateDescriptorPool(device, &poolInfo, nullptr, &imguiPool);

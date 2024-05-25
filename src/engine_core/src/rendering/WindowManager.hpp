@@ -8,16 +8,18 @@
 #include "WindowRenderer.hpp"
 #include "log/Logger.hpp"
 
-namespace Hush {
+namespace Hush
+{
     class WindowManager
     {
-    public:
-        static WindowRenderer* GetMainWindow()
+      public:
+        static WindowRenderer *GetMainWindow()
         {
             return s_windowRenderer;
         }
 
-        static void SetMainWindow(WindowRenderer* window) {
+        static void SetMainWindow(WindowRenderer *window)
+        {
             if (s_windowRenderer != nullptr)
             {
                 LogWarn("Cannot override main window!");
@@ -25,7 +27,7 @@ namespace Hush {
             s_windowRenderer = window;
         }
 
-    private:
+      private:
         static inline WindowRenderer *s_windowRenderer = nullptr;
     };
-}
+} // namespace Hush

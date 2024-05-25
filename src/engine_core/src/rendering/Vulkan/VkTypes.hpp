@@ -10,7 +10,7 @@
 // Stuff from vk_mem_alloc to avoid cyclical references
 struct VmaAllocationInfo;
 struct VmaAllocation_T;
-using VmaAllocation = VmaAllocation_T*;
+using VmaAllocation = VmaAllocation_T *;
 
 struct AllocatedImage
 {

@@ -13,6 +13,9 @@ print_files("${RENDERING_SRC}")
 message("Getting input module...")
 file(GLOB_RECURSE INPUT_SRC "src/input/*.hpp" "src/input/*.cpp")
 print_files("${INPUT_SRC}")
+message("Getting editor module...")
+file(GLOB_RECURSE EDITOR_SRC "src/editor/*.hpp" "src/editor/*.cpp")
+print_files("${EDITOR_SRC}")
 
 set(SOURCES
     src/main.cpp
@@ -22,7 +25,7 @@ set(SOURCES
     ${UTILS_SRC}
     ${RENDERING_SRC}
     ${INPUT_SRC}
-    src/editor/IEditorPanel.hpp
+    ${EDITOR_SRC}
     src/log/Logger.hpp
     src/log/Logger.cpp
 )

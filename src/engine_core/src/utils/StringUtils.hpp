@@ -6,9 +6,9 @@
 //
 
 #pragma once
+#include <array>
 #include <codecvt>
 #include <string>
-#include <array>
 
 /// @brief Provides utility functions for handling strings (C and std strings)
 class StringUtils
@@ -22,7 +22,7 @@ class StringUtils
 
     static std::string FromWString(std::wstring str);
 
-    template<uint32_t N1, uint32_t N2>
+    template <uint32_t N1, uint32_t N2>
     static constexpr auto CompileTimeConcat(const char (&str1)[N1], const char (&str2)[N2])
     {
         std::array<char, N1 + N2 - 1> result{}; // Subtract 1 for the null terminator
@@ -40,4 +40,3 @@ class StringUtils
         return result;
     }
 };
-

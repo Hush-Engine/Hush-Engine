@@ -128,9 +128,10 @@ class VkUtilsFactory
         return colorAttachmentInfo;
     }
 
-    static VkRenderingAttachmentInfo CreateAttachmentInfoWithLayout(VkImageView view, VkClearValue *clear, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-    {    
-     VkRenderingAttachmentInfo colorAttachment{};
+    static VkRenderingAttachmentInfo CreateAttachmentInfoWithLayout(
+        VkImageView view, VkClearValue *clear, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        VkRenderingAttachmentInfo colorAttachment{};
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         colorAttachment.pNext = nullptr;
 
@@ -149,8 +150,8 @@ class VkUtilsFactory
     static VkRenderingInfo CreateRenderingInfo(VkExtent2D renderExtent, VkRenderingAttachmentInfo *colorAttachment,
                                                VkRenderingAttachmentInfo *depthAttachment)
     {
-    
-     VkRenderingInfo renderInfo{};
+
+        VkRenderingInfo renderInfo{};
         renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
         renderInfo.pNext = nullptr;
 
@@ -164,19 +165,19 @@ class VkUtilsFactory
         return renderInfo;
     }
 
-    static VkDebugUtilsMessengerCreateInfoEXT CreateDebugMessengerInfo(PFN_vkDebugUtilsMessengerCallbackEXT callback, void* pUserData = nullptr)
+    static VkDebugUtilsMessengerCreateInfoEXT CreateDebugMessengerInfo(PFN_vkDebugUtilsMessengerCallbackEXT callback,
+                                                                       void *pUserData = nullptr)
     {
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
         debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+        debugCreateInfo.messageSeverity =
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
         debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debugCreateInfo.pfnUserCallback = callback; // This is a function you need to define
-        debugCreateInfo.pUserData = pUserData;             // Optional data pointer
+        debugCreateInfo.pUserData = pUserData;      // Optional data pointer
         return debugCreateInfo;
     }
 
@@ -250,5 +251,4 @@ class VkUtilsFactory
 
         return info;
     }
-
 };

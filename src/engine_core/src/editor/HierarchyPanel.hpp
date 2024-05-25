@@ -13,4 +13,4 @@ namespace Hush
       public:
         void OnRender() override;
     };
-}
+} // namespace Hush

@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <SDL2/SDL.h>
+#include <cstdint>
 
 namespace Hush
 {
@@ -33,9 +33,10 @@ namespace Hush
 
         virtual void Draw() = 0;
 
-        /// @brief Initializes all the internal structures needed to begin rendering, call after a swapchain has been created!
+        /// @brief Initializes all the internal structures needed to begin rendering, call after a swapchain has been
+        /// created!
         virtual void InitRendering() = 0;
-        
+
         virtual void NewUIFrame() const noexcept = 0;
 
         virtual void HandleEvent(const SDL_Event *event) noexcept = 0;

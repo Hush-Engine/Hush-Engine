@@ -5,8 +5,8 @@
 */
 
 #pragma once
-#include <vulkan/vulkan.h>
 #include "VulkanDeletionQueue.hpp"
+#include <vulkan/vulkan.h>
 
 /// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
 /// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)
