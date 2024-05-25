@@ -8,7 +8,7 @@
 #include <rendering/WindowManager.hpp>
 #include <rendering/Vulkan/VkUtilsFactory.hpp>
 
-void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
+void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
 {
     // Cast the renderer to a Vulkan renderer
     auto* vulkanRenderer = dynamic_cast<VulkanRenderer*>(renderer);
@@ -18,7 +18,7 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer* renderer)
     ImGui::CreateContext();
     // IO forwarding
     ImGuiIO &io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable; // Enable Keyboard Controls
     ImGui_ImplVulkan_InitInfo initData = this->CreateInitData(vulkanRenderer);
     auto *sdlWindow = static_cast<SDL_Window *>(vulkanRenderer->GetWindowContext());
     //Load vulkan functions
@@ -40,6 +40,12 @@ void Hush::VulkanImGuiForwarder::NewFrame()
 void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept
 {
     ImGui_ImplSDL2_ProcessEvent(event);
+}
+
+void Hush::VulkanImGuiForwarder::Dispose() noexcept
+{
+    ImGui_ImplSDL2_Shutdown();
+    ImGui_ImplVulkan_Shutdown();
 }
 
 void Hush::VulkanImGuiForwarder::RenderFrame(VkCommandBuffer cmd)

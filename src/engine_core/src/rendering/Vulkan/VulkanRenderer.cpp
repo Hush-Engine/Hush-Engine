@@ -344,6 +344,9 @@ void Hush::VulkanRenderer::InitRendering()
 
 void Hush::VulkanRenderer::Dispose()
 {
+    this->m_uiForwarder->Dispose();
+    LogTrace("Disposed of ImGui resources");
+
     if (this->m_device != nullptr)
     {
         vkDeviceWaitIdle(this->m_device);

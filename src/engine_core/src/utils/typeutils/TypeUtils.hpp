@@ -5,12 +5,8 @@
 */
 
 #pragma once
-
-class TypeUtils
+#include <type_traits>
+namespace Hush::TypeUtils
 {
-  public:
-    template <class B, class D> static bool IsInstanceOf(D instance)
-    {
-        return typeid(instance) == typeid(B);
-    }
-};
+
+}

@@ -25,7 +25,7 @@ namespace Hush
 
         virtual ~IEditorPanel() = default;
 
-        virtual void OnRenderPass(){};
+        virtual void OnRender() = 0;
     };
 
 } // namespace Hush

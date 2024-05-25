@@ -2,6 +2,7 @@
 #include <rendering/WindowManager.hpp>
 #include <imgui/imgui.h>
 #include <spdlog/details/os-inl.h>
+#include <editor/UI.hpp>
 
 Hush::HushEngine::~HushEngine()
 {
@@ -12,8 +13,10 @@ void Hush::HushEngine::Run()
 {
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
-    // Link our renderer with our ImGui implementation
     IRenderer *rendererImpl = mainRenderer.GetInternalRenderer();
+    
+    //Initialize any static resources we need
+    UI::InitializePanels();
 
     while (this->m_isApplicationRunning)
     {
@@ -29,11 +32,7 @@ void Hush::HushEngine::Run()
         }
         rendererImpl->NewUIFrame();
 
-        ImGui::Begin("Test");
-
-        ImGui::Text("This is only a test... Hello there!");
-
-        ImGui::End();
+        UI::DrawPanels();
 
         rendererImpl->Draw();
 

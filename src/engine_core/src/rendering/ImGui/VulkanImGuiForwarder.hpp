@@ -11,7 +11,7 @@
 namespace Hush
 {
     class VulkanRenderer;
-    class VulkanImGuiForwarder : public IImGuiForwarder
+    class VulkanImGuiForwarder final : public IImGuiForwarder
     {
       public:
         void SetupImGui(IRenderer* renderer) override;
@@ -19,9 +19,10 @@ namespace Hush
         void NewFrame() override;
 
         void HandleEvent(const SDL_Event *event) noexcept override;
+        
+        void Dispose() noexcept override;
 
         void RenderFrame(VkCommandBuffer cmd);
-
       private:
         [[nodiscard]] ImGui_ImplVulkan_InitInfo CreateInitData(VulkanRenderer* vulkanRenderer) const noexcept;
 
