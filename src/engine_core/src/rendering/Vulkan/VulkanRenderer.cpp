@@ -332,20 +332,7 @@ void Hush::VulkanRenderer::NewUIFrame() const noexcept
 }
 
 void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
-{
-    if (event->type == SDL_WINDOWEVENT)
-    {
-        switch (event->window.event)
-        {
-            case SDL_WINDOWEVENT_MINIMIZED:
-                this->m_isRendering = false;
-                break;
-            case SDL_WINDOWEVENT_RESTORED:
-                this->m_isRendering = true;
-                break;
-        }
-    }
-    
+{    
     this->m_uiForwarder->HandleEvent(event);
 }
 
@@ -554,11 +541,6 @@ void Hush::VulkanRenderer::DestroySwapChain()
 void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 {
     return this->m_windowContext;
-}
-
-bool Hush::VulkanRenderer::IsRendering() const noexcept
-{
-    return this->m_isRendering;
 }
 
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,

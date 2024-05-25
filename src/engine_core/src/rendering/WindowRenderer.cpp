@@ -35,6 +35,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
     this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
     this->m_windowRenderer->InitImGui();
     this->m_windowRenderer->InitRendering();
+    this->m_isActive = true;
 }
 
 void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
@@ -44,7 +45,6 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
     InputManager::ResetMouseAcceleration();
     SDL_PollEvent(&event);
     // Forward event to the renderer
-
     switch (event.type)
     {
     case SDL_QUIT:
@@ -67,6 +67,9 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
     case SDL_MOUSEMOTION:
         InputManager::SendMouseMovementEvent(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
         break;
+    case SDL_WINDOWEVENT:
+        CheckWindowState(event.window, &this->m_isActive);
+        break;
     default:
         break;
     }
@@ -85,6 +88,11 @@ Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
     return this->m_windowRenderer.get();
 }
 
+bool Hush::WindowRenderer::IsActive() const noexcept
+{
+    return this->m_isActive;
+}
+
 bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 {
     if (SDL_WasInit(SDL_INIT_EVERYTHING) != 0)
@@ -94,4 +102,17 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
     int rc = SDL_Init(SDL_INIT_EVERYTHING);
     SDL_SetMainReady();
     return rc == 0;
+}
+
+void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, bool *isActive) noexcept
+{
+    switch (windowEvent.event)
+    {
+    case SDL_WINDOWEVENT_MINIMIZED:
+        *isActive = false;
+        break;
+    case SDL_WINDOWEVENT_RESTORED:
+        *isActive = true;
+        break;
+    }
 }

@@ -89,8 +89,6 @@ namespace Hush
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
 
-        [[nodiscard]] bool IsRendering() const noexcept override;
-
 
       private:
         void Configure(vkb::Instance vkbInstance);
@@ -147,6 +145,5 @@ namespace Hush
 
         VulkanDeletionQueue m_mainDeletionQueue{};
         VmaAllocator m_allocator = nullptr; // vma lib allocator
-        bool m_isRendering = true;
     };
 } // namespace Hush

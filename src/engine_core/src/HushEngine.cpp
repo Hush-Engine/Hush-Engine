@@ -20,7 +20,8 @@ void Hush::HushEngine::Run()
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
         mainRenderer.HandleEvents(&this->m_isApplicationRunning);
         
-        if (!rendererImpl->IsRendering())
+        //TODO: Change this to the window renderer
+        if (!mainRenderer.IsActive())
         {
             // Arbitrary sleep to avoid taking all CPU usage
             std::this_thread::sleep_for(std::chrono::milliseconds(100));

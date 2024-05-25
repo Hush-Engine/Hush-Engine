@@ -32,7 +32,7 @@ add_executable(engine_core ${SOURCES})
 target_include_directories(engine_core PRIVATE src src)
 
 #set(ENGINE_LIBS coreclr imgui SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
-set(ENGINE_LIBS coreclr imgui)
+set(ENGINE_LIBS coreclr imgui Vulkan::Vulkan)
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)

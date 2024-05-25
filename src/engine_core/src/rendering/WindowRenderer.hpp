@@ -38,6 +38,8 @@ namespace Hush
 
         IRenderer *GetInternalRenderer() noexcept;
 
+        [[nodiscard]] bool IsActive() const noexcept;
+
       private:
         /// @brief Pointer that represents the unique instance of an SDL window associated with this context
         /// (This is declared as a raw pointer for compatibility with C)
@@ -47,7 +49,11 @@ namespace Hush
 
         std::unique_ptr<Hush::IRenderer> m_windowRenderer;
 
+        bool m_isActive = false;
+
         bool InitSDLIfNotStarted() noexcept;
+
+        void CheckWindowState(const SDL_WindowEvent windowEvent, bool *isActive) noexcept;
 
         constexpr uint32_t GetInitialRendererFlags()
         {

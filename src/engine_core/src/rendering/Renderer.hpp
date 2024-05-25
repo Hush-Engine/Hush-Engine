@@ -41,6 +41,5 @@ namespace Hush
         virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
 
         [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
-        [[nodiscard]] virtual bool IsRendering() const noexcept = 0;
     };
 } // namespace Hush
