@@ -6,7 +6,6 @@
 
 #pragma once
 #include "editor/IEditorPanel.hpp"
-#include "utils/typeutils/TypeUtils.hpp"
 #include <memory>
 #include <unordered_map>
 
