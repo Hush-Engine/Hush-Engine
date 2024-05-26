@@ -20,7 +20,7 @@ void Hush::TitleBarMenuPanel::OnRender() noexcept
         }
         if (ImGui::BeginMenu("Help"))
         {
-            if (ImGui::MenuItem("Contact Support"))
+            if (ImGui::MenuItem("About Hush Engine"))
             {
                 Networking::SystemOpenURL("https://hushengine.com/");
             }

@@ -8,7 +8,6 @@
 #include <vulkan/vulkan.h>
 
 // Stuff from vk_mem_alloc to avoid cyclical references
-struct VmaAllocationInfo;
 struct VmaAllocation_T;
 using VmaAllocation = VmaAllocation_T *;
 
@@ -19,11 +18,4 @@ struct AllocatedImage
     VmaAllocation allocation;
     VkExtent3D imageExtent;
     VkFormat imageFormat;
-};
-
-struct AllocatedBuffer
-{
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    VmaAllocationInfo info;
 };
