@@ -1,6 +1,8 @@
 #include "VulkanPipelineBuilder.hpp"
 #include "log/Logger.hpp"
+#include "VkUtilsFactory.hpp"
 
+// NOLINTNEXTLINE (Initialization is handled on the clear method)
 Hush::VulkanPipelineBuilder::VulkanPipelineBuilder()
 {
     this->Clear();
@@ -89,10 +91,113 @@ VkPipeline Hush::VulkanPipelineBuilder::Build(
     // its easy to error out on create graphics pipeline, so we handle it a bit
     // better than the common VK_CHECK case
     VkPipeline newPipeline = nullptr;
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS)
     {
         LogError("Failed to create the Vulkan Graphics Pipeline!");
-        return VK_NULL_HANDLE;
+        return nullptr;
     }
     return newPipeline;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetShaders(VkShaderModule vertexShader,
+                                                               VkShaderModule fragmentShader)
+{
+    //Create the information for the shaders to be added
+    VkPipelineShaderStageCreateInfo vertexShaderInfo =
+        VkUtilsFactory::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexShader);
+    VkPipelineShaderStageCreateInfo fragmentShaderInfo =
+        VkUtilsFactory::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader);
+    //Clear the current stages and add both
+    this->m_shaderStages.clear();
+    this->m_shaderStages.push_back(vertexShaderInfo);
+
+    this->m_shaderStages.push_back(fragmentShaderInfo);
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetInputTopology(VkPrimitiveTopology topology)
+{
+    this->m_inputAssembly.topology = topology;
+    // TODO: Set this to true for indexed draws
+    this->m_inputAssembly.primitiveRestartEnable = VK_FALSE;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetPolygonMode(VkPolygonMode mode)
+{
+    this->m_rasterizer.polygonMode = mode;
+    this->m_rasterizer.lineWidth = 1.0f;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetCullMode(VkCullModeFlags cullMode, VkFrontFace frontFace)
+{
+    this->m_rasterizer.cullMode = cullMode;
+    this->m_rasterizer.frontFace = frontFace;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetMultiSamplingNone()
+{
+    this->m_multisampling.sampleShadingEnable = VK_FALSE;
+    // multisampling defaulted to no multisampling (1 sample per pixel)
+    this->m_multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    this->m_multisampling.minSampleShading = 1.0f;
+    this->m_multisampling.pSampleMask = nullptr;
+    // no alpha to coverage either
+    this->m_multisampling.alphaToCoverageEnable = VK_FALSE;
+    this->m_multisampling.alphaToOneEnable = VK_FALSE;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::DisableBlending()
+{
+    // default write mask
+    this->m_colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    // no blending
+    this->m_colorBlendAttachment.blendEnable = VK_FALSE;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAdditive()
+{
+    this->m_colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    this->m_colorBlendAttachment.blendEnable = VK_TRUE;
+    this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+    this->m_colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    this->m_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAlphaBlend()
+{
+    this->m_colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    this->m_colorBlendAttachment.blendEnable = VK_TRUE;
+    this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+    this->m_colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    this->m_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder& Hush::VulkanPipelineBuilder::SetColorAttachmentFormat(VkFormat format)
+{
+    this->m_colorAttachmentformat = format;
+    this->m_renderInfo.colorAttachmentCount = 1;
+    this->m_renderInfo.pColorAttachmentFormats = &this->m_colorAttachmentformat;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetDepthFormat(VkFormat format)
+{
+    this->m_renderInfo.depthAttachmentFormat = format;
+    return *this;
 }
