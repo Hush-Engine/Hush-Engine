@@ -38,6 +38,8 @@ namespace Hush
         void Quit();
 
       private:
+        void Init();
+
         bool m_isApplicationRunning = false;
         static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
     };

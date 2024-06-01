@@ -10,8 +10,6 @@
 #include <vector>
 #include "VkTypes.hpp"
 #include <deque>
-#include <span>
-#include <span>
 
 //> descriptor_layout
 struct DescriptorLayoutBuilder

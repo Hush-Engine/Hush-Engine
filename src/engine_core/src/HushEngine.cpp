@@ -3,6 +3,7 @@
 #include <imgui/imgui.h>
 #include <rendering/WindowManager.hpp>
 #include <spdlog/details/os-inl.h>
+#include <editor/DebugUI.hpp>
 
 Hush::HushEngine::~HushEngine()
 {
@@ -16,13 +17,12 @@ void Hush::HushEngine::Run()
     IRenderer *rendererImpl = mainRenderer.GetInternalRenderer();
 
     // Initialize any static resources we need
-    UI::InitializePanels();
+    this->Init();
 
     while (this->m_isApplicationRunning)
     {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
         mainRenderer.HandleEvents(&this->m_isApplicationRunning);
-
         // TODO: Change this to the window renderer
         if (!mainRenderer.IsActive())
         {
@@ -45,4 +45,9 @@ void Hush::HushEngine::Run()
 void Hush::HushEngine::Quit()
 {
     this->m_isApplicationRunning = false;
+}
+
+void Hush::HushEngine::Init()
+{
+    UI::InitializePanels();
 }

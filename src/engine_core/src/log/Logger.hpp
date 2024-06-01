@@ -82,6 +82,15 @@ namespace Hush
     {
         Log(ELogLevel::Critical, message);
     }
+
+    inline void ClearLogs()
+    {
+#if defined(WIN32)
+        system("cls");
+#else
+        system("clear");
+#endif
+    }
 } // namespace Hush
 
 // NOLINTEND(cppcoreguidelines-missing-std-forward)
