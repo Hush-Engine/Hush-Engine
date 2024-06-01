@@ -211,7 +211,7 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
 
     this->m_mainDeletionQueue.PushFunction([=]() { vkDestroyCommandPool(m_device, m_immediateCommandPool, nullptr); });
 
-    for (int i = 0; i < FRAME_OVERLAP; i++)
+    for (int32_t i = 0; i < FRAME_OVERLAP; i++)
     {
         // Get a REFERENCE to the current frame
         rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_frames.at(i).commandPool);
@@ -583,7 +583,7 @@ uint32_t Hush::VulkanRenderer::LogDebugMessage(VkDebugUtilsMessageSeverityFlagBi
                                                const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                                void *pUserData)
 {
-    Hush::LogWarn(pCallbackData->pMessage);
+    (void)(pCallbackData->pMessage);
     (void)messageSeverity;
     (void)messageTypes;
     (void)pUserData;
@@ -613,6 +613,19 @@ void Hush::VulkanRenderer::InitVmaAllocator()
     vmaCreateAllocator(&allocatorInfo, &this->m_allocator);
 
     this->m_mainDeletionQueue.PushFunction([&]() { vmaDestroyAllocator(m_allocator); });
+}
+
+void Hush::VulkanRenderer::InitRenderables()
+{
+    /*
+    //TODO: Make 
+    std::string structurePath = {"..\\..\\assets\\structure.glb"};
+    auto structureFile = loadGltf(this, structurePath);
+
+    assert(structureFile.has_value());
+
+    loadedScenes["structure"] = *structureFile;
+    */
 }
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,

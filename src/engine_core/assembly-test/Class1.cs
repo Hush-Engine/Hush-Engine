@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
 
 namespace Test;
@@ -31,20 +33,11 @@ public enum LogLevel
 public class Class1
 {
     public static unsafe delegate *unmanaged[Stdcall]<uint, char *, void> LogHandler;
-
+    #region NOT DEMO
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     public static void Func()
     {
         Console.WriteLine("Hello from .NET!");
-    }
-
-    [UnmanagedCallersOnly]
-    public static unsafe void SayName(char *name, int size)
-    {
-        Console.WriteLine("We're now in C# :D");
-        Console.WriteLine($"Size of the string passed: {size}");
-        string nameStr = Marshal.PtrToStringAnsi((IntPtr)name, size);
-        Console.WriteLine($"Hi there {nameStr}, look, we're interpolating with a parameter!");
     }
 
     [UnmanagedCallersOnly]
@@ -65,44 +58,59 @@ public class Class1
         Console.WriteLine($"From C#... Sum: {a + b}");
     }
 
-    // Receive a native char* and copy the .NET version string into it.
-    [UnmanagedCallersOnly]
-    public static unsafe void GetDotNetVersion(byte *buffer, int bufferLength)
-    {
-        string versionString = RuntimeInformation.FrameworkDescription;
-        int length = Math.Min(versionString.Length, bufferLength - 1);
-        fixed(char *pVersionString = versionString)
-        {
-            for (int i = 0; i < length; i++)
-            {
-                buffer[i] = (byte)pVersionString[i];
-            }
-        }
-        buffer[length] = 0;
-    }
 
     [UnmanagedCallersOnly]
-    public static unsafe void GetStruct(TestStruct *testStruct)
+    public static unsafe void GetStruct(TestStruct* testStruct)
     {
         // Convert to a ref struct to access the fields.
         ref TestStruct testStructRef = ref Unsafe.AsRef<TestStruct>(testStruct);
         HandleStruct(ref testStructRef);
     }
+    #endregion
+
+    // Receive a native char* and copy the .NET version string into it.
+    [UnmanagedCallersOnly]
+    public static void GetDotNetVersion()
+    {
+        string versionString = RuntimeInformation.FrameworkDescription;
+        Console.WriteLine($"[C#] - We're running on {versionString}");
+    }
 
     [UnmanagedCallersOnly]
-    public static unsafe char *GetCsharpString()
+    public static unsafe void SayName(char* name)
     {
-        const int SIZE = 50;
-        Span<char> buffer = stackalloc char[SIZE];
-        Random r = new Random();
-        for (int i = 0; i < SIZE; i++)
+        string converted = Marshal.PtrToStringAnsi((IntPtr)name);
+        if (converted == null)
         {
-            buffer[i] = (char)r.Next(65, 91);
+            throw new Exception("Null string passed");
         }
-        string testedBuffer = buffer.ToString();
-        LogMessage(LogLevel.Info, $"C# says that the resulting string is: {testedBuffer}");
-        return testedBuffer.ToUnmanagedString();
+        Console.WriteLine($"[C#] - Hello there {converted}");
     }
+
+    [UnmanagedCallersOnly]
+    public static unsafe char *CalculateHash(char* input)
+    {
+        string converted = Marshal.PtrToStringAnsi((IntPtr)input);
+        if (converted == null)
+        {
+            throw new Exception("Null string passed");
+        }
+        return CalculateMD5(converted).ToUnmanagedString();
+    }
+
+
+    public static string CalculateMD5(string input)
+    {
+        using (MD5 md5 = MD5.Create())
+        {
+            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+        }
+    }
+
+    //Also not demo
+
 
     [UnmanagedCallersOnly]
     public static unsafe void DeallocateString(char *str)
