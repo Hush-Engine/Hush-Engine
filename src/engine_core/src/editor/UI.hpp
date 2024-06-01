@@ -18,7 +18,15 @@ namespace Hush
 
         static void InitializePanels();
 
+        static bool Spinner(const char *label, float radius, int thickness,
+                            const uint32_t &color = 3435973836u /*Default button color*/);
+
+        static bool BeginToolBar();
+
+        static void DockSpace();
+
       private:
+        static void DrawPlayButton();
         template <class T> static std::unique_ptr<T> CreatePanel()
         {
             return std::make_unique<T>();

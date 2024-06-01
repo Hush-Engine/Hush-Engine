@@ -1,5 +1,7 @@
 #include "InputManager.hpp"
 #include "log/Logger.hpp"
+#include <magic_enum.hpp>
+#include "editor/DebugUI.hpp"
 
 // TODO: Populate the map in the stack with all enums
 // NOLINTNEXTLINE
@@ -46,6 +48,11 @@ void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state)
     {
         UpdateKeyStateFromData(data, state);
     }
+    if (DebugUI::KeyboardInfoEnabled())
+    {
+        LogFormat(ELogLevel::Info, "Key {} pressed with state {}!", magic_enum::enum_name(mappedKeyCode),
+                  magic_enum::enum_name(state));
+    }
     S_KEY_DATA_BY_CODE.insert_or_assign(mappedKeyCode, data);
 }
 
@@ -53,6 +60,10 @@ void Hush::InputManager::SendMouseButtonEvent(MouseButton mouseButton, EKeyState
 {
     auto mappedButton = static_cast<EMouseButton>(mouseButton);
     S_MOUSE_DATA.mouseButtonMap.insert_or_assign(mappedButton, state);
+    if (DebugUI::MouseInfoEnabled()) {
+        LogFormat(ELogLevel::Info, "Mouse button {} pressed with state {}!", magic_enum::enum_name(mappedButton),
+                  magic_enum::enum_name(state));
+    }
 }
 
 void Hush::InputManager::SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX,
@@ -62,6 +73,11 @@ void Hush::InputManager::SendMouseMovementEvent(int32_t posX, int32_t posY, int3
     S_MOUSE_DATA.positionY = posY;
     S_MOUSE_DATA.accelerationX = accelerationX;
     S_MOUSE_DATA.accelerationY = accelerationY;
+    if (DebugUI::MouseInfoEnabled())
+    {
+        LogFormat(ELogLevel::Info, "Mouse position: ({}, {})", S_MOUSE_DATA.positionX, S_MOUSE_DATA.positionY);
+        LogFormat(ELogLevel::Info, "Mouse acceleration: ({}, {})", S_MOUSE_DATA.accelerationX, S_MOUSE_DATA.accelerationY);
+    }
 }
 
 void Hush::InputManager::ResetMouseAcceleration()

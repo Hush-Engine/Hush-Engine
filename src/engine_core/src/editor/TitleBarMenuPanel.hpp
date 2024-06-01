@@ -12,5 +12,8 @@ namespace Hush
     {
       public:
         void OnRender() noexcept override;
+
+      private:
+        void FileMenuOptions();
     };
 } // namespace Hush

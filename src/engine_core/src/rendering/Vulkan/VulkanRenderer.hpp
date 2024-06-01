@@ -9,13 +9,6 @@
 #include "utils/Assertions.hpp"
 #include <magic_enum.hpp>
 
-#ifndef HUSH_VULKAN_IMPL
-#define HUSH_VULKAN_IMPL
-// NOLINTNEXTLINE
-#define HUSH_VK_ASSERT(result, message)                                                                                \
-    HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, magic_enum::enum_name(result))
-#endif
-
 #define VK_NO_PROTOTYPES
 
 #include "FrameData.hpp"
@@ -107,6 +100,8 @@ namespace Hush
                                         const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
         void InitVmaAllocator();
+
+        void InitRenderables();
 
         void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 
