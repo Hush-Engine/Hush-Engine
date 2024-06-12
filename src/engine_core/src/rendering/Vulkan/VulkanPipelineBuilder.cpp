@@ -118,7 +118,7 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetShaders(VkShaderMod
 Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetInputTopology(VkPrimitiveTopology topology)
 {
     this->m_inputAssembly.topology = topology;
-    // TODO: Set this to true for indexed draws
+    // #TODO: Set this to true for indexed draws
     this->m_inputAssembly.primitiveRestartEnable = VK_FALSE;
     return *this;
 }
@@ -188,6 +188,12 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAlphaBle
     return *this;
 }
 
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetPipelineLayout(VkPipelineLayout layout)
+{
+    this->m_pipelineLayout = layout;
+    return *this;
+}
+
 Hush::VulkanPipelineBuilder& Hush::VulkanPipelineBuilder::SetColorAttachmentFormat(VkFormat format)
 {
     this->m_colorAttachmentformat = format;
@@ -199,5 +205,19 @@ Hush::VulkanPipelineBuilder& Hush::VulkanPipelineBuilder::SetColorAttachmentForm
 Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetDepthFormat(VkFormat format)
 {
     this->m_renderInfo.depthAttachmentFormat = format;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableDepthTesting(bool depthWriteEnable, VkCompareOp op)
+{
+    this->m_depthStencil.depthTestEnable = VK_TRUE;
+    this->m_depthStencil.depthWriteEnable = static_cast<uint32_t>(depthWriteEnable);
+    this->m_depthStencil.depthCompareOp = op;
+    this->m_depthStencil.depthBoundsTestEnable = VK_FALSE;
+    this->m_depthStencil.stencilTestEnable = VK_FALSE;
+    this->m_depthStencil.front = {};
+    this->m_depthStencil.back = {};
+    this->m_depthStencil.minDepthBounds = 0.f;
+    this->m_depthStencil.maxDepthBounds = 1.f;
     return *this;
 }

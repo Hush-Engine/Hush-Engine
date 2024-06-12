@@ -25,6 +25,7 @@
 #include "vk_mem_alloc.hpp"
 #include <utils/typeutils/TypeUtils.hpp>
 #include <volk.h>
+#include "VulkanVertexBuffer.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -179,16 +180,39 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
                    &this->m_drawImage.allocation, nullptr);
 
     // build a image-view for the draw image to use for rendering
-    VkImageViewCreateInfo rview_info = VkUtilsFactory::CreateImageViewCreateInfo(
+    VkImageViewCreateInfo rViewInfo = VkUtilsFactory::CreateImageViewCreateInfo(
         this->m_drawImage.imageFormat, this->m_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rview_info, nullptr, &this->m_drawImage.imageView),
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rViewInfo, nullptr, &this->m_drawImage.imageView),
                    "Failed to create image view");
+
+    //Create depth image
+    this->m_depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
+    this->m_depthImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags depthImageUsages = {};
+    depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    VkImageCreateInfo depthImageInfo =
+        VkUtilsFactory::CreateImageCreateInfo(this->m_depthImage.imageFormat, depthImageUsages, drawImageExtent);
+
+    // allocate and create the image
+    vmaCreateImage(this->m_allocator, &depthImageInfo, &rimgAllocInfo, &this->m_depthImage.image, &this->m_depthImage.allocation, nullptr);
+
+    // build a image-view for the draw image to use for rendering
+    VkImageViewCreateInfo depthViewInfo = VkUtilsFactory::CreateImageViewCreateInfo(
+        this->m_depthImage.imageFormat, this->m_depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &depthViewInfo, nullptr, &this->m_depthImage.imageView), "Failed to create depth image view");
 
     // add to deletion queues
     this->m_mainDeletionQueue.PushFunction([=]() {
         vkDestroyImageView(m_device, m_drawImage.imageView, nullptr);
         vmaDestroyImage(m_allocator, m_drawImage.image, m_drawImage.allocation);
+
+        //Now destroy the depth image
+        vkDestroyImageView(m_device, m_depthImage.imageView, nullptr);
+        vmaDestroyImage(m_allocator, m_depthImage.image, m_depthImage.allocation);
     });
     //< Init_Swapchain
 }
@@ -437,6 +461,11 @@ VkPhysicalDevice Hush::VulkanRenderer::GetVulkanPhysicalDevice() const noexcept
 VkQueue Hush::VulkanRenderer::GetGraphicsQueue() const noexcept
 {
     return this->m_graphicsQueue;
+}
+
+Hush::AllocatedImage Hush::VulkanRenderer::GetDrawImage() const noexcept
+{
+    return this->m_drawImage;
 }
 
 FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
@@ -696,4 +725,124 @@ void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source,
     blitInfo.pRegions = &blitRegion;
 
     vkCmdBlitImage2(cmd, &blitInfo);
+}
+
+void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
+{
+    std::vector<uint32_t> opaqueDraws;
+    opaqueDraws.reserve(this->m_drawCommands.opaqueSurfaces.size());
+    for (int32_t i = 0; i < this->m_drawCommands.opaqueSurfaces.size(); i++)
+    {
+        RenderObject& surface = this->m_drawCommands.opaqueSurfaces.at(i);
+        if (surface.IsVisible(this->m_sceneData.viewProjection)) {
+            opaqueDraws.push_back(i);
+        }
+    }
+
+    // sort the opaque surfaces by material and mesh
+    std::sort(opaqueDraws.begin(), opaqueDraws.end(), [&](const auto &iA, const auto &iB) {
+        const RenderObject &A = this->m_drawCommands.OpaqueSurfaces[iA];
+        const RenderObject &B = this->m_drawCommands.OpaqueSurfaces[iB];
+        if (A.material == B.material)
+        {
+            return A.indexBuffer < B.indexBuffer;
+        }
+        else
+        {
+            return A.material < B.material;
+        }
+    });
+
+    // allocate a new uniform buffer for the scene data
+    uint32_t bufferSize = sizeof(GPUSceneData);
+    VulkanVertexBuffer gpuSceneDataBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
+
+    // add it to the deletion queue of this frame so it gets deleted once its been used
+    FrameData &currentFrame = this->GetCurrentFrame();
+    currentFrame.deletionQueue.PushFunction([=]() { destroy_buffer(gpuSceneDataBuffer); });
+
+    // write the buffer
+    auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetAllocation()->GetMappedData());
+    *sceneUniformData = this->m_sceneData;
+
+    // create a descriptor set that binds that buffer and update it
+    VkDescriptorSet globalDescriptor =
+        currentFrame.frameDescriptors.Allocate(this->m_device, this->m_gpuSceneDataDescriptorLayout);
+
+    DescriptorWriter writer;
+    writer.write_buffer(0, gpuSceneDataBuffer.m_buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    writer.update_set(_device, globalDescriptor);
+
+    MaterialPipeline *lastPipeline = nullptr;
+    MaterialInstance *lastMaterial = nullptr;
+    VkBuffer lastIndexBuffer = VK_NULL_HANDLE;
+
+    auto draw = [&](const RenderObject &r) {
+        if (r.material != lastMaterial)
+        {
+            lastMaterial = r.material;
+            if (r.material->pipeline != lastPipeline)
+            {
+
+                lastPipeline = r.material->pipeline;
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline->pipeline);
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline->layout, 0, 1,
+                                        &globalDescriptor, 0, nullptr);
+
+                VkViewport viewport = {};
+                viewport.x = 0;
+                viewport.y = 0;
+                viewport.width = (float)_windowExtent.width;
+                viewport.height = (float)_windowExtent.height;
+                viewport.minDepth = 0.f;
+                viewport.maxDepth = 1.f;
+
+                vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+                VkRect2D scissor = {};
+                scissor.offset.x = 0;
+                scissor.offset.y = 0;
+                scissor.extent.width = _windowExtent.width;
+                scissor.extent.height = _windowExtent.height;
+
+                vkCmdSetScissor(cmd, 0, 1, &scissor);
+            }
+
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, r.material->pipeline->layout, 1, 1,
+                                    &r.material->materialSet, 0, nullptr);
+        }
+        if (r.indexBuffer != lastIndexBuffer)
+        {
+            lastIndexBuffer = r.indexBuffer;
+            vkCmdBindIndexBuffer(cmd, r.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        }
+        // calculate final mesh matrix
+        GPUDrawPushConstants push_constants;
+        push_constants.worldMatrix = r.transform;
+        push_constants.vertexBuffer = r.vertexBufferAddress;
+
+        vkCmdPushConstants(cmd, r.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                           sizeof(GPUDrawPushConstants), &push_constants);
+
+        stats.drawcall_count++;
+        stats.triangle_count += r.indexCount / 3;
+        vkCmdDrawIndexed(cmd, r.indexCount, 1, r.firstIndex, 0, 0);
+    };
+
+    stats.drawcall_count = 0;
+    stats.triangle_count = 0;
+
+    for (auto &r : opaqueDraws)
+    {
+        draw(this->m_drawCommands.OpaqueSurfaces[r]);
+    }
+
+    for (auto &r : this->m_drawCommands.TransparentSurfaces)
+    {
+        draw(r);
+    }
+
+    // we delete the draw commands now that we processed them
+    this->m_drawCommands.OpaqueSurfaces.clear();
+    this->m_drawCommands.TransparentSurfaces.clear();
 }

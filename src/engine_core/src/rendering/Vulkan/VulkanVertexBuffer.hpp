@@ -18,6 +18,10 @@ namespace Hush
 
         [[nodiscard]] uint32_t GetSize() const noexcept;
 
+        [[nodiscard]] VmaAllocation GetAllocation() noexcept;
+
+        [[nodiscard]] VkBuffer GetBuffer() noexcept;
+
     private:
         VkBuffer m_buffer = nullptr;
 

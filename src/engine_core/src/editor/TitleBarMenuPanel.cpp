@@ -20,7 +20,7 @@ void Hush::TitleBarMenuPanel::OnRender() noexcept
         }
         ImGui::EndMainMenuBar();
     }
-    //TODO: Also render the play options here
+    // #TODO: Also render the play options here
 }
 
 void Hush::TitleBarMenuPanel::FileMenuOptions()

@@ -21,6 +21,7 @@
 #include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include "rendering/Shared/RenderObject.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -79,6 +80,8 @@ namespace Hush
 
         [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
 
+        [[nodiscard]] AllocatedImage GetDrawImage() const noexcept;
+        
         VkFormat *GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
@@ -108,6 +111,9 @@ namespace Hush
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
                               VkExtent2D dstSize);
 
+        void DrawGeometry(VkCommandBuffer cmd);
+        
+        //Properties
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;
@@ -119,6 +125,7 @@ namespace Hush
         VkFence m_immediateFence = nullptr;
         VkCommandBuffer m_immediateCommandBuffer = nullptr;
         VkCommandPool m_immediateCommandPool = nullptr;
+        VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
         uint32_t m_graphicsQueueFamily = 0u;
 
         VkSwapchainKHR m_swapChain{};
@@ -130,6 +137,10 @@ namespace Hush
         uint32_t m_height = 0u;
         // draw resources
         AllocatedImage m_drawImage{};
+        AllocatedImage m_depthImage{};
+        DrawContext m_drawCommands{};
+        GPUSceneData m_sceneData{};
+
 
         // Frame related data
         std::array<FrameData, FRAME_OVERLAP> m_frames{};
