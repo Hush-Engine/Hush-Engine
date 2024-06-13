@@ -62,7 +62,7 @@ namespace Hush {
             }
             *outShaderModule = shaderModule;
             return true;
-        }
+        
         static std::shared_ptr<LoadedGLTF> loadGltf(VulkanEngine *engine, std::string_view filePath);
     };
 }
