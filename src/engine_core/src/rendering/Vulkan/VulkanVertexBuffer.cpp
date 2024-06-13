@@ -26,7 +26,12 @@ uint32_t Hush::VulkanVertexBuffer::GetSize() const noexcept
     return this->m_size;
 }
 
-VmaAllocation Hush::VulkanVertexBuffer::GetAllocation() noexcept
+VmaAllocation Hush::VulkanVertexBuffer::GetAllocation() const noexcept
 {
     return this->m_allocation;
+}
+
+VkBuffer Hush::VulkanVertexBuffer::GetBuffer() const noexcept
+{
+    return this->m_buffer;
 }

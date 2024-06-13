@@ -468,6 +468,16 @@ Hush::AllocatedImage Hush::VulkanRenderer::GetDrawImage() const noexcept
     return this->m_drawImage;
 }
 
+Hush::AllocatedImage Hush::VulkanRenderer::GetDepthImage() const noexcept
+{
+    return this->m_depthImage;
+}
+
+VkDescriptorSetLayout Hush::VulkanRenderer::GetGpuSceneDataDescriptorLayout() const noexcept
+{
+    return this->m_gpuSceneDataDescriptorLayout;
+}
+
 FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
 {
     return this->m_frames.at(this->m_frameNumber % FRAME_OVERLAP);
@@ -578,6 +588,11 @@ void Hush::VulkanRenderer::DestroySwapChain()
 void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 {
     return this->m_windowContext;
+}
+
+const RenderStats &Hush::VulkanRenderer::GetStats() const noexcept
+{
+    return this->m_renderStats;
 }
 
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
@@ -741,25 +756,23 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
     // sort the opaque surfaces by material and mesh
     std::sort(opaqueDraws.begin(), opaqueDraws.end(), [&](const auto &iA, const auto &iB) {
-        const RenderObject &A = this->m_drawCommands.OpaqueSurfaces[iA];
-        const RenderObject &B = this->m_drawCommands.OpaqueSurfaces[iB];
-        if (A.material == B.material)
+        const RenderObject &a = this->m_drawCommands.opaqueSurfaces.at(iA);
+        const RenderObject &b = this->m_drawCommands.opaqueSurfaces.at(iB);
+        if (a.material == b.material)
         {
-            return A.indexBuffer < B.indexBuffer;
+            return a.indexBuffer < b.indexBuffer;
         }
-        else
-        {
-            return A.material < B.material;
-        }
+        return a.material < b.material;
     });
 
     // allocate a new uniform buffer for the scene data
-    uint32_t bufferSize = sizeof(GPUSceneData);
-    VulkanVertexBuffer gpuSceneDataBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
+    constexpr uint32_t gpuBufferSize = sizeof(GPUSceneData);
+    VulkanVertexBuffer gpuSceneDataBuffer(gpuBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
 
     // add it to the deletion queue of this frame so it gets deleted once its been used
     FrameData &currentFrame = this->GetCurrentFrame();
-    currentFrame.deletionQueue.PushFunction([=]() { destroy_buffer(gpuSceneDataBuffer); });
+    currentFrame.deletionQueue.PushFunction(
+        [=]() { vmaDestroyBuffer(m_allocator, gpuSceneDataBuffer.GetBuffer(), gpuSceneDataBuffer.GetAllocation()); });
 
     // write the buffer
     auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetAllocation()->GetMappedData());
@@ -770,8 +783,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
         currentFrame.frameDescriptors.Allocate(this->m_device, this->m_gpuSceneDataDescriptorLayout);
 
     DescriptorWriter writer;
-    writer.write_buffer(0, gpuSceneDataBuffer.m_buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    writer.update_set(_device, globalDescriptor);
+    writer.WriteBuffer(0, gpuSceneDataBuffer.GetBuffer(), gpuBufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    writer.UpdateSet(this->m_device, globalDescriptor);
 
     MaterialPipeline *lastPipeline = nullptr;
     MaterialInstance *lastMaterial = nullptr;
@@ -792,8 +805,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
                 VkViewport viewport = {};
                 viewport.x = 0;
                 viewport.y = 0;
-                viewport.width = (float)_windowExtent.width;
-                viewport.height = (float)_windowExtent.height;
+                viewport.width = static_cast<float>(m_width);
+                viewport.height = static_cast<float>(m_height);
                 viewport.minDepth = 0.f;
                 viewport.maxDepth = 1.f;
 
@@ -802,8 +815,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
                 VkRect2D scissor = {};
                 scissor.offset.x = 0;
                 scissor.offset.y = 0;
-                scissor.extent.width = _windowExtent.width;
-                scissor.extent.height = _windowExtent.height;
+                scissor.extent.width = m_width;
+                scissor.extent.height = m_height;
 
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
@@ -817,32 +830,33 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
             vkCmdBindIndexBuffer(cmd, r.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
         // calculate final mesh matrix
-        GPUDrawPushConstants push_constants;
-        push_constants.worldMatrix = r.transform;
-        push_constants.vertexBuffer = r.vertexBufferAddress;
+        GPUDrawPushConstants pushConstants = {};
+        pushConstants.worldMatrix = r.transform;
+        pushConstants.vertexBuffer = r.vertexBufferAddress;
 
         vkCmdPushConstants(cmd, r.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                           sizeof(GPUDrawPushConstants), &push_constants);
+                           sizeof(GPUDrawPushConstants), &pushConstants);
 
-        stats.drawcall_count++;
-        stats.triangle_count += r.indexCount / 3;
+        m_renderStats.drawCalls++;
+        m_renderStats.triangles += r.indexCount / 3;
         vkCmdDrawIndexed(cmd, r.indexCount, 1, r.firstIndex, 0, 0);
     };
 
-    stats.drawcall_count = 0;
-    stats.triangle_count = 0;
+    //Preparing to draw the geometry frame, set the stats count to 0
+    this->m_renderStats.drawCalls = 0;
+    this->m_renderStats.triangles = 0;
 
     for (auto &r : opaqueDraws)
     {
-        draw(this->m_drawCommands.OpaqueSurfaces[r]);
+        draw(this->m_drawCommands.opaqueSurfaces.at(r));
     }
 
-    for (auto &r : this->m_drawCommands.TransparentSurfaces)
+    for (auto &r : this->m_drawCommands.transparentSurfaces)
     {
         draw(r);
     }
 
     // we delete the draw commands now that we processed them
-    this->m_drawCommands.OpaqueSurfaces.clear();
-    this->m_drawCommands.TransparentSurfaces.clear();
+    this->m_drawCommands.opaqueSurfaces.clear();
+    this->m_drawCommands.transparentSurfaces.clear();
 }

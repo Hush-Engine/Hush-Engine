@@ -5,16 +5,19 @@
 #include "VkUtilsFactory.hpp"
 #include "VulkanPipelineBuilder.hpp"
 
+constexpr std::string_view FRAGMENT_SHADER_PATH = "../../shaders/mesh.frag.spv";
+constexpr std::string_view VERTEX_SHADER_PATH = "../../shaders/mesh.vert.spv";
+
 void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine)
 {
     // #TODO: Load shaders dynamically
     auto *renderer = dynamic_cast<VulkanRenderer*>(engine);
     VkShaderModule meshFragShader = nullptr;
-    bool loadedShader = VkOperations::LoadShaderModule("../../shaders/mesh.frag.spv", renderer->GetVulkanDevice(), &meshFragShader);
+    bool loadedShader = VkOperations::LoadShaderModule(FRAGMENT_SHADER_PATH, renderer->GetVulkanDevice(), &meshFragShader);
     HUSH_ASSERT(loadedShader, "Error when building the triangle fragment shader module");
 
     VkShaderModule meshVertexShader = nullptr;
-    loadedShader = VkOperations::LoadShaderModule("../../shaders/mesh.vert.spv", renderer->GetVulkanDevice(), &meshVertexShader);
+    loadedShader = VkOperations::LoadShaderModule(VERTEX_SHADER_PATH, renderer->GetVulkanDevice(), &meshVertexShader);
     HUSH_ASSERT(loadedShader, "Error when building the triangle vertex shader module");
 
     VkPushConstantRange matrixRange{};
@@ -29,16 +32,17 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine)
 
     materialLayout = layoutBuilder.Build(renderer->GetVulkanDevice(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    VkDescriptorSetLayout layouts[] = {renderer->_gpuSceneDataDescriptorLayout, materialLayout};
+    VkDescriptorSetLayout layouts[] = {renderer->GetGpuSceneDataDescriptorLayout(), materialLayout};
 
-    VkPipelineLayoutCreateInfo mesh_layout_info = VkUtilsFactory::PipelineLayoutCreateInfo();
-    mesh_layout_info.setLayoutCount = 2;
-    mesh_layout_info.pSetLayouts = layouts;
-    mesh_layout_info.pPushConstantRanges = &matrixRange;
-    mesh_layout_info.pushConstantRangeCount = 1;
+    VkPipelineLayoutCreateInfo meshLayoutInfo = VkUtilsFactory::PipelineLayoutCreateInfo();
+    meshLayoutInfo.setLayoutCount = 2;
+    meshLayoutInfo.pSetLayouts = static_cast<VkDescriptorSetLayout*>(layouts);
+    meshLayoutInfo.pPushConstantRanges = &matrixRange;
+    meshLayoutInfo.pushConstantRangeCount = 1;
 
     VkPipelineLayout newLayout = nullptr;
-    HUSH_VK_ASSERT(vkCreatePipelineLayout(renderer->GetVulkanDevice(), &mesh_layout_info, nullptr, &newLayout), "Failed to create pipeline layout!");
+    VkResult rc = vkCreatePipelineLayout(renderer->GetVulkanDevice(), &meshLayoutInfo, nullptr, &newLayout);
+    HUSH_VK_ASSERT(rc, "Failed to create pipeline layout!");
 
     opaquePipeline.layout = newLayout;
     transparentPipeline.layout = newLayout;
@@ -63,7 +67,7 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine)
 
     // render format
     pipelineBuilder.SetColorAttachmentFormat(renderer->GetDrawImage().imageFormat);
-    pipelineBuilder.SetDepthFormat(renderer->dep.imageFormat);
+    pipelineBuilder.SetDepthFormat(renderer->GetDepthImage().imageFormat);
 
     // use the triangle layout we created
     pipelineBuilder.SetPipelineLayout(newLayout);
@@ -76,7 +80,7 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine)
 
     pipelineBuilder.EnableDepthTesting(false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
-    transparentPipeline.pipeline = pipelineBuilder.Build();
+    transparentPipeline.pipeline = pipelineBuilder.Build(renderer->GetVulkanDevice());
 
     vkDestroyShaderModule(renderer->GetVulkanDevice(), meshFragShader, nullptr);
     vkDestroyShaderModule(renderer->GetVulkanDevice(), meshVertexShader, nullptr);

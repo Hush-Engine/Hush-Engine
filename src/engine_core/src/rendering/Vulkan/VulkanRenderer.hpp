@@ -81,10 +81,16 @@ namespace Hush
         [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
 
         [[nodiscard]] AllocatedImage GetDrawImage() const noexcept;
+
+        [[nodiscard]] AllocatedImage GetDepthImage() const noexcept;
+
+        [[nodiscard]] VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() const noexcept;
         
         VkFormat *GetSwapchainImageFormat() noexcept;
 
         [[nodiscard]] void *GetWindowContext() const noexcept override;
+
+        [[nodiscard]] const RenderStats &GetStats() const noexcept override;
 
       private:
         void Configure(vkb::Instance vkbInstance);
@@ -115,6 +121,7 @@ namespace Hush
         
         //Properties
         void *m_windowContext;
+        RenderStats m_renderStats{};
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;
         VkPhysicalDevice m_vulkanPhysicalDevice = nullptr;

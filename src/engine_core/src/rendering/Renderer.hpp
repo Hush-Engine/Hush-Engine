@@ -8,6 +8,7 @@
 
 #include <SDL2/SDL.h>
 #include <cstdint>
+#include "rendering/Shared/RenderStats.hpp"
 
 namespace Hush
 {
@@ -42,5 +43,7 @@ namespace Hush
         virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
 
         [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
+
+        [[nodiscard]] virtual const RenderStats &GetStats() const noexcept = 0;
     };
 } // namespace Hush
