@@ -4,9 +4,9 @@
     \brief Vulkan implementation for rendering
 */
 
+#include "rendering/Shared/RenderObject.hpp"
 #include <_types/_uint32_t.h>
 #include <cstddef>
-#include <sys/_types/_int32_t.h>
 #include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
 #include "VulkanRenderer.hpp"
@@ -850,12 +850,12 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
     this->m_renderStats.drawCalls = 0;
     this->m_renderStats.triangles = 0;
 
-    for (auto &r : opaqueDraws)
+    for (uint32_t &r : opaqueDraws)
     {
         draw(this->m_drawCommands.opaqueSurfaces.at(r));
     }
 
-    for (auto &r : this->m_drawCommands.transparentSurfaces)
+    for (RenderObject &r : this->m_drawCommands.transparentSurfaces)
     {
         draw(r);
     }

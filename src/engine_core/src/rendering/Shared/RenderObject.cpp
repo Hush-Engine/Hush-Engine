@@ -1,4 +1,6 @@
 #include "RenderObject.hpp"
+#include "rendering/Renderer.hpp"
+#include "rendering/Vulkan/VkDescriptors.hpp"
 
 void Hush::LoadedGLTF::ClearAll()
 {
@@ -18,4 +20,16 @@ void Hush::INode::Draw(const glm::mat4 &topMatrix, DrawContext &ctx) {
 	for (std::shared_ptr<INode>& c : m_children) {
 	    c->Draw(topMatrix, ctx);
 	}
+}
+
+Hush::IRenderer* Hush::LoadedGLTF::GetCreator() const noexcept {
+	return this->m_creator;
+}
+
+void Hush::LoadedGLTF::SetCreator(IRenderer *creator) {
+	this->m_creator = creator;
+}
+
+DescriptorAllocatorGrowable& Hush::LoadedGLTF::GetDescriptorPool() noexcept {
+	return this->m_descriptorPool;
 }

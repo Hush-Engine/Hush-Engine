@@ -133,6 +133,11 @@ namespace Hush {
 
 	    void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
 
+		[[nodiscard]] IRenderer* GetCreator() const noexcept;
+		void SetCreator(IRenderer* creator);
+
+		[[nodiscard]] DescriptorAllocatorGrowable& GetDescriptorPool() noexcept;
+
 	  private:
 	    void ClearAll();
 
@@ -147,7 +152,7 @@ namespace Hush {
 
 	    std::vector<VkSampler> m_samplers;
 
-	    DescriptorAllocatorGrowable m_descriptorPool;
+	    DescriptorAllocatorGrowable m_descriptorPool{};
 
 	    VulkanVertexBuffer m_materialDataBuffer;
 
