@@ -4,6 +4,10 @@
     \brief Vulkan implementation for rendering
 */
 
+#include <_types/_uint32_t.h>
+#include <cstddef>
+#include <sys/_types/_int32_t.h>
+#include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
 #include "VulkanRenderer.hpp"
 #include "log/Logger.hpp"
@@ -235,7 +239,7 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
 
     this->m_mainDeletionQueue.PushFunction([=]() { vkDestroyCommandPool(m_device, m_immediateCommandPool, nullptr); });
 
-    for (int32_t i = 0; i < FRAME_OVERLAP; i++)
+    for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
     {
         // Get a REFERENCE to the current frame
         rc = vkCreateCommandPool(this->m_device, &commandPoolInfo, nullptr, &this->m_frames.at(i).commandPool);
@@ -263,7 +267,7 @@ void Hush::VulkanRenderer::Draw()
     const uint32_t fenceTargetCount = 1u;
     // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
     VkResult rc =
-        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
+        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, VK_TRUE, VK_OPERATION_TIMEOUT_NS);
     HUSH_VK_ASSERT(rc, "Fence wait failed!");
 
     currentFrame.deletionQueue.Flush();
@@ -382,7 +386,7 @@ void Hush::VulkanRenderer::Dispose()
         vkDeviceWaitIdle(this->m_device);
 
         this->m_mainDeletionQueue.Flush();
-        for (int i = 0; i < FRAME_OVERLAP; i++)
+        for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
         {
             this->m_frames.at(i).deletionQueue.Flush();
             // Delete any command pools
@@ -554,7 +558,7 @@ void Hush::VulkanRenderer::CreateSyncObjects()
 
     this->m_mainDeletionQueue.PushFunction([=]() { vkDestroyFence(m_device, m_immediateFence, nullptr); });
 
-    for (int i = 0; i < FRAME_OVERLAP; i++)
+    for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
     {
         rc = vkCreateFence(this->m_device, &fenceInfo, nullptr, &this->m_frames.at(i).renderFence);
         HUSH_VK_ASSERT(rc, "Creating fence failed!");
@@ -662,7 +666,7 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 void Hush::VulkanRenderer::InitRenderables()
 {
     /*
-    //TODO: Make 
+    //TODO: Make
     std::string structurePath = {"..\\..\\assets\\structure.glb"};
     auto structureFile = loadGltf(this, structurePath);
 
@@ -709,12 +713,12 @@ void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source,
     blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
     blitRegion.pNext = nullptr;
 
-    blitRegion.srcOffsets[1].x = srcSize.width;
-    blitRegion.srcOffsets[1].y = srcSize.height;
+    blitRegion.srcOffsets[1].x = static_cast<int32_t>(srcSize.width);
+    blitRegion.srcOffsets[1].y = static_cast<int32_t>(srcSize.height);
     blitRegion.srcOffsets[1].z = 1;
 
-    blitRegion.dstOffsets[1].x = dstSize.width;
-    blitRegion.dstOffsets[1].y = dstSize.height;
+    blitRegion.dstOffsets[1].x = static_cast<int32_t>(dstSize.width);
+    blitRegion.dstOffsets[1].y = static_cast<int32_t>(dstSize.height);
     blitRegion.dstOffsets[1].z = 1;
 
     blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -746,7 +750,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 {
     std::vector<uint32_t> opaqueDraws;
     opaqueDraws.reserve(this->m_drawCommands.opaqueSurfaces.size());
-    for (int32_t i = 0; i < this->m_drawCommands.opaqueSurfaces.size(); i++)
+    for (size_t i = 0; i < this->m_drawCommands.opaqueSurfaces.size(); i++)
     {
         RenderObject& surface = this->m_drawCommands.opaqueSurfaces.at(i);
         if (surface.IsVisible(this->m_sceneData.viewProjection)) {

@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include "rendering/Vulkan/VulkanVertexBuffer.hpp"
 #include "utils/Assertions.hpp"
 #include <vulkan/vulkan.h>
 #include <magic_enum.hpp>
@@ -52,6 +53,13 @@ namespace Hush
         glm::vec4 ambientColor;
         glm::vec4 sunlightDirection; // w for sun power
         glm::vec4 sunlightColor;
+    };
+
+    // holds the resources needed for a mesh
+    struct GPUMeshBuffers {
+        VulkanVertexBuffer indexBuffer;
+        VulkanVertexBuffer vertexBuffer;
+        VkDeviceAddress vertexBufferAddress{};
     };
 
 }

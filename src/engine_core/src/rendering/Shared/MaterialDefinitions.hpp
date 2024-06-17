@@ -5,35 +5,36 @@
 */
 
 #pragma once
+#include "rendering/Vulkan/VkTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
-enum class EMaterialPass : uint8_t
-{
-    MainColor,
-    Transparent,
-    Other
-};
-struct MaterialPipeline
-{
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-};
+namespace Hush {
+	struct MaterialPipeline
+	{
+	    VkPipeline pipeline;
+	    VkPipelineLayout layout;
+	};
 
-struct MaterialInstance {
-    MaterialPipeline *pipeline;
-    VkDescriptorSet materialSet;
-    EMaterialPass passType;
-};
+	struct MaterialInstance {
+	    MaterialPipeline *pipeline;
+	    VkDescriptorSet materialSet;
+	    EMaterialPass passType;
+	};
 
-//< mat_types
-//> vbuf_types
-struct Vertex
-{
+	struct GLTFMaterial {
+				MaterialInstance data;
+	};
 
-    glm::vec3 position;
-    float uv_x;
-    glm::vec3 normal;
-    float uv_y;
-    glm::vec4 color;
-};
+	//< mat_types
+	//> vbuf_types
+	struct Vertex
+	{
+
+	    float uvX;
+	    float uvY;
+	    glm::vec3 position;
+	    glm::vec3 normal;
+	    glm::vec4 color;
+	};
+}

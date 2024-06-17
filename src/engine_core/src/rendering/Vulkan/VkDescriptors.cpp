@@ -104,6 +104,7 @@ void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets, const std:
     {
         VkDescriptorPoolSize toInsert = {};
         toInsert.type = ratio.type;
+        // NOLINTNEXTLINE
         toInsert.descriptorCount = uint32_t(ratio.ratio * maxSets);
         poolSizes.push_back(toInsert);
     }
@@ -154,7 +155,7 @@ void DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSets,
     }
 
     VkDescriptorPool newPool = this->CreatePool(device, initialSets, poolRatios);
-    
+
     // NOLINTNEXTLINE
     this->m_setsPerPool = static_cast<uint32_t>(initialSets * 1.5); // grow it next allocation
 
