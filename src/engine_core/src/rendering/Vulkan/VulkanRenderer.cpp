@@ -5,7 +5,6 @@
 */
 
 #include "rendering/Shared/RenderObject.hpp"
-#include <_types/_uint32_t.h>
 #include <cstddef>
 #include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
@@ -30,6 +29,7 @@
 #include <utils/typeutils/TypeUtils.hpp>
 #include <volk.h>
 #include "VulkanVertexBuffer.hpp"
+#include "VkOperations.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -254,6 +254,60 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
     }
 }
 
+void Hush::VulkanRenderer::InitDescriptors() noexcept
+{
+    // create a descriptor pool
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+    };
+
+    this->m_globalDescriptorAllocator.InitPool(this->m_device, 10, sizes);
+    this->m_mainDeletionQueue.PushFunction(
+        [&]() { vkDestroyDescriptorPool(m_device, m_globalDescriptorAllocator.pool, nullptr); });
+
+    {
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        this->m_drawImageDescriptorLayout = builder.Build(this->m_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+    {
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        this->m_gpuSceneDataDescriptorLayout =
+            builder.Build(this->m_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
+
+    this->m_mainDeletionQueue.PushFunction([&]() {
+        vkDestroyDescriptorSetLayout(m_device, m_drawImageDescriptorLayout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, m_gpuSceneDataDescriptorLayout, nullptr);
+    });
+
+    this->m_drawImageDescriptors = this->m_globalDescriptorAllocator.Allocate(this->m_device, m_drawImageDescriptorLayout);
+    {
+        DescriptorWriter writer;
+        writer.WriteImage(0, this->m_drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL,
+                           VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        writer.UpdateSet(this->m_device, this->m_drawImageDescriptors);
+    }
+
+    for (int i = 0; i < FRAME_OVERLAP; i++)
+    {
+        // create a descriptor pool
+        std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> frame_sizes = {
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4},
+        };
+
+        this->m_frames.at(i).frameDescriptors = DescriptorAllocatorGrowable{};
+        this->m_frames.at(i).frameDescriptors.Init(this->m_device, 1000, frame_sizes);
+        this->m_mainDeletionQueue.PushFunction([&, i]() { m_frames.at(i).frameDescriptors.DestroyPool(m_device); });
+    }
+}
+
 void Hush::VulkanRenderer::InitImGui()
 {
     this->m_uiForwarder = std::make_unique<VulkanImGuiForwarder>();
@@ -374,6 +428,9 @@ void Hush::VulkanRenderer::InitRendering()
 {
     this->InitializeCommands();
     this->CreateSyncObjects();
+    this->InitDescriptors();
+    //InitPipelines(?
+    this->InitRenderables();
 }
 
 void Hush::VulkanRenderer::Dispose()
@@ -384,7 +441,8 @@ void Hush::VulkanRenderer::Dispose()
     if (this->m_device != nullptr)
     {
         vkDeviceWaitIdle(this->m_device);
-
+        //Clear scenes and everything on our deletion queues
+        this->m_loadedScenes.clear();
         this->m_mainDeletionQueue.Flush();
         for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
         {
@@ -414,7 +472,10 @@ void Hush::VulkanRenderer::Dispose()
     {
         vkDestroyInstance(this->m_vulkanInstance, nullptr);
     }
-
+    if (this->m_allocator != nullptr) 
+    {
+        vmaDestroyAllocator(this->m_allocator);   
+    }
     LogTrace("Vulkan resources destroyed");
 }
 
@@ -665,15 +726,11 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-    /*
     //TODO: Make
-    std::string structurePath = {"..\\..\\assets\\structure.glb"};
-    auto structureFile = loadGltf(this, structurePath);
-
-    assert(structureFile.has_value());
-
-    loadedScenes["structure"] = *structureFile;
-    */
+    std::string structurePath = {R"(..\..\assets\structure.glb)"};
+    auto structureFile = VkOperations::LoadGltf(this, structurePath);
+    HUSH_ASSERT(structureFile.get() != nullptr, "GLTF structure failed to load");
+    this->m_loadedScenes["structure"] = structureFile;
 }
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,

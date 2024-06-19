@@ -39,8 +39,10 @@ namespace Hush
         DescriptorWriter writer;
 
         void BuildPipelines(IRenderer *engine);
+        //TODO: Implement ClearResources
         void ClearResources(VkDevice device);
 
+        //TODO: Implement WriteMaterial
         MaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources &resources,
                                         DescriptorAllocatorGrowable &descriptorAllocator);
     };

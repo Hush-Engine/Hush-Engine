@@ -24,6 +24,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 
     this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                          DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+    
     if (this->m_windowPtr == nullptr)
     {
         Hush::LogError("SDL window creation failed!");
@@ -31,10 +32,10 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
     }
     this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
-    this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
-    this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-    this->m_windowRenderer->InitImGui();
-    this->m_windowRenderer->InitRendering();
+    this->m_internalRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
+    this->m_internalRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+    this->m_internalRenderer->InitImGui();
+    this->m_internalRenderer->InitRendering();
     this->m_isActive = true;
 }
 
@@ -73,7 +74,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
     default:
         break;
     }
-    this->m_windowRenderer->HandleEvent(&event);
+    this->m_internalRenderer->HandleEvent(&event);
 }
 
 Hush::WindowRenderer::~WindowRenderer()
@@ -85,7 +86,7 @@ Hush::WindowRenderer::~WindowRenderer()
 
 Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
 {
-    return this->m_windowRenderer.get();
+    return this->m_internalRenderer.get();
 }
 
 bool Hush::WindowRenderer::IsActive() const noexcept

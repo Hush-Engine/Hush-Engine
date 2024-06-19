@@ -133,19 +133,25 @@ namespace Hush {
 
 	    void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
 
-		[[nodiscard]] IRenderer* GetCreator() const noexcept;
 		void SetCreator(IRenderer* creator);
+        
+		void AddSampler(VkSampler sampler);
 
-		[[nodiscard]] DescriptorAllocatorGrowable& GetDescriptorPool() noexcept;
+		//FIXME: Probably needs a ref or ptr to the image (if it worked, remove this comment)
+		void AddImage(const std::string_view& name, AllocatedImage image);
+
+		[[nodiscard]] IRenderer* GetCreator() const noexcept;
+
+		[[nodiscard]] DescriptorAllocatorGrowable& GetDescriptorPool() noexcept; 
 
 	  private:
 	    void ClearAll();
 
 	    // storage for all the data on a given gltf file
-	    std::unordered_map<std::string, std::shared_ptr<MeshAsset>> m_meshes = {};
-	    std::unordered_map<std::string, std::shared_ptr<INode>> m_nodes;
-	    std::unordered_map<std::string, AllocatedImage> m_images;
-	    std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> m_materials;
+	    std::unordered_map<std::string_view, std::shared_ptr<MeshAsset>> m_meshes = {};
+	    std::unordered_map<std::string_view, std::shared_ptr<INode>> m_nodes;
+	    std::unordered_map<std::string_view, AllocatedImage> m_images;
+	    std::unordered_map<std::string_view, std::shared_ptr<GLTFMaterial>> m_materials;
 
 	    // nodes that dont have a parent, for iterating through the file in tree order
 	    std::vector<std::shared_ptr<INode>> m_topNodes;

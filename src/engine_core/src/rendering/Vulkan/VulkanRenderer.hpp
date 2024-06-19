@@ -22,6 +22,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "rendering/Shared/RenderObject.hpp"
+#include "GltfMetallicRoughness.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -53,6 +54,8 @@ namespace Hush
         void InitRendering() override;
 
         void InitializeCommands() noexcept;
+
+        void InitDescriptors() noexcept;
 
         void InitImGui() override;
 
@@ -132,7 +135,11 @@ namespace Hush
         VkFence m_immediateFence = nullptr;
         VkCommandBuffer m_immediateCommandBuffer = nullptr;
         VkCommandPool m_immediateCommandPool = nullptr;
-        VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
+        VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout = nullptr;
+        VkDescriptorSet m_drawImageDescriptors = nullptr;
+        VkDescriptorSetLayout m_drawImageDescriptorLayout = nullptr;
+
+        DescriptorAllocator m_globalDescriptorAllocator{};
         uint32_t m_graphicsQueueFamily = 0u;
 
         VkSwapchainKHR m_swapChain{};
@@ -146,7 +153,10 @@ namespace Hush
         AllocatedImage m_drawImage{};
         AllocatedImage m_depthImage{};
         DrawContext m_drawCommands{};
+        GLTFMetallicRoughness m_metalRoughMaterial{};
+        //Scene data
         GPUSceneData m_sceneData{};
+        std::unordered_map<std::string_view, std::shared_ptr<LoadedGLTF>> m_loadedScenes;
 
 
         // Frame related data

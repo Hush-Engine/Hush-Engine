@@ -30,6 +30,17 @@ void Hush::LoadedGLTF::SetCreator(IRenderer *creator) {
 	this->m_creator = creator;
 }
 
-DescriptorAllocatorGrowable& Hush::LoadedGLTF::GetDescriptorPool() noexcept {
+void Hush::LoadedGLTF::AddSampler(VkSampler sampler)
+{
+    this->m_samplers.push_back(sampler);
+}
+
+void Hush::LoadedGLTF::AddImage(const std::string_view &name, AllocatedImage image)
+{
+    this->m_images.insert_or_assign(name, image);
+}
+
+DescriptorAllocatorGrowable &Hush::LoadedGLTF::GetDescriptorPool() noexcept
+{
 	return this->m_descriptorPool;
 }

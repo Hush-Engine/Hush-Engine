@@ -10,6 +10,7 @@
     "vk-bootstrap",
     "volk",
     "vulkan-headers",
-    "glm"
+    "glm",
+    "fastgltf"
   ]
 }

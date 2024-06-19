@@ -47,7 +47,8 @@ namespace Hush
 
         SDL_Renderer *m_rendererPtr = nullptr;
 
-        std::unique_ptr<Hush::IRenderer> m_windowRenderer;
+        //TODO: Make this a shared ptr
+        std::unique_ptr<Hush::IRenderer> m_internalRenderer;
 
         bool m_isActive = false;
 

@@ -18,3 +18,6 @@ find_package(vk-bootstrap CONFIG REQUIRED)
 
 #glm
 find_package(glm CONFIG REQUIRED)
+
+#fastgltf
+find_package(fastgltf CONFIG REQUIRED)
