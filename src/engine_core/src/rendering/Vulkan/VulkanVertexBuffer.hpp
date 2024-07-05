@@ -16,11 +16,15 @@ namespace Hush
     public:
         VulkanVertexBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator);
 
+        void Destroy(VmaAllocator allocator);
+
         [[nodiscard]] uint32_t GetSize() const noexcept;
 
         [[nodiscard]] VmaAllocation GetAllocation() const noexcept;
 
         [[nodiscard]] VkBuffer GetBuffer() const noexcept;
+
+        [[nodiscard]] VmaAllocationInfo GetAllocationInfo() const noexcept;
 
     private:
         VkBuffer m_buffer = nullptr;

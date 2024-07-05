@@ -140,9 +140,19 @@ namespace Hush {
 		//FIXME: Probably needs a ref or ptr to the image (if it worked, remove this comment)
 		void AddImage(const std::string_view& name, AllocatedImage image);
 
+
+		/// @brief Passes a reference to a material data buffer, non owning
+		void SetMaterialDataBuffer(VulkanVertexBuffer& materialDataBuffer);
+
+		void AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr) noexcept;
+
 		[[nodiscard]] IRenderer* GetCreator() const noexcept;
 
 		[[nodiscard]] DescriptorAllocatorGrowable& GetDescriptorPool() noexcept; 
+
+		[[nodiscard]] VulkanVertexBuffer& GetMaterialDataBuffer() noexcept;
+
+		[[nodiscard]] std::shared_ptr<GLTFMaterial> GetMaterialOwning(const std::string_view &name) noexcept;
 
 	  private:
 	    void ClearAll();

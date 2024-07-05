@@ -40,7 +40,28 @@ void Hush::LoadedGLTF::AddImage(const std::string_view &name, AllocatedImage ima
     this->m_images.insert_or_assign(name, image);
 }
 
+void Hush::LoadedGLTF::SetMaterialDataBuffer(VulkanVertexBuffer &materialDataBuffer)
+{
+    this->m_materialDataBuffer = materialDataBuffer;
+}
+
+void Hush::LoadedGLTF::AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr) noexcept
+{
+    this->m_materials.insert_or_assign(name, materialPtr);
+}
+
 DescriptorAllocatorGrowable &Hush::LoadedGLTF::GetDescriptorPool() noexcept
 {
 	return this->m_descriptorPool;
+}
+
+Hush::VulkanVertexBuffer& Hush::LoadedGLTF::GetMaterialDataBuffer() noexcept
+{
+    return this->m_materialDataBuffer;
+}
+
+std::shared_ptr<Hush::GLTFMaterial> Hush::LoadedGLTF::GetMaterialOwning(const std::string_view &name) noexcept
+{
+	//TODO: Add safety check to see if the map actually contains the key
+    return this->m_materials.at(name);
 }

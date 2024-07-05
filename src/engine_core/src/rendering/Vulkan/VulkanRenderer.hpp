@@ -69,6 +69,9 @@ namespace Hush
 
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
+        AllocatedImage CreateImage(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+                                   bool mipmapped);
+
         FrameData &GetCurrentFrame() noexcept;
 
         FrameData &GetLastFrame() noexcept;
@@ -95,6 +98,8 @@ namespace Hush
 
         [[nodiscard]] const RenderStats &GetStats() const noexcept override;
 
+        [[nodiscard]] VmaAllocator GetVmaAllocator() const noexcept;
+
       private:
         void Configure(vkb::Instance vkbInstance);
 
@@ -115,12 +120,12 @@ namespace Hush
 
         void InitRenderables();
 
-        void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
-
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
                               VkExtent2D dstSize);
 
         void DrawGeometry(VkCommandBuffer cmd);
+
+        AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped); 
         
         //Properties
         void *m_windowContext;

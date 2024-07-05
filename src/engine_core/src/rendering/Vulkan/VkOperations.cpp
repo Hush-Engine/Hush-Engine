@@ -1,5 +1,6 @@
 #include "VkOperations.hpp"
 #include "VulkanRenderer.hpp"
+#include "VkUtilsFactory.hpp"
 
 
 
@@ -155,28 +156,54 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         AllocatedImage img = {};
         bool loadedImage = LoadImageToRender(engine, gltf, image, &img);
 
-        if (LoadImage)
+        if (loadedImage)
         {
             images.push_back(img);
             file.AddImage(image.name, img);
+            continue;
         }
-        else
+        // we failed to load, so lets give the slot a default white texture to not
+        // completely break loading
+        // 3 default textures, white, grey, black. 1 pixel each
+        uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
+
+        uint32_t grey = glm::packUnorm4x8(glm::vec4(0.66f, 0.66f, 0.66f, 1));
+
+        uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 0));
+
+        // checkerboard image
+        uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
+        std::array<uint32_t, 16 * 16> pixels; // for 16x16 checkerboard texture
+
+        for (int x = 0; x < 16; x++)
         {
-            // we failed to load, so lets give the slot a default white texture to not
-            // completely break loading
-            images.push_back(engine->_errorCheckerboardImage);
-            LogFormat(ELogLevel::Error, "Gltf failed to load texture {}", image.name);
+            for (int y = 0; y < 16; y++)
+            {
+                // FIXME: Fix casting
+                pixels.at(y * 16 + x) = ((x % 2) ^ (y % 2)) ? magenta : black;
+            }
         }
+
+        auto *rawImageData = static_cast<void *>(pixels.data());
+        // TODO: Make this a constructor
+        AllocatedImage errorDefaultImage = engine->CreateImage(
+            rawImageData, VkExtent3D{16, 16, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+        images.push_back(errorDefaultImage);
+        LogFormat(ELogLevel::Error, "Gltf failed to load texture {}", image.name);
     }
 
     //> load_buffer
     // create buffer to hold the material data
-    file.materialDataBuffer =
-        engine->create_buffer(sizeof(GLTFMetallic_Roughness::MaterialConstants) * gltf.materials.size(),
-                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    int data_index = 0;
-    GLTFMetallic_Roughness::MaterialConstants *sceneMaterialConstants =
-        (GLTFMetallic_Roughness::MaterialConstants *)file.materialDataBuffer.info.pMappedData;
+    constexpr uint32_t materialConstantsSize = sizeof(GLTFMetallicRoughness::MaterialConstants);
+    VulkanVertexBuffer buffer(materialConstantsSize * gltf.materials.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                              VMA_MEMORY_USAGE_CPU_TO_GPU, engine->GetVmaAllocator());
+    
+    auto *materialConstants = static_cast<GLTFMetallicRoughness::MaterialConstants *>(buffer.GetAllocationInfo().pMappedData);
+
+    file.SetMaterialDataBuffer(buffer);
+    
+    int32_t dataIndex = 0;
+    GLTFMetallicRoughness::MaterialConstants *sceneMaterialConstants = materialConstants;
     //< load_buffer
     //
     //> load_material
@@ -184,7 +211,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
     {
         std::shared_ptr<GLTFMaterial> newMat = std::make_shared<GLTFMaterial>();
         materials.push_back(newMat);
-        file.materials[mat.name.c_str()] = newMat;
+        file.AddMaterial(mat.name, newMat);
 
         GLTFMetallic_Roughness::MaterialConstants constants;
         constants.colorFactors.x = mat.pbrData.baseColorFactor[0];
@@ -195,7 +222,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
         constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
         // write material parameters to buffer
-        sceneMaterialConstants[data_index] = constants;
+        sceneMaterialConstants[dataIndex] = constants;
 
         MaterialPass passType = MaterialPass::MainColor;
         if (mat.alphaMode == fastgltf::AlphaMode::Blend)
@@ -212,7 +239,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
         // set the uniform buffer for the material data
         materialResources.dataBuffer = file.materialDataBuffer.buffer;
-        materialResources.dataBufferOffset = data_index * sizeof(GLTFMetallic_Roughness::MaterialConstants);
+        materialResources.dataBufferOffset = dataIndex * sizeof(GLTFMetallic_Roughness::MaterialConstants);
         // grab textures from gltf file
         if (mat.pbrData.baseColorTexture.has_value())
         {
@@ -226,7 +253,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         newMat->data = engine->metalRoughMaterial.write_material(engine->_device, passType, materialResources,
                                                                  file.descriptorPool);
 
-        data_index++;
+        dataIndex++;
     }
     //< load_material
 
@@ -406,4 +433,111 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 bool Hush::VkOperations::LoadImageToRender(IRenderer *baseRenderer, fastgltf::Asset &asset, fastgltf::Image &image, AllocatedImage* outImage)
 {
     return false;
+}
+
+void Hush::VkOperations::GenerateMipMaps(VkCommandBuffer cmd, VkImage image, VkExtent2D imageSize)
+{
+    int mipLevels = int(std::floor(std::log2(std::max(imageSize.width, imageSize.height)))) + 1;
+    for (int mip = 0; mip < mipLevels; mip++)
+    {
+
+        VkExtent2D halfSize = imageSize;
+        halfSize.width /= 2;
+        halfSize.height /= 2;
+
+        VkImageMemoryBarrier2 imageBarrier = {};
+
+        imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        imageBarrier.pNext = nullptr;
+        imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+        imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange = vkinit::image_subresource_range(aspectMask);
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseMipLevel = mip;
+        imageBarrier.image = image;
+
+        VkDependencyInfo depInfo = {};
+        depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        depInfo.pNext = nullptr;
+        depInfo.imageMemoryBarrierCount = 1;
+        depInfo.pImageMemoryBarriers = &imageBarrier;
+
+        vkCmdPipelineBarrier2(cmd, &depInfo);
+
+        if (mip < mipLevels - 1)
+        {
+            VkImageBlit2 blitRegion{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr};
+
+            blitRegion.srcOffsets[1].x = imageSize.width;
+            blitRegion.srcOffsets[1].y = imageSize.height;
+            blitRegion.srcOffsets[1].z = 1;
+
+            blitRegion.dstOffsets[1].x = halfSize.width;
+            blitRegion.dstOffsets[1].y = halfSize.height;
+            blitRegion.dstOffsets[1].z = 1;
+
+            blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blitRegion.srcSubresource.baseArrayLayer = 0;
+            blitRegion.srcSubresource.layerCount = 1;
+            blitRegion.srcSubresource.mipLevel = mip;
+
+            blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blitRegion.dstSubresource.baseArrayLayer = 0;
+            blitRegion.dstSubresource.layerCount = 1;
+            blitRegion.dstSubresource.mipLevel = mip + 1;
+
+            VkBlitImageInfo2 blitInfo{.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr};
+            blitInfo.dstImage = image;
+            blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            blitInfo.srcImage = image;
+            blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            blitInfo.filter = VK_FILTER_LINEAR;
+            blitInfo.regionCount = 1;
+            blitInfo.pRegions = &blitRegion;
+
+            vkCmdBlitImage2(cmd, &blitInfo);
+
+            imageSize = halfSize;
+        }
+    }
+
+    // transition all mip levels into the final read_only layout
+    TransitionImage(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+void Hush::VkOperations::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
+                                         VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 imageBarrier{};
+    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    imageBarrier.pNext = nullptr;
+
+    imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+    imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+    imageBarrier.oldLayout = currentLayout;
+    imageBarrier.newLayout = newLayout;
+
+    VkImageAspectFlags aspectMask =
+        (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBarrier.subresourceRange = VkUtilsFactory::ImageSubResourceRange(aspectMask);
+    imageBarrier.image = image;
+
+    VkDependencyInfo depInfo{};
+    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    depInfo.pNext = nullptr;
+
+    depInfo.imageMemoryBarrierCount = 1;
+    depInfo.pImageMemoryBarriers = &imageBarrier;
+
+    vkCmdPipelineBarrier2(cmd, &depInfo);
 }

@@ -26,6 +26,11 @@ namespace Hush {
 
         static bool LoadImageToRender(IRenderer *baseRenderer, fastgltf::Asset &asset, fastgltf::Image &image, AllocatedImage* outImage);
 
+        static void GenerateMipMaps(VkCommandBuffer cmd, VkImage image, VkExtent2D imageSize);
+
+        static void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
+                                    VkImageLayout newLayout);
+
       private:
         static VkFilter ExtractFilter(fastgltf::Filter filter) {
             switch (filter)

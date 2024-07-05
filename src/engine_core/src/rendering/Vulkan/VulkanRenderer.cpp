@@ -367,7 +367,7 @@ void Hush::VulkanRenderer::Draw()
     uiImpl->RenderFrame(cmd);
     // set swapchain image layout to Present so we can draw it
     vkCmdEndRendering(cmd);
-    this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex),
+    VkOperations::TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex),
                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -506,6 +506,50 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
 
     rc = vkWaitForFences(this->m_device, 1u, &this->m_immediateFence, VK_TRUE, 9999999999);
     HUSH_VK_ASSERT(rc, "Immediate fence timed out");
+}
+
+Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(void *data, VkExtent3D size, VkFormat format,
+                                                       VkImageUsageFlags usage, bool mipmapped)
+{
+    uint32_t dataSize = size.depth * size.width * size.height * 4;
+    VulkanVertexBuffer uploadbuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
+
+    memcpy(uploadbuffer.GetAllocationInfo().pMappedData, data, dataSize);
+
+    AllocatedImage newImage = this->CreateImage(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+
+    this->ImmediateSubmit([&](VkCommandBuffer cmd) {
+        VkOperations::TransitionImage(cmd, newImage.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        VkBufferImageCopy copyRegion = {};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent = size;
+
+        // copy the buffer into the image
+        vkCmdCopyBufferToImage(cmd, uploadbuffer.GetBuffer(), newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                               &copyRegion);
+
+        if (mipmapped)
+        {
+            VkOperations::GenerateMipMaps(cmd, newImage.image,
+                                     VkExtent2D{newImage.imageExtent.width, newImage.imageExtent.height});
+        }
+        else
+        {
+            VkOperations::TransitionImage(cmd, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+    });
+    uploadbuffer.Destroy(this->m_allocator);
+    return newImage;
 }
 
 VkInstance Hush::VulkanRenderer::GetVulkanInstance() const noexcept
@@ -660,6 +704,11 @@ const RenderStats &Hush::VulkanRenderer::GetStats() const noexcept
     return this->m_renderStats;
 }
 
+VmaAllocator Hush::VulkanRenderer::GetVmaAllocator() const noexcept
+{
+    return this->m_allocator;
+}
+
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
                                                VkSemaphoreSubmitInfo *signalSemaphoreInfo,
                                                VkSemaphoreSubmitInfo *waitSemaphoreInfo)
@@ -731,36 +780,6 @@ void Hush::VulkanRenderer::InitRenderables()
     auto structureFile = VkOperations::LoadGltf(this, structurePath);
     HUSH_ASSERT(structureFile.get() != nullptr, "GLTF structure failed to load");
     this->m_loadedScenes["structure"] = structureFile;
-}
-
-void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
-                                           VkImageLayout newLayout)
-{
-    VkImageMemoryBarrier2 imageBarrier{};
-    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    imageBarrier.pNext = nullptr;
-
-    imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-    imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-    imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-    imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
-
-    imageBarrier.oldLayout = currentLayout;
-    imageBarrier.newLayout = newLayout;
-
-    VkImageAspectFlags aspectMask =
-        (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    imageBarrier.subresourceRange = VkUtilsFactory::ImageSubResourceRange(aspectMask);
-    imageBarrier.image = image;
-
-    VkDependencyInfo depInfo{};
-    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    depInfo.pNext = nullptr;
-
-    depInfo.imageMemoryBarrierCount = 1;
-    depInfo.pImageMemoryBarriers = &imageBarrier;
-
-    vkCmdPipelineBarrier2(cmd, &depInfo);
 }
 
 void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination,
@@ -920,4 +939,42 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
     // we delete the draw commands now that we processed them
     this->m_drawCommands.opaqueSurfaces.clear();
     this->m_drawCommands.transparentSurfaces.clear();
+}
+
+Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+                                                       bool mipmapped)
+{
+    AllocatedImage newImage;
+    newImage.imageFormat = format;
+    newImage.imageExtent = size;
+
+    VkImageCreateInfo imgInfo = VkUtilsFactory::CreateImageCreateInfo(format, usage, size);
+    if (mipmapped)
+    {
+        imgInfo.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
+    }
+
+    // always allocate images on dedicated GPU memory
+    VmaAllocationCreateInfo allocinfo = {};
+    allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    // allocate and create the image
+    HUSH_VK_ASSERT(vmaCreateImage(this->m_allocator, &imgInfo, &allocinfo, &newImage.image, &newImage.allocation, nullptr),
+                   "Failed to create internal image!");
+
+    // if the format is a depth format, we will need to have it use the correct
+    // aspect flag
+    VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+    if (format == VK_FORMAT_D32_SFLOAT)
+    {
+        aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    // build a image-view for the image
+    VkImageViewCreateInfo view_info = VkUtilsFactory::CreateImageViewCreateInfo(format, newImage.image, aspectFlag);
+    view_info.subresourceRange.levelCount = imgInfo.mipLevels;
+
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &view_info, nullptr, &newImage.imageView), "Failed to create image view!");
+    return newImage;
 }

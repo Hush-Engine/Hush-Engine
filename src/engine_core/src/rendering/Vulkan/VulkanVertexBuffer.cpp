@@ -21,6 +21,10 @@ Hush::VulkanVertexBuffer::VulkanVertexBuffer(uint32_t size, VkBufferUsageFlags u
                    "Vertex buffer allocation failed!");
 }
 
+void Hush::VulkanVertexBuffer::Destroy(VmaAllocator allocator) {
+    vmaDestroyBuffer(allocator, this->m_buffer, this->m_allocation);
+}
+
 uint32_t Hush::VulkanVertexBuffer::GetSize() const noexcept
 {
     return this->m_size;
@@ -34,4 +38,9 @@ VmaAllocation Hush::VulkanVertexBuffer::GetAllocation() const noexcept
 VkBuffer Hush::VulkanVertexBuffer::GetBuffer() const noexcept
 {
     return this->m_buffer;
+}
+
+VmaAllocationInfo Hush::VulkanVertexBuffer::GetAllocationInfo() const noexcept
+{
+    return this->m_allocInfo;
 }
