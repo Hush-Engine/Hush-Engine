@@ -213,7 +213,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         materials.push_back(newMat);
         file.AddMaterial(mat.name, newMat);
 
-        GLTFMetallicRoughness::MaterialConstants constants;
+        GLTFMetallicRoughness::MaterialConstants constants = {};
         constants.colorFactors.x = mat.pbrData.baseColorFactor[0];
         constants.colorFactors.y = mat.pbrData.baseColorFactor[1];
         constants.colorFactors.z = mat.pbrData.baseColorFactor[2];
@@ -230,7 +230,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             passType = EMaterialPass::Transparent;
         }
 
-        GLTFMetallicRoughness::MaterialResources materialResources;
+        GLTFMetallicRoughness::MaterialResources materialResources = {};
         //TODO: Get these default images from a static constexpr resource
         // default the material textures
         materialResources.colorImage = engine->_whiteImage;

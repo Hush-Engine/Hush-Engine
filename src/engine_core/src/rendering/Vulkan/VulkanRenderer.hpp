@@ -69,7 +69,7 @@ namespace Hush
 
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
-        AllocatedImage CreateImage(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+        AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
                                    bool mipmapped);
 
         FrameData &GetCurrentFrame() noexcept;
@@ -99,6 +99,8 @@ namespace Hush
         [[nodiscard]] const RenderStats &GetStats() const noexcept override;
 
         [[nodiscard]] VmaAllocator GetVmaAllocator() const noexcept;
+
+        [[nodiscard]] const AllocatedImage &GetWhiteImage() const noexcept;
 
       private:
         void Configure(vkb::Instance vkbInstance);
@@ -159,6 +161,10 @@ namespace Hush
         AllocatedImage m_depthImage{};
         DrawContext m_drawCommands{};
         GLTFMetallicRoughness m_metalRoughMaterial{};
+
+        //TODO: Refactor the default images
+        AllocatedImage m_whiteImage{};
+
         //Scene data
         GPUSceneData m_sceneData{};
         std::unordered_map<std::string_view, std::shared_ptr<LoadedGLTF>> m_loadedScenes;

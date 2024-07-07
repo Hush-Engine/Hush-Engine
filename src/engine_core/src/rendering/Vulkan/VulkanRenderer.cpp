@@ -30,6 +30,7 @@
 #include <volk.h>
 #include "VulkanVertexBuffer.hpp"
 #include "VkOperations.hpp"
+#include "../Shared/Colors.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -508,7 +509,7 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
     HUSH_VK_ASSERT(rc, "Immediate fence timed out");
 }
 
-Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(void *data, VkExtent3D size, VkFormat format,
+Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, VkExtent3D size, VkFormat format,
                                                        VkImageUsageFlags usage, bool mipmapped)
 {
     uint32_t dataSize = size.depth * size.width * size.height * 4;
@@ -707,6 +708,14 @@ const RenderStats &Hush::VulkanRenderer::GetStats() const noexcept
 VmaAllocator Hush::VulkanRenderer::GetVmaAllocator() const noexcept
 {
     return this->m_allocator;
+}
+
+const Hush::AllocatedImage &Hush::VulkanRenderer::GetWhiteImage() const noexcept
+{
+    uint32_t whiteColor = Color::ColorAsInteger(Color::s_white);
+    const auto *rawWhiteData = static_cast<const void *>(&whiteColor);
+    this->m_whiteImage = this->CreateImage(rawWhiteData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM,
+                                           VK_IMAGE_USAGE_SAMPLED_BIT, false);
 }
 
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
@@ -944,7 +953,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
                                                        bool mipmapped)
 {
-    AllocatedImage newImage;
+    AllocatedImage newImage = {};
     newImage.imageFormat = format;
     newImage.imageExtent = size;
 
@@ -972,9 +981,9 @@ Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(VkExtent3D size, VkFormat
     }
 
     // build a image-view for the image
-    VkImageViewCreateInfo view_info = VkUtilsFactory::CreateImageViewCreateInfo(format, newImage.image, aspectFlag);
-    view_info.subresourceRange.levelCount = imgInfo.mipLevels;
+    VkImageViewCreateInfo viewInfo = VkUtilsFactory::CreateImageViewCreateInfo(format, newImage.image, aspectFlag);
+    viewInfo.subresourceRange.levelCount = imgInfo.mipLevels;
 
-    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &view_info, nullptr, &newImage.imageView), "Failed to create image view!");
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &viewInfo, nullptr, &newImage.imageView), "Failed to create image view!");
     return newImage;
 }
