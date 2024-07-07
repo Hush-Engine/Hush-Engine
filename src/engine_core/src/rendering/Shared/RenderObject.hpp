@@ -144,11 +144,19 @@ namespace Hush {
 		/// @brief Passes a reference to a material data buffer, non owning
 		void SetMaterialDataBuffer(VulkanVertexBuffer& materialDataBuffer);
 
-		void AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr) noexcept;
+		void AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr);
+
+		void AddMesh(const std::string_view &name, std::shared_ptr<MeshAsset> mesh);
+
+		void AddNode(const std::string_view &name, std::shared_ptr<INode> node);
+
+		[[nodiscard]] VkSampler &GetSampler(uint32_t index);
 
 		[[nodiscard]] IRenderer* GetCreator() const noexcept;
 
 		[[nodiscard]] DescriptorAllocatorGrowable& GetDescriptorPool() noexcept; 
+
+		[[nodiscard]] std::shared_ptr<MeshAsset> GetMesh(const std::string_view&& name) noexcept;
 
 		[[nodiscard]] VulkanVertexBuffer& GetMaterialDataBuffer() noexcept;
 

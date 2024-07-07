@@ -213,24 +213,25 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         materials.push_back(newMat);
         file.AddMaterial(mat.name, newMat);
 
-        GLTFMetallic_Roughness::MaterialConstants constants;
+        GLTFMetallicRoughness::MaterialConstants constants;
         constants.colorFactors.x = mat.pbrData.baseColorFactor[0];
         constants.colorFactors.y = mat.pbrData.baseColorFactor[1];
         constants.colorFactors.z = mat.pbrData.baseColorFactor[2];
         constants.colorFactors.w = mat.pbrData.baseColorFactor[3];
 
-        constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
-        constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
+        constants.metalRoughFactors.x = mat.pbrData.metallicFactor;
+        constants.metalRoughFactors.y = mat.pbrData.roughnessFactor;
         // write material parameters to buffer
         sceneMaterialConstants[dataIndex] = constants;
 
-        MaterialPass passType = MaterialPass::MainColor;
+        EMaterialPass passType = EMaterialPass::MainColor;
         if (mat.alphaMode == fastgltf::AlphaMode::Blend)
         {
-            passType = MaterialPass::Transparent;
+            passType = EMaterialPass::Transparent;
         }
 
-        GLTFMetallic_Roughness::MaterialResources materialResources;
+        GLTFMetallicRoughness::MaterialResources materialResources;
+        //TODO: Get these default images from a static constexpr resource
         // default the material textures
         materialResources.colorImage = engine->_whiteImage;
         materialResources.colorSampler = engine->_defaultSamplerLinear;
@@ -238,8 +239,9 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         materialResources.metalRoughSampler = engine->_defaultSamplerLinear;
 
         // set the uniform buffer for the material data
-        materialResources.dataBuffer = file.materialDataBuffer.buffer;
-        materialResources.dataBufferOffset = dataIndex * sizeof(GLTFMetallic_Roughness::MaterialConstants);
+        materialResources.dataBuffer = file.GetMaterialDataBuffer().GetBuffer();
+        //TODO: Make sure this points to the constexpr
+        materialResources.dataBufferOffset = dataIndex * sizeof(GLTFMetallicRoughness::MaterialConstants);
         // grab textures from gltf file
         if (mat.pbrData.baseColorTexture.has_value())
         {
@@ -247,11 +249,11 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             size_t sampler = gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
 
             materialResources.colorImage = images[img];
-            materialResources.colorSampler = file.samplers[sampler];
+            materialResources.colorSampler = file.GetSampler(sampler);
         }
         // build material
-        newMat->data = engine->metalRoughMaterial.write_material(engine->_device, passType, materialResources,
-                                                                 file.descriptorPool);
+        newMat->data = engine->metalRoughMaterial.write_material(engine->GetVulkanDevice(), passType, materialResources,
+                                                                 file.GetDescriptorPool());
 
         dataIndex++;
     }
@@ -264,10 +266,10 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
     for (fastgltf::Mesh &mesh : gltf.meshes)
     {
-        std::shared_ptr<MeshAsset> newmesh = std::make_shared<MeshAsset>();
-        meshes.push_back(newmesh);
-        file.meshes[mesh.name.c_str()] = newmesh;
-        newmesh->name = mesh.name;
+        std::shared_ptr<MeshAsset> newMesh = std::make_shared<MeshAsset>();
+        newMesh->name = mesh.name;
+        meshes.push_back(newMesh);
+        file.AddMesh(mesh.name, newMesh);
 
         // clear the mesh arrays each mesh, we dont want to merge them by error
         indices.clear();
@@ -296,18 +298,18 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
                 vertices.resize(vertices.size() + posAccessor.count);
 
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, posAccessor, [&](glm::vec3 v, size_t index) {
-                    Vertex newvtx;
-                    newvtx.position = v;
-                    newvtx.normal = {1, 0, 0};
-                    newvtx.color = glm::vec4{1.f};
-                    newvtx.uv_x = 0;
-                    newvtx.uv_y = 0;
-                    vertices[initial_vtx + index] = newvtx;
+                    Vertex createdVertex;
+                    createdVertex.position = v;
+                    createdVertex.normal = {1, 0, 0};
+                    createdVertex.color = glm::vec4{1.f};
+                    createdVertex.uvX = 0;
+                    createdVertex.uvY = 0;
+                    vertices[initial_vtx + index] = createdVertex;
                 });
             }
 
             // load vertex normals
-            auto normals = p.findAttribute("NORMAL");
+            auto* normals = p.findAttribute("NORMAL");
             if (normals != p.attributes.end())
             {
 
@@ -317,7 +319,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             }
 
             // load UVs
-            auto uv = p.findAttribute("TEXCOORD_0");
+            auto* uv = p.findAttribute("TEXCOORD_0");
             if (uv != p.attributes.end())
             {
 
@@ -358,16 +360,16 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             newSurface.bounds.origin = (maxpos + minpos) / 2.f;
             newSurface.bounds.extents = (maxpos - minpos) / 2.f;
             newSurface.bounds.sphereRadius = glm::length(newSurface.bounds.extents);
-            newmesh->surfaces.push_back(newSurface);
+            newMesh->surfaces.push_back(newSurface);
         }
 
-        newmesh->meshBuffers = engine->uploadMesh(indices, vertices);
+        newMesh->meshBuffers = engine->UploadMesh(indices, vertices);
     }
     //> load_nodes
     // load all nodes and their meshes
     for (fastgltf::Node &node : gltf.nodes)
     {
-        std::shared_ptr<Node> newNode;
+        std::shared_ptr<INode> newNode;
 
         // find if the node has a mesh, and if it does hook it to the mesh pointer and allocate it with the meshnode
         // class
@@ -378,11 +380,11 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         }
         else
         {
-            newNode = std::make_shared<Node>();
+            newNode = std::make_shared<INode>();
         }
 
         nodes.push_back(newNode);
-        file.nodes[node.name.c_str()];
+        //file.nodes[node.name.c_str()]; Idk what this is for(?
 
         std::visit(fastgltf::visitor{[&](fastgltf::Node::TransformMatrix matrix) {
                                          memcpy(&newNode->localTransform, matrix.data(), sizeof(matrix));
@@ -473,7 +475,10 @@ void Hush::VkOperations::GenerateMipMaps(VkCommandBuffer cmd, VkImage image, VkE
 
         if (mip < mipLevels - 1)
         {
-            VkImageBlit2 blitRegion{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr};
+            VkImageBlit2 blitRegion = {};
+
+            blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+            blitRegion.pNext = nullptr;
 
             blitRegion.srcOffsets[1].x = imageSize.width;
             blitRegion.srcOffsets[1].y = imageSize.height;
@@ -493,7 +498,9 @@ void Hush::VkOperations::GenerateMipMaps(VkCommandBuffer cmd, VkImage image, VkE
             blitRegion.dstSubresource.layerCount = 1;
             blitRegion.dstSubresource.mipLevel = mip + 1;
 
-            VkBlitImageInfo2 blitInfo{.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr};
+            VkBlitImageInfo2 blitInfo = {};
+            blitInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+            blitInfo.pNext = nullptr;
             blitInfo.dstImage = image;
             blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             blitInfo.srcImage = image;

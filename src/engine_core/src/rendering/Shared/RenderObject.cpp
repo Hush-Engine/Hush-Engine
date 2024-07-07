@@ -45,14 +45,37 @@ void Hush::LoadedGLTF::SetMaterialDataBuffer(VulkanVertexBuffer &materialDataBuf
     this->m_materialDataBuffer = materialDataBuffer;
 }
 
-void Hush::LoadedGLTF::AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr) noexcept
+void Hush::LoadedGLTF::AddMaterial(const std::string_view &name, std::shared_ptr<GLTFMaterial> materialPtr)
 {
+	//FIXME: Throws
     this->m_materials.insert_or_assign(name, materialPtr);
+}
+
+void Hush::LoadedGLTF::AddMesh(const std::string_view &name, std::shared_ptr<MeshAsset> mesh)
+{
+    // FIXME: Throws
+    this->m_meshes.insert_or_assign(name, mesh);
+}
+
+void Hush::LoadedGLTF::AddNode(const std::string_view &name, std::shared_ptr<INode> node)
+{
+    // FIXME: Throws
+    this->m_nodes.insert_or_assign(name, node);
+}
+
+VkSampler &Hush::LoadedGLTF::GetSampler(uint32_t index)
+{
+    return this->m_samplers.at(index);
 }
 
 DescriptorAllocatorGrowable &Hush::LoadedGLTF::GetDescriptorPool() noexcept
 {
 	return this->m_descriptorPool;
+}
+
+std::shared_ptr<Hush::MeshAsset> Hush::LoadedGLTF::GetMesh(const std::string_view &&name) noexcept
+{
+    return this->m_meshes.at(name);
 }
 
 Hush::VulkanVertexBuffer& Hush::LoadedGLTF::GetMaterialDataBuffer() noexcept
