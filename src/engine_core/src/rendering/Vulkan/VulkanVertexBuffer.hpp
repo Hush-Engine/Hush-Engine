@@ -14,6 +14,8 @@ namespace Hush
     class VulkanVertexBuffer final
     {
     public:
+        VulkanVertexBuffer() = default;
+
         VulkanVertexBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator);
 
         void Destroy(VmaAllocator allocator);

@@ -430,6 +430,7 @@ void Hush::VulkanRenderer::InitRendering()
     this->InitializeCommands();
     this->CreateSyncObjects();
     this->InitDescriptors();
+    this->InitDefaultImages();
     //InitPipelines(?
     this->InitRenderables();
 }
@@ -507,6 +508,65 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
 
     rc = vkWaitForFences(this->m_device, 1u, &this->m_immediateFence, VK_TRUE, 9999999999);
     HUSH_VK_ASSERT(rc, "Immediate fence timed out");
+}
+
+Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t> &indices,
+                                                      const std::vector<Vertex> &vertices)
+{
+    //> mesh_create_1
+    const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+    const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+
+    GPUMeshBuffers newSurface = {};
+
+    // create vertex buffer
+    newSurface.vertexBuffer = VulkanVertexBuffer(vertexBufferSize,
+                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                            VMA_MEMORY_USAGE_GPU_ONLY, this->m_allocator);
+
+    // find the adress of the vertex buffer
+    VkBufferDeviceAddressInfo deviceAddressInfo = {};
+    deviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    deviceAddressInfo.buffer = newSurface.vertexBuffer.GetBuffer();
+    newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(this->m_device, &deviceAddressInfo);
+
+    // create index buffer
+    newSurface.indexBuffer =
+        VulkanVertexBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                      VMA_MEMORY_USAGE_GPU_ONLY, this->m_allocator);
+
+    //< mesh_create_1
+    //
+    //> mesh_create_2
+    VulkanVertexBuffer staging =
+        VulkanVertexBuffer(vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, this->m_allocator);
+
+    void *data = staging.GetAllocation()->GetMappedData();
+
+    // copy vertex buffer
+    memcpy(data, vertices.data(), vertexBufferSize);
+    // copy index buffer
+    memcpy(static_cast<char*>(data) + vertexBufferSize, indices.data(), indexBufferSize);
+
+    this->ImmediateSubmit([&](VkCommandBuffer cmd) {
+        VkBufferCopy vertexCopy{0};
+        vertexCopy.dstOffset = 0;
+        vertexCopy.srcOffset = 0;
+        vertexCopy.size = vertexBufferSize;
+
+        vkCmdCopyBuffer(cmd, staging.GetBuffer(), newSurface.vertexBuffer.GetBuffer(), 1, &vertexCopy);
+
+        VkBufferCopy indexCopy{0};
+        indexCopy.dstOffset = 0;
+        indexCopy.srcOffset = vertexBufferSize;
+        indexCopy.size = indexBufferSize;
+
+        vkCmdCopyBuffer(cmd, staging.GetBuffer(), newSurface.indexBuffer.GetBuffer(), 1, &indexCopy);
+    });
+    staging.Destroy(this->m_allocator);
+    
+    return newSurface;
 }
 
 Hush::AllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, VkExtent3D size, VkFormat format,
@@ -596,6 +656,11 @@ FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
 FrameData &Hush::VulkanRenderer::GetLastFrame() noexcept
 {
     return this->m_frames.at((this->m_frameNumber - 1) % FRAME_OVERLAP);
+}
+
+Hush::GLTFMetallicRoughness &Hush::VulkanRenderer::GetMetallicRoughnessMaterial() noexcept
+{
+    return this->m_metalRoughMaterial;
 }
 
 void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
@@ -710,11 +775,11 @@ VmaAllocator Hush::VulkanRenderer::GetVmaAllocator() const noexcept
     return this->m_allocator;
 }
 
-const Hush::AllocatedImage &Hush::VulkanRenderer::GetWhiteImage() const noexcept
+const Hush::AllocatedImage &Hush::VulkanRenderer::GetWhiteImage() noexcept
 {
     uint32_t whiteColor = Color::ColorAsInteger(Color::s_white);
     const auto *rawWhiteData = static_cast<const void *>(&whiteColor);
-    this->m_whiteImage = this->CreateImage(rawWhiteData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM,
+    this->m_whiteImage = CreateImage(rawWhiteData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM,
                                            VK_IMAGE_USAGE_SAMPLED_BIT, false);
 }
 
@@ -789,6 +854,25 @@ void Hush::VulkanRenderer::InitRenderables()
     auto structureFile = VkOperations::LoadGltf(this, structurePath);
     HUSH_ASSERT(structureFile.get() != nullptr, "GLTF structure failed to load");
     this->m_loadedScenes["structure"] = structureFile;
+}
+
+void Hush::VulkanRenderer::InitDefaultImages()
+{
+    uint32_t whiteColor = Color::ColorAsInteger(Color::s_white);
+    auto *rawWhiteData = static_cast<void *>(&whiteColor);
+    this->m_whiteImage =
+        CreateImage(rawWhiteData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+
+    uint32_t blackColor = Color::ColorAsInteger(Color::s_black);
+    auto *rawBlackData = static_cast<void *>(&blackColor);
+    this->m_blackImage =
+        CreateImage(rawBlackData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+
+    uint32_t greyColor = Color::ColorAsInteger(Color::s_grey);
+    auto *rawGreyData = static_cast<void *>(&greyColor);
+    this->m_greyImage =
+        CreateImage(rawBlackData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+
 }
 
 void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination,

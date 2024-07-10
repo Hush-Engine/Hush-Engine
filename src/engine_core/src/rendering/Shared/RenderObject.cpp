@@ -22,6 +22,30 @@ void Hush::INode::Draw(const glm::mat4 &topMatrix, DrawContext &ctx) {
 	}
 }
 
+glm::mat4 &Hush::INode::GetLocalTransform() noexcept
+{
+    return this->m_localTransform;
+}
+
+std::weak_ptr<Hush::INode> Hush::INode::GetParent()
+{
+    return this->GetParent();
+}
+
+void Hush::INode::SetParent(std::weak_ptr<INode> parent)
+{
+    this->m_parent = parent;
+}
+
+void Hush::INode::SetTransform(const glm::mat4 &matrix) noexcept {
+    this->m_localTransform = matrix;
+}
+
+void Hush::INode::AddChild(std::shared_ptr<INode> child)
+{
+    this->m_children.push_back(child);
+}
+
 Hush::IRenderer* Hush::LoadedGLTF::GetCreator() const noexcept {
 	return this->m_creator;
 }
@@ -61,6 +85,11 @@ void Hush::LoadedGLTF::AddNode(const std::string_view &name, std::shared_ptr<INo
 {
     // FIXME: Throws
     this->m_nodes.insert_or_assign(name, node);
+}
+
+void Hush::LoadedGLTF::AddTopNode(std::shared_ptr<INode> node)
+{
+    this->m_topNodes.push_back(node);
 }
 
 VkSampler &Hush::LoadedGLTF::GetSampler(uint32_t index)

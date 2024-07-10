@@ -100,6 +100,16 @@ namespace Hush {
 
 	    void Draw(const glm::mat4& topMatrix, DrawContext& ctx) override;
 
+		glm::mat4& GetLocalTransform() noexcept;
+
+		std::weak_ptr<INode> GetParent();
+
+		void SetParent(std::weak_ptr<INode> parent);
+
+		void SetTransform(const glm::mat4& matrix) noexcept;
+
+		void AddChild(std::shared_ptr<INode> child);
+
 	private:
 		// parent pointer must be a weak pointer to avoid circular dependencies
 	    std::weak_ptr<INode> m_parent;
@@ -149,6 +159,8 @@ namespace Hush {
 		void AddMesh(const std::string_view &name, std::shared_ptr<MeshAsset> mesh);
 
 		void AddNode(const std::string_view &name, std::shared_ptr<INode> node);
+
+		void AddTopNode(std::shared_ptr<INode> node);
 
 		[[nodiscard]] VkSampler &GetSampler(uint32_t index);
 

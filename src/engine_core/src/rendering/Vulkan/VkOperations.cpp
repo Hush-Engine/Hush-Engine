@@ -1,6 +1,7 @@
 #include "VkOperations.hpp"
 #include "VulkanRenderer.hpp"
 #include "VkUtilsFactory.hpp"
+#include "../Shared/Colors.hpp"
 
 
 
@@ -165,14 +166,13 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         // we failed to load, so lets give the slot a default white texture to not
         // completely break loading
         // 3 default textures, white, grey, black. 1 pixel each
-        uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
+        uint32_t white = Color::ColorAsInteger(Color::s_white);
 
-        uint32_t grey = glm::packUnorm4x8(glm::vec4(0.66f, 0.66f, 0.66f, 1));
+        uint32_t grey = Color::ColorAsInteger(Color::s_grey);
 
-        uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 0));
+        uint32_t black = Color::ColorAsInteger(Color::s_black);
 
-        // checkerboard image
-        uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
+        uint32_t magenta = Color::ColorAsInteger(Color::s_magenta);
         std::array<uint32_t, 16 * 16> pixels; // for 16x16 checkerboard texture
 
         for (int x = 0; x < 16; x++)
@@ -233,9 +233,9 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         GLTFMetallicRoughness::MaterialResources materialResources = {};
         //TODO: Get these default images from a static constexpr resource
         // default the material textures
-        materialResources.colorImage = engine->_whiteImage;
+        materialResources.colorImage = engine->GetWhiteImage();
         materialResources.colorSampler = engine->_defaultSamplerLinear;
-        materialResources.metalRoughImage = engine->_whiteImage;
+        materialResources.metalRoughImage = engine->GetWhiteImage();
         materialResources.metalRoughSampler = engine->_defaultSamplerLinear;
 
         // set the uniform buffer for the material data
@@ -252,7 +252,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             materialResources.colorSampler = file.GetSampler(sampler);
         }
         // build material
-        newMat->data = engine->metalRoughMaterial.write_material(engine->GetVulkanDevice(), passType, materialResources,
+        newMat->data = engine->GetMetallicRoughnessMaterial().WriteMaterial(engine->GetVulkanDevice(), passType, materialResources,
                                                                  file.GetDescriptorPool());
 
         dataIndex++;
@@ -362,7 +362,6 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             newSurface.bounds.sphereRadius = glm::length(newSurface.bounds.extents);
             newMesh->surfaces.push_back(newSurface);
         }
-
         newMesh->meshBuffers = engine->UploadMesh(indices, vertices);
     }
     //> load_nodes
@@ -387,7 +386,9 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         //file.nodes[node.name.c_str()]; Idk what this is for(?
 
         std::visit(fastgltf::visitor{[&](fastgltf::Node::TransformMatrix matrix) {
-                                         memcpy(&newNode->localTransform, matrix.data(), sizeof(matrix));
+                                        auto *rawTransformData =
+                                             static_cast<void *>(&newNode->GetLocalTransform());                    
+                                        memcpy(rawTransformData, matrix.data(), sizeof(matrix));
                                      },
                                      [&](fastgltf::Node::TRS transform) {
                                          glm::vec3 tl(transform.translation[0], transform.translation[1],
@@ -400,7 +401,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
                                          glm::mat4 rm = glm::toMat4(rot);
                                          glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
 
-                                         newNode->localTransform = tm * rm * sm;
+                                         newNode->SetTransform(tm * rm * sm);
                                      }},
                    node.transform);
     }
@@ -410,22 +411,22 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
     for (int i = 0; i < gltf.nodes.size(); i++)
     {
         fastgltf::Node &node = gltf.nodes[i];
-        std::shared_ptr<Node> &sceneNode = nodes[i];
+        std::shared_ptr<INode> &sceneNode = nodes[i];
 
         for (auto &c : node.children)
         {
-            sceneNode->children.push_back(nodes[c]);
-            nodes[c]->parent = sceneNode;
+            sceneNode->AddChild(nodes[c]);
+            nodes[c]->SetParent(sceneNode);
         }
     }
 
     // find the top nodes, with no parents
     for (auto &node : nodes)
     {
-        if (node->parent.lock() == nullptr)
+        if (node->GetParent().lock() == nullptr)
         {
-            file.topNodes.push_back(node);
-            node->refreshTransform(glm::mat4{1.f});
+            file.AddTopNode(node);
+            node->RefreshTransform(glm::mat4{1.f});
         }
     }
     return scene;

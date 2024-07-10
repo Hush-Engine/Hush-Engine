@@ -57,8 +57,8 @@ namespace Hush
 
     // holds the resources needed for a mesh
     struct GPUMeshBuffers {
-        VulkanVertexBuffer indexBuffer;
-        VulkanVertexBuffer vertexBuffer;
+        VulkanVertexBuffer indexBuffer{};
+        VulkanVertexBuffer vertexBuffer{};
         VkDeviceAddress vertexBufferAddress{};
     };
 

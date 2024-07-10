@@ -69,12 +69,16 @@ namespace Hush
 
         void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
+        GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Vertex> &vertices);
+
         AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
                                    bool mipmapped);
 
         FrameData &GetCurrentFrame() noexcept;
 
         FrameData &GetLastFrame() noexcept;
+
+        GLTFMetallicRoughness &GetMetallicRoughnessMaterial() noexcept;
 
         /* CONSTANT GETTERS */
 
@@ -100,7 +104,7 @@ namespace Hush
 
         [[nodiscard]] VmaAllocator GetVmaAllocator() const noexcept;
 
-        [[nodiscard]] const AllocatedImage &GetWhiteImage() const noexcept;
+        [[nodiscard]] const AllocatedImage &GetWhiteImage() noexcept;
 
       private:
         void Configure(vkb::Instance vkbInstance);
@@ -121,6 +125,9 @@ namespace Hush
         void InitVmaAllocator();
 
         void InitRenderables();
+
+        //TODO: Maybe remove this after we know rendering works just fine(?
+        void InitDefaultImages();
 
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
                               VkExtent2D dstSize);
@@ -164,6 +171,8 @@ namespace Hush
 
         //TODO: Refactor the default images
         AllocatedImage m_whiteImage{};
+        AllocatedImage m_blackImage{};
+        AllocatedImage m_greyImage{};
 
         //Scene data
         GPUSceneData m_sceneData{};
