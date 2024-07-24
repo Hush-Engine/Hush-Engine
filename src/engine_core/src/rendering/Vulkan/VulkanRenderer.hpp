@@ -106,6 +106,10 @@ namespace Hush
 
         [[nodiscard]] const AllocatedImage &GetWhiteImage() noexcept;
 
+        [[nodiscard]] VkSampler GetDefaultLinearSampler() noexcept;
+
+        [[nodiscard]] VkSampler GetDefaultNearestSampler() noexcept;
+
       private:
         void Configure(vkb::Instance vkbInstance);
 
@@ -128,6 +132,8 @@ namespace Hush
 
         //TODO: Maybe remove this after we know rendering works just fine(?
         void InitDefaultImages();
+
+        void InitDefaultData();
 
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
                               VkExtent2D dstSize);
@@ -173,6 +179,11 @@ namespace Hush
         AllocatedImage m_whiteImage{};
         AllocatedImage m_blackImage{};
         AllocatedImage m_greyImage{};
+
+        VkSampler m_defaultSamplerLinear;
+        VkSampler m_defaultSamplerNearest;
+
+        GPUMeshBuffers m_rectangle{};
 
         //Scene data
         GPUSceneData m_sceneData{};

@@ -2,6 +2,7 @@
 #include "VulkanRenderer.hpp"
 #include "VkUtilsFactory.hpp"
 #include "../Shared/Colors.hpp"
+#include <fastgltf/tools.hpp>
 
 
 
@@ -234,9 +235,9 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         //TODO: Get these default images from a static constexpr resource
         // default the material textures
         materialResources.colorImage = engine->GetWhiteImage();
-        materialResources.colorSampler = engine->_defaultSamplerLinear;
+        materialResources.colorSampler = engine->GetDefaultLinearSampler();
         materialResources.metalRoughImage = engine->GetWhiteImage();
-        materialResources.metalRoughSampler = engine->_defaultSamplerLinear;
+        materialResources.metalRoughSampler = engine->GetDefaultLinearSampler();
 
         // set the uniform buffer for the material data
         materialResources.dataBuffer = file.GetMaterialDataBuffer().GetBuffer();
@@ -281,7 +282,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
             newSurface.startIndex = (uint32_t)indices.size();
             newSurface.count = (uint32_t)gltf.accessors[p.indicesAccessor.value()].count;
 
-            size_t initial_vtx = vertices.size();
+            size_t initialVtx = vertices.size();
 
             // load indexes
             {
@@ -289,7 +290,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
                 indices.reserve(indices.size() + indexaccessor.count);
 
                 fastgltf::iterateAccessor<std::uint32_t>(
-                    gltf, indexaccessor, [&](std::uint32_t idx) { indices.push_back(idx + initial_vtx); });
+                    gltf, indexaccessor, [&](std::uint32_t idx) { indices.push_back(idx + initialVtx); });
             }
 
             // load vertex positions
@@ -298,13 +299,13 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
                 vertices.resize(vertices.size() + posAccessor.count);
 
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, posAccessor, [&](glm::vec3 v, size_t index) {
-                    Vertex createdVertex;
+                    Vertex createdVertex = {};
                     createdVertex.position = v;
                     createdVertex.normal = {1, 0, 0};
                     createdVertex.color = glm::vec4{1.f};
                     createdVertex.uvX = 0;
                     createdVertex.uvY = 0;
-                    vertices[initial_vtx + index] = createdVertex;
+                    vertices[initialVtx + index] = createdVertex;
                 });
             }
 
@@ -315,7 +316,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(
                     gltf, gltf.accessors[(*normals).second],
-                    [&](glm::vec3 v, size_t index) { vertices[initial_vtx + index].normal = v; });
+                    [&](glm::vec3 v, size_t index) { vertices[initialVtx + index].normal = v; });
             }
 
             // load UVs
@@ -325,8 +326,8 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
                 fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[(*uv).second],
                                                               [&](glm::vec2 v, size_t index) {
-                                                                  vertices[initial_vtx + index].uv_x = v.x;
-                                                                  vertices[initial_vtx + index].uv_y = v.y;
+                                                                  vertices[initialVtx + index].uvX = v.x;
+                                                                  vertices[initialVtx + index].uvY = v.y;
                                                               });
             }
 
@@ -337,7 +338,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(
                     gltf, gltf.accessors[(*colors).second],
-                    [&](glm::vec4 v, size_t index) { vertices[initial_vtx + index].color = v; });
+                    [&](glm::vec4 v, size_t index) { vertices[initialVtx + index].color = v; });
             }
 
             if (p.materialIndex.has_value())
@@ -349,9 +350,9 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
                 newSurface.material = materials[0];
             }
 
-            glm::vec3 minpos = vertices[initial_vtx].position;
-            glm::vec3 maxpos = vertices[initial_vtx].position;
-            for (int i = initial_vtx; i < vertices.size(); i++)
+            glm::vec3 minpos = vertices[initialVtx].position;
+            glm::vec3 maxpos = vertices[initialVtx].position;
+            for (int32_t i = initialVtx; i < vertices.size(); i++)
             {
                 minpos = glm::min(minpos, vertices[i].position);
                 maxpos = glm::max(maxpos, vertices[i].position);

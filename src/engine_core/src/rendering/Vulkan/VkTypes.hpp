@@ -61,13 +61,6 @@ namespace Hush
         VulkanVertexBuffer vertexBuffer{};
         VkDeviceAddress vertexBufferAddress{};
     };
-
-    enum class EMaterialPass : uint8_t
-    {
-        MainColor,
-        Transparent,
-        Other
-    };
 }
 
 

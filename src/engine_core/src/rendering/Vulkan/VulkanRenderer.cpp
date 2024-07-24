@@ -432,6 +432,7 @@ void Hush::VulkanRenderer::InitRendering()
     this->InitDescriptors();
     this->InitDefaultImages();
     //InitPipelines(?
+    this->InitDefaultData();
     this->InitRenderables();
 }
 
@@ -783,6 +784,16 @@ const Hush::AllocatedImage &Hush::VulkanRenderer::GetWhiteImage() noexcept
                                            VK_IMAGE_USAGE_SAMPLED_BIT, false);
 }
 
+VkSampler Hush::VulkanRenderer::GetDefaultLinearSampler() noexcept
+{
+    return this->m_defaultSamplerLinear;
+}
+
+VkSampler Hush::VulkanRenderer::GetDefaultNearestSampler() noexcept
+{
+    return this->m_defaultSamplerNearest;
+}
+
 VkSubmitInfo2 Hush::VulkanRenderer::SubmitInfo(VkCommandBufferSubmitInfo *cmd,
                                                VkSemaphoreSubmitInfo *signalSemaphoreInfo,
                                                VkSemaphoreSubmitInfo *waitSemaphoreInfo)
@@ -873,6 +884,53 @@ void Hush::VulkanRenderer::InitDefaultImages()
     this->m_greyImage =
         CreateImage(rawBlackData, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
 
+}
+
+void Hush::VulkanRenderer::InitDefaultData()
+{
+    std::array<Vertex, 4> rectVertices;
+    rectVertices[0].position = {0.5, -0.5, 0};
+    rectVertices[1].position = {0.5, 0.5, 0};
+    rectVertices[2].position = {-0.5, -0.5, 0};
+    rectVertices[3].position = {-0.5, 0.5, 0};
+
+    rectVertices[0].color = {0, 0, 0, 1};
+    rectVertices[1].color = {0.5, 0.5, 0.5, 1};
+    rectVertices[2].color = {1, 0, 0, 1};
+    rectVertices[3].color = {0, 1, 0, 1};
+
+    rectVertices[0].uvX = 1;
+    rectVertices[0].uvY = 0;
+    rectVertices[1].uvX = 0;
+    rectVertices[1].uvY = 0;
+    rectVertices[2].uvX = 1;
+    rectVertices[2].uvY = 1;
+    rectVertices[3].uvX = 0;
+    rectVertices[3].uvY = 1;
+
+    std::array<uint32_t, 6> rectIndices;
+
+    rectIndices[0] = 0;
+    rectIndices[1] = 1;
+    rectIndices[2] = 2;
+
+    rectIndices[3] = 2;
+    rectIndices[4] = 1;
+    rectIndices[5] = 3;
+    
+    this->m_rectangle = this->UploadMesh(std::vector(rectIndices.begin(), rectIndices.end()), std::vector(rectVertices.begin(), rectVertices.end()));
+
+    VkSamplerCreateInfo sampl = {};
+
+    sampl.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampl.magFilter = VK_FILTER_NEAREST;
+    sampl.minFilter = VK_FILTER_NEAREST;
+
+    vkCreateSampler(this->m_device, &sampl, nullptr, &this->m_defaultSamplerNearest);
+
+    sampl.magFilter = VK_FILTER_LINEAR;
+    sampl.minFilter = VK_FILTER_LINEAR;
+    vkCreateSampler(this->m_device, &sampl, nullptr, &this->m_defaultSamplerLinear);
 }
 
 void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination,
