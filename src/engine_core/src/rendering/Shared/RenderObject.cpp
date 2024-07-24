@@ -117,3 +117,25 @@ std::shared_ptr<Hush::GLTFMaterial> Hush::LoadedGLTF::GetMaterialOwning(const st
 	//TODO: Add safety check to see if the map actually contains the key
     return this->m_materials.at(name);
 }
+
+void Hush::MeshNode::Draw(const glm::mat4 &topMatrix, DrawContext &ctx)
+{
+    glm::mat4 nodeMatrix = topMatrix * this->m_worldTransform;
+
+    for (auto &s : mesh->surfaces)
+    {
+        RenderObject def;
+        def.indexCount = s.count;
+        def.firstIndex = s.startIndex;
+        def.indexBuffer = mesh->meshBuffers.indexBuffer.GetBuffer();
+        def.material = &s.material->data;
+
+        def.transform = nodeMatrix;
+        def.vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress;
+
+        ctx.opaqueSurfaces.push_back(def);
+    }
+
+    // recurse down
+    INode::Draw(topMatrix, ctx);
+}

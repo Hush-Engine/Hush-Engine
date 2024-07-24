@@ -110,7 +110,7 @@ namespace Hush {
 
 		void AddChild(std::shared_ptr<INode> child);
 
-	private:
+	protected:
 		// parent pointer must be a weak pointer to avoid circular dependencies
 	    std::weak_ptr<INode> m_parent;
 	    std::vector<std::shared_ptr<INode>> m_children;
@@ -118,6 +118,14 @@ namespace Hush {
 	    glm::mat4 m_localTransform;
 	    glm::mat4 m_worldTransform;
 	};
+
+	struct MeshNode : public INode
+    {
+
+        std::shared_ptr<MeshAsset> mesh;
+
+        virtual void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
+    };
 
 	struct MeshAsset {
 	    std::string name;
