@@ -22,10 +22,10 @@ namespace Hush
         
         static constexpr auto s_magenta = glm::vec4(1, 0, 1, 1);
 
-        static constexpr uint32_t ColorAsInteger(glm::vec4 const &color);
+        static uint32_t ColorAsInteger(glm::vec4 const &color);
 
         private:
-        static inline constexpr uint32_t CompileTimePackUnorm4x8(glm::vec4 const &v)
+        static inline uint32_t PackUnorm4x8(glm::vec4 const &v)
         {
             union {
                 unsigned char in[4];

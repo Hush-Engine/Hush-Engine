@@ -124,7 +124,7 @@ void Hush::MeshNode::Draw(const glm::mat4 &topMatrix, DrawContext &ctx)
 
     for (auto &s : mesh->surfaces)
     {
-        RenderObject def;
+        RenderObject def = {};
         def.indexCount = s.count;
         def.firstIndex = s.startIndex;
         def.indexBuffer = mesh->meshBuffers.indexBuffer.GetBuffer();

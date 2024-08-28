@@ -35,14 +35,14 @@ namespace Hush {
 
 	struct RenderObject
 	{
-	    uint32_t indexCount;
-	    uint32_t firstIndex;
-	    VkBuffer indexBuffer; //TODO: Make this a generic index buffer class
+	    uint32_t indexCount = 0;
+	    uint32_t firstIndex = 0;
+	    VkBuffer indexBuffer = nullptr; //TODO: Make this a generic index buffer class
 
-	    MaterialInstance *material;
-	    Bounds bounds;
-	    glm::mat4 transform;
-	    VkDeviceAddress vertexBufferAddress;
+	    MaterialInstance *material = nullptr;
+        Bounds bounds{};
+        glm::mat4 transform{};
+	    VkDeviceAddress vertexBufferAddress = 0;
 
 	    [[nodiscard]] bool IsVisible(const glm::mat4 &viewProjection) const
 	    {

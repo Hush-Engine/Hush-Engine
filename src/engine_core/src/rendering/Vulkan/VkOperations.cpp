@@ -4,6 +4,7 @@
 #include "../Shared/Colors.hpp"
 #include <fastgltf/tools.hpp>
 #include <glm/ext.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 
 bool Hush::VkOperations::LoadShaderModule(const std::string_view &filePath, VkDevice device,
@@ -167,9 +168,6 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         // we failed to load, so lets give the slot a default white texture to not
         // completely break loading
         // 3 default textures, white, grey, black. 1 pixel each
-        uint32_t white = Color::ColorAsInteger(Color::s_white);
-
-        uint32_t grey = Color::ColorAsInteger(Color::s_grey);
 
         uint32_t black = Color::ColorAsInteger(Color::s_black);
 
@@ -462,7 +460,7 @@ void Hush::VkOperations::GenerateMipMaps(VkCommandBuffer cmd, VkImage image, VkE
         imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
         VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBarrier.subresourceRange = vkinit::image_subresource_range(aspectMask);
+        imageBarrier.subresourceRange = VkUtilsFactory::ImageSubResourceRange(aspectMask);
         imageBarrier.subresourceRange.levelCount = 1;
         imageBarrier.subresourceRange.baseMipLevel = mip;
         imageBarrier.image = image;
