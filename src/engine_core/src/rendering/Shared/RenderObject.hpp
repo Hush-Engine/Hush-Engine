@@ -14,7 +14,7 @@
 #include <array>
 #include <string>
 #include <rendering/Vulkan/VkTypes.hpp>
-#include "../Vulkan/VulkanVertexBuffer.hpp"
+#include "rendering/Vulkan/VulkanVertexBuffer.hpp"
 #include "rendering/Vulkan/VkDescriptors.hpp"
 #include <rendering/Renderer.hpp>
 
@@ -119,21 +119,21 @@ namespace Hush {
 	    glm::mat4 m_worldTransform;
 	};
 
+	struct MeshAsset
+    {
+        std::string name;
+
+        std::vector<GeoSurface> surfaces;
+        GPUMeshBuffers meshBuffers;
+    };
+
 	struct MeshNode : public INode
     {
 
         std::shared_ptr<MeshAsset> mesh;
 
-        virtual void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
+        void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
     };
-
-	struct MeshAsset {
-	    std::string name;
-
-
-	    std::vector<GeoSurface> surfaces;
-	    GPUMeshBuffers meshBuffers;
-	};
 
 	class LoadedGLTF final : public IRenderable
 	{

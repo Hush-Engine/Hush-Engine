@@ -3,7 +3,7 @@
 #include "VkUtilsFactory.hpp"
 #include "../Shared/Colors.hpp"
 #include <fastgltf/tools.hpp>
-
+#include <glm/ext.hpp>
 
 
 bool Hush::VkOperations::LoadShaderModule(const std::string_view &filePath, VkDevice device,
@@ -376,7 +376,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
         if (node.meshIndex.has_value())
         {
             newNode = std::make_shared<MeshNode>();
-            static_cast<MeshNode *>(newNode.get())->mesh = meshes[*node.meshIndex];
+            dynamic_cast<MeshNode *>(newNode.get())->mesh = meshes[*node.meshIndex];
         }
         else
         {
@@ -404,7 +404,7 @@ std::shared_ptr<Hush::LoadedGLTF> Hush::VkOperations::LoadGltf(IRenderer *baseRe
 
                                          newNode->SetTransform(tm * rm * sm);
                                      }},
-                   node.transform);
+        node.transform);
     }
     //< load_nodes
     //> load_graph
