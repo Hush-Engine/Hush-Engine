@@ -1,3 +1,5 @@
+#define VK_NO_PROTOTYPES
+
 #include "VulkanImGuiForwarder.hpp"
 #include "log/Logger.hpp"
 #include "rendering/Vulkan/VulkanRenderer.hpp"

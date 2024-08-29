@@ -1,6 +1,7 @@
 #include "VkDescriptors.hpp"
 #include "VulkanRenderer.hpp"
 
+
 void DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type)
 {
     VkDescriptorSetLayoutBinding newbind{};
@@ -98,7 +99,8 @@ void DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSet set)
     vkUpdateDescriptorSets(device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }
 
-void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets, const std::vector<PoolSizeRatio> &poolRatios)
+void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
+                                   const std::vector<PoolSizeRatio> &poolRatios) noexcept
 {
     std::vector<VkDescriptorPoolSize> poolSizes;
     for (PoolSizeRatio ratio : poolRatios)
@@ -115,7 +117,8 @@ void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets, const std:
     poolInfo.maxSets = maxSets;
     poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
     poolInfo.pPoolSizes = poolSizes.data();
-    vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool);
+    VkResult rc = vkCreateDescriptorPool(device, &poolInfo, nullptr, &this->pool);
+    HUSH_VK_ASSERT(rc, "Creating descriptor set failed!");
 }
 
 void DescriptorAllocator::ClearDescriptors(VkDevice device) const

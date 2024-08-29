@@ -5,12 +5,11 @@
 */
 
 #pragma once
+#define VK_NO_PROTOTYPES
+
 #include "rendering/Renderer.hpp"
 #include "utils/Assertions.hpp"
 #include <magic_enum.hpp>
-
-#define VK_NO_PROTOTYPES
-
 #include "FrameData.hpp"
 #include "VkTypes.hpp"
 #include "VulkanDeletionQueue.hpp"
@@ -72,9 +71,9 @@ namespace Hush
 
         /* CONSTANT GETTERS */
 
-        [[nodiscard]] VkInstance GetVulkanInstance() const noexcept;
+        [[nodiscard]] VkInstance GetVulkanInstance() noexcept;
 
-        [[nodiscard]] VkDevice GetVulkanDevice() const noexcept;
+        [[nodiscard]] VkDevice GetVulkanDevice() noexcept;
 
         [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
 

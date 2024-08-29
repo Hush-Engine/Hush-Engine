@@ -29,9 +29,7 @@
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
-    auto *mainVulkanRenderer = dynamic_cast<VulkanRenderer *>(WindowManager::GetMainWindow()->GetInternalRenderer());
-    VkInstance mainWindowInstance = mainVulkanRenderer->GetVulkanInstance();
-    PFN_vkVoidFunction result = vkGetInstanceProcAddr(mainWindowInstance, functionName);
+    PFN_vkVoidFunction result = vkGetInstanceProcAddr(volkGetLoadedInstance(), functionName);
     (void)userData; // Ignore user data
     return result;
 }
@@ -51,6 +49,7 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
         builder.set_app_name("Hush Engine")
             .request_validation_layers(true)
             .enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+            //.enable_extension(VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)
             // TODO: We might use a lower version for some platforms such as Android
             .require_api_version(1, 3, 0)
             .build();
@@ -425,12 +424,12 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
     HUSH_VK_ASSERT(rc, "Immediate fence timed out");
 }
 
-VkInstance Hush::VulkanRenderer::GetVulkanInstance() const noexcept
+VkInstance Hush::VulkanRenderer::GetVulkanInstance() noexcept
 {
     return this->m_vulkanInstance;
 }
 
-VkDevice Hush::VulkanRenderer::GetVulkanDevice() const noexcept
+VkDevice Hush::VulkanRenderer::GetVulkanDevice() noexcept
 {
     return this->m_device;
 }
@@ -470,6 +469,7 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     vkb::PhysicalDeviceSelector selector{vkbInstance};
     vkb::PhysicalDevice vkbPhysicalDevice = selector.set_minimum_version(1, 3)
                                                 .set_required_features_13(vulkan13Features)
+                                                .set_required_features_12(vulkan12Features)
                                                 .set_surface(m_surface)
                                                 .select()
                                                 .value();
@@ -589,6 +589,7 @@ uint32_t Hush::VulkanRenderer::LogDebugMessage(VkDebugUtilsMessageSeverityFlagBi
                                                const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                                void *pUserData)
 {
+    Hush::LogFormat(ELogLevel::Critical, "Error from Vulkan: {}", pCallbackData->pMessage);
     (void)(pCallbackData->pMessage);
     (void)messageSeverity;
     (void)messageTypes;
@@ -709,7 +710,7 @@ void Hush::VulkanRenderer::InitDescriptors() noexcept
     // create a descriptor pool that will hold 10 sets with 1 image each
     std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
 
-    this->m_globalDescriptorAllocator.InitPool(this->m_device, 10, sizes);
+    this->m_globalDescriptorAllocator.InitPool(volkGetLoadedDevice(), 10, sizes);
 
     // make the descriptor set layout for our compute draw
     {
