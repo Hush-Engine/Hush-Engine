@@ -25,6 +25,7 @@
 #include "vk_mem_alloc.hpp"
 #include <utils/typeutils/TypeUtils.hpp>
 #include <volk.h>
+#include "VulkanPipelineBuilder.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -179,10 +180,10 @@ void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
                    &this->m_drawImage.allocation, nullptr);
 
     // build a image-view for the draw image to use for rendering
-    VkImageViewCreateInfo rview_info = VkUtilsFactory::CreateImageViewCreateInfo(
+    VkImageViewCreateInfo rViewInfo = VkUtilsFactory::CreateImageViewCreateInfo(
         this->m_drawImage.imageFormat, this->m_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rview_info, nullptr, &this->m_drawImage.imageView),
+    HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &rViewInfo, nullptr, &this->m_drawImage.imageView),
                    "Failed to create image view");
 
     // add to deletion queues
@@ -345,6 +346,11 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 void Hush::VulkanRenderer::InitRendering()
 {
     this->InitializeCommands();
+
+    this->InitDescriptors();
+
+    this->InitPipelines();
+
     this->CreateSyncObjects();
 }
 
@@ -696,4 +702,102 @@ void Hush::VulkanRenderer::CopyImageToImage(VkCommandBuffer cmd, VkImage source,
     blitInfo.pRegions = &blitRegion;
 
     vkCmdBlitImage2(cmd, &blitInfo);
+}
+
+void Hush::VulkanRenderer::InitDescriptors() noexcept
+{
+    // create a descriptor pool that will hold 10 sets with 1 image each
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+
+    this->m_globalDescriptorAllocator.InitPool(this->m_device, 10, sizes);
+
+    // make the descriptor set layout for our compute draw
+    {
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        this->m_drawImageDescriptorLayout = builder.Build(this->m_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+    // allocate a descriptor set for our draw images
+    this->m_drawImageDescriptors = this->m_globalDescriptorAllocator.Allocate(this->m_device, this->m_drawImageDescriptorLayout);
+
+    VkDescriptorImageInfo imgInfo{};
+    imgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imgInfo.imageView = this->m_drawImage.imageView;
+
+    VkWriteDescriptorSet drawImageWrite = {};
+    drawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    drawImageWrite.pNext = nullptr;
+
+    drawImageWrite.dstBinding = 0;
+    drawImageWrite.dstSet = this->m_drawImageDescriptors;
+    drawImageWrite.descriptorCount = 1;
+    drawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    drawImageWrite.pImageInfo = &imgInfo;
+
+    vkUpdateDescriptorSets(this->m_device, 1, &drawImageWrite, 0, nullptr);
+
+    // make sure both the descriptor allocator and the new layout get cleaned up properly
+    this->m_mainDeletionQueue.PushFunction([&]() {
+        m_globalDescriptorAllocator.DestroyPool(m_device);
+
+        vkDestroyDescriptorSetLayout(m_device, m_drawImageDescriptorLayout, nullptr);
+    });
+}
+
+void Hush::VulkanRenderer::InitPipelines() noexcept
+{
+    this->InitBackgroundPipelines();
+}
+
+void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
+{
+    // layout code
+    VkShaderModule computeDrawShader = nullptr;
+    if (!VulkanHelper::LoadShaderModule("Y:/Programming/C++/unamed-engine/resgradient.comp.spv", this->m_device, &computeDrawShader))
+    {
+        LogError("Error when building the compute shader");
+    }
+
+    VkPipelineShaderStageCreateInfo stageinfo{};
+    stageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageinfo.pNext = nullptr;
+    stageinfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stageinfo.module = computeDrawShader;
+    stageinfo.pName = "main";
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo{};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.layout = this->m_gradientPipelineLayout;
+    computePipelineCreateInfo.stage = stageinfo;
+    VkResult res = vkCreateComputePipelines(this->m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &this->m_gradientPipeline);
+    HUSH_VK_ASSERT(res, "Creating compute pipelines failed!");
+
+    // destroy structures properly
+    vkDestroyShaderModule(this->m_device, computeDrawShader, nullptr);
+    this->m_mainDeletionQueue.PushFunction([=]() {
+        vkDestroyPipelineLayout(this->m_device, this->m_gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(this->m_device, this->m_gradientPipeline, nullptr);
+    });
+
+}
+
+void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
+{
+    // bind the gradient drawing compute pipeline
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->m_gradientPipeline);
+
+    // bind the descriptor set containing the draw image for the compute pipeline
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->m_gradientPipelineLayout, 0, 1, &this->m_drawImageDescriptors,
+                            0, nullptr);
+
+    //ComputePushConstants pc;
+    //pc.data1 = glm::vec4(1, 0, 0, 1);
+    //pc.data2 = glm::vec4(0, 0, 1, 1);
+
+    //vkCmdPushConstants(cmd, this->m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
+    // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    uint32_t roundedWidth = static_cast<uint32_t>(std::ceil(this->m_width / 16.0));
+    uint32_t roundedHeight = static_cast<uint32_t>(std::ceil(this->m_height / 16.0));
+    vkCmdDispatch(cmd, roundedWidth, roundedHeight, 1);
 }

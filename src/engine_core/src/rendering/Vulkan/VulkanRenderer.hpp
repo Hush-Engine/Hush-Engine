@@ -21,6 +21,7 @@
 #include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include "VkDescriptors.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -108,6 +109,14 @@ namespace Hush
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
                               VkExtent2D dstSize);
 
+        void InitDescriptors() noexcept;
+
+        void InitPipelines() noexcept;
+
+        void InitBackgroundPipelines() noexcept;
+
+        void DrawBackground(VkCommandBuffer cmd) noexcept;
+
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;
@@ -119,9 +128,15 @@ namespace Hush
         VkFence m_immediateFence = nullptr;
         VkCommandBuffer m_immediateCommandBuffer = nullptr;
         VkCommandPool m_immediateCommandPool = nullptr;
-        uint32_t m_graphicsQueueFamily = 0u;
-
+        VkDescriptorSet m_drawImageDescriptors = nullptr;
+        VkDescriptorSetLayout m_drawImageDescriptorLayout = nullptr;
         VkSwapchainKHR m_swapChain{};
+        VkPipeline m_gradientPipeline = nullptr;
+        VkPipelineLayout m_gradientPipelineLayout = nullptr;
+
+        uint32_t m_graphicsQueueFamily = 0u;
+        DescriptorAllocator m_globalDescriptorAllocator{};
+
         VkFormat m_swapchainImageFormat = VkFormat::VK_FORMAT_UNDEFINED;
         std::vector<VkImage> m_swapchainImages{};
         std::vector<VkImageView> m_swapchainImageViews{};

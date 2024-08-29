@@ -34,8 +34,8 @@ add_executable(engine_core ${SOURCES})
 
 target_include_directories(engine_core PRIVATE src src)
 
-#set(ENGINE_LIBS coreclr imgui SDL2::SDL2 magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
-set(ENGINE_LIBS coreclr imgui Vulkan::Vulkan)
+set(ENGINE_LIBS coreclr imgui SDL2::SDL2 Vulkan::Vulkan magic_enum::magic_enum fmt::fmt spdlog::spdlog volk::volk_headers vk-bootstrap::vk-bootstrap glm::glm)
+#set(ENGINE_LIBS coreclr imgui Vulkan::Vulkan)
 
 if (UNIX)
     set(ENGINE_LIBS ${ENGINE_LIBS} dl)
@@ -56,6 +56,7 @@ elseif(WIN32)
 
     target_compile_options(engine_core PRIVATE /W4 /WX)
 endif()
+
 target_link_libraries(engine_core PUBLIC ${ENGINE_LIBS})
 
 target_compile_features(engine_core PRIVATE cxx_std_17)

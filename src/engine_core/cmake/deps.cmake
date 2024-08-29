@@ -1,3 +1,6 @@
+#Vulkan
+find_package(Vulkan REQUIRED)
+
 # fmt
 find_package(fmt REQUIRED)
 

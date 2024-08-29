@@ -9,7 +9,7 @@
     "spdlog",
     "vk-bootstrap",
     "volk",
-    "vulkan-headers",
+    "vulkan",
     "glm"
   ]
 }

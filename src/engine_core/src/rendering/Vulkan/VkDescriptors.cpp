@@ -1,4 +1,5 @@
 #include "VkDescriptors.hpp"
+#include "VulkanRenderer.hpp"
 
 void DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type)
 {
@@ -114,7 +115,6 @@ void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets, const std:
     poolInfo.maxSets = maxSets;
     poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
     poolInfo.pPoolSizes = poolSizes.data();
-
     vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool);
 }
 

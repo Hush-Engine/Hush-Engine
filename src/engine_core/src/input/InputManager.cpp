@@ -51,7 +51,7 @@ void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state)
     if (DebugUI::KeyboardInfoEnabled())
     {
         LogFormat(ELogLevel::Info, "Key {} pressed with state {}!", magic_enum::enum_name(mappedKeyCode),
-                  magic_enum::enum_name(state));
+                  magic_enum::enum_name(data.currentState));
     }
     S_KEY_DATA_BY_CODE.insert_or_assign(mappedKeyCode, data);
 }

@@ -7,7 +7,7 @@ endfunction()
 
 cmake_minimum_required(VERSION 3.26)
 
-project(test)
+project(Hush)
 
 set(CMAKE_CXX_STANDARD 17)
 
