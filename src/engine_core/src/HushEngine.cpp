@@ -1,9 +1,9 @@
 #include "HushEngine.hpp"
-#include <editor/UI.hpp>
+// #include <editor/UI.hpp>
+#include "ApplicationLoader.hpp"
+#include <WindowManager.hpp>
 #include <imgui/imgui.h>
-#include <rendering/WindowManager.hpp>
 #include <spdlog/details/os-inl.h>
-#include <editor/DebugUI.hpp>
 
 Hush::HushEngine::~HushEngine()
 {
@@ -12,12 +12,16 @@ Hush::HushEngine::~HushEngine()
 
 void Hush::HushEngine::Run()
 {
+    m_app = LoadApplication();
+
     this->m_isApplicationRunning = true;
-    WindowRenderer mainRenderer(ENGINE_WINDOW_NAME.data());
+    WindowRenderer mainRenderer(m_app->GetAppName().c_str());
     IRenderer *rendererImpl = mainRenderer.GetInternalRenderer();
 
     // Initialize any static resources we need
     this->Init();
+
+    this->m_app->Init();
 
     while (this->m_isApplicationRunning)
     {
@@ -30,11 +34,20 @@ void Hush::HushEngine::Run()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
+
+        this->m_app->Update();
+
+        this->m_app->OnPreRender();
+
         rendererImpl->NewUIFrame();
 
-        UI::DrawPanels();
+        this->m_app->OnRender();
+
+        // UI::DrawPanels();
 
         rendererImpl->Draw();
+
+        this->m_app->OnPostRender();
 
         std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -49,5 +62,5 @@ void Hush::HushEngine::Quit()
 
 void Hush::HushEngine::Init()
 {
-    UI::InitializePanels();
+    // UI::InitializePanels();
 }

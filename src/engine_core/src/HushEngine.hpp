@@ -5,9 +5,12 @@
 */
 
 #pragma once
-#include "rendering/WindowRenderer.hpp"
-#include "scripting/DotnetHost.hpp"
+#include "DotnetHost.hpp"
+#include "IApplication.hpp"
+#include "WindowRenderer.hpp"
+
 #include <string_view>
+
 namespace Hush
 {
     class HushEngine
@@ -39,6 +42,8 @@ namespace Hush
 
       private:
         void Init();
+
+        std::unique_ptr<IApplication> m_app;
 
         bool m_isApplicationRunning = false;
         static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
