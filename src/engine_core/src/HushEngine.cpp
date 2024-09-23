@@ -62,5 +62,4 @@ void Hush::HushEngine::Quit()
 
 void Hush::HushEngine::Init()
 {
-    // UI::InitializePanels();
 }

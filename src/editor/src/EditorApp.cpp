@@ -23,6 +23,7 @@ class EditorApp final : public Hush::IApplication
 
     void Init() override
     {
+        Hush::UI::InitializePanels();
     }
 
     void Update() override

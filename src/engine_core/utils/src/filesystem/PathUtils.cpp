@@ -13,14 +13,22 @@ using PathIterator_t = std::filesystem::recursive_directory_iterator;
 bool PathUtils::FindAndAppendSubDirectory(std::filesystem::path &path, const char *targetDirectorySubString)
 {
     PathIterator_t iterator = PathIterator_t(path);
-    iterator++;
-    std::filesystem::path nextPath = iterator->path();
-    if (!iterator->exists() || nextPath.string().find(targetDirectorySubString) == std::string::npos)
+
+
+    for (auto it = iterator; it != PathIterator_t(); ++it)
     {
-        Hush::LogFormat(Hush::ELogLevel::Debug, "FindAndAppendSubDirectory, no child path was found for directory {}",
-                        path.string());
-        return false;
+        std::filesystem::path nextPath = it->path();
+
+        if (nextPath.string().find(targetDirectorySubString) != std::string::npos)
+        {
+            // Iterate next.
+            auto next = ++it;
+            path.assign(next->path());
+            return true;
+        }
     }
-    path.assign(nextPath);
-    return true;
+
+    Hush::LogFormat(Hush::ELogLevel::Debug, "FindAndAppendSubDirectory, no child path was found for directory {}",
+                    path.string());
+    return false;
 }
