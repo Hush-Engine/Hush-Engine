@@ -209,8 +209,7 @@ bool Hush::VulkanHelper::LoadShaderModule(const std::string_view &filePath, VkDe
 {
     // open the file. With cursor at the end
     std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
-
-    if (!file.is_open())
+    if (file.fail() || !file.is_open())
     {
         return false;
     }

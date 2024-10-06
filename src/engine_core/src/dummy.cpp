@@ -1,4 +1,5 @@
 #include "ApplicationLoader.hpp"
+#include "../internal/AppSupport.hpp"
 
 extern "C" bool BundledAppExists_Internal_() HUSH_WEAK
 {

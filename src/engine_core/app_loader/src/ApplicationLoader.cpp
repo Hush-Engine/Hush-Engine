@@ -10,38 +10,6 @@
 
 #include <Logger.hpp>
 
-class DummyApplication final : public Hush::IApplication
-{
-    public:
-
-    DummyApplication() : IApplication("ERROR: no app loaded")
-    {
-    }
-
-    ~DummyApplication() override = default;
-
-    void Init() override
-    {
-        Log(Hush::ELogLevel::Error, "No application was loaded");
-    }
-
-    void Update() override
-    {
-    }
-
-    void OnRender() override
-    {
-    }
-
-    void OnPostRender() override
-    {
-    }
-
-    void OnPreRender() override
-    {
-    }
-};
-
 extern "C" bool BundledAppExists_Internal_() HUSH_WEAK;
 
 extern "C" Hush::IApplication* BundledApp_Internal_() HUSH_WEAK;
