@@ -116,6 +116,8 @@ namespace Hush
 
         void DrawBackground(VkCommandBuffer cmd) noexcept;
 
+        VkCommandBuffer PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
         VkInstance m_vulkanInstance = nullptr;

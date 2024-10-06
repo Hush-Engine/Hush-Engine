@@ -53,5 +53,5 @@ extern "C" bool BundledAppExists_Internal_() // NOLINT(*-identifier-naming)
 
 extern "C" Hush::IApplication* BundledApp_Internal_() // NOLINT(*-identifier-naming)
 {
-    return  new EditorApp();
+    return new EditorApp();
 }

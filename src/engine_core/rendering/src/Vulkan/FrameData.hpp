@@ -27,5 +27,4 @@ struct FrameData
     VulkanDeletionQueue deletionQueue;
 
     DescriptorAllocatorGrowable frameDescriptors;
-
 };

@@ -235,52 +235,12 @@ void Hush::VulkanRenderer::InitImGui()
 
 void Hush::VulkanRenderer::Draw()
 {
+    //Prepare and flush the render command
     FrameData &currentFrame = this->GetCurrentFrame();
-    // wait until the gpu has finished rendering the last frame. Timeout of 1 second
-    const uint32_t fenceTargetCount = 1u;
-    // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
-    VkResult rc =
-        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
-    HUSH_VK_ASSERT(rc, "Fence wait failed!");
-
-    currentFrame.deletionQueue.Flush();
-
-    // Request an image from the swapchain
     uint32_t swapchainImageIndex = 0u;
-    rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
-                               currentFrame.swapchainSemaphore, nullptr, &swapchainImageIndex);
-    HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
-
-    rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
-    HUSH_VK_ASSERT(rc, "Fence reset failed!");
-
-    // Get the command buffer and reset it
-    VkCommandBuffer cmd = currentFrame.mainCommandBuffer;
-    // Reset the command buffer
-    rc = vkResetCommandBuffer(cmd, 0u);
-    HUSH_VK_ASSERT(rc, "Reset command buffer failed!");
-
-    // begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know
-    // that
-    VkCommandBufferBeginInfo cmdBeginInfo =
-        VkUtilsFactory::CreateCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    rc = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
-    HUSH_VK_ASSERT(rc, "Begin command buffer failed!");
-
-    VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
-        this->m_swapchainImageViews.at(swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo renderingInfo =
-        VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
-    // execute a copy from the draw image into the swapchain
-    VkExtent2D drawExtent = {this->m_width, this->m_height};
-    this->CopyImageToImage(cmd, this->m_drawImage.image, this->m_swapchainImages.at(swapchainImageIndex), drawExtent,
-                           this->m_swapChainExtent);
-
-    // set swapchain image layout to Attachment Optimal so we can draw it
-    // this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-    vkCmdBeginRendering(cmd, &renderingInfo);
+    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex);
+    
+    this->DrawBackground(cmd);
     // draw imgui into the swapchain image
     auto *uiImpl = dynamic_cast<VulkanImGuiForwarder *>(this->m_uiForwarder.get());
     uiImpl->RenderFrame(cmd);
@@ -755,12 +715,19 @@ void Hush::VulkanRenderer::InitPipelines() noexcept
 
 void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
 {
+	//First, define the push constant range
+	VkPushConstantRange pushConstant{};
+	pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	pushConstant.offset = 0;
+	pushConstant.size = sizeof(ComputePushConstants);
+
     // layout code
     VkShaderModule computeDrawShader = nullptr;
-    if (!VulkanHelper::LoadShaderModule("C:/Users/Alan5/Downloads/shader-binary(1).o", this->m_device,
-                                        &computeDrawShader))
+    constexpr std::string_view shaderPath = "Y:/Programming/C++/Hush-Engine/res/gradient_color.comp.spv";
+    if (!VulkanHelper::LoadShaderModule(shaderPath, this->m_device, &computeDrawShader))
     {
         LogError("Error when building the compute shader");
+        return;
     }
 
     VkPipelineLayoutCreateInfo computeLayout{};
@@ -768,6 +735,8 @@ void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
     computeLayout.pNext = nullptr;
     computeLayout.pSetLayouts = &this->m_drawImageDescriptorLayout;
     computeLayout.setLayoutCount = 1;
+	computeLayout.pushConstantRangeCount = 1;
+	computeLayout.pPushConstantRanges = &pushConstant;
 
     VkResult res = vkCreatePipelineLayout(this->m_device, &computeLayout, nullptr, &this->m_gradientPipelineLayout);
     HUSH_VK_ASSERT(res, "Creating compute pipelines failed!");
@@ -805,14 +774,64 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->m_gradientPipelineLayout, 0, 1,
                             &this->m_drawImageDescriptors, 0, nullptr);
 
-    // ComputePushConstants pc;
-    // pc.data1 = glm::vec4(1, 0, 0, 1);
-    // pc.data2 = glm::vec4(0, 0, 1, 1);
-
-    // vkCmdPushConstants(cmd, this->m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-    // sizeof(ComputePushConstants), &pc);
+    ComputePushConstants pc;
+    pc.data1 = glm::vec4(1, 0, 0, 1);
+	pc.data2 = glm::vec4(0, 0, 1, 1);
+	pc.data3 = glm::vec4(0, 1, 0, 1);
+	pc.data4 = glm::vec4(1, 0, 1, 1);
+    constexpr uint32_t computeConstantsSize = sizeof(ComputePushConstants);
+    vkCmdPushConstants(cmd, this->m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, computeConstantsSize, &pc);
     //  execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     uint32_t roundedWidth = static_cast<uint32_t>(std::ceil(this->m_width / 16.0));
     uint32_t roundedHeight = static_cast<uint32_t>(std::ceil(this->m_height / 16.0));
     vkCmdDispatch(cmd, roundedWidth, roundedHeight, 1);
+}
+
+VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex)
+{
+	// wait until the gpu has finished rendering the last frame. Timeout of 1 second
+	const uint32_t fenceTargetCount = 1u;
+	// Wait until the gpu has finished rendering the last frame. Timeout of 1 second
+	VkResult rc =
+		vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
+	HUSH_VK_ASSERT(rc, "Fence wait failed!");
+
+	currentFrame.deletionQueue.Flush();
+
+	// Request an image from the swapchain
+	rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
+		currentFrame.swapchainSemaphore, nullptr, swapchainImageIndex);
+	HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
+
+	rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
+	HUSH_VK_ASSERT(rc, "Fence reset failed!");
+
+	// Get the command buffer and reset it
+	VkCommandBuffer cmd = currentFrame.mainCommandBuffer;
+	// Reset the command buffer
+	rc = vkResetCommandBuffer(cmd, 0u);
+	HUSH_VK_ASSERT(rc, "Reset command buffer failed!");
+
+	// begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know
+	// that
+	VkCommandBufferBeginInfo cmdBeginInfo =
+		VkUtilsFactory::CreateCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	rc = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
+	HUSH_VK_ASSERT(rc, "Begin command buffer failed!");
+
+	VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
+		this->m_swapchainImageViews.at(*swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
+	VkRenderingInfo renderingInfo =
+		VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
+	// execute a copy from the draw image into the swapchain
+	VkExtent2D drawExtent = { this->m_width, this->m_height };
+	this->CopyImageToImage(cmd, this->m_drawImage.image, this->m_swapchainImages.at(*swapchainImageIndex), drawExtent,
+		this->m_swapChainExtent);
+
+	// set swapchain image layout to Attachment Optimal so we can draw it
+	// this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	// VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	vkCmdBeginRendering(cmd, &renderingInfo);
+    return cmd;
 }

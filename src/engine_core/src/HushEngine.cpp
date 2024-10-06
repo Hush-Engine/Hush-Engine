@@ -12,7 +12,7 @@ Hush::HushEngine::~HushEngine()
 
 void Hush::HushEngine::Run()
 {
-    m_app = LoadApplication();
+    this->m_app = LoadApplication();
 
     this->m_isApplicationRunning = true;
     WindowRenderer mainRenderer(m_app->GetAppName().c_str());
