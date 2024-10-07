@@ -17,7 +17,7 @@ namespace Hush
     class VulkanPipelineBuilder
     {
       public:
-        VulkanPipelineBuilder();
+        VulkanPipelineBuilder(VkPipelineLayout pipelineLayout);
 
         void Clear();
 
@@ -31,6 +31,7 @@ namespace Hush
         VulkanPipelineBuilder& DisableBlending();
         VulkanPipelineBuilder& EnableBlendingAdditive();
         VulkanPipelineBuilder& EnableBlendingAlphaBlend();
+        VulkanPipelineBuilder& DisableDepthTest();
 
         VulkanPipelineBuilder& SetColorAttachmentFormat(VkFormat format);
         VulkanPipelineBuilder& SetDepthFormat(VkFormat format);

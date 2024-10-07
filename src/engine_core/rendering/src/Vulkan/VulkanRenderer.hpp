@@ -114,9 +114,15 @@ namespace Hush
 
         void InitBackgroundPipelines() noexcept;
 
+        void DrawGeometry(VkCommandBuffer cmd);
+
         void DrawBackground(VkCommandBuffer cmd) noexcept;
 
+        void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
+
         VkCommandBuffer PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+
+        void InitTrianglePipeline();
 
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
@@ -134,6 +140,8 @@ namespace Hush
         VkSwapchainKHR m_swapChain{};
         VkPipeline m_gradientPipeline = nullptr;
         VkPipelineLayout m_gradientPipelineLayout = nullptr;
+		VkPipelineLayout m_trianglePipelineLayout = nullptr;
+		VkPipeline m_trianglePipeline = nullptr;
 
         uint32_t m_graphicsQueueFamily = 0u;
         DescriptorAllocator m_globalDescriptorAllocator{};

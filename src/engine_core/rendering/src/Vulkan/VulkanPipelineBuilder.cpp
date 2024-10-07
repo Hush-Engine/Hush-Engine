@@ -6,9 +6,10 @@
 #include <volk.h>
 
 // NOLINTNEXTLINE (Initialization is handled on the clear method)
-Hush::VulkanPipelineBuilder::VulkanPipelineBuilder()
+Hush::VulkanPipelineBuilder::VulkanPipelineBuilder(VkPipelineLayout pipelineLayout)
 {
     this->Clear();
+    this->m_pipelineLayout = pipelineLayout;
 }
 
 void Hush::VulkanPipelineBuilder::Clear()
@@ -188,6 +189,20 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAlphaBle
     this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     this->m_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    return *this;
+}
+
+Hush::VulkanPipelineBuilder& Hush::VulkanPipelineBuilder::DisableDepthTest()
+{
+	this->m_depthStencil.depthTestEnable = VK_FALSE;
+	this->m_depthStencil.depthWriteEnable = VK_FALSE;
+	this->m_depthStencil.depthCompareOp = VK_COMPARE_OP_NEVER;
+	this->m_depthStencil.depthBoundsTestEnable = VK_FALSE;
+	this->m_depthStencil.stencilTestEnable = VK_FALSE;
+	this->m_depthStencil.front = {};
+	this->m_depthStencil.back = {};
+	this->m_depthStencil.minDepthBounds = 0.f;
+	this->m_depthStencil.maxDepthBounds = 1.f;
     return *this;
 }
 

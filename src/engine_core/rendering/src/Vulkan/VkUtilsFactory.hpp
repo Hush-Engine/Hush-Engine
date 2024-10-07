@@ -270,6 +270,20 @@ class VkUtilsFactory
         return info;
     }
 
+    static VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo() {
+		VkPipelineLayoutCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		info.pNext = nullptr;
+
+		// empty defaults
+		info.flags = 0;
+		info.setLayoutCount = 0;
+		info.pSetLayouts = nullptr;
+		info.pushConstantRangeCount = 0;
+		info.pPushConstantRanges = nullptr;
+		return info;
+    }
+
   private:
     static constexpr inline std::string_view MAIN_SHADER_ENTRY = "main";
 };

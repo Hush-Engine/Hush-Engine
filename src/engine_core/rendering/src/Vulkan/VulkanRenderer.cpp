@@ -27,6 +27,7 @@
 #include "vk_mem_alloc.hpp"
 #include <typeutils/TypeUtils.hpp>
 #include <volk.h>
+#include <vulkan/vulkan_core.h>
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -239,15 +240,27 @@ void Hush::VulkanRenderer::Draw()
     FrameData &currentFrame = this->GetCurrentFrame();
     uint32_t swapchainImageIndex = 0u;
     VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex);
+    VkImage currentImage = this->m_swapchainImages.at(swapchainImageIndex);
     
+    this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
     this->DrawBackground(cmd);
-    // draw imgui into the swapchain image
-    auto *uiImpl = dynamic_cast<VulkanImGuiForwarder *>(this->m_uiForwarder.get());
-    uiImpl->RenderFrame(cmd);
+    //Transition
+	this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    //Geometry
+    this->DrawGeometry(cmd);
+
+	//transtion the draw image and the swapchain image into their correct transfer layouts
+	this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	this->TransitionImage(cmd, currentImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    this->CopyImageToImage(cmd, this->m_drawImage.image, currentImage, { this->m_width, this->m_height }, this->m_swapChainExtent);
+    this->TransitionImage(cmd, currentImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    
+    //UI
+    this->DrawUI(cmd, this->m_swapchainImageViews[swapchainImageIndex]);
     // set swapchain image layout to Present so we can draw it
-    vkCmdEndRendering(cmd);
-    this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex),
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    this->TransitionImage(cmd, currentImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // finalize the command buffer (we can no longer add commands, but it can now be executed)
     HUSH_VK_ASSERT(vkEndCommandBuffer(cmd), "End command buffer failed!");
@@ -426,8 +439,10 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     vulkan12Features.bufferDeviceAddress = VK_TRUE;
     vulkan12Features.descriptorIndexing = VK_TRUE;
 
+
     // Select our physical GPU
     vkb::PhysicalDeviceSelector selector{vkbInstance};
+
     vkb::PhysicalDevice vkbPhysicalDevice = selector.set_minimum_version(1, 3)
                                                 .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                                                 .set_required_features_13(vulkan13Features)
@@ -711,6 +726,7 @@ void Hush::VulkanRenderer::InitDescriptors() noexcept
 void Hush::VulkanRenderer::InitPipelines() noexcept
 {
     this->InitBackgroundPipelines();
+    this->InitTrianglePipeline();
 }
 
 void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
@@ -765,6 +781,50 @@ void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
     });
 }
 
+void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
+{
+	//begin a render pass  connected to our draw image
+	VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
+        this->m_drawImage.imageView, 
+        nullptr, 
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    );
+
+    VkExtent2D extent = {
+        this->m_width,
+        this->m_height
+    };
+
+	VkRenderingInfo renderInfo = VkUtilsFactory::CreateRenderingInfo(extent, &colorAttachment, nullptr);
+	vkCmdBeginRendering(cmd, &renderInfo);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->m_trianglePipeline);
+
+	//set dynamic viewport and scissor
+	VkViewport viewport = {};
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.width = static_cast<float>(extent.width);
+	viewport.height = static_cast<float>(extent.height);
+	viewport.minDepth = 0.f;
+	viewport.maxDepth = 1.f;
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+	VkRect2D scissor = {};
+	scissor.offset.x = 0;
+	scissor.offset.y = 0;
+	scissor.extent.width = extent.width;
+	scissor.extent.height = extent.height;
+
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	//launch a draw command to draw 3 vertices
+	vkCmdDraw(cmd, 3, 1, 0, 0);
+
+	vkCmdEndRendering(cmd);
+}
+
 void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
 {
     // bind the gradient drawing compute pipeline
@@ -775,16 +835,26 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
                             &this->m_drawImageDescriptors, 0, nullptr);
 
     ComputePushConstants pc;
-    pc.data1 = glm::vec4(1, 0, 0, 1);
-	pc.data2 = glm::vec4(0, 0, 1, 1);
-	pc.data3 = glm::vec4(0, 1, 0, 1);
-	pc.data4 = glm::vec4(1, 0, 1, 1);
-    constexpr uint32_t computeConstantsSize = sizeof(ComputePushConstants);
+    pc.data1 = glm::vec4(0, 0, 1, 1);
+	pc.data2 = glm::vec4(1, 0, 0, 1);
+	constexpr uint32_t computeConstantsSize = sizeof(ComputePushConstants);
     vkCmdPushConstants(cmd, this->m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, computeConstantsSize, &pc);
     //  execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     uint32_t roundedWidth = static_cast<uint32_t>(std::ceil(this->m_width / 16.0));
     uint32_t roundedHeight = static_cast<uint32_t>(std::ceil(this->m_height / 16.0));
     vkCmdDispatch(cmd, roundedWidth, roundedHeight, 1);
+}
+
+void Hush::VulkanRenderer::DrawUI(VkCommandBuffer cmd, VkImageView imageView)
+{
+	VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	VkRenderingInfo renderInfo = VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
+
+	vkCmdBeginRendering(cmd, &renderInfo);
+	auto* uiImpl = dynamic_cast<VulkanImGuiForwarder*>(this->m_uiForwarder.get());
+	uiImpl->RenderFrame(cmd);
+
+    vkCmdEndRendering(cmd);
 }
 
 VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex)
@@ -834,4 +904,59 @@ VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint
 
 	vkCmdBeginRendering(cmd, &renderingInfo);
     return cmd;
+}
+
+void Hush::VulkanRenderer::InitTrianglePipeline()
+{
+	constexpr std::string_view fragmentShaderPath = "Y:/Programming/C++/Hush-Engine/res/colored_triangle.frag.spv";
+	constexpr std::string_view vertexShaderPath = "Y:/Programming/C++/Hush-Engine/res/colored_triangle.vert.spv";
+	
+	VkShaderModule triangleFragShader;
+    if (!VulkanHelper::LoadShaderModule(fragmentShaderPath, this->m_device, &triangleFragShader)) {
+		LogError("Error when building the triangle fragment shader module");
+	}
+
+	VkShaderModule triangleVertexShader;
+	if (!VulkanHelper::LoadShaderModule(vertexShaderPath, this->m_device, &triangleVertexShader)) {
+		LogError("Error when building the triangle vertex shader module");
+	}
+
+	//build the pipeline layout that controls the inputs/outputs of the shader
+	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = VkUtilsFactory::PipelineLayoutCreateInfo();
+    VkResult rc = vkCreatePipelineLayout(this->m_device, &pipelineLayoutInfo, nullptr, &this->m_trianglePipelineLayout);
+    HUSH_VK_ASSERT(rc, "Failed to create triangle pipeline");
+
+	VulkanPipelineBuilder pipelineBuilder(this->m_trianglePipelineLayout);
+
+	//connecting the vertex and pixel shaders to the pipeline
+	pipelineBuilder.SetShaders(triangleVertexShader, triangleFragShader);
+	//it will draw triangles
+	pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	//filled triangles
+	pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+	//no backface culling
+	pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	//no multisampling
+	pipelineBuilder.SetMultiSamplingNone();
+	//no blending
+	pipelineBuilder.DisableBlending();
+	
+	pipelineBuilder.DisableDepthTest();
+
+	//connect the image format we will draw into, from draw image
+	pipelineBuilder.SetColorAttachmentFormat(this->m_drawImage.imageFormat);
+	pipelineBuilder.SetDepthFormat(VK_FORMAT_UNDEFINED);
+
+	//finally build the pipeline
+	this->m_trianglePipeline = pipelineBuilder.Build(this->m_device);
+
+	//clean structures
+	vkDestroyShaderModule(this->m_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(this->m_device, triangleVertexShader, nullptr);
+
+	this->m_mainDeletionQueue.PushFunction([=]() {
+		vkDestroyPipelineLayout(m_device, m_trianglePipelineLayout, nullptr);
+		vkDestroyPipeline(m_device, m_trianglePipeline, nullptr);
+	});
 }
