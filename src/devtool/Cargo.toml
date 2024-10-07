@@ -1,0 +1,11 @@
+[package]
+name = "devtool"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+clap = { version = "4.5.19", features = ["derive"] }
+regex = "1.11.0"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
