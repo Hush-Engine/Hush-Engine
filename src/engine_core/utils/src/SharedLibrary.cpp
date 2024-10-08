@@ -17,19 +17,39 @@
 #include <unistd.h>
 #endif
 
-SharedLibrary::SharedLibrary(void *handle) : m_nativeHandle(handle)
+Hush::SharedLibrary::SharedLibrary(void *handle) : m_nativeHandle(handle)
 {
 }
 
-SharedLibrary SharedLibrary::OpenSharedLibrary(std::string_view libraryName)
+Hush::SharedLibrary::~SharedLibrary()
+{
+    if (m_nativeHandle)
+    {
+#if HUSH_PLATFORM_WIN
+        CloseHandle(m_nativeHandle);
+#else
+#endif
+    }
+}
+Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
+    std::string_view libraryName) noexcept
 {
 #if HUSH_PLATFORM_WIN
-    return SharedLibrary{LoadLibraryA(libraryName.data())};
+    auto *handle = LoadLibraryA(libraryName.data());
 #else
-    return dlopen(libraryPath, RTLD_LAZY);
+    auto *handle = dlopen(libraryPath.data(), RTLD_LAZY);
+
 #endif
+
+    if (handle == nullptr)
+    {
+        LogFormat(ELogLevel::Debug, "Failed to open library: {}", libraryName);
+        return EError::NotFound;
+    }
+    return SharedLibrary(handle);
 }
-void *SharedLibrary::GetRawSymbol(std::string_view symbolName)
+
+void *Hush::SharedLibrary::GetRawSymbol(std::string_view symbolName)
 {
 #if HUSH_PLATFORM_WIN
     auto *winHandle = static_cast<HMODULE>(m_nativeHandle);

@@ -27,7 +27,7 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
     HUSH_ASSERT(ImGui_ImplVulkan_LoadFunctions(VulkanRenderer::CustomVulkanFunctionLoader),
                 "Loading vulkan functions to imgui failed");
 
-    HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!");
+    HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!", SDL_GetError());
 
     // Get the rendering functions
     HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");

@@ -1,5 +1,7 @@
 # Utils
 
+find_package(outcome CONFIG REQUIRED)
+
 add_library(HushUtils OBJECT
         src/StringUtils.cpp
         src/LibManager.cpp
@@ -7,7 +9,7 @@ add_library(HushUtils OBJECT
         src/SharedLibrary.cpp
 )
 
-target_link_libraries(HushUtils PUBLIC HushLog)
+target_link_libraries(HushUtils PUBLIC HushLog outcome::hl)
 
 target_include_directories(HushUtils PUBLIC src)
 
