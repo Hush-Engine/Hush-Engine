@@ -1,6 +1,6 @@
-use std::process::ExitCode;
 use anyhow::Result;
-pub trait CliCommand : Sized {
+use std::process::ExitCode;
+pub trait CliCommand: Sized {
     /// Runs the command
     ///
     /// # Return

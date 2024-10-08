@@ -1,6 +1,6 @@
 use crate::commands::clicommand::CliCommand;
 use crate::commands::utils::cmake_version;
-use anyhow::{anyhow};
+use anyhow::anyhow;
 use clap::Parser;
 use std::process::{ExitCode, Stdio};
 
@@ -46,10 +46,18 @@ impl CliCommand for ConfigureCommand {
             tracing::info!("Configuring finished");
         } else {
             let error = String::from_utf8_lossy(&cmake_command.stdout);
-            let extra_string = if self.verbose { String::new() } else { format!("\n{}", error) };
+            let extra_string = if self.verbose {
+                String::new()
+            } else {
+                format!("\n{}", error)
+            };
             tracing::error!("Configuring Failed{}", extra_string);
         }
 
-        Ok(if cmake_command.status.success() { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+        Ok(if cmake_command.status.success() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        })
     }
 }

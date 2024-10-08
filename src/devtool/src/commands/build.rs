@@ -1,10 +1,9 @@
 use crate::commands::clicommand::CliCommand;
 use crate::commands::utils::cmake_version;
-use anyhow::{anyhow};
+use anyhow::anyhow;
 use clap::Parser;
 use std::process::{ExitCode, Stdio};
 use std::time::Instant;
-use tracing_subscriber::fmt::format;
 
 /// Build command
 #[derive(Debug, Parser)]
@@ -18,7 +17,6 @@ pub struct BuildCommand {
 }
 
 impl CliCommand for BuildCommand {
-
     fn run(self) -> anyhow::Result<ExitCode> {
         let cmake_version = cmake_version()?;
 
@@ -52,10 +50,18 @@ impl CliCommand for BuildCommand {
             tracing::info!("Build finished in {:.2}", duration.as_secs_f32());
         } else {
             let error = String::from_utf8_lossy(&cmake_command.stdout);
-            let extra_string = if self.verbose { String::new() } else { format!("\n{}", error) };
+            let extra_string = if self.verbose {
+                String::new()
+            } else {
+                format!("\n{}", error)
+            };
             tracing::error!("Build Failed{}", extra_string);
         }
 
-        Ok(if cmake_command.status.success() { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+        Ok(if cmake_command.status.success() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        })
     }
 }

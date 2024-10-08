@@ -1,8 +1,8 @@
-use std::process::ExitCode;
-use crate::commands::configure::ConfigureCommand;
-use clap::{Parser, Subcommand};
 use crate::commands::build::BuildCommand;
 use crate::commands::clicommand::CliCommand;
+use crate::commands::configure::ConfigureCommand;
+use clap::{Parser, Subcommand};
+use std::process::ExitCode;
 
 #[derive(Parser)]
 #[command(version, about)]

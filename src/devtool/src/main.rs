@@ -1,6 +1,6 @@
-use std::process::ExitCode;
-use crate::args::{DevtoolCliOptions};
+use crate::args::DevtoolCliOptions;
 use clap::Parser;
+use std::process::ExitCode;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -20,8 +20,7 @@ fn main() -> anyhow::Result<ExitCode> {
         // completes the builder.
         .finish();
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     let cli = DevtoolCliOptions::parse();
 
