@@ -4,10 +4,10 @@ use lazy_static::lazy_static;
 use rfd::FileDialog;
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fs::{File};
+use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{ExitCode};
+use std::process::ExitCode;
 use tracing::{error, info};
 
 /// Build command
@@ -52,7 +52,11 @@ impl CliCommand for NewFileCommand {
 
         // TODO: finish
 
-        let extension = new_file_path.extension().map(|p| p.to_str()).flatten().unwrap_or("");
+        let extension = new_file_path
+            .extension()
+            .map(|p| p.to_str())
+            .flatten()
+            .unwrap_or("");
 
         let template = TEMPLATES.get(extension);
 
