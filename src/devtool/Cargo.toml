@@ -5,9 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.89"
+chrono = "0.4.38"
 clap = { version = "4.5.19", features = ["derive"] }
 inquire = "0.7.5"
 lazy_static = "1.5.0"
+minijinja = "2.3.1"
 regex = "1.11.0"
 rfd = "0.15.0"
 tracing = "0.1.40"

@@ -1,5 +1,5 @@
 /*! \file SharedLibrary.hpp
-\author Alan Ramirez
+    \author Alan Ramirez
     \date 2024-09-22
     \brief Shared Library implementation
 */

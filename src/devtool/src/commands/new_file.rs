@@ -1,12 +1,14 @@
 use crate::commands::clicommand::CliCommand;
+use crate::commands::utils::git_username;
+use anyhow::anyhow;
 use clap::Parser;
 use lazy_static::lazy_static;
+use minijinja::context;
 use rfd::FileDialog;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 use tracing::{error, info};
 
@@ -14,9 +16,11 @@ use tracing::{error, info};
 #[derive(Debug, Parser)]
 pub struct NewFileCommand {
     /// File path
+    #[arg(short, long)]
     file_path: Option<PathBuf>,
 
     /// File brief
+    #[arg(short, long)]
     brief: Option<String>,
 }
 
@@ -31,13 +35,13 @@ const SH_FILE: &str = include_str!("../../templates/.sh");
 lazy_static! {
     static ref TEMPLATES: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
-        m.insert(".cmake", CMAKE_FILE);
-        m.insert(".cpp", CPP_FILE);
-        m.insert(".cs", CSHARP_FILE);
-        m.insert(".hpp", HPP_FILE);
-        m.insert(".ps1", PS1_FILE);
-        m.insert(".py", PY_FILE);
-        m.insert(".sh", SH_FILE);
+        m.insert("cmake", CMAKE_FILE);
+        m.insert("cpp", CPP_FILE);
+        m.insert("cs", CSHARP_FILE);
+        m.insert("hpp", HPP_FILE);
+        m.insert("ps1", PS1_FILE);
+        m.insert("py", PY_FILE);
+        m.insert("sh", SH_FILE);
 
         m
     };
@@ -45,22 +49,24 @@ lazy_static! {
 
 impl CliCommand for NewFileCommand {
     fn run(self) -> anyhow::Result<ExitCode> {
-        let new_file_path = self
-            .file_path
-            .unwrap_or_else(|| FileDialog::new().pick_file().unwrap_or(PathBuf::new()));
-        let brief = self.brief.unwrap_or_else(|| "".into());
+        let current_dir = std::env::current_dir()?;
+        let new_file_path = self.file_path.unwrap_or_else(|| {
+            FileDialog::new()
+                .set_directory(current_dir)
+                .save_file()
+                .unwrap_or_default()
+        });
 
-        // TODO: finish
+        let brief = self.brief.unwrap_or_else(|| "".into());
 
         let extension = new_file_path
             .extension()
-            .map(|p| p.to_str())
-            .flatten()
+            .and_then(|p| p.to_str())
             .unwrap_or("");
 
         let template = TEMPLATES.get(extension);
 
-        if new_file_path.extension().is_none() || template.is_none() {
+        if template.is_none() {
             // Create it as-is
             File::create(new_file_path)?;
 
@@ -68,8 +74,26 @@ impl CliCommand for NewFileCommand {
 
             Ok(ExitCode::SUCCESS)
         } else if let Some(template) = template {
-            let mut file = File::create(template)?;
-            file.write_all(template.as_bytes())?;
+            // Render the template
+            let mut env = minijinja::Environment::new();
+            env.add_template("template", template)?;
+
+            let filename = new_file_path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .ok_or_else(|| anyhow!("Cannot get filename"))?;
+            let git_user = git_username()?;
+            let current_date = chrono::offset::Local::now().format("%Y-%m-%d").to_string();
+
+            let template = env.get_template("template")?;
+            let content = template.render(context! (filename => filename,
+                author => git_user,
+                date => current_date,
+                brief => brief
+            ))?;
+
+            let mut file = File::create(new_file_path)?;
+            file.write_all(content.as_bytes())?;
 
             info!("File created from template successfully");
 

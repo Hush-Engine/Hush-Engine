@@ -1,7 +1,7 @@
 use crate::args::DevtoolCliOptions;
 use clap::Parser;
 use std::process::ExitCode;
-use tracing::Level;
+use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
 
 mod args;
@@ -24,5 +24,10 @@ fn main() -> anyhow::Result<ExitCode> {
 
     let cli = DevtoolCliOptions::parse();
 
-    cli.execute()
+    if let Err(e) = cli.execute() {
+        error!("{}", e);
+        Ok(ExitCode::FAILURE)
+    } else {
+        Ok(ExitCode::SUCCESS)
+    }
 }

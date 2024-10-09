@@ -8,14 +8,16 @@ on:
 
 jobs:
   format:
+    name: Format devtool
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
       - name: Format
         working-directory: src/devtool
         run: cargo fmt --check
   build:
-    runs-on: ubuntu-latest
+    name: Build devtool
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
@@ -25,3 +27,4 @@ jobs:
       - name: Build release
         run: cargo build --release
         working-directory: src/devtool
+    runs-on: ${{ matrix.os }}
