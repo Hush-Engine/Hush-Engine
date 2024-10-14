@@ -1,6 +1,7 @@
 build
 vcpkg_installed
 CMakeLists.txt.user
+CMakeUserPresets.json
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
