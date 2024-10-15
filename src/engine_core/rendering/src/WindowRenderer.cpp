@@ -33,7 +33,11 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 
     if (this->m_rendererPtr == nullptr)
     {
-        Hush::LogError(std::string("SDL renderer creation failed! ") + SDL_GetError());
+        Hush::ELogLevel severity = ELogLevel::Error;
+#ifdef HUSH_VULKAN_IMPL
+        severity = ELogLevel::Warn;
+#endif // HUSH_VULKAN_IMPL
+        Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
     }
 
     this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
