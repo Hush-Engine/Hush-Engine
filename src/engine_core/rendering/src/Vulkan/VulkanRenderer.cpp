@@ -236,13 +236,15 @@ void Hush::VulkanRenderer::InitImGui()
 
 void Hush::VulkanRenderer::Draw()
 {
+    if (this->m_resizeRequested) {
+        this->ResizeSwapchain();
+    }
     //Prepare and flush the render command
     FrameData &currentFrame = this->GetCurrentFrame();
     uint32_t swapchainImageIndex = 0u;
-    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex, &this->m_resizeRequested);
+    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex);
     
-    if (this->m_resizeRequested) {
-        this->ResizeSwapchain();
+    if (cmd == nullptr) {
         return;
     }
 
@@ -867,7 +869,7 @@ void Hush::VulkanRenderer::DrawUI(VkCommandBuffer cmd, VkImageView imageView)
     vkCmdEndRendering(cmd);
 }
 
-VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex, bool* resized)
+VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex)
 {
     // wait until the gpu has finished rendering the last frame. Timeout of 1 second
     const uint32_t fenceTargetCount = 1u;
@@ -884,7 +886,7 @@ VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint
     //Handle resize request, pass this back to the caller to check
     if (rc == VK_ERROR_OUT_OF_DATE_KHR) {
 		//Resized
-		*resized = true;
+		this->m_resizeRequested = true;
 		return nullptr;
 	}
 	else {
