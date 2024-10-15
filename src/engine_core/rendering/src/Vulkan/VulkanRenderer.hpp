@@ -120,7 +120,9 @@ namespace Hush
 
         void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
 
-        VkCommandBuffer PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+        VkCommandBuffer PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex, bool* resized);
+
+        void ResizeSwapchain();
 
         void InitTrianglePipeline();
 
@@ -164,5 +166,6 @@ namespace Hush
 
         VulkanDeletionQueue m_mainDeletionQueue{};
         VmaAllocator m_allocator = nullptr; // vma lib allocator
+        bool m_resizeRequested = false;
     };
 } // namespace Hush

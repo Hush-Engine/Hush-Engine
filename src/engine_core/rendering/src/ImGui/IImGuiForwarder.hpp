@@ -28,6 +28,8 @@ namespace Hush
 
         virtual void NewFrame() = 0;
 
+        virtual void EndFrame() = 0;
+
         virtual void HandleEvent(const SDL_Event *) noexcept = 0;
 
         virtual void Dispose() noexcept = 0;

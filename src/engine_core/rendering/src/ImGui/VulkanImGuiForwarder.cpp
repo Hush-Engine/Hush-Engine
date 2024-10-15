@@ -45,6 +45,11 @@ void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
+void Hush::VulkanImGuiForwarder::EndFrame()
+{
+    ImGui::EndFrame();
+}
+
 void Hush::VulkanImGuiForwarder::Dispose() noexcept
 {
     ImGui_ImplSDL2_Shutdown();

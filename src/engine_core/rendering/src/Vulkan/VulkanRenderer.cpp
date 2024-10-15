@@ -239,14 +239,21 @@ void Hush::VulkanRenderer::Draw()
     //Prepare and flush the render command
     FrameData &currentFrame = this->GetCurrentFrame();
     uint32_t swapchainImageIndex = 0u;
-    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex);
+    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex, &this->m_resizeRequested);
+    
+    if (this->m_resizeRequested) {
+        this->ResizeSwapchain();
+        return;
+    }
+
     VkImage currentImage = this->m_swapchainImages.at(swapchainImageIndex);
     
     this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
     this->DrawBackground(cmd);
     //Transition
 	this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	//TODO: Restore when we actually care about depth stuff
+    //this->TransitionImage(cmd, this->m_drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     //Geometry
     this->DrawGeometry(cmd);
 
@@ -299,6 +306,11 @@ void Hush::VulkanRenderer::Draw()
     presentInfo.pImageIndices = &swapchainImageIndex;
 
     VkResult presentResult = vkQueuePresentKHR(this->m_graphicsQueue, &presentInfo);
+
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR) {
+        this->m_resizeRequested = true;
+        return;
+    }
 
     HUSH_VK_ASSERT(presentResult, "Presenting failed!");
 
@@ -438,7 +450,6 @@ void Hush::VulkanRenderer::Configure(vkb::Instance vkbInstance)
     VkPhysicalDeviceVulkan12Features vulkan12Features{};
     vulkan12Features.bufferDeviceAddress = VK_TRUE;
     vulkan12Features.descriptorIndexing = VK_TRUE;
-
 
     // Select our physical GPU
     vkb::PhysicalDeviceSelector selector{vkbInstance};
@@ -638,7 +649,6 @@ void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, V
 
     depInfo.imageMemoryBarrierCount = 1;
     depInfo.pImageMemoryBarriers = &imageBarrier;
-
     vkCmdPipelineBarrier2(cmd, &depInfo);
 }
 
@@ -835,8 +845,8 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
                             &this->m_drawImageDescriptors, 0, nullptr);
 
     ComputePushConstants pc;
-    pc.data1 = glm::vec4(0, 0, 1, 1);
-	pc.data2 = glm::vec4(1, 0, 0, 1);
+    pc.data1 = glm::vec4(1, 0, 0, 1);
+	pc.data2 = glm::vec4(0, 0, 1, 1);
 	constexpr uint32_t computeConstantsSize = sizeof(ComputePushConstants);
     vkCmdPushConstants(cmd, this->m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, computeConstantsSize, &pc);
     //  execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
@@ -857,21 +867,29 @@ void Hush::VulkanRenderer::DrawUI(VkCommandBuffer cmd, VkImageView imageView)
     vkCmdEndRendering(cmd);
 }
 
-VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex)
+VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex, bool* resized)
 {
-	// wait until the gpu has finished rendering the last frame. Timeout of 1 second
-	const uint32_t fenceTargetCount = 1u;
-	// Wait until the gpu has finished rendering the last frame. Timeout of 1 second
-	VkResult rc =
-		vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
+    // wait until the gpu has finished rendering the last frame. Timeout of 1 second
+    const uint32_t fenceTargetCount = 1u;
+    // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
+    VkResult rc =
+        vkWaitForFences(this->m_device, fenceTargetCount, &currentFrame.renderFence, true, VK_OPERATION_TIMEOUT_NS);
+    currentFrame.deletionQueue.Flush();
 	HUSH_VK_ASSERT(rc, "Fence wait failed!");
 
-	currentFrame.deletionQueue.Flush();
-
-	// Request an image from the swapchain
-	rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
-		currentFrame.swapchainSemaphore, nullptr, swapchainImageIndex);
-	HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
+    // Request an image from the swapchain
+    rc = vkAcquireNextImageKHR(this->m_device, this->m_swapChain, VK_OPERATION_TIMEOUT_NS,
+        currentFrame.swapchainSemaphore, nullptr, swapchainImageIndex);
+	
+    //Handle resize request, pass this back to the caller to check
+    if (rc == VK_ERROR_OUT_OF_DATE_KHR) {
+		//Resized
+		*resized = true;
+		return nullptr;
+	}
+	else {
+	    HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
+	}
 
 	rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
 	HUSH_VK_ASSERT(rc, "Fence reset failed!");
@@ -889,21 +907,19 @@ VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint
 	rc = vkBeginCommandBuffer(cmd, &cmdBeginInfo);
 	HUSH_VK_ASSERT(rc, "Begin command buffer failed!");
 
-	VkRenderingAttachmentInfo colorAttachment = VkUtilsFactory::CreateAttachmentInfoWithLayout(
-		this->m_swapchainImageViews.at(*swapchainImageIndex), nullptr, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-	VkRenderingInfo renderingInfo =
-		VkUtilsFactory::CreateRenderingInfo(this->m_swapChainExtent, &colorAttachment, nullptr);
-	// execute a copy from the draw image into the swapchain
-	VkExtent2D drawExtent = { this->m_width, this->m_height };
-	this->CopyImageToImage(cmd, this->m_drawImage.image, this->m_swapchainImages.at(*swapchainImageIndex), drawExtent,
-		this->m_swapChainExtent);
-
-	// set swapchain image layout to Attachment Optimal so we can draw it
-	// this->TransitionImage(cmd, this->m_swapchainImages.at(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	// VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-	vkCmdBeginRendering(cmd, &renderingInfo);
     return cmd;
+}
+
+void Hush::VulkanRenderer::ResizeSwapchain()
+{
+    this->m_uiForwarder->EndFrame();
+    vkDeviceWaitIdle(this->m_device);
+    this->DestroySwapChain();
+    //Defer this to the WindowRenderer interface instead of SDL
+    int32_t width, height;
+    SDL_GetWindowSize(static_cast<SDL_Window*>(this->m_windowContext), &width, &height);
+    this->CreateSwapChain(width, height);
+    this->m_resizeRequested = false;
 }
 
 void Hush::VulkanRenderer::InitTrianglePipeline()
