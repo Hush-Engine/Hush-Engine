@@ -242,7 +242,7 @@ void Hush::VulkanRenderer::Draw()
     //Prepare and flush the render command
     FrameData &currentFrame = this->GetCurrentFrame();
     uint32_t swapchainImageIndex = 0u;
-    VkCommandBuffer cmd = this->PreRendering(currentFrame, &swapchainImageIndex);
+    VkCommandBuffer cmd = this->PrepareCommandBuffer(currentFrame, &swapchainImageIndex);
     
     if (cmd == nullptr) {
         return;
@@ -869,7 +869,7 @@ void Hush::VulkanRenderer::DrawUI(VkCommandBuffer cmd, VkImageView imageView)
     vkCmdEndRendering(cmd);
 }
 
-VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex)
+VkCommandBuffer Hush::VulkanRenderer::PrepareCommandBuffer(FrameData& currentFrame, uint32_t* swapchainImageIndex)
 {
     // wait until the gpu has finished rendering the last frame. Timeout of 1 second
     const uint32_t fenceTargetCount = 1u;
@@ -889,9 +889,7 @@ VkCommandBuffer Hush::VulkanRenderer::PreRendering(FrameData& currentFrame, uint
 		this->m_resizeRequested = true;
 		return nullptr;
 	}
-	else {
-	    HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
-	}
+	HUSH_VK_ASSERT(rc, "Image request from the swapchain failed!");
 
 	rc = vkResetFences(this->m_device, fenceTargetCount, &currentFrame.renderFence);
 	HUSH_VK_ASSERT(rc, "Fence reset failed!");

@@ -120,7 +120,7 @@ namespace Hush
 
         void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
 
-        VkCommandBuffer PreRendering(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+        VkCommandBuffer PrepareCommandBuffer(FrameData& currentFrame, uint32_t* swapchainImageIndex);
 
         void ResizeSwapchain();
 
