@@ -48,7 +48,7 @@ void Hush::EditorCamera::OnUpdate(float delta)
 
 	if (cameraDir != Vector3Math::ZERO) {
 		//constexpr float maxSpeed = 5000.0F;
-		constexpr float maxSpeed = 200.0F;
+		constexpr float maxSpeed = 20.0F;
 		this->m_blendValue = MathUtils::Clamp(this->m_blendValue + delta, 0.0F, 1.0F);
 		float speed = maxSpeed * ApplyAccelerationCurve(this->m_blendValue);
 		this->m_position += glm::normalize(cameraDir) * speed * delta;
