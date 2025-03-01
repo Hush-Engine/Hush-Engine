@@ -274,7 +274,7 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 
 void Hush::VulkanRenderer::InitRendering()
 {
-    this->m_editorCamera = EditorCamera(70.0f, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 10000.f);
+    this->m_editorCamera = EditorCamera(70.0f, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
     
     this->CreateSyncObjects();
 
@@ -969,7 +969,6 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	////allocate a new uniform buffer for the scene data
 	VulkanAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
     
-    
 	////write the buffer
 	GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.GetAllocation()->GetMappedData();
 	*sceneUniformData = this->m_sceneData;
@@ -1090,6 +1089,9 @@ void Hush::VulkanRenderer::DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalD
 	proj[1][1] *= -1;
 	
 	ShaderMaterial::EError resultCode = ShaderMaterial::EError::None;	
+	resultCode = shaderMat->SetProperty("farPlane", this->m_editorCamera.GetFarPlane());
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
+	
 	resultCode = shaderMat->SetProperty("pos", cameraPos);
 	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
 	
