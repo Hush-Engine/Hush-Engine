@@ -9,7 +9,7 @@ layout(location = 8) in mat4 fragProj;
 layout(location = 0) out vec4 outColor;
 
 
-const float gridCellSize = 0.025;
+const float gridCellSize = 1.0;
 
 const float minPixelsBetweenCells = 2.0;
 

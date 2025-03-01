@@ -969,10 +969,6 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	////allocate a new uniform buffer for the scene data
 	VulkanAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
     
-	////add it to the deletion queue of this frame so it gets deleted once its been used
-	this->GetCurrentFrame().deletionQueue.PushFunction([=, this]() {
-		    gpuSceneDataBuffer.Dispose(m_allocator);
-	});
     
 	////write the buffer
 	GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.GetAllocation()->GetMappedData();
@@ -1055,6 +1051,12 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 		drawRenderObject(draw);
 	}
 
+
+	////add it to the deletion queue of this frame so it gets deleted once its been used
+	this->GetCurrentFrame().deletionQueue.PushFunction([=, this]() {
+		    gpuSceneDataBuffer.Dispose(m_allocator);
+	});
+	
 	vkCmdEndRendering(cmd);
 }
 
