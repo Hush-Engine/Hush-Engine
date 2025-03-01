@@ -1,0 +1,128 @@
+name: CI devtool
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  format-devtool:
+    name: Format devtool
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Format
+        working-directory: src/devtool
+        run: cargo fmt --check
+
+  build-devtool:
+    name: Build and Upload devtool
+    needs: format-devtool
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release
+        run: cargo build --release
+        working-directory: src/devtool
+      - name: Upload artifact
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          # Name must be hush-devtool-<os>-{dev|main}
+          name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+          path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+      - name: Upload artifact
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          # Name must be hush-devtool-<os>-<hash>
+          name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
+          path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  test-devtool:
+    name: Test devtool
+    runs-on: ubuntu-latest
+    needs: build-devtool
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        working-directory: src/devtool
+        run: cargo test
+
+  build-hush-windows:
+    name: Build hush engine
+    needs: build-devtool
+    strategy:
+      matrix:
+        build-type: [ debug, release ]
+        os: [ windows-latest ]
+
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18"
+
+      - name: Get devtool
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/download-artifact@v4
+        with:
+          name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+
+      - name: Get devtool
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
+        uses: actions/download-artifact@v4
+        with:
+          name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
+
+      # Rename the devtool to hush-devtool{.exe}
+      - name: Rename devtool
+        run: mv hush${{ matrix.os == 'windows-latest' && '.exe' || '' }} hush-devtool${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+        shell: bash
+
+      - name: Configure MSVC
+        uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x64
+
+      - name: Bootstrap VCPKG
+        run: ./vcpkg/bootstrap-vcpkg.bat
+
+      - name: Setup ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Configure hush
+        run: ./hush-devtool.exe configure -p windows-x64-${{ matrix.build-type }} -v
+
+     # Diff with the target branch if it's a PR
+      - name: Format hush
+        run: ./hush-devtool.exe format --check -v --print-files --all-files
+        continue-on-error: true
+
+      - name: Build hush
+        run: ./hush-devtool.exe build -p windows-x64-${{ matrix.build-type }} -v

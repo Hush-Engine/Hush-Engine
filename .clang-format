@@ -3,9 +3,10 @@ Language: Cpp
 BasedOnStyle: Microsoft
 NamespaceIndentation: All
 BinPackArguments: true
-BinPackParameters: OnePerLine
+BinPackParameters: true
+AllowAllParametersOfDeclarationOnNextLine: true
 AccessModifierOffset: -4
-BreakTemplateDeclarations: Yes
+AlwaysBreakTemplateDeclarations: Yes
 BreakAfterAttributes: Always
 PackConstructorInitializers: Never
 ---

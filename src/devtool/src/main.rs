@@ -24,10 +24,13 @@ fn main() -> anyhow::Result<ExitCode> {
 
     let cli = DevtoolCliOptions::parse();
 
-    if let Err(e) = cli.execute() {
+    let result = cli.execute();
+
+    if let Err(e) = result {
         error!("{}", e);
         Ok(ExitCode::FAILURE)
     } else {
-        Ok(ExitCode::SUCCESS)
+        let exit_code = result.unwrap(); // Safe to unwrap here
+        Ok(exit_code)
     }
 }

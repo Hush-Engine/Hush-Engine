@@ -8,8 +8,8 @@
 #include "IEditorPanel.hpp"
 #include <imgui/imgui.h>
 #include <Logger.hpp>
-#include <DotnetHost.hpp>
-#include <ScriptingManager.hpp>
+// #include <DotnetHost.hpp>
+// #include <ScriptingManager.hpp>
 
 
 #if defined(_WIN32)
@@ -32,9 +32,9 @@ namespace Hush
         
         DebugUI()
         {
-            this->m_dotnetHost = std::make_shared<DotnetHost>(DOTNET_PATH.data());
-            this->m_manager = std::make_unique<ScriptingManager>(this->m_dotnetHost, ASSEMBLY_TEST);
-            this->m_manager->InvokeCSharp("Test", "Class1", "GetDotNetVersion");
+            // this->m_dotnetHost = std::make_shared<DotnetHost>(DOTNET_PATH.data());
+            // this->m_manager = std::make_unique<ScriptingManager>(this->m_dotnetHost, ASSEMBLY_TEST);
+            // this->m_manager->InvokeCSharp("Test", "Class1", "GetDotNetVersion");
             this->m_name = new char[BUFF_SIZE];
             this->m_name[0] = 0;
             this->m_className = new char[BUFF_SIZE];
@@ -77,21 +77,21 @@ namespace Hush
             ImGui::InputText("method", this->m_methodName, BUFF_SIZE);
             if (ImGui::Button("Script away! (void)"))
             {
-                this->m_manager->InvokeCSharp("Test", this->m_className, this->m_methodName);
+                // this->m_manager->InvokeCSharp("Test", this->m_className, this->m_methodName);
             }
 
             ImGui::Text("Input your name");
             ImGui::InputText("name", this->m_name, BUFF_SIZE);
             if (ImGui::Button("Greet me from C#\n(string demonstration)"))
             {
-                this->m_manager->InvokeCSharp("Test", "Class1", "SayName", this->m_name);
+                // this->m_manager->InvokeCSharp("Test", "Class1", "SayName", this->m_name);
             }
 
             ImGui::InputText("Get hash of...", this->m_toHash, BUFF_SIZE);
             if (ImGui::Button("Hash your input and display it on ImGui\n (returning demonstration)"))
             {
-                this->m_hashOutput = this->m_manager->InvokeCSharpWithReturn<char *>(
-                    "Test", "Class1", "CalculateHash", this->m_toHash);
+                // this->m_hashOutput = this->m_manager->InvokeCSharpWithReturn<char *>(
+                //     "Test", "Class1", "CalculateHash", this->m_toHash);
             }
 
             if (this->m_hashOutput != nullptr && strlen(this->m_hashOutput) > 0)
@@ -112,8 +112,8 @@ namespace Hush
       private:
         static inline bool S_SHOW_MOUSE_INFO = false;
         static inline bool S_SHOW_KEYBOARD_INFO = false;
-        std::shared_ptr<DotnetHost> m_dotnetHost = nullptr;
-        std::unique_ptr<ScriptingManager> m_manager;
+        // std::shared_ptr<DotnetHost> m_dotnetHost = nullptr;
+        // std::unique_ptr<ScriptingManager> m_manager;
         char* m_hashOutput;
         char* m_className;
         char* m_methodName;

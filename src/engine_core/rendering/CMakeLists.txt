@@ -1,28 +1,28 @@
 # Rendering
 
-add_library(HushRendering OBJECT
-        src/WindowRenderer.cpp
-        src/Vulkan/VulkanAllocatedBuffer.cpp
-        src/Vulkan/VulkanRenderer.cpp
-        src/Vulkan/GltfMetallicRoughness.cpp
-        src/Vulkan/VulkanMeshNode.cpp
-        src/Vulkan/VulkanPipelineBuilder.cpp
-        src/Vulkan/VulkanLoader.cpp
-        src/Vulkan/VkDescriptors.cpp
-        src/Vulkan/VulkanSwapchain.cpp
-        src/Vulkan/VulkanFullScreenPass.cpp
-        src/Shared/Camera.cpp
-        src/Shared/ShaderMaterial.cpp
-        src/Shared/ImageTexture.cpp
-        src/Shared/EditorCamera.cpp
-        src/Shared/GltfLoadFunctions.cpp
-        src/ImGui/VulkanImGuiForwarder.cpp
+
+hush_add_library(
+        TARGET_NAME HushRendering
+        LIB_TYPE OBJECT
+        SRCS src/WindowRenderer.cpp
+             src/Vulkan/VulkanAllocatedBuffer.cpp
+             src/Vulkan/VulkanRenderer.cpp
+             src/Vulkan/GltfMetallicRoughness.cpp
+             src/Vulkan/VulkanMeshNode.cpp
+             src/Vulkan/VulkanPipelineBuilder.cpp
+             src/Vulkan/VulkanFullScreenPass.cpp
+             src/Shared/ShaderMaterial.cpp
+             src/Vulkan/VulkanLoader.cpp
+             src/Vulkan/VkDescriptors.cpp
+             src/Vulkan/VulkanSwapchain.cpp
+             src/Shared/Camera.cpp
+             src/Shared/ImageTexture.cpp
+             src/Shared/EditorCamera.cpp
+             src/Shared/GltfLoadFunctions.cpp
+             src/ImGui/VulkanImGuiForwarder.cpp
+        PUBLIC_HEADER_DIRS src
 )
-
-# This is the default renderer and should be switched accordingly
-add_compile_definitions(HUSH_VULKAN_IMPL)
-
-target_include_directories(HushRendering PUBLIC src)
+add_library(Hush::Rendering ALIAS HushRendering)
 
 target_link_libraries(HushRendering PUBLIC
         SDL2::SDL2
@@ -38,4 +38,3 @@ target_link_libraries(HushRendering PUBLIC
         HushInput
 )
 
-set_all_warnings(HushRendering)

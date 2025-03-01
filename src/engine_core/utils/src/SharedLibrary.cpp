@@ -17,7 +17,12 @@
 #include <unistd.h>
 #endif
 
-Hush::SharedLibrary::SharedLibrary(void *handle) : m_nativeHandle(handle)
+Hush::SharedLibrary::SharedLibrary(void *handle)
+    : m_nativeHandle(handle)
+{
+}
+
+Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept : m_nativeHandle(std::exchange(rhs.m_nativeHandle, nullptr))
 {
 }
 

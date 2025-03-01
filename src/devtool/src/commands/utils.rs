@@ -56,6 +56,28 @@ pub fn get_project_files(filter: Vec<&str>, only_modified: bool) -> anyhow::Resu
     Ok(modified_files)
 }
 
+pub fn get_diff_files(filter: Vec<&str>, branch: &str) -> anyhow::Result<Vec<String>> {
+    let output = Command::new("git")
+        .args(["diff", "--name-only", branch])
+        .args(filter)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()?;
+
+    if !output.status.success() {
+        let error_message = "git diff --name-only failed";
+        error!("Output: {}", String::from_utf8_lossy(&output.stderr));
+        return Err(anyhow!(error_message));
+    }
+
+    let modified_files = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|s| s.to_string())
+        .collect();
+
+    Ok(modified_files)
+}
+
 pub fn create_stdio(verbose: bool) -> (Stdio, Stdio) {
     if verbose {
         (Stdio::inherit(), Stdio::inherit())
