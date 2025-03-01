@@ -32,3 +32,9 @@ void Hush::Camera::SetPerspectiveProjectionMatrix(const float radFov, const floa
     this->m_projectionMatrix = glm::perspectiveFov(radFov, width, height, farP, nearP);
     this->m_unreversedProjectionMatrix = glm::perspectiveFov(radFov, width, height, nearP, farP);
 }
+
+
+float Hush::Camera::GetFarPlane() const noexcept {
+    return this->m_farPlane;
+}
+

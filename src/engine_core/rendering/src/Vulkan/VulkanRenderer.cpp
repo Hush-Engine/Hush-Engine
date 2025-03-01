@@ -5,6 +5,7 @@
 */
 
 #include "Shared/MaterialOptions.hpp"
+#include <magic_enum/magic_enum.hpp>
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
@@ -1080,14 +1081,18 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
 void Hush::VulkanRenderer::DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor)
 {
     ShaderMaterial* shaderMat = this->m_gridEffect.GetMaterial();
-
+	glm::vec3 cameraPos = this->m_editorCamera.GetPosition();
 	glm::mat4 view = this->m_editorCamera.GetViewMatrix();
 	glm::mat4 proj = this->m_editorCamera.GetProjectionMatrix();
+
 	proj[1][1] *= -1;
 	
-	shaderMat->SetProperty("pos", this->m_editorCamera.GetPosition());
-	shaderMat->SetProperty("viewproj", proj * view);
+	ShaderMaterial::EError resultCode = ShaderMaterial::EError::None;	
+	resultCode = shaderMat->SetProperty("pos", cameraPos);
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
 	
+	resultCode = shaderMat->SetProperty("viewproj", proj * view);	
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
     this->m_gridEffect.RecordCommands(cmd, globalDescriptor);
 }
 

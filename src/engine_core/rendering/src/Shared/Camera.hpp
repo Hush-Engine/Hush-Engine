@@ -35,6 +35,8 @@ namespace Hush
         void SetPerspectiveProjectionMatrix(const float radFov, const float width, const float height,
                                             const float nearP, const float farP);
 
+		[[nodiscard]] float GetFarPlane() const noexcept;
+        
       protected:
         // NOLINTNEXTLINE
         float m_exposure = 0.8f; //Aribtrary value (inspired from the Hazel Engine)

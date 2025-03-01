@@ -68,16 +68,20 @@ namespace Hush {
 		void SetCullMode(ECullMode cullMode);
 		
 		template<class T>
-		inline void SetProperty(const std::string_view& name, T value) {
+		inline EError SetProperty(const std::string_view& name, T value) {
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
 			const ShaderBindings& binding = this->FindBinding(name);
+			if (this->m_bindingsByName.find(name.data()) == this->m_bindingsByName.end()) {
+				return EError::PropertyNotFound;
+			}
 			HUSH_ASSERT(this->m_uniformBufferMappedData != nullptr, "Material buffer is not initialized! Forgot to call LoadShaders?");
 			// Offset the pointer by the binding's offset
 			std::byte* dataStartingPoint = static_cast<std::byte*>(this->m_uniformBufferMappedData) + binding.offset;
 			// Memcpy the data with sizeof(T)
 			memcpy(dataStartingPoint, &value, valueSize);
 			this->SyncronizeMemory();
+			return EError::None;
 		}
 
 		template<class T>

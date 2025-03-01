@@ -8,13 +8,14 @@
 
 Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float nearP, float farP) : Camera(degFov, width, height, nearP, farP)
 {
-	this->m_position = glm::vec3(0.f, 0.f, 5.f);
+	this->m_position = glm::vec3(0.f, 1.f, 5.f);
 	this->m_yaw = 0.0f;
 	this->m_pitch = 0.0f;
 }
 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
+	LogFormat(ELogLevel::Info, "Position: ({}, {}, {})", this->m_position.x, this->m_position.y, this->m_position.z);
 	glm::mat4 viewMatrix = this->GetViewMatrix();
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
