@@ -15,7 +15,6 @@ Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float 
 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
-	LogFormat(ELogLevel::Info, "Position: ({}, {}, {})", this->m_position.x, this->m_position.y, this->m_position.z);
 	glm::mat4 viewMatrix = this->GetViewMatrix();
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
@@ -49,7 +48,7 @@ void Hush::EditorCamera::OnUpdate(float delta)
 
 	if (cameraDir != Vector3Math::ZERO) {
 		//constexpr float maxSpeed = 5000.0F;
-		constexpr float maxSpeed = 20.0F;
+		constexpr float maxSpeed = 200.0F;
 		this->m_blendValue = MathUtils::Clamp(this->m_blendValue + delta, 0.0F, 1.0F);
 		float speed = maxSpeed * ApplyAccelerationCurve(this->m_blendValue);
 		this->m_position += glm::normalize(cameraDir) * speed * delta;

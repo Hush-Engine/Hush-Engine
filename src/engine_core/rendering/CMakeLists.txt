@@ -1,5 +1,6 @@
 # Rendering
-
+# This is the default renderer and should be switched accordingly
+add_compile_definitions(HUSH_VULKAN_IMPL)
 
 hush_add_library(
         TARGET_NAME HushRendering
@@ -22,6 +23,7 @@ hush_add_library(
              src/ImGui/VulkanImGuiForwarder.cpp
         PUBLIC_HEADER_DIRS src
 )
+
 add_library(Hush::Rendering ALIAS HushRendering)
 
 target_link_libraries(HushRendering PUBLIC
