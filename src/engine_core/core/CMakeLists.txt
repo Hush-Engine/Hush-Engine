@@ -5,6 +5,7 @@ hush_add_library(
         SRCS src/ISystem.cpp
              src/Scene.cpp
              src/Entity.cpp
+             src/Components/Transform.cpp
              src/Query.cpp
              src/traits/EntityTraits.cpp
         PUBLIC_HEADER_DIRS src
