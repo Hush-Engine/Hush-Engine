@@ -29,6 +29,7 @@
 #include "Shared/RenderableNode.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "VulkanSwapchain.hpp"
+#include "VulkanFullScreenPass.hpp"
 #include "DrawContext.hpp"
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
@@ -167,6 +168,8 @@ namespace Hush
 
         void DrawBackground(VkCommandBuffer cmd) noexcept;
 
+        void DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor);
+
         void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
 
         VkCommandBuffer PrepareCommandBuffer(FrameData& currentFrame, uint32_t* swapchainImageIndex);
@@ -227,6 +230,7 @@ namespace Hush
 
 		VkMaterialInstance m_defaultData;
 		GLTFMetallicRoughness m_metalRoughMaterial;
+        VulkanFullScreenPass m_gridEffect;
 
 		VkSampler m_defaultSamplerLinear;
 		VkSampler m_defaultSamplerNearest;

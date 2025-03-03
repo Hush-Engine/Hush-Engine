@@ -5,6 +5,8 @@
 #include "VkUtilsFactory.hpp"
 #include <volk.h>
 
+constexpr VkColorComponentFlags RGBA_COLOR_WRITE_MASK = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
 // NOLINTNEXTLINE (Initialization is handled on the clear method)
 Hush::VulkanPipelineBuilder::VulkanPipelineBuilder(VkPipelineLayout pipelineLayout)
 {
@@ -157,8 +159,7 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetMultiSamplingNone()
 Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::DisableBlending()
 {
     // default write mask
-    this->m_colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    this->m_colorBlendAttachment.colorWriteMask = RGBA_COLOR_WRITE_MASK;
     // no blending
     this->m_colorBlendAttachment.blendEnable = VK_FALSE;
     return *this;
@@ -166,8 +167,7 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::DisableBlending()
 
 Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAdditive()
 {
-    this->m_colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    this->m_colorBlendAttachment.colorWriteMask = RGBA_COLOR_WRITE_MASK;
     this->m_colorBlendAttachment.blendEnable = VK_TRUE;
     this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
     this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
@@ -180,8 +180,7 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAdditive
 
 Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAlphaBlend()
 {
-    this->m_colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    this->m_colorBlendAttachment.colorWriteMask = RGBA_COLOR_WRITE_MASK;
     this->m_colorBlendAttachment.blendEnable = VK_TRUE;
     this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
     this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
@@ -189,6 +188,60 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::EnableBlendingAlphaBle
     this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     this->m_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    return *this;
+}
+
+
+Hush::VulkanPipelineBuilder& Hush::VulkanPipelineBuilder::SetAlphaBlendMode(EAlphaBlendMode blendMode) {
+	
+	this->m_colorBlendAttachment.colorWriteMask = RGBA_COLOR_WRITE_MASK;
+    this->m_colorBlendAttachment.blendEnable = VK_TRUE;
+
+    switch (blendMode)
+    {
+        case EAlphaBlendMode::None:
+            this->m_colorBlendAttachment.blendEnable = VK_FALSE;
+            break;
+
+        case EAlphaBlendMode::OneMinusSrcAlpha:
+            this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            break;
+
+        case EAlphaBlendMode::OneMinusDestAlpha:
+            this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            break;
+
+        case EAlphaBlendMode::ConstAlpha:
+            this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_CONSTANT_ALPHA;
+            this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+            this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_ALPHA;
+            this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+            break;
+
+        case EAlphaBlendMode::DestAlpha:
+            this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+            this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+            break;
+
+        case EAlphaBlendMode::SrcAlpha:
+            this->m_colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            this->m_colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            this->m_colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            break;
+    }
+
+    this->m_colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    this->m_colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
     return *this;
 }
 
@@ -233,51 +286,64 @@ Hush::VulkanPipelineBuilder &Hush::VulkanPipelineBuilder::SetDepthFormat(VkForma
     this->m_renderInfo.depthAttachmentFormat = format;
     return *this;
 }
-bool Hush::VulkanHelper::LoadShaderModule(const std::string_view &filePath, VkDevice device,
-                                          VkShaderModule *outShaderModule)
-{
-    // open the file. With cursor at the end
-    std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
-    if (file.fail() || !file.is_open())
-    {
-        return false;
-    }
 
-    // find what the size of the file is by looking up the location of the cursor
-    // because the cursor is at the end, it gives the size directly in bytes
-    uint32_t fileSize = static_cast<uint32_t>(file.tellg());
+bool Hush::VulkanHelper::LoadShaderModule(const std::string_view& filePath, VkDevice device,
+	VkShaderModule* outShaderModule, std::vector<uint32_t>* outBuffer)
+{   
+	// open the file. With cursor at the end
+	std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
+	if (file.fail() || !file.is_open())
+	{
+		return false;
+	}
 
-    // spirv expects the buffer to be on uint32, so make sure to reserve a int
-    // vector big enough for the entire file
-    std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
+	// find what the size of the file is by looking up the location of the cursor
+	// because the cursor is at the end, it gives the size directly in bytes
+	uint32_t fileSize = static_cast<uint32_t>(file.tellg());
 
-    // put file cursor at beginning
-    file.seekg(0);
+	// create a new shader module, using the buffer we loaded
+	VkShaderModuleCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.pNext = nullptr;
 
-    // load the entire file into the buffer
-    auto *fileData =
-        reinterpret_cast<char *>(buffer.data()); // We downsize this, but idk, this is how it expects us to use this
-    file.read(fileData, fileSize);
 
-    // now that the file is loaded into the buffer, we can close it
-    file.close();
+	// spirv expects the buffer to be on uint32, so make sure to reserve a int
+	// vector big enough for the entire file
+	size_t bufferSize = fileSize / sizeof(uint32_t);
+	std::vector<uint32_t> localBuffer;
+	if (outBuffer == nullptr) {
+		//Set the out buffer to the local address since we weren't passed an actual instance in memory
+		outBuffer = &localBuffer;
+	}
+	outBuffer->resize(bufferSize, 0);
 
-    // create a new shader module, using the buffer we loaded
-    VkShaderModuleCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.pNext = nullptr;
+	ReadDataInto(*outBuffer, file, fileSize);
+	// codeSize has to be in bytes, so multply the ints in the buffer by size of
+	// int to know the real size of the buffer
+	createInfo.codeSize = outBuffer->size() * sizeof(uint32_t);
+	createInfo.pCode = outBuffer->data();
 
-    // codeSize has to be in bytes, so multply the ints in the buffer by size of
-    // int to know the real size of the buffer
-    createInfo.codeSize = buffer.size() * sizeof(uint32_t);
-    createInfo.pCode = buffer.data();
-
-    // check that the creation goes well.
-    VkShaderModule shaderModule = nullptr;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-    {
-        return false;
-    }
-    *outShaderModule = shaderModule;
-    return true;
+	// check that the creation goes well.
+	VkShaderModule shaderModule = nullptr;
+	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+		return false;
+	}
+	*outShaderModule = shaderModule;
+	return true;
 }
+
+
+void Hush::VulkanHelper::ReadDataInto(std::vector<uint32_t>& buffer, std::ifstream& file, size_t fileSize)
+{
+	// put file cursor at beginning
+	file.seekg(0);
+
+	// load the entire file into the buffer
+	auto* fileData =
+		reinterpret_cast<char*>(buffer.data()); // We downsize this, but idk, this is how it expects us to use this
+	file.read(fileData, fileSize);
+
+	// now that the file is loaded into the buffer, we can close it
+	file.close();
+}
+

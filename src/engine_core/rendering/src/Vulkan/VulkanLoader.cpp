@@ -20,14 +20,14 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
         return EError::FileNotFound;
     }
 
-    fastgltf::Expected<fastgltf::GltfDataBuffer> loaded_data = fastgltf::GltfDataBuffer::FromPath(filePath);
+    fastgltf::Expected<fastgltf::GltfDataBuffer> loadedData = fastgltf::GltfDataBuffer::FromPath(filePath);
 
-    if (!loaded_data)
+    if (!loadedData)
     {
         return EError::InvalidMeshFile;
     }
 
-    fastgltf::GltfDataBuffer &data = loaded_data.get();
+    fastgltf::GltfDataBuffer &data = loadedData.get();
 
     constexpr fastgltf::Options loadingOptions = fastgltf::Options::LoadExternalBuffers;
 
@@ -45,8 +45,8 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	for (const fastgltf::Mesh& mesh : loadedAsset->meshes)
 	{
 		auto node = std::make_shared<VulkanMeshNode>(CreateMeshFromGltfMesh(mesh, loadedAsset.get(), indices, vertices, engine));
-		node->SetLocalTransform(glm::mat4{ 1.f });
-		node->SetWorldTransform(glm::mat4{ 1.f });
+		node->SetLocalTransform(glm::mat4{ 1.F });
+		node->SetWorldTransform(glm::mat4{ 1.F });
 		meshes.emplace_back(node);
 	}
 

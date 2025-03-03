@@ -1,4 +1,6 @@
 # Rendering
+# This is the default renderer and should be switched accordingly
+add_compile_definitions(HUSH_VULKAN_IMPL)
 
 hush_add_library(
         TARGET_NAME HushRendering
@@ -9,6 +11,8 @@ hush_add_library(
              src/Vulkan/GltfMetallicRoughness.cpp
              src/Vulkan/VulkanMeshNode.cpp
              src/Vulkan/VulkanPipelineBuilder.cpp
+             src/Vulkan/VulkanFullScreenPass.cpp
+             src/Shared/ShaderMaterial.cpp
              src/Vulkan/VulkanLoader.cpp
              src/Vulkan/VkDescriptors.cpp
              src/Vulkan/VulkanSwapchain.cpp
@@ -19,6 +23,7 @@ hush_add_library(
              src/ImGui/VulkanImGuiForwarder.cpp
         PUBLIC_HEADER_DIRS src
 )
+
 add_library(Hush::Rendering ALIAS HushRendering)
 
 target_link_libraries(HushRendering PUBLIC
@@ -28,6 +33,7 @@ target_link_libraries(HushRendering PUBLIC
         Vulkan::Vulkan
         vk-bootstrap::vk-bootstrap
         glm::glm
+        unofficial::spirv-reflect
         fastgltf::fastgltf
         HushLog
         HushUtils

@@ -18,6 +18,11 @@
     "spdlog",
     "vk-bootstrap",
     "volk",
-    "vulkan"
+    "vulkan",
+    "glm",
+    "outcome",
+    "fastgltf",
+    "catch2",
+    "spirv-reflect"
   ]
 }

@@ -38,5 +38,7 @@ namespace Hush
         uint32_t m_size = 0;
         /// @brief The initial size of the buffer's data, and therefore, the max size it accepts
         uint32_t m_capacity = 0;
+
+        VmaAllocator m_allocatorRef;
     };
 }

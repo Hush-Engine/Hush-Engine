@@ -1,5 +1,9 @@
 #include "GltfLoadFunctions.hpp"
-#include "Vector3Math.hpp"
+#include "Assertions.hpp"
+#include "Result.hpp"
+#include "Shared/ImageTexture.hpp"
+#include <cstdint>
+#include <fastgltf/types.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 #include "MaterialPass.hpp"
@@ -14,7 +18,7 @@ glm::mat4 Hush::GltfLoadFunctions::GetNodeTransform(const fastgltf::Node& node)
 	}
 	const fastgltf::TRS* trsMatrix = std::get_if<fastgltf::TRS>(&node.transform);
 	if (trsMatrix == nullptr) {
-		return glm::mat4(1.0f);
+		return {1.0F};
 	}
 	// Use TRS components
 	glm::vec3 translation = *reinterpret_cast<const glm::vec3*>(trsMatrix->translation.data());
@@ -23,9 +27,9 @@ glm::mat4 Hush::GltfLoadFunctions::GetNodeTransform(const fastgltf::Node& node)
 
 	glm::vec3 scale = *reinterpret_cast<const glm::vec3*>(trsMatrix->scale.data());
 
-	return glm::translate(glm::mat4(1.0f), translation) *
+	return glm::translate(glm::mat4(1.0F), translation) *
 		glm::mat4_cast(rotation) *
-		glm::scale(glm::mat4(1.0f), scale);
+		glm::scale(glm::mat4(1.0F), scale);
 	
 }
 
@@ -55,16 +59,14 @@ std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDat
 
 	// Buffer view index
 	if (bufferViewData != nullptr) {
-
 		const fastgltf::BufferView& bufferView = asset.bufferViews.at(bufferViewData->bufferViewIndex);
 		const fastgltf::Buffer& buffer = asset.buffers.at(bufferView.bufferIndex);
-		vectorData = std::get_if<fastgltf::sources::Vector>(&buffer.data);
-
-		if (vectorData == nullptr) {
-			return nullptr;
+		Result<const std::byte*, EError> bufferData = GetDataFromBufferSource(buffer);
+		if (bufferData.has_error()) {
+			HUSH_ASSERT(false, "Unrecognized data format!!");
 		}
-
-		return std::make_shared<ImageTexture>(reinterpret_cast<const std::byte*>(vectorData->bytes.data() + bufferView.byteOffset), bufferView.byteLength);
+		
+		return std::make_shared<ImageTexture>(bufferData.value() + bufferView.byteOffset, bufferView.byteLength);
 	}
 
 	// TODO: support for file byte offset
@@ -74,17 +76,24 @@ std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDat
 	return std::make_shared<ImageTexture>(uriData->uri.fspath());
 }
 
-Hush::Result<const uint8_t*, Hush::GltfLoadFunctions::EError> Hush::GltfLoadFunctions::GetDataFromBufferSource(const fastgltf::Buffer& buffer)
+Hush::Result<const std::byte*, Hush::GltfLoadFunctions::EError> Hush::GltfLoadFunctions::GetDataFromBufferSource(const fastgltf::Buffer& buffer)
 {
 	const fastgltf::sources::Vector* vectorData = std::get_if<fastgltf::sources::Vector>(&buffer.data);
 	if (vectorData != nullptr) {
-		return reinterpret_cast<const std::uint8_t*> (vectorData->bytes.data());
+		return vectorData->bytes.data();
+	}
+	
+	const fastgltf::sources::Array* arrayData = std::get_if<fastgltf::sources::Array>(&buffer.data);
+	
+	if (arrayData != nullptr) {
+		return arrayData->bytes.data();
 	}
 	//Ok, try the ByteView
 	const fastgltf::sources::ByteView* byteData = std::get_if<fastgltf::sources::ByteView>(&buffer.data);
 	if (byteData != nullptr) {
-		return reinterpret_cast<const uint8_t*>(byteData->bytes.data());
+		return byteData->bytes.data();
 	}
+	
 	//Else, idk, we don't recognize this yet
 	return EError::InvalidMeshFile;
 }

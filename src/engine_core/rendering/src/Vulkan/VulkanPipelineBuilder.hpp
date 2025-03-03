@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include "Shared/MaterialOptions.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <string_view>
@@ -31,6 +32,7 @@ namespace Hush
         VulkanPipelineBuilder& DisableBlending();
         VulkanPipelineBuilder& EnableBlendingAdditive();
         VulkanPipelineBuilder& EnableBlendingAlphaBlend();
+        VulkanPipelineBuilder& SetAlphaBlendMode(EAlphaBlendMode blendMode);
         VulkanPipelineBuilder& DisableDepthTest();
 		VulkanPipelineBuilder& EnableDepthTest(bool depthWriteEnable, VkCompareOp op);
 
@@ -55,7 +57,9 @@ namespace Hush
     {
       public:
         static bool LoadShaderModule(const std::string_view &filePath, VkDevice device,
-                                     VkShaderModule *outShaderModule);
+                                     VkShaderModule *outShaderModule, std::vector<uint32_t>* outBuffer = nullptr);
+    private:
+        static void ReadDataInto(std::vector<uint32_t>& buffer, std::ifstream& file, size_t fileSize);
     };
 
 } // namespace Hush

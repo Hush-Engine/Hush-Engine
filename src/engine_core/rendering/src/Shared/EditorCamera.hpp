@@ -14,6 +14,8 @@ namespace Hush {
 
 		glm::mat4 GetOrientationMatrix() const noexcept;
 
+		glm::vec3 GetPosition() const noexcept;
+
 	private:
 
 		float ApplyAccelerationCurve(float blend);

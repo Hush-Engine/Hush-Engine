@@ -41,6 +41,7 @@ namespace Hush {
 	// TODO: Make non-static
 	class VulkanLoader {
 
+	public:
 		enum class EError {
 			None = 0,
 			FileNotFound,
@@ -48,7 +49,6 @@ namespace Hush {
 			FormatNotSupported
 		};
 
-	public:
 		static Result<std::vector<std::shared_ptr<VulkanMeshNode>>, EError> LoadGltfMeshes(VulkanRenderer* engine, std::filesystem::path filePath);
 
 		static AllocatedImage LoadTexture(VulkanRenderer* engine, const ImageTexture& texture);

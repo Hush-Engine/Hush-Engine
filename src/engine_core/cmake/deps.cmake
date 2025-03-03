@@ -31,3 +31,6 @@ include(Catch)
 
 # Flecs
 find_package(flecs CONFIG REQUIRED)
+
+# SPIR-V reflect
+find_package(unofficial-spirv-reflect CONFIG REQUIRED)

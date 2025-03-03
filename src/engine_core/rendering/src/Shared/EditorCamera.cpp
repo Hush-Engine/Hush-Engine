@@ -8,7 +8,7 @@
 
 Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float nearP, float farP) : Camera(degFov, width, height, nearP, farP)
 {
-	this->m_position = glm::vec3(0.f, 0.f, 5.f);
+	this->m_position = glm::vec3(0.f, 1.f, 5.f);
 	this->m_yaw = 0.0f;
 	this->m_pitch = 0.0f;
 }
@@ -47,8 +47,9 @@ void Hush::EditorCamera::OnUpdate(float delta)
 	}
 
 	if (cameraDir != Vector3Math::ZERO) {
-		constexpr float maxSpeed = 5000.0f;
-		this->m_blendValue = MathUtils::Clamp(this->m_blendValue + delta, 0.0f, 1.0f);
+		//constexpr float maxSpeed = 5000.0F;
+		constexpr float maxSpeed = 20.0F;
+		this->m_blendValue = MathUtils::Clamp(this->m_blendValue + delta, 0.0F, 1.0F);
 		float speed = maxSpeed * ApplyAccelerationCurve(this->m_blendValue);
 		this->m_position += glm::normalize(cameraDir) * speed * delta;
 	}
@@ -75,6 +76,11 @@ glm::mat4 Hush::EditorCamera::GetOrientationMatrix() const noexcept
 	return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
 }
 
+glm::vec3 Hush::EditorCamera::GetPosition() const noexcept
+{
+	return this->m_position;
+}
+
 float Hush::EditorCamera::ApplyAccelerationCurve(float blend)
 {
 	//From a custom asymmetrical sigmoidal curve, formula approximated by: https://mycurvefit.com/
@@ -86,7 +92,6 @@ float Hush::EditorCamera::ApplyAccelerationCurve(float blend)
 	constexpr float m = 0.5257619f;
 	float expVariantFraction = MathUtils::Pow(blend / c, b);
 	return offset + (numerator / MathUtils::Pow(1.0f + expVariantFraction, m));
-	
 }
 
 glm::mat4 Hush::EditorCamera::GetViewMatrix() const noexcept

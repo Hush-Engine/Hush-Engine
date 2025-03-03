@@ -4,22 +4,23 @@
 #include <volk.h>
 
 
-void DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type)
+void Hush::DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, uint32_t stageFlags)
 {
     VkDescriptorSetLayoutBinding newbind{};
     newbind.binding = binding;
     newbind.descriptorCount = 1;
     newbind.descriptorType = type;
+    newbind.stageFlags = stageFlags;
 
     bindings.push_back(newbind);
 }
 
-void DescriptorLayoutBuilder::Clear()
+void Hush::DescriptorLayoutBuilder::Clear()
 {
     bindings.clear();
 }
 
-VkDescriptorSetLayout DescriptorLayoutBuilder::Build(VkDevice device, VkShaderStageFlags shaderStages, void *pNext,
+VkDescriptorSetLayout Hush::DescriptorLayoutBuilder::Build(VkDevice device, VkShaderStageFlags shaderStages, void *pNext,
                                                      VkDescriptorSetLayoutCreateFlags flags)
 {
     for (auto &b : bindings)
@@ -41,7 +42,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::Build(VkDevice device, VkShaderSt
     return set;
 }
 
-void DescriptorWriter::WriteImage(int32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout,
+void Hush::DescriptorWriter::WriteImage(int32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout,
                                   VkDescriptorType type)
 {
     VkDescriptorImageInfo toInsert = {};
@@ -63,7 +64,7 @@ void DescriptorWriter::WriteImage(int32_t binding, VkImageView image, VkSampler 
     this->writes.push_back(write);
 }
 
-void DescriptorWriter::WriteBuffer(int32_t binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type)
+void Hush::DescriptorWriter::WriteBuffer(int32_t binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type)
 {
     VkDescriptorBufferInfo toInsert = {};
     toInsert.buffer = buffer;
@@ -84,14 +85,14 @@ void DescriptorWriter::WriteBuffer(int32_t binding, VkBuffer buffer, size_t size
     this->writes.push_back(write);
 }
 
-void DescriptorWriter::Clear()
+void Hush::DescriptorWriter::Clear()
 {
     imageInfos.clear();
     writes.clear();
     bufferInfos.clear();
 }
 
-void DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSet set)
+void Hush::DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSet set)
 {
     for (VkWriteDescriptorSet &write : writes)
     {
@@ -101,7 +102,7 @@ void DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSet set)
     vkUpdateDescriptorSets(device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }
 
-void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
+void Hush::DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
                                    const std::vector<PoolSizeRatio> &poolRatios) noexcept
 {
     std::vector<VkDescriptorPoolSize> poolSizes;
@@ -123,17 +124,17 @@ void DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
     HUSH_VK_ASSERT(rc, "Creating descriptor set failed!");
 }
 
-void DescriptorAllocator::ClearDescriptors(VkDevice device) const
+void Hush::DescriptorAllocator::ClearDescriptors(VkDevice device) const
 {
     vkResetDescriptorPool(device, pool, 0);
 }
 
-void DescriptorAllocator::DestroyPool(VkDevice device) const
+void Hush::DescriptorAllocator::DestroyPool(VkDevice device) const
 {
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
-VkDescriptorSet DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout) const
+VkDescriptorSet Hush::DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout) const
 {
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -148,7 +149,7 @@ VkDescriptorSet DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLa
     return ds;
 }
 
-void DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSets,
+void Hush::DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSets,
                                        const std::vector<PoolSizeRatio> &poolRatios)
 {
     this->m_ratios.clear();
@@ -168,7 +169,7 @@ void DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSets,
     this->m_readyPools.push_back(newPool);
 }
 
-void DescriptorAllocatorGrowable::ClearPool(VkDevice device)
+void Hush::DescriptorAllocatorGrowable::ClearPool(VkDevice device)
 {
     for (auto *p : this->m_readyPools)
     {
@@ -182,7 +183,7 @@ void DescriptorAllocatorGrowable::ClearPool(VkDevice device)
     this->m_fullPools.clear();
 }
 
-void DescriptorAllocatorGrowable::DestroyPool(VkDevice device)
+void Hush::DescriptorAllocatorGrowable::DestroyPool(VkDevice device)
 {
     for (auto *p : this->m_readyPools)
     {
@@ -196,7 +197,7 @@ void DescriptorAllocatorGrowable::DestroyPool(VkDevice device)
     this->m_fullPools.clear();
 }
 
-VkDescriptorSet DescriptorAllocatorGrowable::Allocate(VkDevice device, VkDescriptorSetLayout layout, void *pNext)
+VkDescriptorSet Hush::DescriptorAllocatorGrowable::Allocate(VkDevice device, VkDescriptorSetLayout layout, void *pNext)
 {
  //get or create a pool to allocate from
     VkDescriptorPool poolToUse = this->GetPool(device);
@@ -226,7 +227,7 @@ VkDescriptorSet DescriptorAllocatorGrowable::Allocate(VkDevice device, VkDescrip
     return ds;
 }
 
-VkDescriptorPool DescriptorAllocatorGrowable::GetPool(VkDevice device)
+VkDescriptorPool Hush::DescriptorAllocatorGrowable::GetPool(VkDevice device)
 {
     VkDescriptorPool newPool = nullptr;
     if (!this->m_readyPools.empty())
@@ -250,7 +251,7 @@ VkDescriptorPool DescriptorAllocatorGrowable::GetPool(VkDevice device)
     return newPool;
 }
 
-VkDescriptorPool DescriptorAllocatorGrowable::CreatePool(VkDevice device, uint32_t setCount,
+VkDescriptorPool Hush::DescriptorAllocatorGrowable::CreatePool(VkDevice device, uint32_t setCount,
                                                          const std::vector<PoolSizeRatio> &poolRatios)
 {
 	std::vector<VkDescriptorPoolSize> poolSizes;

@@ -56,7 +56,7 @@ const Hush::VulkanAllocatedBuffer& Hush::VulkanMeshNode::GetMaterialDataBuffer()
 	return this->m_materialDataBuffer;
 }
 
-const DescriptorAllocatorGrowable& Hush::VulkanMeshNode::GetDescriptorPool() const noexcept
+const Hush::DescriptorAllocatorGrowable& Hush::VulkanMeshNode::GetDescriptorPool() const noexcept
 {
 	return this->m_descriptorPool;
 }

@@ -4,12 +4,13 @@
     \brief Vulkan implementation for rendering
 */
 
+#include "Shared/MaterialOptions.hpp"
+#include <magic_enum/magic_enum.hpp>
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
 #include "Logger.hpp"
 #include "Platform.hpp"
-#include "WindowManager.hpp"
 
 #include "Vulkan/VkTypes.hpp"
 
@@ -35,6 +36,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include "VulkanMeshNode.hpp"
+#include "VulkanFullScreenPass.hpp"
+#include <Shared/ShaderMaterial.hpp>
+#include "Vector3Math.hpp"
+#include <glm/gtx/string_cast.hpp>
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -241,7 +246,6 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
-
     this->m_editorCamera.OnUpdate(delta);
 	this->m_mainDrawContext.opaqueSurfaces.clear();
 	this->m_mainDrawContext.transparentSurfaces.clear();
@@ -252,12 +256,10 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	    nodeEntry.second->Draw(topMatrix, &this->m_mainDrawContext);
     }
 
-    glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), glm::vec3{1.0f});
+    glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), Vector3Math::ONE);
     glm::mat4 viewMatrix = this->m_editorCamera.GetViewMatrix() * scaleMat;
 	this->m_sceneData.view = viewMatrix;
-	// camera projection
-	//this->m_sceneData.proj = this->m_editorCamera.GetProjectionMatrix();
-	this->m_sceneData.proj = glm::perspective(glm::radians(70.f), (float)this->m_width / (float)this->m_height, 10000.f, 0.1f);
+	this->m_sceneData.proj = this->m_editorCamera.GetProjectionMatrix();
 
 	// invert the Y direction on projection matrix so that we are more similar
 	// to opengl and gltf axis
@@ -272,6 +274,8 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 
 void Hush::VulkanRenderer::InitRendering()
 {
+    this->m_editorCamera = EditorCamera(70.0f, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
+    
     this->CreateSyncObjects();
 
     this->InitializeCommands();
@@ -285,7 +289,6 @@ void Hush::VulkanRenderer::InitRendering()
 
     this->InitRenderables();
 
-    this->m_editorCamera = EditorCamera(70.0f, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 10000.f);
 
 }
 
@@ -409,12 +412,12 @@ VkQueue Hush::VulkanRenderer::GetGraphicsQueue() const noexcept
     return this->m_graphicsQueue;
 }
 
-FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
+Hush::FrameData &Hush::VulkanRenderer::GetCurrentFrame() noexcept
 {
     return this->m_frames.at(this->m_frameNumber % FRAME_OVERLAP);
 }
 
-FrameData &Hush::VulkanRenderer::GetLastFrame() noexcept
+Hush::FrameData &Hush::VulkanRenderer::GetLastFrame() noexcept
 {
     return this->m_frames.at((this->m_frameNumber - 1) % FRAME_OVERLAP);
 }
@@ -439,7 +442,7 @@ Hush::GLTFMetallicRoughness& Hush::VulkanRenderer::GetMetalRoughMaterial() noexc
     return this->m_metalRoughMaterial;
 }
 
-DescriptorAllocatorGrowable& Hush::VulkanRenderer::GlobalDescriptorAllocator() noexcept
+Hush::DescriptorAllocatorGrowable& Hush::VulkanRenderer::GlobalDescriptorAllocator() noexcept
 {
     return this->m_globalDescriptorAllocator;
 }
@@ -609,7 +612,8 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-    std::string structurePath = "C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\AlphaBlendModeTest.glb";
+    //std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
+    std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
     std::vector<std::shared_ptr<VulkanMeshNode>> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath).value();
     for (auto& node : nodeVector)
     {
@@ -748,9 +752,21 @@ void Hush::VulkanRenderer::InitPipelines() noexcept
     this->InitBackgroundPipelines();
     this->InitMeshPipeline();
 
-	constexpr std::string_view fragmentShaderPath = "C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\mesh.frag.spv";
-    constexpr std::string_view vertexShaderPath = "C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\mesh.vert.spv";
+	constexpr std::string_view fragmentShaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.frag.spv)";
+    constexpr std::string_view vertexShaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.vert.spv)";
     this->m_metalRoughMaterial.BuildPipelines(this, fragmentShaderPath, vertexShaderPath);
+
+	//Just as a test, let's bind some shaders!
+	std::filesystem::path frag(R"(C:\Users\nefes\Personal\Hush-Engine\res\grid.frag.spv)");
+	std::filesystem::path vert(R"(C:\Users\nefes\Personal\Hush-Engine\res\grid.vert.spv)");
+    
+    auto gridMaterial = std::make_shared<ShaderMaterial>();
+    gridMaterial->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
+	ShaderMaterial::EError err = gridMaterial->LoadShaders(this, frag, vert);
+    this->m_gridEffect = VulkanFullScreenPass(this, gridMaterial);
+    gridMaterial->GenerateMaterialInstance(&this->m_globalDescriptorAllocator);
+
+	HUSH_ASSERT(err == ShaderMaterial::EError::None, "Failed to load shader material: {}", magic_enum::enum_name(err));
 }
 
 void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
@@ -763,7 +779,7 @@ void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
 
     // layout code
     VkShaderModule computeDrawShader = nullptr;
-    constexpr std::string_view shaderPath = "C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\gradient_color.comp.spv";
+    constexpr std::string_view shaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\gradient_color.comp.spv)";
     if (!VulkanHelper::LoadShaderModule(shaderPath, this->m_device, &computeDrawShader))
     {
         LogError("Error when building the compute shader");
@@ -953,11 +969,6 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	////allocate a new uniform buffer for the scene data
 	VulkanAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
     
-	////add it to the deletion queue of this frame so it gets deleted once its been used
-	this->GetCurrentFrame().deletionQueue.PushFunction([=, this]() {
-		    gpuSceneDataBuffer.Dispose(m_allocator);
-	});
-    
 	////write the buffer
 	GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.GetAllocation()->GetMappedData();
 	*sceneUniformData = this->m_sceneData;
@@ -1014,6 +1025,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
     int32_t drawCalls = 0;
 
+    this->DrawGrid(cmd, globalDescriptor);
+
     auto drawRenderObject = [&](const VkRenderObject& draw) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
@@ -1037,6 +1050,12 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 		drawRenderObject(draw);
 	}
 
+
+	////add it to the deletion queue of this frame so it gets deleted once its been used
+	this->GetCurrentFrame().deletionQueue.PushFunction([=, this]() {
+		    gpuSceneDataBuffer.Dispose(m_allocator);
+	});
+	
 	vkCmdEndRendering(cmd);
 }
 
@@ -1058,6 +1077,27 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
     uint32_t roundedWidth = static_cast<uint32_t>(std::ceil(this->m_width / 16.0));
     uint32_t roundedHeight = static_cast<uint32_t>(std::ceil(this->m_height / 16.0));
     vkCmdDispatch(cmd, roundedWidth, roundedHeight, 1);
+}
+
+void Hush::VulkanRenderer::DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor)
+{
+    ShaderMaterial* shaderMat = this->m_gridEffect.GetMaterial();
+	glm::vec3 cameraPos = this->m_editorCamera.GetPosition();
+	glm::mat4 view = this->m_editorCamera.GetViewMatrix();
+	glm::mat4 proj = this->m_editorCamera.GetProjectionMatrix();
+
+	proj[1][1] *= -1;
+	
+	ShaderMaterial::EError resultCode = ShaderMaterial::EError::None;	
+	resultCode = shaderMat->SetProperty("farPlane", this->m_editorCamera.GetFarPlane());
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
+	
+	resultCode = shaderMat->SetProperty("pos", cameraPos);
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
+	
+	resultCode = shaderMat->SetProperty("viewproj", proj * view);	
+	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
+    this->m_gridEffect.RecordCommands(cmd, globalDescriptor);
 }
 
 void Hush::VulkanRenderer::DrawUI(VkCommandBuffer cmd, VkImageView imageView)

@@ -49,10 +49,5 @@ struct ComputePushConstants {
 //MAX bytes that we're able to pass to the GPU per shader
 static_assert(sizeof(ComputePushConstants) <= 128, "Compute shader data exceeds the size limit per shader (128 bytes)");
 
-
-#ifndef HUSH_VULKAN_IMPL
-#define HUSH_VULKAN_IMPL
-// NOLINTNEXTLINE
 #define HUSH_VK_ASSERT(result, message)                                                                                \
     HUSH_ASSERT((result) == VkResult::VK_SUCCESS, "{} VK error code: {}", message, magic_enum::enum_name(result))
-#endif

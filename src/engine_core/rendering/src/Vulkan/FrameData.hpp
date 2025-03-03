@@ -8,23 +8,24 @@
 #include "VulkanDeletionQueue.hpp"
 #include <vulkan/vulkan.h>
 #include "VkDescriptors.hpp"
+namespace Hush {
+    /// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
+    /// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)
+    struct FrameData
+    {
+        /// @brief Used for making the render commands wait for the swapchain image
+        VkSemaphore swapchainSemaphore;
 
-/// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
-/// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)
-struct FrameData
-{
-    /// @brief Used for making the render commands wait for the swapchain image
-    VkSemaphore swapchainSemaphore;
+        /// @brief Controls presenting the image to the OS once drawing is finished
+        VkSemaphore renderSemaphore;
 
-    /// @brief Controls presenting the image to the OS once drawing is finished
-    VkSemaphore renderSemaphore;
+        /// @brief Lets us wait for the draw commands of a given frame to be finished.
+        VkFence renderFence;
 
-    /// @brief Lets us wait for the draw commands of a given frame to be finished.
-    VkFence renderFence;
+        VkCommandBuffer mainCommandBuffer;
+        VkCommandPool commandPool;
+        VulkanDeletionQueue deletionQueue;
 
-    VkCommandBuffer mainCommandBuffer;
-    VkCommandPool commandPool;
-    VulkanDeletionQueue deletionQueue;
-
-    DescriptorAllocatorGrowable frameDescriptors;
-};
+        DescriptorAllocatorGrowable frameDescriptors;
+    };
+}
