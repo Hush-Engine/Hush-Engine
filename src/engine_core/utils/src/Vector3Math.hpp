@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MathUtils.hpp"
+#include <glm/vec3.hpp>
 
 namespace Hush::Vector3Math {
 	
