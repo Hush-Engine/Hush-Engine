@@ -10,13 +10,11 @@ Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, co
 {
 }
 
-void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept
-{
+void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept {
     this->m_position = position;
 }
 
-glm::vec3 Hush::Transform::GetPosition() const noexcept
-{
+glm::vec3 Hush::Transform::GetPosition() const noexcept {
     return this->m_position; 
 }
 
@@ -24,8 +22,7 @@ void Hush::Transform::SetScale(const glm::vec3& scale) noexcept {
     this->m_scale = scale;
 }
 
-glm::vec3 Hush::Transform::GetScale() const noexcept
-{
+glm::vec3 Hush::Transform::GetScale() const noexcept {
     return this->m_scale;
 }
 
@@ -33,11 +30,17 @@ void Hush::Transform::SetRotationQuat(const glm::quat& rotationQuat) noexcept {
     this->m_rotation = rotationQuat;
 }
 
-glm::quat Hush::Transform::GetRotationQuat() const noexcept
-{
+glm::quat Hush::Transform::GetRotationQuat() const noexcept {
     return this->m_rotation;
 }
 
+void Hush::Transform::SetEulerAngles(const glm::vec3& euler) noexcept {
+    this->m_rotation = glm::quat(euler);
+}
+
+glm::vec3 Hush::Transform::GetEulerAngles() const noexcept {
+    return glm::eulerAngles(this->m_rotation);
+}
 
 glm::vec3 Hush::Transform::Forward() const noexcept {
     return this->m_rotation * glm::vec3(0.0F, 0.0F, this->m_scale.z);

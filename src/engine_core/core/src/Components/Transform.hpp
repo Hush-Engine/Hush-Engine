@@ -27,6 +27,10 @@ namespace Hush {
 			
 			[[nodiscard]] glm::quat GetRotationQuat() const noexcept;
 
+			void SetEulerAngles(const glm::vec3& euler) noexcept;
+			
+			[[nodiscard]] glm::vec3 GetEulerAngles() const noexcept;
+
 			[[nodiscard]] glm::mat3 GetRotationMatrix() const noexcept;
 			
 			[[nodiscard]] glm::vec3 Forward() const noexcept;
