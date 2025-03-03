@@ -38,56 +38,51 @@ float calculateLOD(float derivativeMagnitude) {
     return max(0.0, log10(derivativeMagnitude * minPixelsBetweenCells / gridCellSize) + 1.0);
 }
 
-// Draw axis lines with consistent thickness
+
 vec4 drawAxisLines(vec3 fragPos3D, vec2 dudv, float farPlane) {
-    // Calculate distance to x-axis (z=0) and z-axis (x=0)
-    float distToXAxis = abs(fragPos3D.z);
-    float distToZAxis = abs(fragPos3D.x);
+    // Constant desired axis thickness in screen-space (pixels)
+    float desiredPixelWidth = 5.0;
+    float epsilon = 1e-6;
     
-    // Get world space distance to view origin (camera position)
-    float distFromOrigin = length(fragPos3D.xz);
+    // Compute a world-space thickness from the desired pixel width.
+    // For the X axis (drawn along z = 0), we use the screen-space derivative of z (dudv.y),
+    // and for the Z axis (drawn along x = 0), we use the derivative of x (dudv.x).
+    float thicknessX = desiredPixelWidth / max(dudv.y, epsilon);
+    float thicknessZ = desiredPixelWidth / max(dudv.x, epsilon);
     
-    // Base width calculation adjusted for near and far planes
-    float pixelWorldRatio = length(dudv) / 2.0;
-    float basePixelWidth = 3.0; // Desired width in pixels
-    float baseWidth = pixelWorldRatio * basePixelWidth;
+    // Clamp the thickness so it never becomes too large (here capped to 10% of a grid cell).
+    float maxThickness = gridCellSize * 0.1;
+    thicknessX = min(thicknessX, maxThickness);
+    thicknessZ = min(thicknessZ, maxThickness);
     
-    // Scale up the width based on distance to maintain visual consistency
-    // Using the ratio of current distance to far plane
-    float distanceRatio = distFromOrigin / farPlane;
+    // Compute the screen-space antialiasing width using fwidth.
+    // Use a minimum value to avoid artifacts when fwidth is extremely small.
+    float aaWidthX = max(fwidth(fragPos3D.z), 0.001);
+    float aaWidthZ = max(fwidth(fragPos3D.x), 0.001);
     
-    // Use a curve that scales width appropriately to account for perspective
-    // The exponent value controls how rapidly the line width increases with distance
-    float scaleExponent = 1.5; // Adjust between 1.0-2.0 for different scaling behaviors
-    float widthScale = pow(1.0 + distanceRatio, scaleExponent);
+    // Compute the distance from the fragment to the X and Z axes in world space.
+    float distToXAxis = abs(fragPos3D.z); // X axis is at z = 0.
+    float distToZAxis = abs(fragPos3D.x); // Z axis is at x = 0.
     
-    // Apply the scaling with appropriate limits
-    float lineWidth = baseWidth * widthScale;
+    // Use smoothstep with the computed antialiasing widths.
+    // The idea is that when the distance (minus the desired thickness) is less than the AA width,
+    // the line is smoothly blended.
+    float alphaX = 1.0 - smoothstep(0.0, aaWidthX, distToXAxis - thicknessX);
+    float alphaZ = 1.0 - smoothstep(0.0, aaWidthZ, distToZAxis - thicknessZ);
     
-    // Ensure we don't exceed reasonable width values
-    float maxWidth = farPlane * 0.001;
-    lineWidth = min(lineWidth, maxWidth);
+    // Optionally fade the axes out toward the far clipping plane.
+    float distFromCenter = length(fragPos3D.xz);
+    float farFade = 1.0 - smoothstep(farPlane * 0.9, farPlane, distFromCenter);
+    alphaX *= farFade;
+    alphaZ *= farFade;
     
-    // Create smooth anti-aliased lines using smoothstep
-    float xAxisStrength = 1.0 - smoothstep(0.0, lineWidth, distToXAxis);
-    float zAxisStrength = 1.0 - smoothstep(0.0, lineWidth, distToZAxis);
-    
-    // Create the axis color 
-    vec4 axisColor = vec4(0.0);
-    
-    // Apply strengths to respective color channels
-    if (zAxisStrength > 0.0) {
-        axisColor = mix(axisColor, xAxisColor, zAxisStrength);
+    // Separate branches: output the X axis (red) or Z axis (blue) based on which one is stronger.
+    if (alphaX > alphaZ && alphaX > 0.0) {
+        return vec4(xAxisColor.rgb, alphaX);
+    } else if (alphaZ > 0.0) {
+        return vec4(zAxisColor.rgb, alphaZ);
     }
-    
-    if (xAxisStrength > 0.0) {
-        axisColor = mix(axisColor, zAxisColor, xAxisStrength);
-    }
-    
-    // Set the alpha based on whether either axis is visible
-    axisColor.a = max(xAxisStrength, zAxisStrength);
-    
-    return axisColor;
+    return vec4(0.0);
 }
 
 void main() {
