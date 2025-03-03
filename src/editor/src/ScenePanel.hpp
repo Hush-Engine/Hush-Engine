@@ -12,7 +12,7 @@ namespace Hush
 {
     class ScenePanel final : public IEditorPanel
     {
-      public:
+    public:
         void OnRender() noexcept override;
     };
 } // namespace Hush

@@ -12,7 +12,7 @@ namespace Hush
 {
     class HierarchyPanel final : public IEditorPanel
     {
-      public:
+    public:
         void OnRender() override;
     };
 } // namespace Hush

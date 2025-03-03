@@ -250,8 +250,7 @@ namespace Hush
         /// @return ID of the component.
         [[nodiscard]]
         EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-                                              std::uint64_t *id,
-                                              const ComponentTraits::ComponentInfo &desc) const;
+                                              std::uint64_t *id, const ComponentTraits::ComponentInfo &desc) const;
 
         /// Get the id of a component from the cache.
         /// @param name Name of the component.

@@ -14,33 +14,32 @@
 
 namespace Hush
 {
-    //TODO: REFACTOR
+    // TODO: REFACTOR
     class VulkanPipelineBuilder
     {
-      public:
+    public:
         VulkanPipelineBuilder(VkPipelineLayout pipelineLayout);
 
         void Clear();
 
         VkPipeline Build(VkDevice device);
 
-        VulkanPipelineBuilder& SetShaders(VkShaderModule vertexShader, VkShaderModule fragmentShader);
-        VulkanPipelineBuilder& SetInputTopology(VkPrimitiveTopology topology);
-        VulkanPipelineBuilder& SetPolygonMode(VkPolygonMode mode);
-        VulkanPipelineBuilder& SetCullMode(VkCullModeFlags cullMode, VkFrontFace frontFace);
-        VulkanPipelineBuilder& SetMultiSamplingNone();
-        VulkanPipelineBuilder& DisableBlending();
-        VulkanPipelineBuilder& EnableBlendingAdditive();
-        VulkanPipelineBuilder& EnableBlendingAlphaBlend();
-        VulkanPipelineBuilder& SetAlphaBlendMode(EAlphaBlendMode blendMode);
-        VulkanPipelineBuilder& DisableDepthTest();
-		VulkanPipelineBuilder& EnableDepthTest(bool depthWriteEnable, VkCompareOp op);
+        VulkanPipelineBuilder &SetShaders(VkShaderModule vertexShader, VkShaderModule fragmentShader);
+        VulkanPipelineBuilder &SetInputTopology(VkPrimitiveTopology topology);
+        VulkanPipelineBuilder &SetPolygonMode(VkPolygonMode mode);
+        VulkanPipelineBuilder &SetCullMode(VkCullModeFlags cullMode, VkFrontFace frontFace);
+        VulkanPipelineBuilder &SetMultiSamplingNone();
+        VulkanPipelineBuilder &DisableBlending();
+        VulkanPipelineBuilder &EnableBlendingAdditive();
+        VulkanPipelineBuilder &EnableBlendingAlphaBlend();
+        VulkanPipelineBuilder &SetAlphaBlendMode(EAlphaBlendMode blendMode);
+        VulkanPipelineBuilder &DisableDepthTest();
+        VulkanPipelineBuilder &EnableDepthTest(bool depthWriteEnable, VkCompareOp op);
 
+        VulkanPipelineBuilder &SetColorAttachmentFormat(VkFormat format);
+        VulkanPipelineBuilder &SetDepthFormat(VkFormat format);
 
-        VulkanPipelineBuilder& SetColorAttachmentFormat(VkFormat format);
-        VulkanPipelineBuilder& SetDepthFormat(VkFormat format);
-
-      private:
+    private:
         std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
         VkPipelineInputAssemblyStateCreateInfo m_inputAssembly;
@@ -55,11 +54,12 @@ namespace Hush
 
     class VulkanHelper final
     {
-      public:
-        static bool LoadShaderModule(const std::string_view &filePath, VkDevice device,
-                                     VkShaderModule *outShaderModule, std::vector<uint32_t>* outBuffer = nullptr);
+    public:
+        static bool LoadShaderModule(const std::string_view &filePath, VkDevice device, VkShaderModule *outShaderModule,
+                                     std::vector<uint32_t> *outBuffer = nullptr);
+
     private:
-        static void ReadDataInto(std::vector<uint32_t>& buffer, std::ifstream& file, size_t fileSize);
+        static void ReadDataInto(std::vector<uint32_t> &buffer, std::ifstream &file, size_t fileSize);
     };
 
 } // namespace Hush

@@ -8,7 +8,8 @@
 #include "VulkanDeletionQueue.hpp"
 #include <vulkan/vulkan.h>
 #include "VkDescriptors.hpp"
-namespace Hush {
+namespace Hush
+{
     /// @brief Definition of the frame data structure to pass in Vulkan's dynamic rendering
     /// from VKGuide (https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/)
     struct FrameData
@@ -28,4 +29,4 @@ namespace Hush {
 
         DescriptorAllocatorGrowable frameDescriptors;
     };
-}
+} // namespace Hush

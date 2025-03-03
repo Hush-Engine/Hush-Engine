@@ -50,7 +50,10 @@ TEST_CASE("Entity with components", "[entity]")
     {
         float a;
 
-        TestA() : a(0.0f) {}
+        TestA()
+            : a(0.0f)
+        {
+        }
     };
 
     SECTION("EmplaceComponent")

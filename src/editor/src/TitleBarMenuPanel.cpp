@@ -20,11 +20,11 @@ void Hush::TitleBarMenuPanel::OnRender() noexcept
         }
         ImGui::EndMainMenuBar();
     }
-    //TODO: Also render the play options here
+    // TODO: Also render the play options here
 }
 
 void Hush::TitleBarMenuPanel::FileMenuOptions()
-{    
+{
     if (!ImGui::BeginMenu("File"))
     {
         return;
@@ -38,21 +38,18 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
     }
     if (ImGui::MenuItem("Save", "Ctrl+S"))
     {
-    
     }
     if (ImGui::MenuItem("Save Scene As...", "Ctrl+Shift+S"))
     {
     }
 
-    if (ImGui::BeginMenu("Settings")) 
+    if (ImGui::BeginMenu("Settings"))
     {
         if (ImGui::MenuItem("Editor Settings"))
         {
-        
         }
         if (ImGui::MenuItem("Project Settings"))
         {
-
         }
         ImGui::EndMenu();
     }

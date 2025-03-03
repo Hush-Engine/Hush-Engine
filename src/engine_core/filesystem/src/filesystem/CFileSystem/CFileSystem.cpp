@@ -10,7 +10,8 @@
 #include <Logger.hpp>
 #include <array>
 
-Hush::CFileSystem::CFileSystem(std::string_view root) : mRoot(root)
+Hush::CFileSystem::CFileSystem(std::string_view root)
+    : mRoot(root)
 {
 }
 

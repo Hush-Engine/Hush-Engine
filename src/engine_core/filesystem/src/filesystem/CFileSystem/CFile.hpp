@@ -13,8 +13,10 @@ namespace Hush
 {
     class CFile final : public IFile
     {
-      public:
-        CFile(FILE *file, FileMetadata &&fileMetadata) : m_file(file), m_metadata(std::move(fileMetadata))
+    public:
+        CFile(FILE *file, FileMetadata &&fileMetadata)
+            : m_file(file),
+              m_metadata(std::move(fileMetadata))
         {
         }
 
@@ -39,12 +41,13 @@ namespace Hush
         void Close() override;
 
         /// @copydoc IFile::GetMetadata
-        [[nodiscard]] const FileMetadata &GetMetadata() const override
+        [[nodiscard]]
+        const FileMetadata &GetMetadata() const override
         {
             return m_metadata;
         }
 
-      private:
+    private:
         FILE *m_file;
         FileMetadata m_metadata;
     };

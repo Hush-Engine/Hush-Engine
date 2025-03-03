@@ -236,7 +236,7 @@ namespace Hush::Threading
 
                     void await_suspend(std::coroutine_handle<SyncWaitPromise> coroutine) noexcept
                     {
-                        std::atomic_flag* done = coroutine.promise().m_done;
+                        std::atomic_flag *done = coroutine.promise().m_done;
                         done->test_and_set(std::memory_order_relaxed);
                         done->notify_one();
                     }

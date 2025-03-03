@@ -6,11 +6,11 @@
 
 #pragma once
 
-
 #include <vector>
 #include "VkTypes.hpp"
 #include <deque>
-namespace Hush {
+namespace Hush
+{
 
     //> descriptor_layout
     struct DescriptorLayoutBuilder
@@ -32,7 +32,8 @@ namespace Hush {
         std::deque<VkDescriptorBufferInfo> bufferInfos;
         std::vector<VkWriteDescriptorSet> writes;
 
-        void WriteImage(int32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout, VkDescriptorType type);
+        void WriteImage(int32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout,
+                        VkDescriptorType type);
         void WriteBuffer(int32_t binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type);
 
         void Clear();
@@ -63,7 +64,7 @@ namespace Hush {
     //> descriptor_allocator_grow
     struct DescriptorAllocatorGrowable
     {
-      public:
+    public:
         struct PoolSizeRatio
         {
             VkDescriptorType type;
@@ -76,7 +77,7 @@ namespace Hush {
 
         VkDescriptorSet Allocate(VkDevice device, VkDescriptorSetLayout layout, void *pNext = nullptr);
 
-      private:
+    private:
         VkDescriptorPool GetPool(VkDevice device);
         VkDescriptorPool CreatePool(VkDevice device, uint32_t setCount, const std::vector<PoolSizeRatio> &poolRatios);
 
@@ -86,4 +87,4 @@ namespace Hush {
         uint32_t m_setsPerPool;
     };
     //< descriptor_allocator_grow
-}
+} // namespace Hush

@@ -10,18 +10,17 @@
 #include <unordered_map>
 #include <glm/vec2.hpp>
 
-namespace Hush {
+namespace Hush
+{
     struct MouseData
     {
         std::unordered_map<EMouseButton, EKeyState> mouseButtonMap{};
-    
+
         int32_t positionX = 0;
         int32_t positionY = 0;
         int32_t accelerationX = 0;
         int32_t accelerationY = 0;
 
-        glm::vec2 wheelAcceleration { 0.0f };
+        glm::vec2 wheelAcceleration{0.0f};
     };
-}
-
-
+} // namespace Hush

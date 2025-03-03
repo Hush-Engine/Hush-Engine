@@ -27,8 +27,6 @@
 #error "Platform not supported"
 #endif
 
-
-
 #ifdef __clang__
 #define HUSH_COMPILER_CLANG 1
 #define HUSH_COMPILER_GCC 0
@@ -44,8 +42,6 @@
 #else
 #error "Unknown compiler"
 #endif
-
-
 
 namespace Hush
 {

@@ -15,7 +15,7 @@ namespace Hush
     {
         explicit SharedLibrary(void *handle);
 
-      public:
+    public:
         /// SharedLibrary error
         enum class EError
         {
@@ -32,7 +32,8 @@ namespace Hush
 
         ~SharedLibrary();
 
-        [[nodiscard]] void *GetNativeHandle() const
+        [[nodiscard]]
+        void *GetNativeHandle() const
         {
             return m_nativeHandle;
         }
@@ -41,7 +42,9 @@ namespace Hush
         /// @tparam T Type of the symbol
         /// @param symbolName Name of the symbol
         /// @return A pointer to the symbol
-        template <typename T> [[nodiscard]] T *GetSymbolUnsafe(std::string_view symbolName)
+        template <typename T>
+        [[nodiscard]]
+        T *GetSymbolUnsafe(std::string_view symbolName)
         {
             return reinterpret_cast<T *>(GetRawSymbol(symbolName));
         }
@@ -50,7 +53,9 @@ namespace Hush
         /// @tparam T Type of the symbol
         /// @param symbolName Name of the symbol
         /// @return A result with the symbol, or an error if it can't be found
-        template <typename T> [[nodiscard]] Result<T, EError> GetSymbol(std::string_view symbolName) noexcept
+        template <typename T>
+        [[nodiscard]]
+        Result<T, EError> GetSymbol(std::string_view symbolName) noexcept
         {
             auto symbol = GetSymbolUnsafe<T>(symbolName);
             if (symbol == nullptr)
@@ -65,7 +70,7 @@ namespace Hush
         /// @return A handle to the shared library
         static Result<SharedLibrary, EError> OpenSharedLibrary(std::string_view libraryName) noexcept;
 
-      private:
+    private:
         void *GetRawSymbol(std::string_view symbolName);
 
         void *m_nativeHandle;

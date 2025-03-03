@@ -6,6 +6,7 @@
 
 #pragma once
 
-namespace Hush {
+namespace Hush
+{
 
 }

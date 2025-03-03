@@ -35,7 +35,8 @@ namespace Hush
     void Log(ELogLevel logLevel, std::string_view message);
 
     /// @brief Logs a message with a given format
-    template <class... Args> void LogFormat(ELogLevel logLevel, fmt::format_string<Args...> format, Args &&...args)
+    template <class... Args>
+    void LogFormat(ELogLevel logLevel, fmt::format_string<Args...> format, Args &&...args)
     {
         std::string message = fmt::format(format, std::forward<Args>(args)...);
         Log(logLevel, message);

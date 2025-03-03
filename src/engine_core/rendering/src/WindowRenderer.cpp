@@ -77,7 +77,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
         InputManager::SendMouseMovementEvent(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
         break;
     case SDL_MOUSEWHEEL:
-        //Send 0 as acceleration bc it will be calculated manually
+        // Send 0 as acceleration bc it will be calculated manually
         InputManager::SendWheelEvent(event.wheel.preciseX, event.wheel.preciseY);
         break;
     case SDL_WINDOWEVENT:

@@ -68,7 +68,7 @@ extern "C" bool BundledAppExists_Internal_() // NOLINT(*-identifier-naming)
     return true;
 }
 
-extern "C" Hush::IApplication *BundledApp_Internal_(Hush::HushEngine* engine) // NOLINT(*-identifier-naming)
+extern "C" Hush::IApplication *BundledApp_Internal_(Hush::HushEngine *engine) // NOLINT(*-identifier-naming)
 {
     return new EditorApp(engine);
 }

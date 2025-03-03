@@ -16,7 +16,7 @@ namespace Hush
     /// All renderers MUST bind to SDL and ImGUI, the latter can be done through the IImGuiForwarder interface
     class IRenderer
     {
-      public:
+    public:
         IRenderer(void *windowContext)
         {
             (void)windowContext;
@@ -26,7 +26,7 @@ namespace Hush
         IRenderer &operator=(const IRenderer &) = delete;
         IRenderer(IRenderer &&) = delete;
         IRenderer &operator=(IRenderer &&) = delete;
-    
+
         virtual ~IRenderer() = default;
 
         virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
@@ -37,8 +37,8 @@ namespace Hush
 
         /// @brief Each renderer will have to implement a way of updating all the objects
         /// inside of the scene, these are instances of the IRenderableNode, which is a common interface
-        /// for all renderers, but additional render data (i.e drawContext) might be needed by their underlying implementation
-        /// (see VulkanMeshNode for an example)
+        /// for all renderers, but additional render data (i.e drawContext) might be needed by their underlying
+        /// implementation (see VulkanMeshNode for an example)
         virtual void UpdateSceneObjects(float delta) = 0;
 
         /// @brief Initializes all the internal structures needed to begin rendering, call after a swapchain has been
@@ -51,6 +51,7 @@ namespace Hush
 
         virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
 
-        [[nodiscard]] virtual void *GetWindowContext() const noexcept = 0;
+        [[nodiscard]]
+        virtual void *GetWindowContext() const noexcept = 0;
     };
 } // namespace Hush

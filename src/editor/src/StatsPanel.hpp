@@ -3,22 +3,24 @@
 #include <cstdint>
 #include <string>
 
-namespace Hush {
-	class StatsPanel final : public IEditorPanel {
+namespace Hush
+{
+    class StatsPanel final : public IEditorPanel
+    {
 
-	public:
-		void OnRender() noexcept override;
+    public:
+        void OnRender() noexcept override;
 
-		void SetDeltaTime(float delta);
+        void SetDeltaTime(float delta);
 
-		void SetDrawCallsCount(int32_t count);
+        void SetDrawCallsCount(int32_t count);
 
-		void SetDeviceName(const std::string& deviceName);
+        void SetDeviceName(const std::string &deviceName);
 
-	private:
-		float m_deltaTime;
-		float m_framesPerSecond;
-		int32_t m_drawCallCount;
-		std::string m_deviceName;
-	};
-}
+    private:
+        float m_deltaTime;
+        float m_framesPerSecond;
+        int32_t m_drawCallCount;
+        std::string m_deviceName;
+    };
+} // namespace Hush

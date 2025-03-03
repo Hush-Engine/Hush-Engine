@@ -28,7 +28,6 @@ namespace Hush::Threading
             using ReturnType = std::invoke_result_t<decltype(&T::Schedule), T>;
         };
 
-
     } // namespace Concepts
 
     ///

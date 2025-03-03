@@ -9,26 +9,27 @@
 #include <cstddef>
 #include <filesystem>
 
-namespace Hush {
-    class ImageTexture {
-    
-    public:
+namespace Hush
+{
+    class ImageTexture
+    {
 
+    public:
         ImageTexture() = default;
 
-        ImageTexture(const std::filesystem::path& filePath);
+        ImageTexture(const std::filesystem::path &filePath);
 
-        ImageTexture(const std::byte* data, size_t size);
+        ImageTexture(const std::byte *data, size_t size);
 
-		const int32_t& GetWidth() const noexcept;
+        const int32_t &GetWidth() const noexcept;
 
-		const int32_t& GetHeight() const noexcept;
+        const int32_t &GetHeight() const noexcept;
 
-        const std::byte* GetImageData() const;
+        const std::byte *GetImageData() const;
 
     private:
-		int32_t m_width;
-		int32_t m_height;
+        int32_t m_width;
+        int32_t m_height;
         std::unique_ptr<std::byte> m_data;
     };
-}
+} // namespace Hush

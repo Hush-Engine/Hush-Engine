@@ -20,19 +20,21 @@
 
 /// @brief A void C# method with any type of arguments
 /// @tparam ...Types Types of the C# arguments list
-template <class... Types> using VoidCSMethod = void (*)(Types...);
+template <class... Types>
+using VoidCSMethod = void (*)(Types...);
 
 /// @brief A C# method with a return value (non complex value type)
 /// @tparam R Return type
 /// @tparam ...Types Types of the C# arguments list
-template <class R, class... Types> using ReturnableCSMethod = R (*)(Types...);
+template <class R, class... Types>
+using ReturnableCSMethod = R (*)(Types...);
 
 namespace Hush
 {
     /// @brief Class for bridging with .NET using hostfxr
     class ScriptingManager
     {
-      public:
+    public:
         /// <summary>
         /// Creates a new scripting manager to invoke C# methods
         /// </summary>
@@ -84,7 +86,7 @@ namespace Hush
             testDelegate(args...);
         }
 
-      private:
+    private:
         std::string_view m_targetAssembly;
         // This pointer to a host is shared with other scripting managers, hence the shared ptr nature
         std::shared_ptr<DotnetHost> m_host;
@@ -92,7 +94,8 @@ namespace Hush
         std::string BuildFullClassPath(const char *targetAssembly, const char *targetNamespace,
                                        const char *targetClass) const;
 
-        template <class... Types> int GetMethodFromCS(const char *fullClassPath, const char *fnName, void **outMethod)
+        template <class... Types>
+        int GetMethodFromCS(const char *fullClassPath, const char *fnName, void **outMethod)
         {
 #if _WIN32
             std::wstring pathStr = StringUtils::ToWString(fullClassPath);

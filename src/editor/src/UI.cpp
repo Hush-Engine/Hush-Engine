@@ -14,12 +14,12 @@
 Hush::UI::UI()
 {
     ADD_PANEL(this->m_activePanels, TitleBarMenuPanel);
-	ADD_PANEL(this->m_activePanels, TitleBarMenuPanel);
-	ADD_PANEL(this->m_activePanels, ScenePanel);
-	ADD_PANEL(this->m_activePanels, HierarchyPanel);
-	ADD_PANEL(this->m_activePanels, ContentPanel);
-	ADD_PANEL(this->m_activePanels, DebugUI);
-	ADD_PANEL(this->m_activePanels, DebugTooltip);
+    ADD_PANEL(this->m_activePanels, TitleBarMenuPanel);
+    ADD_PANEL(this->m_activePanels, ScenePanel);
+    ADD_PANEL(this->m_activePanels, HierarchyPanel);
+    ADD_PANEL(this->m_activePanels, ContentPanel);
+    ADD_PANEL(this->m_activePanels, DebugUI);
+    ADD_PANEL(this->m_activePanels, DebugTooltip);
     ADD_PANEL(this->m_activePanels, StatsPanel);
     s_instance = this;
 }
@@ -29,12 +29,12 @@ void Hush::UI::DrawPanels()
     UI::DockSpace();
     UI::DrawPlayButton();
     // NOLINTNEXTLINE
-    for (auto& pairEntry : this->m_activePanels)
+    for (auto &pairEntry : this->m_activePanels)
     {
         pairEntry.second->OnRender();
     }
     ImGui::EndFrame();
-	ImGui::Render();
+    ImGui::Render();
 }
 
 // NOLINTBEGIN
@@ -105,10 +105,10 @@ void Hush::UI::DockSpace()
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
-
     // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
     // and handle the pass-thru hole, so we ask Begin() to not render a background.
-    if (dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) {
+    if (dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode)
+    {
         window_flags |= ImGuiWindowFlags_NoBackground;
     }
 
@@ -122,7 +122,7 @@ void Hush::UI::DockSpace()
     ImGui::End();
 }
 
-Hush::UI& Hush::UI::Get()
+Hush::UI &Hush::UI::Get()
 {
     return *s_instance;
 }
@@ -130,10 +130,10 @@ Hush::UI& Hush::UI::Get()
 void Hush::UI::DrawPlayButton()
 {
     UI::BeginToolBar();
-    //if (ImGui::ImageButton("PlayButton", ImVec2(20.0f, 20.0f)))
+    // if (ImGui::ImageButton("PlayButton", ImVec2(20.0f, 20.0f)))
     if (ImGui::Button("PlayButton"))
     {
-        //If we're on edit mode, play, otherwise, stop
+        // If we're on edit mode, play, otherwise, stop
     }
     ImGui::End();
 }

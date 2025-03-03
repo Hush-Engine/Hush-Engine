@@ -10,7 +10,7 @@
 
 class VkUtilsFactory
 {
-  public:
+public:
     static VkFenceCreateInfo CreateFenceInfo(VkFenceCreateFlagBits flags)
     {
         VkFenceCreateInfo result = {};
@@ -253,9 +253,8 @@ class VkUtilsFactory
         return info;
     }
 
-    static VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage,
-                                                                         VkShaderModule shaderModule, 
-                                                                         const std::string_view& entry = MAIN_SHADER_ENTRY)
+    static VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(
+        VkShaderStageFlagBits stage, VkShaderModule shaderModule, const std::string_view &entry = MAIN_SHADER_ENTRY)
     {
         VkPipelineShaderStageCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -270,35 +269,35 @@ class VkUtilsFactory
         return info;
     }
 
-    static VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo() {
-		VkPipelineLayoutCreateInfo info{};
-		info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		info.pNext = nullptr;
+    static VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo()
+    {
+        VkPipelineLayoutCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        info.pNext = nullptr;
 
-		// empty defaults
-		info.flags = 0;
-		info.setLayoutCount = 0;
-		info.pSetLayouts = nullptr;
-		info.pushConstantRangeCount = 0;
-		info.pPushConstantRanges = nullptr;
-		return info;
+        // empty defaults
+        info.flags = 0;
+        info.setLayoutCount = 0;
+        info.pSetLayouts = nullptr;
+        info.pushConstantRangeCount = 0;
+        info.pPushConstantRanges = nullptr;
+        return info;
     }
-	static VkRenderingAttachmentInfo DepthAttachmentInfo(
-		VkImageView view, VkImageLayout layout)
-	{
-		VkRenderingAttachmentInfo depthAttachment{};
-		depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachment.pNext = nullptr;
+    static VkRenderingAttachmentInfo DepthAttachmentInfo(VkImageView view, VkImageLayout layout)
+    {
+        VkRenderingAttachmentInfo depthAttachment{};
+        depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachment.pNext = nullptr;
 
-		depthAttachment.imageView = view;
-		depthAttachment.imageLayout = layout;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		depthAttachment.clearValue.depthStencil.depth = 0.f;
+        depthAttachment.imageView = view;
+        depthAttachment.imageLayout = layout;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        depthAttachment.clearValue.depthStencil.depth = 0.f;
 
-		return depthAttachment;
-	}
+        return depthAttachment;
+    }
 
-  private:
+private:
     static constexpr inline std::string_view MAIN_SHADER_ENTRY = "main";
 };

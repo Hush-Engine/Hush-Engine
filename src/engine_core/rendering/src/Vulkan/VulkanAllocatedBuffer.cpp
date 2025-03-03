@@ -2,7 +2,8 @@
 #include "VkTypes.hpp"
 #include "vk_mem_alloc.hpp"
 
-Hush::VulkanAllocatedBuffer::VulkanAllocatedBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator)
+Hush::VulkanAllocatedBuffer::VulkanAllocatedBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+                                                   VmaAllocator allocator)
 {
     // allocate buffer
     VkBufferCreateInfo bufferInfo = {};
@@ -45,7 +46,7 @@ VkBuffer Hush::VulkanAllocatedBuffer::GetBuffer()
     return this->m_buffer;
 }
 
-VmaAllocationInfo& Hush::VulkanAllocatedBuffer::GetAllocationInfo() noexcept
+VmaAllocationInfo &Hush::VulkanAllocatedBuffer::GetAllocationInfo() noexcept
 {
     return this->m_allocInfo;
 }

@@ -41,7 +41,8 @@ namespace Hush::ComponentTraits
     {
         None = 0,
 
-        // Flags used for testing if a component has a specific operation. Do not use these to disable operations. It won't work.
+        // Flags used for testing if a component has a specific operation. Do not use these to disable operations. It
+        // won't work.
         HasCtor = 1 << 0,
         HasDtor = 1 << 1,
         HasCopy = 1 << 2,
@@ -189,7 +190,7 @@ namespace Hush::ComponentTraits
     /// @return Nullptr
     template <typename T>
         requires std::is_trivially_constructible_v<T> && !std::is_default_constructible_v<T>
-    constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags &)
+                                                     constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags &)
     {
         return nullptr;
     }
@@ -363,8 +364,8 @@ namespace Hush::ComponentTraits
     /// @tparam T Type of the component.
     /// @return Operations for the component.
     template <typename T>
-    requires !std::is_reference_v<T>
-    constexpr ComponentOps GetOps(EComponentOpsFlags &flags)
+        requires !std::is_reference_v<T>
+                 constexpr ComponentOps GetOps(EComponentOpsFlags & flags)
     {
         return ComponentOps{
             .ctor = GetCtorImpl<std::remove_cvref_t<T>>(flags),

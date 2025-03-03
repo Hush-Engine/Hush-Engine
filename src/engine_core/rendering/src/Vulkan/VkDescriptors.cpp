@@ -3,7 +3,6 @@
 #include "VulkanRenderer.hpp"
 #include <volk.h>
 
-
 void Hush::DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, uint32_t stageFlags)
 {
     VkDescriptorSetLayoutBinding newbind{};
@@ -20,8 +19,8 @@ void Hush::DescriptorLayoutBuilder::Clear()
     bindings.clear();
 }
 
-VkDescriptorSetLayout Hush::DescriptorLayoutBuilder::Build(VkDevice device, VkShaderStageFlags shaderStages, void *pNext,
-                                                     VkDescriptorSetLayoutCreateFlags flags)
+VkDescriptorSetLayout Hush::DescriptorLayoutBuilder::Build(VkDevice device, VkShaderStageFlags shaderStages,
+                                                           void *pNext, VkDescriptorSetLayoutCreateFlags flags)
 {
     for (auto &b : bindings)
     {
@@ -37,13 +36,14 @@ VkDescriptorSetLayout Hush::DescriptorLayoutBuilder::Build(VkDevice device, VkSh
     info.flags = flags;
 
     VkDescriptorSetLayout set = nullptr;
-    HUSH_VK_ASSERT(vkCreateDescriptorSetLayout(device, &info, nullptr, &set), "Failed to create descriptor set layout!");
+    HUSH_VK_ASSERT(vkCreateDescriptorSetLayout(device, &info, nullptr, &set),
+                   "Failed to create descriptor set layout!");
 
     return set;
 }
 
 void Hush::DescriptorWriter::WriteImage(int32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout,
-                                  VkDescriptorType type)
+                                        VkDescriptorType type)
 {
     VkDescriptorImageInfo toInsert = {};
     toInsert.sampler = sampler;
@@ -64,7 +64,8 @@ void Hush::DescriptorWriter::WriteImage(int32_t binding, VkImageView image, VkSa
     this->writes.push_back(write);
 }
 
-void Hush::DescriptorWriter::WriteBuffer(int32_t binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type)
+void Hush::DescriptorWriter::WriteBuffer(int32_t binding, VkBuffer buffer, size_t size, size_t offset,
+                                         VkDescriptorType type)
 {
     VkDescriptorBufferInfo toInsert = {};
     toInsert.buffer = buffer;
@@ -103,7 +104,7 @@ void Hush::DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSet set)
 }
 
 void Hush::DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
-                                   const std::vector<PoolSizeRatio> &poolRatios) noexcept
+                                         const std::vector<PoolSizeRatio> &poolRatios) noexcept
 {
     std::vector<VkDescriptorPoolSize> poolSizes;
     for (PoolSizeRatio ratio : poolRatios)
@@ -150,7 +151,7 @@ VkDescriptorSet Hush::DescriptorAllocator::Allocate(VkDevice device, VkDescripto
 }
 
 void Hush::DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSets,
-                                       const std::vector<PoolSizeRatio> &poolRatios)
+                                             const std::vector<PoolSizeRatio> &poolRatios)
 {
     this->m_ratios.clear();
 
@@ -160,7 +161,7 @@ void Hush::DescriptorAllocatorGrowable::Init(VkDevice device, uint32_t initialSe
     }
 
     VkDescriptorPool newPool = this->CreatePool(device, initialSets, poolRatios);
-    
+
     HUSH_ASSERT(newPool != nullptr, "Create Pool failed in nullptr!");
 
     // NOLINTNEXTLINE
@@ -199,30 +200,31 @@ void Hush::DescriptorAllocatorGrowable::DestroyPool(VkDevice device)
 
 VkDescriptorSet Hush::DescriptorAllocatorGrowable::Allocate(VkDevice device, VkDescriptorSetLayout layout, void *pNext)
 {
- //get or create a pool to allocate from
+    // get or create a pool to allocate from
     VkDescriptorPool poolToUse = this->GetPool(device);
 
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.pNext = pNext;
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = poolToUse;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &layout;
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.pNext = pNext;
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = poolToUse;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &layout;
 
-	VkDescriptorSet ds = nullptr;
-	VkResult result = vkAllocateDescriptorSets(device, &allocInfo, &ds);
+    VkDescriptorSet ds = nullptr;
+    VkResult result = vkAllocateDescriptorSets(device, &allocInfo, &ds);
 
-    //allocation failed. Try again
-    if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL) {
+    // allocation failed. Try again
+    if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL)
+    {
 
         this->m_fullPools.push_back(poolToUse);
-    
+
         poolToUse = this->GetPool(device);
         allocInfo.descriptorPool = poolToUse;
 
-       HUSH_VK_ASSERT(vkAllocateDescriptorSets(device, &allocInfo, &ds), "Failed to allocate descriptor sets");
+        HUSH_VK_ASSERT(vkAllocateDescriptorSets(device, &allocInfo, &ds), "Failed to allocate descriptor sets");
     }
-  
+
     this->m_readyPools.push_back(poolToUse);
     return ds;
 }
@@ -252,24 +254,23 @@ VkDescriptorPool Hush::DescriptorAllocatorGrowable::GetPool(VkDevice device)
 }
 
 VkDescriptorPool Hush::DescriptorAllocatorGrowable::CreatePool(VkDevice device, uint32_t setCount,
-                                                         const std::vector<PoolSizeRatio> &poolRatios)
+                                                               const std::vector<PoolSizeRatio> &poolRatios)
 {
-	std::vector<VkDescriptorPoolSize> poolSizes;
-	for (PoolSizeRatio ratio : poolRatios) {
-		poolSizes.push_back(VkDescriptorPoolSize{
-			.type = ratio.type,
-			.descriptorCount = uint32_t(ratio.ratio * setCount)
-			});
-	}
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    for (PoolSizeRatio ratio : poolRatios)
+    {
+        poolSizes.push_back(
+            VkDescriptorPoolSize{.type = ratio.type, .descriptorCount = uint32_t(ratio.ratio * setCount)});
+    }
 
-	VkDescriptorPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.flags = 0;
-	poolInfo.maxSets = setCount;
-	poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
-	poolInfo.pPoolSizes = poolSizes.data();
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags = 0;
+    poolInfo.maxSets = setCount;
+    poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
+    poolInfo.pPoolSizes = poolSizes.data();
 
-	VkDescriptorPool newPool;
-	vkCreateDescriptorPool(device, &poolInfo, nullptr, &newPool);
-	return newPool;
+    VkDescriptorPool newPool;
+    vkCreateDescriptorPool(device, &poolInfo, nullptr, &newPool);
+    return newPool;
 }

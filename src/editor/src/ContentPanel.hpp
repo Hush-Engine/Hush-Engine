@@ -9,8 +9,8 @@
 
 namespace Hush
 {
-    class ContentPanel final: public IEditorPanel
+    class ContentPanel final : public IEditorPanel
     {
         void OnRender() noexcept override;
     };
-}
+} // namespace Hush

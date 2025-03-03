@@ -14,7 +14,7 @@
 class StringUtils
 {
 
-  public:
+public:
     /// @brief Converts the given char* to a standard wstring, used for Windows, since char_t* is wchar_t*
     /// @param data String to convert
     /// @return wstring of the converted string, from 8B to 16B chars

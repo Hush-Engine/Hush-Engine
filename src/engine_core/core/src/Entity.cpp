@@ -76,7 +76,7 @@ std::optional<std::string_view> Hush::Entity::GetName() const
 {
     auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
-    const char* name = ecs_get_name(world, m_entityId);
+    const char *name = ecs_get_name(world, m_entityId);
 
     if (name == nullptr)
     {
@@ -97,8 +97,7 @@ bool Hush::Entity::IsComponentRegistered(EntityId componentId) const
 }
 
 Hush::Entity::EntityId Hush::Entity::InternalRegisterCppComponent(
-    ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-    std::uint64_t *id,
+    ComponentTraits::detail::EEntityRegisterStatus registerStatus, std::uint64_t *id,
     const ComponentTraits::ComponentInfo &desc) const
 {
     return m_ownerScene->InternalRegisterCppComponent(registerStatus, id, desc);

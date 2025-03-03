@@ -38,7 +38,7 @@ namespace Hush
     /// TODO: async interfaces.
     class IFile
     {
-      public:
+    public:
         /// Errors that can occur when reading or writing a file.
         enum class EError
         {
@@ -51,12 +51,14 @@ namespace Hush
             CannotWrite,
             PathDoesntExist
         };
-        template <typename T> using Result = Hush::Result<T, EError>;
+        template <typename T>
+        using Result = Hush::Result<T, EError>;
 
         IFile() = default;
         virtual ~IFile() = default;
 
-        [[nodiscard]] virtual const FileMetadata &GetMetadata() const = 0;
+        [[nodiscard]]
+        virtual const FileMetadata &GetMetadata() const = 0;
 
         /// Writes the file.
         /// @param data Data to write to the file.

@@ -24,7 +24,7 @@
 /// Provides easy access to cross-platform library loading functions
 class LibManager
 {
-  public:
+public:
     /// @brief Opens the selected library path (analogous to dlopen)
     /// @param libraryPath Path of the dynamically linked library
     /// @return A handle of the desired library or null

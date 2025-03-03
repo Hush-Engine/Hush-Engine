@@ -22,7 +22,8 @@ Hush::SharedLibrary::SharedLibrary(void *handle)
 {
 }
 
-Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept : m_nativeHandle(std::exchange(rhs.m_nativeHandle, nullptr))
+Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept
+    : m_nativeHandle(std::exchange(rhs.m_nativeHandle, nullptr))
 {
 }
 

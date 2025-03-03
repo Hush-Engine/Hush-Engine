@@ -29,7 +29,7 @@ TEST_CASE("CFileSystem tests")
         REQUIRE(file.has_value());
 
         // Clean up
-        auto& fileRef = file.assume_value();
+        auto &fileRef = file.assume_value();
         fileRef->Close();
         DeleteFile(tempFilePath);
     }

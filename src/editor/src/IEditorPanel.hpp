@@ -11,7 +11,7 @@ namespace Hush
 
     class IEditorPanel
     {
-      public:
+    public:
         IEditorPanel() noexcept = default;
 
         IEditorPanel(const IEditorPanel &other) = default;

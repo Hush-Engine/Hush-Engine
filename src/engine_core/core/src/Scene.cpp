@@ -377,8 +377,7 @@ Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> component
 }
 
 Hush::Entity::EntityId Hush::Scene::InternalRegisterCppComponent(
-    ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-    std::uint64_t *id,
+    ComponentTraits::detail::EEntityRegisterStatus registerStatus, std::uint64_t *id,
     const ComponentTraits::ComponentInfo &desc)
 {
     // Slow path, the component is zero, which means: 1. It is not registered in this binary instance, or 2. It

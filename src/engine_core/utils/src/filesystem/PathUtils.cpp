@@ -14,7 +14,6 @@ bool PathUtils::FindAndAppendSubDirectory(std::filesystem::path &path, const cha
 {
     PathIterator_t iterator = PathIterator_t(path);
 
-
     for (auto it = iterator; it != PathIterator_t(); ++it)
     {
         std::filesystem::path nextPath = it->path();

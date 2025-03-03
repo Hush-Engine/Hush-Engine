@@ -10,6 +10,6 @@
 
 class PathUtils
 {
-  public:
+public:
     static bool FindAndAppendSubDirectory(std::filesystem::path &path, const char *targetDirectorySubString);
 };

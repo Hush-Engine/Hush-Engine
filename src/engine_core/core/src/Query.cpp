@@ -137,8 +137,7 @@ Hush::RawQuery::QueryIterator Hush::RawQuery::GetIterator()
 }
 
 Hush::impl::QueryImpl::EntityId Hush::impl::QueryImpl::InternalRegisterCppComponent(
-    ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-    std::uint64_t *id,
+    ComponentTraits::detail::EEntityRegisterStatus registerStatus, std::uint64_t *id,
     const ComponentTraits::ComponentInfo &desc)
 {
     Scene *scene = m_rawQuery.GetScene();

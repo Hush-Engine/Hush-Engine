@@ -130,8 +130,7 @@ namespace Hush
         }
 
         Entity::EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-                                                      std::uint64_t *id,
-                                                      const ComponentTraits::ComponentInfo &desc);
+                                                      std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
 
         [[nodiscard]]
         void *GetWorld() const

@@ -12,10 +12,10 @@ namespace Hush
 {
     class TitleBarMenuPanel final : public IEditorPanel
     {
-      public:
+    public:
         void OnRender() noexcept override;
 
-      private:
+    private:
         void FileMenuOptions();
     };
 } // namespace Hush

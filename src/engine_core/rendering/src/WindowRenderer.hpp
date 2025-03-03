@@ -21,7 +21,7 @@ namespace Hush
 {
     class WindowRenderer
     {
-      public:
+    public:
         WindowRenderer(const char *windowName) noexcept;
 
         WindowRenderer(WindowRenderer &&other) = default;
@@ -38,9 +38,10 @@ namespace Hush
 
         IRenderer *GetInternalRenderer() noexcept;
 
-        [[nodiscard]] bool IsActive() const noexcept;
+        [[nodiscard]]
+        bool IsActive() const noexcept;
 
-      private:
+    private:
         /// @brief Pointer that represents the unique instance of an SDL window associated with this context
         /// (This is declared as a raw pointer for compatibility with C)
         SDL_Window *m_windowPtr = nullptr;

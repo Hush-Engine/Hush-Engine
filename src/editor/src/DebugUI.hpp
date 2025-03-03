@@ -11,7 +11,6 @@
 // #include <DotnetHost.hpp>
 // #include <ScriptingManager.hpp>
 
-
 #if defined(_WIN32)
 constexpr std::string_view DOTNET_PATH = "C:/Program Files/dotnet/";
 #elif defined(__APPLE__)
@@ -28,8 +27,7 @@ namespace Hush
 {
     class DebugUI final : public IEditorPanel
     {
-      public:
-        
+    public:
         DebugUI()
         {
             // this->m_dotnetHost = std::make_shared<DotnetHost>(DOTNET_PATH.data());
@@ -102,22 +100,24 @@ namespace Hush
             ImGui::End();
         }
 
-        static inline bool MouseInfoEnabled() {
+        static inline bool MouseInfoEnabled()
+        {
             return S_SHOW_MOUSE_INFO;
         }
-        static inline bool KeyboardInfoEnabled() {
+        static inline bool KeyboardInfoEnabled()
+        {
             return S_SHOW_KEYBOARD_INFO;
         }
 
-      private:
+    private:
         static inline bool S_SHOW_MOUSE_INFO = false;
         static inline bool S_SHOW_KEYBOARD_INFO = false;
         // std::shared_ptr<DotnetHost> m_dotnetHost = nullptr;
         // std::unique_ptr<ScriptingManager> m_manager;
-        char* m_hashOutput;
-        char* m_className;
-        char* m_methodName;
-        char* m_name;
-        char* m_toHash;
+        char *m_hashOutput;
+        char *m_className;
+        char *m_methodName;
+        char *m_name;
+        char *m_toHash;
     };
-}
+} // namespace Hush

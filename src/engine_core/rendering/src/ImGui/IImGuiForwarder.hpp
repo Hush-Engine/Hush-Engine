@@ -11,7 +11,7 @@ namespace Hush
 {
     class IImGuiForwarder
     {
-      public:
+    public:
         IImGuiForwarder() = default;
 
         virtual ~IImGuiForwarder() = default;

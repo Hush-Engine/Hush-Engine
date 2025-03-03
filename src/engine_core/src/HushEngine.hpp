@@ -13,7 +13,7 @@ namespace Hush
 {
     class HushEngine
     {
-      public:
+    public:
         /// <summary>
         /// Initializes the HushEngine with all its properties
         /// </summary>
@@ -38,7 +38,7 @@ namespace Hush
         /// </summary>
         void Quit();
 
-      private:
+    private:
         void Init();
 
         std::unique_ptr<IApplication> m_app;

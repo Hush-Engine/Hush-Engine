@@ -23,7 +23,7 @@ namespace Hush
     /// </summary>
     class DotnetHost
     {
-      public:
+    public:
         /// <summary>
         /// Creates a new .NET host using hostfxr with the provided path of the runtime
         /// </summary>
@@ -41,7 +41,7 @@ namespace Hush
 
         get_function_pointer_fn GetFunctionGetterFuncPtr();
 
-      private:
+    private:
         // Declare function pointers for the coreclr functions
         hostfxr_initialize_for_dotnet_command_line_fn m_cmdLineFuncPtr = nullptr;
         hostfxr_initialize_for_runtime_config_fn m_initFuncPtr = nullptr;
@@ -60,6 +60,7 @@ namespace Hush
 
         bool LoadAssemblyFromPath(load_assembly_fn assemblyLoader);
 
-        template <class T> T LoadSymbol(void *sharedLibrary, const char *name);
+        template <class T>
+        T LoadSymbol(void *sharedLibrary, const char *name);
     };
 } // namespace Hush

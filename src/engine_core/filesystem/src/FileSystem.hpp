@@ -22,7 +22,7 @@ namespace Hush
     /// Resource sources must live until all of their children are deleted.
     class IFileSystem
     {
-      public:
+    public:
         /// Errors when loading data.
         enum class EError
         {

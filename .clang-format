@@ -9,6 +9,7 @@ AccessModifierOffset: -4
 AlwaysBreakTemplateDeclarations: Yes
 BreakAfterAttributes: Always
 PackConstructorInitializers: Never
+SortIncludes: Never
 ---
 Language: CSharp
 BasedOnStyle: Microsoft

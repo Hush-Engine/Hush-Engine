@@ -16,17 +16,22 @@ namespace Hush
     public:
         VulkanAllocatedBuffer() = default;
 
-        VulkanAllocatedBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocator allocator);
+        VulkanAllocatedBuffer(uint32_t size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+                              VmaAllocator allocator);
 
         void Dispose(VmaAllocator allocator) const;
 
-        [[nodiscard]] uint32_t GetSize() const noexcept;
+        [[nodiscard]]
+        uint32_t GetSize() const noexcept;
 
-        [[nodiscard]] VmaAllocation GetAllocation();
+        [[nodiscard]]
+        VmaAllocation GetAllocation();
 
-        [[nodiscard]] VkBuffer GetBuffer();
+        [[nodiscard]]
+        VkBuffer GetBuffer();
 
-        [[nodiscard]] VmaAllocationInfo& GetAllocationInfo() noexcept;
+        [[nodiscard]]
+        VmaAllocationInfo &GetAllocationInfo() noexcept;
 
     private:
         VkBuffer m_buffer = nullptr;
@@ -41,4 +46,4 @@ namespace Hush
 
         VmaAllocator m_allocatorRef;
     };
-}
+} // namespace Hush

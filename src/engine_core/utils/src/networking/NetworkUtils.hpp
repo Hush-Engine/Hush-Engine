@@ -13,7 +13,8 @@ namespace Hush::Networking
 {
 
 #if HUSH_PLATFORM_WIN
-    template <uint32_t N> constexpr auto SystemOpenURL(const char (&url)[N])
+    template <uint32_t N>
+    constexpr auto SystemOpenURL(const char (&url)[N])
     {
         const char *cmd = StringUtils::CompileTimeConcat("start ", url).data();
         return system(cmd);

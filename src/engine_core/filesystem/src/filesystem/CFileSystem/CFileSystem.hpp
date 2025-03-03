@@ -18,12 +18,13 @@ namespace Hush
     /// For more complex scenarios, look at memory mapped sources.
     class CFileSystem final : public IFileSystem
     {
-      public:
+    public:
         CFileSystem(std::string_view root);
 
         CFileSystem(const CFileSystem &) = delete;
 
-        CFileSystem(CFileSystem &&rhs) noexcept : mLoadedFiles(std::move(rhs.mLoadedFiles))
+        CFileSystem(CFileSystem &&rhs) noexcept
+            : mLoadedFiles(std::move(rhs.mLoadedFiles))
         {
         }
 
@@ -38,10 +39,9 @@ namespace Hush
         ~CFileSystem() override = default;
 
         Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::filesystem::path vfsPath,
-                                                               std::filesystem::path path,
-                                                               EFileOpenMode mode) override;
+                                                               std::filesystem::path path, EFileOpenMode mode) override;
 
-      private:
+    private:
         std::filesystem::path mRoot;
         std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> mLoadedFiles;
     };

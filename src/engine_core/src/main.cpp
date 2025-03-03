@@ -1,7 +1,6 @@
 #include "HushEngine.hpp"
 #include "Scene.hpp"
 
-
 int main()
 {
     Hush::HushEngine engine;

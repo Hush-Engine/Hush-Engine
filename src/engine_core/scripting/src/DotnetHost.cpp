@@ -144,7 +144,8 @@ bool Hush::DotnetHost::LoadAssemblyFromPath(load_assembly_fn assemblyLoader)
     return rc == 0;
 }
 
-template <class T> T Hush::DotnetHost::LoadSymbol(void *sharedLibrary, const char *name)
+template <class T>
+T Hush::DotnetHost::LoadSymbol(void *sharedLibrary, const char *name)
 {
     void *libraryPtr = LibManager::DynamicLoadSymbol(sharedLibrary, name);
     return reinterpret_cast<T>(libraryPtr);

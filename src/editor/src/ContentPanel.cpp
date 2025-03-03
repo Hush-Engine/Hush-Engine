@@ -6,7 +6,6 @@ void Hush::ContentPanel::OnRender() noexcept
 {
     if (ImGui::Begin("Project", nullptr, CONTENT_PANEL_FLAGS))
     {
-    
     }
     ImGui::End();
 }

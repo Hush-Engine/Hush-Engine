@@ -211,8 +211,7 @@ namespace Hush
 
             [[nodiscard]]
             EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
-                                                  std::uint64_t *id,
-                                                  const ComponentTraits::ComponentInfo &desc);
+                                                  std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
 
         private:
             RawQuery m_rawQuery;

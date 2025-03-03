@@ -32,9 +32,8 @@ namespace Hush::Tests
         return str;
     }
 
-
     inline void DeleteFile(const std::string &path)
     {
         std::filesystem::remove(path);
     }
-};
+}; // namespace Hush::Tests

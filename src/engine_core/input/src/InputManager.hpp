@@ -13,7 +13,8 @@
 namespace Hush
 {
 
-    enum class ECursorLockMode {
+    enum class ECursorLockMode
+    {
         Free = 0,
         Locked = 1
     };
@@ -21,7 +22,7 @@ namespace Hush
     class InputManager
     {
     public:
-        /// @brief Evaluates to true whilst the key is pressed down 
+        /// @brief Evaluates to true whilst the key is pressed down
         static bool IsKeyDown(EKeyCode key);
 
         /// @brief Evaluates to true the frame the key is identified as EKeyState::Pressed
@@ -42,7 +43,7 @@ namespace Hush
         /// @brief Gets the vector of the mouse's acceleration in pixels/s^2
         static glm::vec2 GetMouseAcceleration();
 
-        static const glm::vec2& GetMouseScrollAcceleration();
+        static const glm::vec2 &GetMouseScrollAcceleration();
 
         /* Methods to send events from SDL */
 
@@ -66,7 +67,7 @@ namespace Hush
         // NOLINTNEXTLINE
         static MouseData S_MOUSE_DATA;
 
-        static void UpdateKeyStateFromData(KeyData& keyData, EKeyState incomingState);
+        static void UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState);
 
         static bool KeyMapContains(EKeyCode key);
 

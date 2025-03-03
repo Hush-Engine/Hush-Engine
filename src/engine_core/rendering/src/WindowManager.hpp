@@ -12,7 +12,7 @@ namespace Hush
 {
     class WindowManager
     {
-      public:
+    public:
         static WindowRenderer *GetMainWindow()
         {
             return s_windowRenderer;
@@ -27,7 +27,7 @@ namespace Hush
             s_windowRenderer = window;
         }
 
-      private:
+    private:
         static inline WindowRenderer *s_windowRenderer = nullptr;
     };
 } // namespace Hush

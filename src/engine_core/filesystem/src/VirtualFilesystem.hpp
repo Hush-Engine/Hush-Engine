@@ -30,10 +30,11 @@ namespace Hush
 
         struct ResolvedPath
         {
-            IFileSystem* filesystem = nullptr;
+            IFileSystem *filesystem = nullptr;
             std::string_view path;
         };
-      public:
+
+    public:
         enum class EError
         {
             None,
@@ -61,14 +62,16 @@ namespace Hush
 
         std::vector<std::string_view> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
 
-        Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath, EFileOpenMode mode = EFileOpenMode::Read);
+        Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath,
+                                                               EFileOpenMode mode = EFileOpenMode::Read);
 
-        template <class T, class... Args> void MountFileSystem(std::string_view path, Args &&...args)
+        template <class T, class... Args>
+        void MountFileSystem(std::string_view path, Args &&...args)
         {
             MountFileSystemInternal(path, std::make_unique<T>(std::forward<Args>(args)...));
         }
 
-      private:
+    private:
         void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);
 
         std::optional<ResolvedPath> ResolveFileSystem(std::string_view path);

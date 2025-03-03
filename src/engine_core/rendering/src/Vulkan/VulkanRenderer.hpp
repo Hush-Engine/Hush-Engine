@@ -45,17 +45,17 @@ namespace Hush
     class VulkanRenderer final : public IRenderer
     {
     public:
-        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char* functionName, void* userData);
-        
+        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char *functionName, void *userData);
+
         /// @brief Creates a new vulkan renderer from a given window context
         /// @param windowContext opaque pointer to the window context
-        VulkanRenderer(void* windowContext);
+        VulkanRenderer(void *windowContext);
 
-        VulkanRenderer(const VulkanRenderer&) = delete;
-        VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+        VulkanRenderer(const VulkanRenderer &) = delete;
+        VulkanRenderer &operator=(const VulkanRenderer &) = delete;
 
-        VulkanRenderer(VulkanRenderer&& rhs) noexcept;
-        VulkanRenderer& operator=(VulkanRenderer&& rhs) noexcept;
+        VulkanRenderer(VulkanRenderer &&rhs) noexcept;
+        VulkanRenderer &operator=(VulkanRenderer &&rhs) noexcept;
 
         ~VulkanRenderer() override;
 
@@ -73,59 +73,76 @@ namespace Hush
 
         void EndUIFrame() const noexcept override;
 
-        void HandleEvent(const SDL_Event* event) noexcept override;
+        void HandleEvent(const SDL_Event *event) noexcept override;
 
         void UpdateSceneObjects(float delta) override;
 
         void Dispose();
 
-        void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function) noexcept;
+        void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
-        FrameData& GetCurrentFrame() noexcept;
+        FrameData &GetCurrentFrame() noexcept;
 
-        FrameData& GetLastFrame() noexcept;
+        FrameData &GetLastFrame() noexcept;
 
         /* CONSTANT GETTERS */
 
-		[[nodiscard]] VkSampler GetDefaultSamplerLinear() noexcept;
+        [[nodiscard]]
+        VkSampler GetDefaultSamplerLinear() noexcept;
 
-		[[nodiscard]] VkSampler GetDefaultSamplerNearest() noexcept;
+        [[nodiscard]]
+        VkSampler GetDefaultSamplerNearest() noexcept;
 
-        [[nodiscard]] AllocatedImage GetDefaultWhiteImage() const noexcept;
+        [[nodiscard]]
+        AllocatedImage GetDefaultWhiteImage() const noexcept;
 
-        [[nodiscard]] GLTFMetallicRoughness& GetMetalRoughMaterial() noexcept;
+        [[nodiscard]]
+        GLTFMetallicRoughness &GetMetalRoughMaterial() noexcept;
 
-        [[nodiscard]] DescriptorAllocatorGrowable& GlobalDescriptorAllocator() noexcept;
+        [[nodiscard]]
+        DescriptorAllocatorGrowable &GlobalDescriptorAllocator() noexcept;
 
-        [[nodiscard]] VmaAllocator GetVmaAllocator() noexcept;
+        [[nodiscard]]
+        VmaAllocator GetVmaAllocator() noexcept;
 
-        [[nodiscard]] VkInstance GetVulkanInstance() noexcept;
+        [[nodiscard]]
+        VkInstance GetVulkanInstance() noexcept;
 
-        [[nodiscard]] VkDevice GetVulkanDevice() noexcept;
+        [[nodiscard]]
+        VkDevice GetVulkanDevice() noexcept;
 
-        [[nodiscard]] VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() noexcept;
+        [[nodiscard]]
+        VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() noexcept;
 
-        [[nodiscard]] const AllocatedImage& GetDrawImage() const noexcept;
-        
-        //Non const variant
-        [[nodiscard]] AllocatedImage& GetDrawImage() noexcept;
+        [[nodiscard]]
+        const AllocatedImage &GetDrawImage() const noexcept;
 
-        [[nodiscard]] const AllocatedImage& GetDepthImage() const noexcept;
-        
-        //Non const variant
-        [[nodiscard]] AllocatedImage& GetDepthImage() noexcept;
+        // Non const variant
+        [[nodiscard]]
+        AllocatedImage &GetDrawImage() noexcept;
 
-        [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
+        [[nodiscard]]
+        const AllocatedImage &GetDepthImage() const noexcept;
 
-        [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
+        // Non const variant
+        [[nodiscard]]
+        AllocatedImage &GetDepthImage() noexcept;
 
-        [[nodiscard]] void* GetWindowContext() const noexcept override;
+        [[nodiscard]]
+        VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
 
-        VulkanSwapchain& GetSwapchain();
+        [[nodiscard]]
+        VkQueue GetGraphicsQueue() const noexcept;
 
-        GPUMeshBuffers UploadMesh(const std::vector<uint32_t>& indices, const std::vector<Vertex>& vertices);
+        [[nodiscard]]
+        void *GetWindowContext() const noexcept override;
 
-		AllocatedImage CreateImage(const void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        VulkanSwapchain &GetSwapchain();
+
+        GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Vertex> &vertices);
+
+        AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+                                   bool mipmapped = false);
 
         VkSurfaceKHR GetSurface() noexcept;
 
@@ -136,14 +153,14 @@ namespace Hush
 
         void CreateSyncObjects();
 
-        VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
-            VkSemaphoreSubmitInfo* waitSemaphoreInfo);
+        VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo *cmd, VkSemaphoreSubmitInfo *signalSemaphoreInfo,
+                                 VkSemaphoreSubmitInfo *waitSemaphoreInfo);
 
         void LoadDebugMessenger();
 
         static uint32_t LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+                                        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
         void InitVmaAllocator();
 
@@ -152,7 +169,7 @@ namespace Hush
         void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 
         void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
-            VkExtent2D dstSize);
+                              VkExtent2D dstSize);
 
         void InitDescriptors() noexcept;
 
@@ -172,14 +189,13 @@ namespace Hush
 
         void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
 
-        VkCommandBuffer PrepareCommandBuffer(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+        VkCommandBuffer PrepareCommandBuffer(FrameData &currentFrame, uint32_t *swapchainImageIndex);
 
         void ResizeSwapchain();
 
-		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
-
-        void DestroyImage(const AllocatedImage& img);
+        void DestroyImage(const AllocatedImage &img);
 
         void *m_windowContext;
         // TODO: Send all of these to a custom struct holding the pointers
@@ -196,20 +212,20 @@ namespace Hush
         VkDescriptorSetLayout m_drawImageDescriptorLayout = nullptr;
         VkPipeline m_gradientPipeline = nullptr;
         VkPipelineLayout m_gradientPipelineLayout = nullptr;
-		VkPipelineLayout m_trianglePipelineLayout = nullptr;
-		VkPipeline m_trianglePipeline = nullptr;
-		VkPipelineLayout m_meshPipelineLayout = nullptr;
-		VkPipeline m_meshPipeline = nullptr;
+        VkPipelineLayout m_trianglePipelineLayout = nullptr;
+        VkPipeline m_trianglePipeline = nullptr;
+        VkPipelineLayout m_meshPipelineLayout = nullptr;
+        VkPipeline m_meshPipeline = nullptr;
         GPUSceneData m_sceneData;
         VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
 
         std::vector<std::shared_ptr<MeshAsset>> m_testMeshes;
 
-		GPUMeshBuffers m_rectangle;
+        GPUMeshBuffers m_rectangle;
 
         uint32_t m_graphicsQueueFamily = 0u;
         DescriptorAllocatorGrowable m_globalDescriptorAllocator{};
-        
+
         VkExtent2D m_drawExtent{};
         float m_renderScale = 1.0f;
         uint32_t m_width = 0u;
@@ -222,18 +238,18 @@ namespace Hush
         std::unordered_map<std::string, std::shared_ptr<RenderableNode>> m_loadedNodes;
 
         // Test stuff
-		AllocatedImage m_whiteImage{};
-		AllocatedImage m_blackImage{};
-		AllocatedImage m_greyImage{};
+        AllocatedImage m_whiteImage{};
+        AllocatedImage m_blackImage{};
+        AllocatedImage m_greyImage{};
         AllocatedImage m_errorCheckerboardImage{};
         VkDescriptorSetLayout m_singleImageDescriptorLayout;
 
-		VkMaterialInstance m_defaultData;
-		GLTFMetallicRoughness m_metalRoughMaterial;
+        VkMaterialInstance m_defaultData;
+        GLTFMetallicRoughness m_metalRoughMaterial;
         VulkanFullScreenPass m_gridEffect;
 
-		VkSampler m_defaultSamplerLinear;
-		VkSampler m_defaultSamplerNearest;
+        VkSampler m_defaultSamplerLinear;
+        VkSampler m_defaultSamplerNearest;
 
         EditorCamera m_editorCamera;
 

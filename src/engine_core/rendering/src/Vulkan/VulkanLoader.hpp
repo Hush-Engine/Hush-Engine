@@ -1,10 +1,10 @@
 #pragma once
 
-//TODO: Move these undefs to the common.hpp file after dev merge
-// remove stupid MSVC min/max macro definitions
+// TODO: Move these undefs to the common.hpp file after dev merge
+//  remove stupid MSVC min/max macro definitions
 #ifdef WIN32
-	#undef min
-	#undef max
+#undef min
+#undef max
 #endif
 
 #include <vector>
@@ -19,52 +19,65 @@
 #include "Shared/ImageTexture.hpp"
 #include "VulkanMeshNode.hpp"
 
-namespace Hush {
+namespace Hush
+{
 
-	struct GeoSurface {
-		uint32_t startIndex;
-		uint32_t count;
-		std::shared_ptr<VkMaterialInstance> material;
-	};
+    struct GeoSurface
+    {
+        uint32_t startIndex;
+        uint32_t count;
+        std::shared_ptr<VkMaterialInstance> material;
+    };
 
-	struct MeshAsset {
-		std::string name;
+    struct MeshAsset
+    {
+        std::string name;
 
-		std::vector<GeoSurface> surfaces;
-		GPUMeshBuffers meshBuffers;
-	};
+        std::vector<GeoSurface> surfaces;
+        GPUMeshBuffers meshBuffers;
+    };
 
-	//forward declaration
-	class VulkanRenderer;
-	class VulkanAllocatedBuffer;
+    // forward declaration
+    class VulkanRenderer;
+    class VulkanAllocatedBuffer;
 
-	// TODO: Make non-static
-	class VulkanLoader {
+    // TODO: Make non-static
+    class VulkanLoader
+    {
 
-	public:
-		enum class EError {
-			None = 0,
-			FileNotFound,
-			InvalidMeshFile,
-			FormatNotSupported
-		};
+    public:
+        enum class EError
+        {
+            None = 0,
+            FileNotFound,
+            InvalidMeshFile,
+            FormatNotSupported
+        };
 
-		static Result<std::vector<std::shared_ptr<VulkanMeshNode>>, EError> LoadGltfMeshes(VulkanRenderer* engine, std::filesystem::path filePath);
+        static Result<std::vector<std::shared_ptr<VulkanMeshNode>>, EError> LoadGltfMeshes(
+            VulkanRenderer *engine, std::filesystem::path filePath);
 
-		static AllocatedImage LoadTexture(VulkanRenderer* engine, const ImageTexture& texture);
+        static AllocatedImage LoadTexture(VulkanRenderer *engine, const ImageTexture &texture);
 
-	private:
+    private:
+        static std::vector<AllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine);
 
-		static std::vector<AllocatedImage> LoadAllTextures(const fastgltf::Asset& asset, VulkanRenderer* engine);
+        static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &accessors,
+                                                     std::vector<uint32_t> &indicesRef,
+                                                     std::vector<Vertex> &verticesRef, VulkanRenderer *engine);
 
-		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh& mesh, const fastgltf::Asset& accessors, std::vector<uint32_t>& indicesRef, std::vector<Vertex>& verticesRef, VulkanRenderer* engine);
+        static std::shared_ptr<VkMaterialInstance> GenerateMaterial(size_t materialIdx, const fastgltf::Asset &asset,
+                                                                    VulkanRenderer *engine,
+                                                                    VulkanAllocatedBuffer *sceneMaterialBuffer,
+                                                                    DescriptorAllocatorGrowable &allocatorPool,
+                                                                    const std::vector<AllocatedImage> &loadedTextures);
 
-		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(size_t materialIdx, const fastgltf::Asset& asset, VulkanRenderer* engine, VulkanAllocatedBuffer* sceneMaterialBuffer, DescriptorAllocatorGrowable& allocatorPool, const std::vector<AllocatedImage>& loadedTextures);
+        static std::optional<AllocatedImage> LoadedTextureFromMaterial(
+            const fastgltf::Asset &asset, const fastgltf::Material &material,
+            const std::vector<AllocatedImage> &loadedTextures);
 
-		static std::optional<AllocatedImage> LoadedTextureFromMaterial(const fastgltf::Asset& asset, const fastgltf::Material& material, const std::vector<AllocatedImage>& loadedTextures);
+        static constexpr VkFilter ExtractFilter(const fastgltf::Filter &filter);
+        static constexpr VkSamplerMipmapMode ExtractMipMapMode(const fastgltf::Filter &filter);
+    };
 
-		static constexpr VkFilter ExtractFilter(const fastgltf::Filter& filter);
-		static constexpr VkSamplerMipmapMode ExtractMipMapMode(const fastgltf::Filter& filter);
-	};
-
-}
+} // namespace Hush

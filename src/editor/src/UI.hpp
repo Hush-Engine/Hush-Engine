@@ -15,14 +15,16 @@ namespace Hush
 {
     class UI
     {
-      public:
+    public:
         UI();
 
         void DrawPanels();
 
         template <class T>
-        [[nodiscard]] T& GetPanel() const noexcept {
-            return *static_cast<T*>(this->m_activePanels.at(typeid(T)).get());
+        [[nodiscard]]
+        T &GetPanel() const noexcept
+        {
+            return *static_cast<T *>(this->m_activePanels.at(typeid(T)).get());
         }
 
         static bool Spinner(const char *label, float radius, int thickness,
@@ -32,14 +34,15 @@ namespace Hush
 
         static void DockSpace();
 
-        static UI& Get();
+        static UI &Get();
 
-      private:
+    private:
         static void DrawPlayButton();
 
-        static inline UI* s_instance;
+        static inline UI *s_instance;
 
-        template <class T> static std::unique_ptr<T> CreatePanel()
+        template <class T>
+        static std::unique_ptr<T> CreatePanel()
         {
             return std::make_unique<T>();
         }

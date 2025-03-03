@@ -189,7 +189,7 @@ namespace Hush::Threading
     } // namespace impl
 
     template <typename T>
-     struct [[nodiscard]] Task final
+    struct [[nodiscard]] Task final
     {
         using promise_type = impl::TaskPromise<T>;
         using value_type = T;
@@ -333,4 +333,4 @@ namespace Hush::Threading
         }
 
     } // namespace impl
-} // namespace Hush
+} // namespace Hush::Threading

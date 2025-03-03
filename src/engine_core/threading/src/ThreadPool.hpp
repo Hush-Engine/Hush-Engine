@@ -64,7 +64,7 @@ namespace Hush::Threading
 
             /// Steals a task from another thread.
             /// @return Steals a task from another thread.
-            TaskOperation * StealFromOtherThread(std::uint32_t threadNumber);
+            TaskOperation *StealFromOtherThread(std::uint32_t threadNumber);
 
         private:
             /// Reference to the thread pool, it is used to push tasks to the global queue in case the worker queue is
@@ -116,8 +116,7 @@ namespace Hush::Threading
             /// @param threadPool The thread pool that the worker thread belongs to.
             /// @param threadIndex The index of the worker thread.
             /// @param options The options for the worker thread.
-            WorkerThread(std::unique_ptr<WorkerQueue> workerQueue,
-                         std::uint32_t threadIndex,
+            WorkerThread(std::unique_ptr<WorkerQueue> workerQueue, std::uint32_t threadIndex,
                          ThreadOptions options) noexcept;
 
             WorkerThread(const WorkerThread &) = delete;
@@ -192,8 +191,7 @@ namespace Hush::Threading
         friend class ThreadPool;
         friend class impl::WorkerThread;
 
-        explicit TaskOperation(ThreadPool &executor,
-                               std::int32_t threadAffinity = -1,
+        explicit TaskOperation(ThreadPool &executor, std::int32_t threadAffinity = -1,
                                bool shouldDeleteWhenDone = false)
             : m_executor(executor),
               m_threadAffinity(threadAffinity),
@@ -252,8 +250,8 @@ namespace Hush::Threading
         /// @param args Arguments to pass to the function.
         /// @return Task wrapped that will be executed by the thread pool.
         template <typename Fn, typename... Args>
-        requires !Concepts::Awaitable<std::invoke_result_t<Fn, Args...>>
-        Job ScheduleFunction(Fn &&function, Args &&...args)
+            requires !Concepts::Awaitable<std::invoke_result_t<Fn, Args...>>
+                     Job ScheduleFunction(Fn && function, Args &&...args)
         {
             auto wrapper = [this](Fn &&function, Args &&...args) -> Job {
                 co_await ScheduleCurrentTask();
@@ -287,7 +285,7 @@ namespace Hush::Threading
         /// Steals a task from another thread.
         /// @param threadNumber The thread number of the current thread.
         /// @return Steals a task from another thread.
-        TaskOperation * StealFromOtherThread(std::uint32_t threadNumber);
+        TaskOperation *StealFromOtherThread(std::uint32_t threadNumber);
 
         /// Steals a task from the global queue.
         /// @return A task from the global queue.
