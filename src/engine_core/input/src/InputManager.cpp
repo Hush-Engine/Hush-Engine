@@ -38,16 +38,15 @@ bool Hush::InputManager::GetMouseButtonPressed(EMouseButton button)
 
 glm::vec2 Hush::InputManager::GetMousePosition()
 {
-	return glm::vec2{ S_MOUSE_DATA.positionX, S_MOUSE_DATA.positionY };
+	return glm::vec2{S_MOUSE_DATA.positionX, S_MOUSE_DATA.positionY};
 }
 
 glm::vec2 Hush::InputManager::GetMouseAcceleration()
 {
-	return glm::vec2{ S_MOUSE_DATA.accelerationX, S_MOUSE_DATA.accelerationY };
+	return glm::vec2{S_MOUSE_DATA.accelerationX, S_MOUSE_DATA.accelerationY};
 }
 
-
-const glm::vec2& Hush::InputManager::GetMouseScrollAcceleration()
+const glm::vec2 &Hush::InputManager::GetMouseScrollAcceleration()
 {
 	return S_MOUSE_DATA.wheelAcceleration;
 }
@@ -55,7 +54,7 @@ const glm::vec2& Hush::InputManager::GetMouseScrollAcceleration()
 void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state)
 {
 	auto mappedKeyCode = static_cast<EKeyCode>(key);
-	KeyData data{ mappedKeyCode, state };
+	KeyData data{mappedKeyCode, state};
 	// If the key is already inserted and the state is not none
 	if (KeyMapContains(mappedKeyCode))
 	{
@@ -71,7 +70,7 @@ void Hush::InputManager::SendMouseButtonEvent(MouseButton mouseButton, EKeyState
 }
 
 void Hush::InputManager::SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX,
-	int32_t accelerationY)
+												int32_t accelerationY)
 {
 	S_MOUSE_DATA.positionX = posX;
 	S_MOUSE_DATA.positionY = posY;
@@ -98,7 +97,7 @@ void Hush::InputManager::SetCursorLock(ECursorLockMode lockMode)
 	SDL_SetRelativeMouseMode(static_cast<SDL_bool>(lockMode));
 }
 
-void Hush::InputManager::UpdateKeyStateFromData(KeyData& keyData, EKeyState incomingState)
+void Hush::InputManager::UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState)
 {
 	// Check if we already had a current state in our entry, and if so, move that to the previous state
 	KeyData existingData = S_KEY_DATA_BY_CODE[keyData.code];

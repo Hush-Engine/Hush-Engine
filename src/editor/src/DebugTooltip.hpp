@@ -3,17 +3,19 @@
 #include "IEditorPanel.hpp"
 #include <glm/vec3.hpp>
 
-namespace Hush {
-	class DebugTooltip final : public IEditorPanel {
+namespace Hush
+{
+	class DebugTooltip final : public IEditorPanel
+	{
 	public:
-		static inline DebugTooltip* s_debugTooltip = nullptr;
+		static inline DebugTooltip *s_debugTooltip = nullptr;
 		void OnRender() noexcept override;
 
-		const glm::vec3& GetScale() const;
+		const glm::vec3 &GetScale() const;
 
-		const glm::vec3& GetRotation() const;
+		const glm::vec3 &GetRotation() const;
 
-		const glm::vec3& GetTranslation() const;
+		const glm::vec3 &GetTranslation() const;
 
 	private:
 		glm::vec3 m_scale{0.5f};
@@ -21,4 +23,4 @@ namespace Hush {
 		glm::vec3 m_translation;
 	};
 
-}
+} // namespace Hush

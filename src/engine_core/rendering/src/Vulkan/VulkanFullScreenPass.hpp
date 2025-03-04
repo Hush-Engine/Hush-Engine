@@ -3,22 +3,24 @@
 #define VK_NO_PROTOTYPES
 #include <volk.h>
 
-namespace Hush {
+namespace Hush
+{
 	class VulkanRenderer;
 	class ShaderMaterial;
 
-	class VulkanFullScreenPass {
+	class VulkanFullScreenPass
+	{
 	public:
 		VulkanFullScreenPass() = default;
 
-		VulkanFullScreenPass(VulkanRenderer* renderer, std::shared_ptr<ShaderMaterial> material);
+		VulkanFullScreenPass(VulkanRenderer *renderer, std::shared_ptr<ShaderMaterial> material);
 
 		void RecordCommands(VkCommandBuffer cmd, VkDescriptorSet globalDescriptorSet);
-		
-		ShaderMaterial* GetMaterial();
+
+		ShaderMaterial *GetMaterial();
 
 	private:
-		VulkanRenderer* m_renderer = nullptr;
+		VulkanRenderer *m_renderer = nullptr;
 		std::shared_ptr<ShaderMaterial> m_materialInstance;
 	};
-}
+} // namespace Hush

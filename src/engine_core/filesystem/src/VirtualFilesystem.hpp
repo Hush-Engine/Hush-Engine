@@ -1,7 +1,7 @@
 /*! \file VirtualFilesystem.hpp
-    \author Alan Ramirez
-    \date 2024-12-07
-    \brief A Virtual filesystem implementation
+	\author Alan Ramirez
+	\date 2024-12-07
+	\brief A Virtual filesystem implementation
 */
 
 #pragma once
@@ -15,64 +15,67 @@
 
 namespace Hush
 {
-    /// The VFS allows to manage paths as virtual locations (that might not refer to the real filesystem).
-    /// For instance, to access an asset, we could use rs://myasset.txt, instead of referring to the physical location
-    /// of the file. This, while introducing overhead, allows to manage more complex scenarios such as
-    /// having the game files in a ZIP or a tar file. Or some other format.
-    /// To use it, you must instantiate it
-    class VirtualFilesystem final
-    {
-        struct MountPoint
-        {
-            std::string path;
-            std::unique_ptr<IFileSystem> filesystem;
-        };
+	/// The VFS allows to manage paths as virtual locations (that might not refer to the real filesystem).
+	/// For instance, to access an asset, we could use rs://myasset.txt, instead of referring to the physical location
+	/// of the file. This, while introducing overhead, allows to manage more complex scenarios such as
+	/// having the game files in a ZIP or a tar file. Or some other format.
+	/// To use it, you must instantiate it
+	class VirtualFilesystem final
+	{
+		struct MountPoint
+		{
+			std::string path;
+			std::unique_ptr<IFileSystem> filesystem;
+		};
 
-        struct ResolvedPath
-        {
-            IFileSystem* filesystem = nullptr;
-            std::string_view path;
-        };
-      public:
-        enum class EError
-        {
-            None,
-            FileDoesntExist,
-            OperationNotSupported,
-        };
+		struct ResolvedPath
+		{
+			IFileSystem *filesystem = nullptr;
+			std::string_view path;
+		};
 
-        enum class EListOptions
-        {
-            None,
-            Recursive,
-        };
+	public:
+		enum class EError
+		{
+			None,
+			FileDoesntExist,
+			OperationNotSupported,
+		};
 
-        VirtualFilesystem();
+		enum class EListOptions
+		{
+			None,
+			Recursive,
+		};
 
-        ~VirtualFilesystem();
+		VirtualFilesystem();
 
-        VirtualFilesystem(const VirtualFilesystem &) = delete;
-        VirtualFilesystem &operator=(const VirtualFilesystem &) = delete;
+		~VirtualFilesystem();
 
-        VirtualFilesystem(VirtualFilesystem &&rhs) noexcept;
-        VirtualFilesystem &operator=(VirtualFilesystem &&rhs) noexcept;
+		VirtualFilesystem(const VirtualFilesystem &) = delete;
+		VirtualFilesystem &operator=(const VirtualFilesystem &) = delete;
 
-        void Unmount(std::string_view virtualPath);
+		VirtualFilesystem(VirtualFilesystem &&rhs) noexcept;
+		VirtualFilesystem &operator=(VirtualFilesystem &&rhs) noexcept;
 
-        std::vector<std::string_view> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
+		void Unmount(std::string_view virtualPath);
 
-        Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath, EFileOpenMode mode = EFileOpenMode::Read);
+		std::vector<std::string_view> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
 
-        template <class T, class... Args> void MountFileSystem(std::string_view path, Args &&...args)
-        {
-            MountFileSystemInternal(path, std::make_unique<T>(std::forward<Args>(args)...));
-        }
+		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath,
+															   EFileOpenMode mode = EFileOpenMode::Read);
 
-      private:
-        void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);
+		template <class T, class... Args>
+		void MountFileSystem(std::string_view path, Args &&...args)
+		{
+			MountFileSystemInternal(path, std::make_unique<T>(std::forward<Args>(args)...));
+		}
 
-        std::optional<ResolvedPath> ResolveFileSystem(std::string_view path);
+	private:
+		void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);
 
-        std::vector<MountPoint> m_mountedFileSystems;
-    };
+		std::optional<ResolvedPath> ResolveFileSystem(std::string_view path);
+
+		std::vector<MountPoint> m_mountedFileSystems;
+	};
 } // namespace Hush

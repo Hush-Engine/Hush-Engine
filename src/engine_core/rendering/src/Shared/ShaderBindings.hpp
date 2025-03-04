@@ -1,10 +1,13 @@
 #pragma once
 #include <cstdint>
-namespace Hush {
+namespace Hush
+{
 
-	struct ShaderBindings {
+	struct ShaderBindings
+	{
 
-		enum class EBindingType {
+		enum class EBindingType
+		{
 			Unknown,
 			PushConstant,
 			InputVariable,
@@ -24,7 +27,7 @@ namespace Hush {
 			UniformBufferMember,
 		};
 
-		//NOTE: Some of these variables are not all needed for all bindings, but will be there for the applicable ones
+		// NOTE: Some of these variables are not all needed for all bindings, but will be there for the applicable ones
 		uint32_t bindingIndex{};
 		uint32_t size{};
 		uint32_t offset{};
@@ -33,4 +36,4 @@ namespace Hush {
 		EBindingType type = EBindingType::Unknown;
 	};
 
-}
+} // namespace Hush

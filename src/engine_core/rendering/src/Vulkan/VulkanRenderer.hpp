@@ -1,7 +1,7 @@
 /*! \file VulkanRenderer.hpp
-    \author Alan Ramirez Herrera
-    \date 2024-03-03
-    \brief Vulkan implementation for rendering
+	\author Alan Ramirez Herrera
+	\date 2024-03-03
+	\brief Vulkan implementation for rendering
 */
 
 #pragma once
@@ -40,213 +40,229 @@ constexpr uint32_t VK_OPERATION_TIMEOUT_NS = 1'000'000'000; // This is one secon
 
 namespace Hush
 {
-    struct MeshAsset;
+	struct MeshAsset;
 
-    class VulkanRenderer final : public IRenderer
-    {
-    public:
-        static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char* functionName, void* userData);
-        
-        /// @brief Creates a new vulkan renderer from a given window context
-        /// @param windowContext opaque pointer to the window context
-        VulkanRenderer(void* windowContext);
+	class VulkanRenderer final : public IRenderer
+	{
+	public:
+		static PFN_vkVoidFunction CustomVulkanFunctionLoader(const char *functionName, void *userData);
 
-        VulkanRenderer(const VulkanRenderer&) = delete;
-        VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+		/// @brief Creates a new vulkan renderer from a given window context
+		/// @param windowContext opaque pointer to the window context
+		VulkanRenderer(void *windowContext);
 
-        VulkanRenderer(VulkanRenderer&& rhs) noexcept;
-        VulkanRenderer& operator=(VulkanRenderer&& rhs) noexcept;
+		VulkanRenderer(const VulkanRenderer &) = delete;
+		VulkanRenderer &operator=(const VulkanRenderer &) = delete;
 
-        ~VulkanRenderer() override;
+		VulkanRenderer(VulkanRenderer &&rhs) noexcept;
+		VulkanRenderer &operator=(VulkanRenderer &&rhs) noexcept;
 
-        void CreateSwapChain(uint32_t width, uint32_t height) override;
+		~VulkanRenderer() override;
 
-        void InitRendering() override;
+		void CreateSwapChain(uint32_t width, uint32_t height) override;
 
-        void InitializeCommands() noexcept;
+		void InitRendering() override;
 
-        void InitImGui() override;
+		void InitializeCommands() noexcept;
 
-        void Draw(float delta) override;
+		void InitImGui() override;
 
-        void NewUIFrame() const noexcept override;
+		void Draw(float delta) override;
 
-        void EndUIFrame() const noexcept override;
+		void NewUIFrame() const noexcept override;
 
-        void HandleEvent(const SDL_Event* event) noexcept override;
+		void EndUIFrame() const noexcept override;
 
-        void UpdateSceneObjects(float delta) override;
+		void HandleEvent(const SDL_Event *event) noexcept override;
 
-        void Dispose();
+		void UpdateSceneObjects(float delta) override;
 
-        void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function) noexcept;
+		void Dispose();
 
-        FrameData& GetCurrentFrame() noexcept;
+		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept;
 
-        FrameData& GetLastFrame() noexcept;
+		FrameData &GetCurrentFrame() noexcept;
 
-        /* CONSTANT GETTERS */
+		FrameData &GetLastFrame() noexcept;
 
-		[[nodiscard]] VkSampler GetDefaultSamplerLinear() noexcept;
+		/* CONSTANT GETTERS */
 
-		[[nodiscard]] VkSampler GetDefaultSamplerNearest() noexcept;
+		[[nodiscard]]
+		VkSampler GetDefaultSamplerLinear() noexcept;
 
-        [[nodiscard]] AllocatedImage GetDefaultWhiteImage() const noexcept;
+		[[nodiscard]]
+		VkSampler GetDefaultSamplerNearest() noexcept;
 
-        [[nodiscard]] GLTFMetallicRoughness& GetMetalRoughMaterial() noexcept;
+		[[nodiscard]]
+		AllocatedImage GetDefaultWhiteImage() const noexcept;
 
-        [[nodiscard]] DescriptorAllocatorGrowable& GlobalDescriptorAllocator() noexcept;
+		[[nodiscard]]
+		GLTFMetallicRoughness &GetMetalRoughMaterial() noexcept;
 
-        [[nodiscard]] VmaAllocator GetVmaAllocator() noexcept;
+		[[nodiscard]]
+		DescriptorAllocatorGrowable &GlobalDescriptorAllocator() noexcept;
 
-        [[nodiscard]] VkInstance GetVulkanInstance() noexcept;
+		[[nodiscard]]
+		VmaAllocator GetVmaAllocator() noexcept;
 
-        [[nodiscard]] VkDevice GetVulkanDevice() noexcept;
+		[[nodiscard]]
+		VkInstance GetVulkanInstance() noexcept;
 
-        [[nodiscard]] VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() noexcept;
+		[[nodiscard]]
+		VkDevice GetVulkanDevice() noexcept;
 
-        [[nodiscard]] const AllocatedImage& GetDrawImage() const noexcept;
-        
-        //Non const variant
-        [[nodiscard]] AllocatedImage& GetDrawImage() noexcept;
+		[[nodiscard]]
+		VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() noexcept;
 
-        [[nodiscard]] const AllocatedImage& GetDepthImage() const noexcept;
-        
-        //Non const variant
-        [[nodiscard]] AllocatedImage& GetDepthImage() noexcept;
+		[[nodiscard]]
+		const AllocatedImage &GetDrawImage() const noexcept;
 
-        [[nodiscard]] VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
+		// Non const variant
+		[[nodiscard]]
+		AllocatedImage &GetDrawImage() noexcept;
 
-        [[nodiscard]] VkQueue GetGraphicsQueue() const noexcept;
+		[[nodiscard]]
+		const AllocatedImage &GetDepthImage() const noexcept;
 
-        [[nodiscard]] void* GetWindowContext() const noexcept override;
+		// Non const variant
+		[[nodiscard]]
+		AllocatedImage &GetDepthImage() noexcept;
 
-        VulkanSwapchain& GetSwapchain();
+		[[nodiscard]]
+		VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
 
-        GPUMeshBuffers UploadMesh(const std::vector<uint32_t>& indices, const std::vector<Vertex>& vertices);
+		[[nodiscard]]
+		VkQueue GetGraphicsQueue() const noexcept;
 
-		AllocatedImage CreateImage(const void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+		[[nodiscard]]
+		void *GetWindowContext() const noexcept override;
 
-        VkSurfaceKHR GetSurface() noexcept;
+		VulkanSwapchain &GetSwapchain();
 
-        VulkanDeletionQueue GetDeletionQueue() noexcept;
+		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Vertex> &vertices);
 
-    private:
-        void Configure(vkb::Instance vkbInstance);
+		AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+								   bool mipmapped = false);
 
-        void CreateSyncObjects();
+		VkSurfaceKHR GetSurface() noexcept;
 
-        VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
-            VkSemaphoreSubmitInfo* waitSemaphoreInfo);
+		VulkanDeletionQueue GetDeletionQueue() noexcept;
 
-        void LoadDebugMessenger();
+	private:
+		void Configure(vkb::Instance vkbInstance);
 
-        static uint32_t LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+		void CreateSyncObjects();
 
-        void InitVmaAllocator();
+		VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo *cmd, VkSemaphoreSubmitInfo *signalSemaphoreInfo,
+								 VkSemaphoreSubmitInfo *waitSemaphoreInfo);
 
-        void InitRenderables();
+		void LoadDebugMessenger();
 
-        void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+		static uint32_t LogDebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+										VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+										const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
-        void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
-            VkExtent2D dstSize);
+		void InitVmaAllocator();
 
-        void InitDescriptors() noexcept;
+		void InitRenderables();
 
-        void InitPipelines() noexcept;
+		void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 
-        void InitBackgroundPipelines() noexcept;
+		void CopyImageToImage(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
+							  VkExtent2D dstSize);
 
-        void InitMeshPipeline() noexcept;
+		void InitDescriptors() noexcept;
 
-        void InitDefaultData() noexcept;
+		void InitPipelines() noexcept;
 
-        void DrawGeometry(VkCommandBuffer cmd);
+		void InitBackgroundPipelines() noexcept;
 
-        void DrawBackground(VkCommandBuffer cmd) noexcept;
+		void InitMeshPipeline() noexcept;
 
-        void DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor);
+		void InitDefaultData() noexcept;
 
-        void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
+		void DrawGeometry(VkCommandBuffer cmd);
 
-        VkCommandBuffer PrepareCommandBuffer(FrameData& currentFrame, uint32_t* swapchainImageIndex);
+		void DrawBackground(VkCommandBuffer cmd) noexcept;
 
-        void ResizeSwapchain();
+		void DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor);
+
+		void DrawUI(VkCommandBuffer cmd, VkImageView imageView);
+
+		VkCommandBuffer PrepareCommandBuffer(FrameData &currentFrame, uint32_t *swapchainImageIndex);
+
+		void ResizeSwapchain();
 
 		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
+		void DestroyImage(const AllocatedImage &img);
 
-        void DestroyImage(const AllocatedImage& img);
-
-        void *m_windowContext;
-        // TODO: Send all of these to a custom struct holding the pointers
-        VkInstance m_vulkanInstance = nullptr;
-        VkPhysicalDevice m_vulkanPhysicalDevice = nullptr;
-        VkDebugUtilsMessengerEXT m_debugMessenger = nullptr;
-        VkDevice m_device = nullptr;
-        VkSurfaceKHR m_surface{};
-        VkQueue m_graphicsQueue = nullptr;
-        VkFence m_immediateFence = nullptr;
-        VkCommandBuffer m_immediateCommandBuffer = nullptr;
-        VkCommandPool m_immediateCommandPool = nullptr;
-        VkDescriptorSet m_drawImageDescriptors = nullptr;
-        VkDescriptorSetLayout m_drawImageDescriptorLayout = nullptr;
-        VkPipeline m_gradientPipeline = nullptr;
-        VkPipelineLayout m_gradientPipelineLayout = nullptr;
+		void *m_windowContext;
+		// TODO: Send all of these to a custom struct holding the pointers
+		VkInstance m_vulkanInstance = nullptr;
+		VkPhysicalDevice m_vulkanPhysicalDevice = nullptr;
+		VkDebugUtilsMessengerEXT m_debugMessenger = nullptr;
+		VkDevice m_device = nullptr;
+		VkSurfaceKHR m_surface{};
+		VkQueue m_graphicsQueue = nullptr;
+		VkFence m_immediateFence = nullptr;
+		VkCommandBuffer m_immediateCommandBuffer = nullptr;
+		VkCommandPool m_immediateCommandPool = nullptr;
+		VkDescriptorSet m_drawImageDescriptors = nullptr;
+		VkDescriptorSetLayout m_drawImageDescriptorLayout = nullptr;
+		VkPipeline m_gradientPipeline = nullptr;
+		VkPipelineLayout m_gradientPipelineLayout = nullptr;
 		VkPipelineLayout m_trianglePipelineLayout = nullptr;
 		VkPipeline m_trianglePipeline = nullptr;
 		VkPipelineLayout m_meshPipelineLayout = nullptr;
 		VkPipeline m_meshPipeline = nullptr;
-        GPUSceneData m_sceneData;
-        VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
+		GPUSceneData m_sceneData;
+		VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
 
-        std::vector<std::shared_ptr<MeshAsset>> m_testMeshes;
+		std::vector<std::shared_ptr<MeshAsset>> m_testMeshes;
 
 		GPUMeshBuffers m_rectangle;
 
-        uint32_t m_graphicsQueueFamily = 0u;
-        DescriptorAllocatorGrowable m_globalDescriptorAllocator{};
-        
-        VkExtent2D m_drawExtent{};
-        float m_renderScale = 1.0f;
-        uint32_t m_width = 0u;
-        uint32_t m_height = 0u;
-        // draw resources
-        AllocatedImage m_drawImage{};
-        AllocatedImage m_depthImage{};
+		uint32_t m_graphicsQueueFamily = 0u;
+		DescriptorAllocatorGrowable m_globalDescriptorAllocator{};
 
-        DrawContext m_mainDrawContext;
-        std::unordered_map<std::string, std::shared_ptr<RenderableNode>> m_loadedNodes;
+		VkExtent2D m_drawExtent{};
+		float m_renderScale = 1.0f;
+		uint32_t m_width = 0u;
+		uint32_t m_height = 0u;
+		// draw resources
+		AllocatedImage m_drawImage{};
+		AllocatedImage m_depthImage{};
 
-        // Test stuff
+		DrawContext m_mainDrawContext;
+		std::unordered_map<std::string, std::shared_ptr<RenderableNode>> m_loadedNodes;
+
+		// Test stuff
 		AllocatedImage m_whiteImage{};
 		AllocatedImage m_blackImage{};
 		AllocatedImage m_greyImage{};
-        AllocatedImage m_errorCheckerboardImage{};
-        VkDescriptorSetLayout m_singleImageDescriptorLayout;
+		AllocatedImage m_errorCheckerboardImage{};
+		VkDescriptorSetLayout m_singleImageDescriptorLayout;
 
 		VkMaterialInstance m_defaultData;
 		GLTFMetallicRoughness m_metalRoughMaterial;
-        VulkanFullScreenPass m_gridEffect;
+		VulkanFullScreenPass m_gridEffect;
 
 		VkSampler m_defaultSamplerLinear;
 		VkSampler m_defaultSamplerNearest;
 
-        EditorCamera m_editorCamera;
+		EditorCamera m_editorCamera;
 
-        // Frame related data
-        std::array<FrameData, FRAME_OVERLAP> m_frames{};
-        // Frame counter
-        //(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
-        int m_frameNumber = 0;
-        std::unique_ptr<IImGuiForwarder> m_uiForwarder = nullptr;
+		// Frame related data
+		std::array<FrameData, FRAME_OVERLAP> m_frames{};
+		// Frame counter
+		//(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
+		int m_frameNumber = 0;
+		std::unique_ptr<IImGuiForwarder> m_uiForwarder = nullptr;
 
-        VulkanDeletionQueue m_mainDeletionQueue{};
-        VmaAllocator m_allocator = nullptr; // vma lib allocator
-        bool m_resizeRequested = false;
-        VulkanSwapchain m_swapchain{};
-    };
+		VulkanDeletionQueue m_mainDeletionQueue{};
+		VmaAllocator m_allocator = nullptr; // vma lib allocator
+		bool m_resizeRequested = false;
+		VulkanSwapchain m_swapchain{};
+	};
 } // namespace Hush

@@ -1,7 +1,6 @@
 #include "StatsPanel.hpp"
 #include "imgui/imgui.h"
 
-
 void Hush::StatsPanel::OnRender() noexcept
 {
 	ImGui::Begin("Hush Engine Stats");
@@ -23,7 +22,7 @@ void Hush::StatsPanel::SetDrawCallsCount(int32_t count)
 	this->m_drawCallCount = count;
 }
 
-void Hush::StatsPanel::SetDeviceName(const std::string& deviceName)
+void Hush::StatsPanel::SetDeviceName(const std::string &deviceName)
 {
 	this->m_deviceName = deviceName;
 }

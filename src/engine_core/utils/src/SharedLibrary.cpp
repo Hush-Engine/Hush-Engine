@@ -1,7 +1,7 @@
 /*! \file SharedLibrary.hpp
-    \author Alan Ramirez
-    \date 2024-09-22
-    \brief Shared Library implementation
+	\author Alan Ramirez
+	\date 2024-09-22
+	\brief Shared Library implementation
 */
 
 #include "SharedLibrary.hpp"
@@ -18,49 +18,50 @@
 #endif
 
 Hush::SharedLibrary::SharedLibrary(void *handle)
-    : m_nativeHandle(handle)
+	: m_nativeHandle(handle)
 {
 }
 
-Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept : m_nativeHandle(std::exchange(rhs.m_nativeHandle, nullptr))
+Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept
+	: m_nativeHandle(std::exchange(rhs.m_nativeHandle, nullptr))
 {
 }
 
 Hush::SharedLibrary::~SharedLibrary()
 {
-    if (m_nativeHandle)
-    {
+	if (m_nativeHandle)
+	{
 #if HUSH_PLATFORM_WIN
-        CloseHandle(m_nativeHandle);
+		CloseHandle(m_nativeHandle);
 #else
 #endif
-    }
+	}
 }
 Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
-    std::string_view libraryName) noexcept
+	std::string_view libraryName) noexcept
 {
 #if HUSH_PLATFORM_WIN
-    auto *handle = LoadLibraryA(libraryName.data());
+	auto *handle = LoadLibraryA(libraryName.data());
 #else
-    auto *handle = dlopen(libraryPath.data(), RTLD_LAZY);
+	auto *handle = dlopen(libraryPath.data(), RTLD_LAZY);
 
 #endif
 
-    if (handle == nullptr)
-    {
-        LogFormat(ELogLevel::Debug, "Failed to open library: {}", libraryName);
-        return EError::NotFound;
-    }
-    return SharedLibrary(handle);
+	if (handle == nullptr)
+	{
+		LogFormat(ELogLevel::Debug, "Failed to open library: {}", libraryName);
+		return EError::NotFound;
+	}
+	return SharedLibrary(handle);
 }
 
 void *Hush::SharedLibrary::GetRawSymbol(std::string_view symbolName)
 {
 #if HUSH_PLATFORM_WIN
-    auto *winHandle = static_cast<HMODULE>(m_nativeHandle);
+	auto *winHandle = static_cast<HMODULE>(m_nativeHandle);
 
-    return GetProcAddress(winHandle, symbolName.data());
+	return GetProcAddress(winHandle, symbolName.data());
 #else
-    return nullptr;
+	return nullptr;
 #endif
 }

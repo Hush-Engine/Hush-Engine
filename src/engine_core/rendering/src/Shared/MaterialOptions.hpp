@@ -2,9 +2,11 @@
 
 #include <cstdint>
 
-namespace Hush {
+namespace Hush
+{
 	// Flags
-	enum class EAlphaBlendMode : uint32_t {
+	enum class EAlphaBlendMode : uint32_t
+	{
 		None = 0,
 		OneMinusSrcAlpha,
 		OneMinusDestAlpha,
@@ -13,10 +15,11 @@ namespace Hush {
 		SrcAlpha
 	};
 
-	enum class ECullMode : uint32_t {
+	enum class ECullMode : uint32_t
+	{
 		None = 0,
 		Front,
 		Back,
 		FrontAndBack = Front | Back
 	};
-}
+} // namespace Hush

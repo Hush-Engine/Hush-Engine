@@ -1,11 +1,12 @@
 /*! \file {{filename}}
-    \author {{author}}
-    \date {{date}}
-    \brief {{brief}}
+	\author {{author}}
+	\date {{date}}
+	\brief {{brief}}
 */
 
 #pragma once
 
-namespace Hush {
+namespace Hush
+{
 
 }

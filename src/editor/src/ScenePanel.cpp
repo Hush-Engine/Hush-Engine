@@ -7,4 +7,4 @@ void Hush::ScenePanel::OnRender() noexcept
 {
 	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
 	ImGui::End();
-} 
+}

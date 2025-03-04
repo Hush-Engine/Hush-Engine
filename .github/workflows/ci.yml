@@ -84,9 +84,9 @@ jobs:
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
       - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v2
+        uses: KyleMayes/install-llvm-action@v2.0.6
         with:
-          version: "18"
+          version: "19"
 
       - name: Get devtool
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
