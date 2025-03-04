@@ -4,9 +4,9 @@
 
 namespace Hush
 {
-    struct DrawContext
-    {
-        std::vector<VkRenderObject> opaqueSurfaces;
-        std::vector<VkRenderObject> transparentSurfaces;
-    };
+	struct DrawContext
+	{
+		std::vector<VkRenderObject> opaqueSurfaces;
+		std::vector<VkRenderObject> transparentSurfaces;
+	};
 } // namespace Hush

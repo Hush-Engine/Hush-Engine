@@ -1,7 +1,7 @@
 /*! \file TitleBarMenuPanel.hpp
-    \author Kyn21kx
-    \date 2024-05-25
-    \brief The main title bar menu for the Hush Engine
+	\author Kyn21kx
+	\date 2024-05-25
+	\brief The main title bar menu for the Hush Engine
 */
 
 #pragma once
@@ -10,12 +10,12 @@
 
 namespace Hush
 {
-    class TitleBarMenuPanel final : public IEditorPanel
-    {
-    public:
-        void OnRender() noexcept override;
+	class TitleBarMenuPanel final : public IEditorPanel
+	{
+	public:
+		void OnRender() noexcept override;
 
-    private:
-        void FileMenuOptions();
-    };
+	private:
+		void FileMenuOptions();
+	};
 } // namespace Hush

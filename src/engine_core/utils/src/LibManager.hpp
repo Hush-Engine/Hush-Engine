@@ -25,18 +25,18 @@
 class LibManager
 {
 public:
-    /// @brief Opens the selected library path (analogous to dlopen)
-    /// @param libraryPath Path of the dynamically linked library
-    /// @return A handle of the desired library or null
-    static void *LibraryOpen(const char *libraryPath);
+	/// @brief Opens the selected library path (analogous to dlopen)
+	/// @param libraryPath Path of the dynamically linked library
+	/// @return A handle of the desired library or null
+	static void *LibraryOpen(const char *libraryPath);
 
-    /// @brief Loads the desired symbol using a library handle (analogous to dlsym)
-    /// @param handle Library handle where the symbol is located
-    /// @param symbol Name of the symbol to be loaded
-    /// @return A handle to the desired symbol (essentially a function pointer)
-    static void *DynamicLoadSymbol(void *handle, const char *symbol);
+	/// @brief Loads the desired symbol using a library handle (analogous to dlsym)
+	/// @param handle Library handle where the symbol is located
+	/// @param symbol Name of the symbol to be loaded
+	/// @return A handle to the desired symbol (essentially a function pointer)
+	static void *DynamicLoadSymbol(void *handle, const char *symbol);
 
-    /// @brief Gets the parent directory of the current executable file
-    /// @return Parent directory path value
-    static std::filesystem::path GetCurrentExecutablePath();
+	/// @brief Gets the parent directory of the current executable file
+	/// @return Parent directory path value
+	static std::filesystem::path GetCurrentExecutablePath();
 };

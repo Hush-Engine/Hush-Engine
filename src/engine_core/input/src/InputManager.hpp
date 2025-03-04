@@ -1,7 +1,7 @@
 /*! \file InputManager.hpp
-    \author Kyn21kx
-    \date 2024-02-28
-    \brief Receives the input information of the application and makes it available through static methods
+	\author Kyn21kx
+	\date 2024-02-28
+	\brief Receives the input information of the application and makes it available through static methods
 */
 
 #pragma once
@@ -13,64 +13,64 @@
 namespace Hush
 {
 
-    enum class ECursorLockMode
-    {
-        Free = 0,
-        Locked = 1
-    };
+	enum class ECursorLockMode
+	{
+		Free = 0,
+		Locked = 1
+	};
 
-    class InputManager
-    {
-    public:
-        /// @brief Evaluates to true whilst the key is pressed down
-        static bool IsKeyDown(EKeyCode key);
+	class InputManager
+	{
+	public:
+		/// @brief Evaluates to true whilst the key is pressed down
+		static bool IsKeyDown(EKeyCode key);
 
-        /// @brief Evaluates to true the frame the key is identified as EKeyState::Pressed
-        static bool IsKeyDownThisFrame(EKeyCode key);
+		/// @brief Evaluates to true the frame the key is identified as EKeyState::Pressed
+		static bool IsKeyDownThisFrame(EKeyCode key);
 
-        /// @brief Evaluates to true the frame the key is identified as EKeyState::Release
-        static bool IsKeyUp(EKeyCode key);
+		/// @brief Evaluates to true the frame the key is identified as EKeyState::Release
+		static bool IsKeyUp(EKeyCode key);
 
-        /// @brief Evaluates to true as long as the key is identified asEKeyState::Held
-        static bool IsKeyHeld(EKeyCode key);
+		/// @brief Evaluates to true as long as the key is identified asEKeyState::Held
+		static bool IsKeyHeld(EKeyCode key);
 
-        /// @brief Evaluates to true for as long as the mouse button is pressed
-        static bool GetMouseButtonPressed(EMouseButton button);
+		/// @brief Evaluates to true for as long as the mouse button is pressed
+		static bool GetMouseButtonPressed(EMouseButton button);
 
-        /// @brief Gets the vector of the mouse's position in pixels
-        static glm::vec2 GetMousePosition();
+		/// @brief Gets the vector of the mouse's position in pixels
+		static glm::vec2 GetMousePosition();
 
-        /// @brief Gets the vector of the mouse's acceleration in pixels/s^2
-        static glm::vec2 GetMouseAcceleration();
+		/// @brief Gets the vector of the mouse's acceleration in pixels/s^2
+		static glm::vec2 GetMouseAcceleration();
 
-        static const glm::vec2 &GetMouseScrollAcceleration();
+		static const glm::vec2 &GetMouseScrollAcceleration();
 
-        /* Methods to send events from SDL */
+		/* Methods to send events from SDL */
 
-        static void SendKeyEvent(KeyCode key, EKeyState state);
+		static void SendKeyEvent(KeyCode key, EKeyState state);
 
-        static void SendMouseButtonEvent(MouseButton mouseButton, EKeyState state);
+		static void SendMouseButtonEvent(MouseButton mouseButton, EKeyState state);
 
-        static void SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX, int32_t accelerationY);
+		static void SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX, int32_t accelerationY);
 
-        static void SendWheelEvent(float posX, float posY);
+		static void SendWheelEvent(float posX, float posY);
 
-        static void ResetMouseAcceleration();
+		static void ResetMouseAcceleration();
 
-        static void SetCursorLock(ECursorLockMode lockMode);
+		static void SetCursorLock(ECursorLockMode lockMode);
 
-    private:
-        // TODO: Reserve memory for this map???
-        // NOLINTNEXTLINE
-        static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
+	private:
+		// TODO: Reserve memory for this map???
+		// NOLINTNEXTLINE
+		static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
 
-        // NOLINTNEXTLINE
-        static MouseData S_MOUSE_DATA;
+		// NOLINTNEXTLINE
+		static MouseData S_MOUSE_DATA;
 
-        static void UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState);
+		static void UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState);
 
-        static bool KeyMapContains(EKeyCode key);
+		static bool KeyMapContains(EKeyCode key);
 
-        static bool MouseMapContains(EMouseButton button);
-    };
+		static bool MouseMapContains(EMouseButton button);
+	};
 } // namespace Hush

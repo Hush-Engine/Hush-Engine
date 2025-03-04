@@ -5,16 +5,16 @@
 namespace Hush
 {
 
-    struct VkMaterialPipeline
-    {
-        VkPipeline pipeline;
-        VkPipelineLayout layout; // Check deletion queue?
-    };
+	struct VkMaterialPipeline
+	{
+		VkPipeline pipeline;
+		VkPipelineLayout layout; // Check deletion queue?
+	};
 
-    struct VkMaterialInstance
-    {
-        VkMaterialPipeline *pipeline;
-        VkDescriptorSet materialSet;
-        EMaterialPass passType;
-    };
+	struct VkMaterialInstance
+	{
+		VkMaterialPipeline *pipeline;
+		VkDescriptorSet materialSet;
+		EMaterialPass passType;
+	};
 } // namespace Hush

@@ -1,7 +1,7 @@
 /*! \file AppSupport.hpp
 \author Alan Ramirez
-    \date 2024-09-21
-    \brief Defines for application loading support.
+	\date 2024-09-21
+	\brief Defines for application loading support.
 */
 #pragma once
 

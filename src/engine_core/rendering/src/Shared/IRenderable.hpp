@@ -5,13 +5,13 @@
 
 namespace Hush
 {
-    class IRenderable
-    {
-    public:
-        IRenderable() = default;
+	class IRenderable
+	{
+	public:
+		IRenderable() = default;
 
-        virtual ~IRenderable() = default;
+		virtual ~IRenderable() = default;
 
-        virtual void Draw(const glm::mat4 &topMatrix, void *drawContext) = 0;
-    };
+		virtual void Draw(const glm::mat4 &topMatrix, void *drawContext) = 0;
+	};
 } // namespace Hush

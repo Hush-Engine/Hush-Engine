@@ -5,6 +5,6 @@ constexpr ImGuiWindowFlags SCENE_PANEL_FLAGS = ImGuiWindowFlags_NoScrollbar | Im
 
 void Hush::ScenePanel::OnRender() noexcept
 {
-    ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
-    ImGui::End();
+	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
+	ImGui::End();
 }

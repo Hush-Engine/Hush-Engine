@@ -5,22 +5,22 @@
 
 namespace Hush
 {
-    class VulkanRenderer;
-    class ShaderMaterial;
+	class VulkanRenderer;
+	class ShaderMaterial;
 
-    class VulkanFullScreenPass
-    {
-    public:
-        VulkanFullScreenPass() = default;
+	class VulkanFullScreenPass
+	{
+	public:
+		VulkanFullScreenPass() = default;
 
-        VulkanFullScreenPass(VulkanRenderer *renderer, std::shared_ptr<ShaderMaterial> material);
+		VulkanFullScreenPass(VulkanRenderer *renderer, std::shared_ptr<ShaderMaterial> material);
 
-        void RecordCommands(VkCommandBuffer cmd, VkDescriptorSet globalDescriptorSet);
+		void RecordCommands(VkCommandBuffer cmd, VkDescriptorSet globalDescriptorSet);
 
-        ShaderMaterial *GetMaterial();
+		ShaderMaterial *GetMaterial();
 
-    private:
-        VulkanRenderer *m_renderer = nullptr;
-        std::shared_ptr<ShaderMaterial> m_materialInstance;
-    };
+	private:
+		VulkanRenderer *m_renderer = nullptr;
+		std::shared_ptr<ShaderMaterial> m_materialInstance;
+	};
 } // namespace Hush

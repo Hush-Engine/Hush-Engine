@@ -1,7 +1,7 @@
 /*! \file Platform.hpp
-    \author Alan Ramirez Herrera
-    \date 2024-03-03
-    \brief Platform detection macros
+	\author Alan Ramirez Herrera
+	\date 2024-03-03
+	\brief Platform detection macros
 */
 
 #pragma once
@@ -45,28 +45,28 @@
 
 namespace Hush
 {
-    /// @brief Enum representing the current platform
-    enum class EPlatform : uint8_t
-    {
-        Win64,
-        Linux,
-        OSX
-    };
+	/// @brief Enum representing the current platform
+	enum class EPlatform : uint8_t
+	{
+		Win64,
+		Linux,
+		OSX
+	};
 
-    /// @brief Get the current platform
-    /// @return EPlatform
-    inline constexpr EPlatform GetCurrentPlatform()
-    {
+	/// @brief Get the current platform
+	/// @return EPlatform
+	inline constexpr EPlatform GetCurrentPlatform()
+	{
 #if HUSH_PLATFORM_WIN
-        return EPlatform::Win64;
+		return EPlatform::Win64;
 #elif HUSH_PLATFORM_LINUX
-        return EPlatform::Linux;
+		return EPlatform::Linux;
 #elif HUSH_PLATFORM_OSX
-        return EPlatform::OSX;
+		return EPlatform::OSX;
 #else
 #error "Platform not supported"
 #endif
-    }
+	}
 } // namespace Hush
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

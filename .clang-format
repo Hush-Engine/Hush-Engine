@@ -10,6 +10,7 @@ AlwaysBreakTemplateDeclarations: Yes
 BreakAfterAttributes: Always
 PackConstructorInitializers: Never
 SortIncludes: Never
+UseTab: Always
 ---
 Language: CSharp
 BasedOnStyle: Microsoft

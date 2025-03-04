@@ -23,8 +23,8 @@ For building Hush Engine, you will need the following:
 
 The following dependencies are not required to build Hush Engine, but are required for the development workflow:
 
-- Clang-Format 18 or later.
-- Clang-Tidy 18 or later.
+- Clang-Format 19 or later. (Included in LLVM)
+- Clang-Tidy 19 or later. (Included in LLVM)
 - Doxygen 1.8.20 or later.
 - Python
   - Sphinx

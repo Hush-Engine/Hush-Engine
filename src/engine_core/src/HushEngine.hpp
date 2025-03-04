@@ -1,7 +1,7 @@
 /*! \file HushEngine.hpp
-    \author Kyn21kx
-    \date 2024-02-28
-    \brief Main class to instance our hush game engine
+	\author Kyn21kx
+	\date 2024-02-28
+	\brief Main class to instance our hush game engine
 */
 
 #pragma once
@@ -11,40 +11,40 @@
 
 namespace Hush
 {
-    class HushEngine
-    {
-    public:
-        /// <summary>
-        /// Initializes the HushEngine with all its properties
-        /// </summary>
-        HushEngine() = default;
+	class HushEngine
+	{
+	public:
+		/// <summary>
+		/// Initializes the HushEngine with all its properties
+		/// </summary>
+		HushEngine() = default;
 
-        HushEngine(const HushEngine &) = delete;
-        HushEngine &operator=(const HushEngine &) = delete;
+		HushEngine(const HushEngine &) = delete;
+		HushEngine &operator=(const HushEngine &) = delete;
 
-        HushEngine(HushEngine &&) noexcept = default;
+		HushEngine(HushEngine &&) noexcept = default;
 
-        HushEngine &operator=(HushEngine &&) noexcept = default;
+		HushEngine &operator=(HushEngine &&) noexcept = default;
 
-        ~HushEngine();
+		~HushEngine();
 
-        /// <summary>
-        /// Starts running the engine with UI components
-        /// </summary>
-        void Run();
+		/// <summary>
+		/// Starts running the engine with UI components
+		/// </summary>
+		void Run();
 
-        /// <summary>
-        /// Disposes of the HushEngine
-        /// </summary>
-        void Quit();
+		/// <summary>
+		/// Disposes of the HushEngine
+		/// </summary>
+		void Quit();
 
-    private:
-        void Init();
+	private:
+		void Init();
 
-        std::unique_ptr<IApplication> m_app;
+		std::unique_ptr<IApplication> m_app;
 
-        bool m_isApplicationRunning = false;
-        static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
-    };
+		bool m_isApplicationRunning = false;
+		static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
+	};
 
 } // namespace Hush

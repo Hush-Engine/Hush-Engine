@@ -1,7 +1,7 @@
 /*! \file ThreadPool.test.cpp
-    \author Alan Ramirez
-    \date 2025-01-04
-    \brief ThreadPool tests
+	\author Alan Ramirez
+	\date 2025-01-04
+	\brief ThreadPool tests
 */
 
 #include "ThreadPool.hpp"
@@ -19,157 +19,157 @@ using Job = Hush::Threading::Job;
 
 TEST_CASE("Create ThreadPool")
 {
-    ThreadPool threadPool(1);
+	ThreadPool threadPool(1);
 
-    SECTION("GetNumThreads")
-    {
-        REQUIRE(threadPool.GetNumThreads() == 1);
-    }
+	SECTION("GetNumThreads")
+	{
+		REQUIRE(threadPool.GetNumThreads() == 1);
+	}
 }
 
 TEST_CASE("WaitOne")
 {
-    ThreadPool threadPool(1);
-    threadPool.Start();
+	ThreadPool threadPool(1);
+	threadPool.Start();
 
-    SECTION("WaitOne")
-    {
-        // Arrange
-        std::atomic<std::uint32_t> counter = 0;
-        auto threadFunction = [&counter]() -> Task<void> {
-            Hush::LogInfo("Hello from thread");
-            counter.fetch_add(1);
-            co_return;
-        };
+	SECTION("WaitOne")
+	{
+		// Arrange
+		std::atomic<std::uint32_t> counter = 0;
+		auto threadFunction = [&counter]() -> Task<void> {
+			Hush::LogInfo("Hello from thread");
+			counter.fetch_add(1);
+			co_return;
+		};
 
-        // Act
-        auto task = threadPool.ScheduleTask(threadFunction());
-        Hush::Threading::Wait(task);
+		// Act
+		auto task = threadPool.ScheduleTask(threadFunction());
+		Hush::Threading::Wait(task);
 
-        // Assert
-        REQUIRE(counter.load() == 1);
-    }
+		// Assert
+		REQUIRE(counter.load() == 1);
+	}
 }
 
 TEST_CASE("WaitUntilDone")
 {
-    ThreadPool threadPool(4);
-    threadPool.Start();
+	ThreadPool threadPool(4);
+	threadPool.Start();
 
-    SECTION("WaitUntilDone")
-    {
-        // Arrange
-        std::atomic<std::uint32_t> counter = 0;
-        auto threadFunction = [&counter]() -> Task<void> {
-            counter.fetch_add(1);
-            co_return;
-        };
+	SECTION("WaitUntilDone")
+	{
+		// Arrange
+		std::atomic<std::uint32_t> counter = 0;
+		auto threadFunction = [&counter]() -> Task<void> {
+			counter.fetch_add(1);
+			co_return;
+		};
 
-        std::vector<Job> tasks;
+		std::vector<Job> tasks;
 
-        for (int i = 0; i < 20; ++i)
-        {
-            tasks.push_back(threadPool.ScheduleTask(threadFunction()));
-        }
+		for (int i = 0; i < 20; ++i)
+		{
+			tasks.push_back(threadPool.ScheduleTask(threadFunction()));
+		}
 
-        // Act
-        // Wait until all tasks are done
-        for (auto &task : tasks)
-        {
-            Hush::Threading::Wait(task);
-        }
+		// Act
+		// Wait until all tasks are done
+		for (auto &task : tasks)
+		{
+			Hush::Threading::Wait(task);
+		}
 
-        // Assert
-        REQUIRE(counter.load() == 20);
-    }
+		// Assert
+		REQUIRE(counter.load() == 20);
+	}
 }
 
 TEST_CASE("ScheduleFunction")
 {
-    ThreadPool threadPool(1);
-    threadPool.Start();
+	ThreadPool threadPool(1);
+	threadPool.Start();
 
-    SECTION("ScheduleFunction")
-    {
-        // Arrange
-        auto threadFunction = []() { (void)1; };
+	SECTION("ScheduleFunction")
+	{
+		// Arrange
+		auto threadFunction = []() { (void)1; };
 
-        // Act
-        auto task = threadPool.ScheduleFunction(threadFunction);
-        Hush::Threading::Wait(task);
+		// Act
+		auto task = threadPool.ScheduleFunction(threadFunction);
+		Hush::Threading::Wait(task);
 
-        // Assert
-        REQUIRE(task.GetCoroutine().done());
-    }
+		// Assert
+		REQUIRE(task.GetCoroutine().done());
+	}
 
-    SECTION("ScheduleFunction lambda with captures")
-    {
-        // Arrange
-        std::uint32_t result = 0;
-        std::uint32_t a = 10;
-        std::uint32_t b = 5;
+	SECTION("ScheduleFunction lambda with captures")
+	{
+		// Arrange
+		std::uint32_t result = 0;
+		std::uint32_t a = 10;
+		std::uint32_t b = 5;
 
-        auto threadFunction = [&] { result = a + b; };
-        // Act
-        auto task = threadPool.ScheduleFunction(threadFunction);
-        Hush::Threading::Wait(task);
+		auto threadFunction = [&] { result = a + b; };
+		// Act
+		auto task = threadPool.ScheduleFunction(threadFunction);
+		Hush::Threading::Wait(task);
 
-        // Assert
-        REQUIRE(task.GetCoroutine().done());
-        REQUIRE(result == 15);
-    }
+		// Assert
+		REQUIRE(task.GetCoroutine().done());
+		REQUIRE(result == 15);
+	}
 
-    SECTION("ScheduleFunction with arguments")
-    {
-        // Arrange
-        std::uint32_t result = 0;
-        auto threadFunction = [&result](std::uint32_t a, std::uint32_t b) { result = a + b; };
-        const std::uint32_t a = 10;
-        const std::uint32_t b = 5;
+	SECTION("ScheduleFunction with arguments")
+	{
+		// Arrange
+		std::uint32_t result = 0;
+		auto threadFunction = [&result](std::uint32_t a, std::uint32_t b) { result = a + b; };
+		const std::uint32_t a = 10;
+		const std::uint32_t b = 5;
 
-        // Act
-        auto task = threadPool.ScheduleFunction(threadFunction, a, b);
-        Hush::Threading::Wait(task);
+		// Act
+		auto task = threadPool.ScheduleFunction(threadFunction, a, b);
+		Hush::Threading::Wait(task);
 
-        // Assert
-        REQUIRE(task.GetCoroutine().done());
-        REQUIRE(result == 15);
-    }
+		// Assert
+		REQUIRE(task.GetCoroutine().done());
+		REQUIRE(result == 15);
+	}
 }
 
 TEST_CASE("Multithread")
 {
-    ThreadPool threadPool(3);
-    threadPool.Start();
-    SECTION("Multithread")
-    {
-        // Arrange
-        std::set<std::thread::id> threadIds;
-        std::mutex mutex;
-        std::vector<Job> tasks;
-        constexpr std::uint32_t numTasks = 10000;
-        auto threadFunction = [&threadIds, &mutex]() -> Task<void> {
-            {
-                std::lock_guard lock(mutex);
-                threadIds.insert(std::this_thread::get_id());
-            }
+	ThreadPool threadPool(3);
+	threadPool.Start();
+	SECTION("Multithread")
+	{
+		// Arrange
+		std::set<std::thread::id> threadIds;
+		std::mutex mutex;
+		std::vector<Job> tasks;
+		constexpr std::uint32_t numTasks = 10000;
+		auto threadFunction = [&threadIds, &mutex]() -> Task<void> {
+			{
+				std::lock_guard lock(mutex);
+				threadIds.insert(std::this_thread::get_id());
+			}
 
-            co_return;
-        };
+			co_return;
+		};
 
-        // Act
-        for (std::uint32_t i = 0; i < numTasks; ++i)
-        {
-            tasks.push_back(threadPool.ScheduleTask(threadFunction()));
-        }
+		// Act
+		for (std::uint32_t i = 0; i < numTasks; ++i)
+		{
+			tasks.push_back(threadPool.ScheduleTask(threadFunction()));
+		}
 
-        // Wait until all tasks are done
-        for (auto &task : tasks)
-        {
-            Hush::Threading::Wait(task);
-        }
+		// Wait until all tasks are done
+		for (auto &task : tasks)
+		{
+			Hush::Threading::Wait(task);
+		}
 
-        // Assert
-        REQUIRE(threadIds.size() == threadPool.GetNumThreads());
-    }
+		// Assert
+		REQUIRE(threadIds.size() == threadPool.GetNumThreads());
+	}
 }

@@ -4,22 +4,22 @@
 
 namespace Hush
 {
-    // Flags
-    enum class EAlphaBlendMode : uint32_t
-    {
-        None = 0,
-        OneMinusSrcAlpha,
-        OneMinusDestAlpha,
-        ConstAlpha,
-        DestAlpha,
-        SrcAlpha
-    };
+	// Flags
+	enum class EAlphaBlendMode : uint32_t
+	{
+		None = 0,
+		OneMinusSrcAlpha,
+		OneMinusDestAlpha,
+		ConstAlpha,
+		DestAlpha,
+		SrcAlpha
+	};
 
-    enum class ECullMode : uint32_t
-    {
-        None = 0,
-        Front,
-        Back,
-        FrontAndBack = Front | Back
-    };
+	enum class ECullMode : uint32_t
+	{
+		None = 0,
+		Front,
+		Back,
+		FrontAndBack = Front | Back
+	};
 } // namespace Hush

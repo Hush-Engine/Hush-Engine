@@ -1,7 +1,7 @@
 /*! \file Common.hpp
-    \author Alan Ramirez
-    \date 2024-10-13
-    \brief Common definitions
+	\author Alan Ramirez
+	\date 2024-10-13
+	\brief Common definitions
 */
 
 #pragma once

@@ -73,13 +73,12 @@ impl FormatCommand {
             vec![]
         };
 
-        info!("Running clang-format with flags: {:?}", check_flags);
+        if self.verbose {
+            info!("Running clang-format with flags: {:?}", check_flags);
+        }
 
         let mut command = Command::new("clang-format");
         command.args(["-i"]).args(&files).args(&check_flags);
-
-        // Print the command
-        info!("{:?}", command);
 
         let status = Command::new("clang-format")
             .args(["-i"])
