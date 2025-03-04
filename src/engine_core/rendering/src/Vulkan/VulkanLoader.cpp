@@ -265,14 +265,15 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	}
 
 	mappedData[materialIdx] = constants;
-	GLTFMetallicRoughness::MaterialResources materialResources;
+	GLTFMetallicRoughness::MaterialResources materialResources{};
 	// default the material textures
-	std::optional<AllocatedImage> loadedTextureToUse = LoadedTextureFromMaterial(asset, material, loadedTextures);
-	materialResources.colorImage =
-		loadedTextureToUse.has_value() ? loadedTextureToUse.value() : engine->GetDefaultWhiteImage();
+	materialResources.colorImage = engine->GetDefaultWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
+
+	// Then actually set them to the material's
+	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
 	materialResources.dataBuffer = sceneMaterialBuffer->GetBuffer();

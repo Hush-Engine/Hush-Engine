@@ -21,7 +21,6 @@
 
 namespace Hush
 {
-
 	struct GeoSurface
 	{
 		uint32_t startIndex;
@@ -71,7 +70,7 @@ namespace Hush
 																	VulkanAllocatedBuffer *sceneMaterialBuffer,
 																	DescriptorAllocatorGrowable &allocatorPool,
 																	const std::vector<AllocatedImage> &loadedTextures);
-
+		
 		static std::optional<AllocatedImage> LoadedTextureFromMaterial(
 			const fastgltf::Asset &asset, const fastgltf::Material &material,
 			const std::vector<AllocatedImage> &loadedTextures);

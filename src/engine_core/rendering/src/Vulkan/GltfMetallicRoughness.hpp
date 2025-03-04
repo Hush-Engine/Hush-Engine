@@ -5,21 +5,23 @@
 */
 
 #pragma once
+#include "Shared/IMaterial3D.hpp"
 #include "VkTypes.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace Hush
 {
 	class IRenderer;
-	struct GLTFMetallicRoughness
+	class GLTFMetallicRoughness : public IMaterial3D
 	{
 		VkMaterialPipeline opaquePipeline;
 		VkMaterialPipeline transparentPipeline;
 
 		VkDescriptorSetLayout materialLayout;
-
+	public:
 		struct MaterialConstants
 		{
 			alignas(16) glm::vec4 colorFactors;
@@ -37,6 +39,8 @@ namespace Hush
 			VkSampler colorSampler;
 			AllocatedImage metalRoughImage;
 			VkSampler metalRoughSampler;
+			AllocatedImage normalImage;
+			VkSampler normalSampler;
 			VkBuffer dataBuffer;
 			uint32_t dataBufferOffset;
 		};
@@ -46,11 +50,18 @@ namespace Hush
 		void BuildPipelines(IRenderer *engine, const std::string_view &fragmentShaderPath,
 							const std::string_view &vertexShaderPath);
 		void ClearResources(VkDevice device);
+		
+        [[nodiscard]] EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
 
-		inline VkMaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources &resources,
-												DescriptorAllocatorGrowable &descriptorAllocator)
-		{
-			Hush::VkMaterialInstance matData;
+		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept override;
+
+		[[nodiscard]] ECullMode GetCullMode() const noexcept override;
+		
+		void SetCullMode(ECullMode cullMode) override;
+
+		inline VkMaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator) {
+
+			Hush::VkMaterialInstance matData{};
 			matData.passType = pass;
 
 			switch (pass)
@@ -84,4 +95,5 @@ namespace Hush
 			return matData;
 		}
 	};
+
 } // namespace Hush
