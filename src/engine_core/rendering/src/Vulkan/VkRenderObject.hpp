@@ -1,5 +1,7 @@
 #pragma once
 #include "VkMaterialInstance.hpp"
+#include <glm/mat4x4.hpp>
+
 namespace Hush
 {
 	struct VkRenderObject

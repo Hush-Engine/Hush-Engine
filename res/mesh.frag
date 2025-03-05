@@ -6,6 +6,8 @@
 layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec2 inUV;
+layout (location = 3) in vec3 inTangent;
+layout (location = 4) in vec3 inVertPos;
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -46,12 +48,30 @@ vec3 calcIrradiance(vec3 nor) {
     );
 }
 
+// Makes the normal look better for little performance cost
+vec3 calculateTangentGramSchmidt(in vec3 normal, in vec3 tangent) {
+	return (tangent - dot(tangent, normal) * normal);
+}
+
+// Tangent, BiTangent and normal matrix
+// Converts texture space into model space
+mat3 TBN;
+
 void main() 
 {
 	float lightValue = max(dot(inNormal, vec3(0.3f,1.f,0.3f)), 0.1f);
 
-	vec3 irradiance = calcIrradiance(inNormal); 
 
+	// Calculate normal related stuff
+	vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
+	vec3 biTangent = cross(inNormal, tangent);
+	TBN = mat3(tangent, biTangent, inNormal);
+
+	vec3 localNormal = 2.0 * texture(normalTex, inVertPos).rgb - 1.0;
+	vec3 finalNormal = normalize(TBN * localNormal);
+	//Calculate the light once we're done with normal calculations
+	vec3 irradiance = calcIrradiance(finalNormal); 
+	
 
 	vec3 color = inColor * texture(colorTex,inUV).xyz;
 

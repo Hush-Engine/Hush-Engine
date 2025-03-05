@@ -13,6 +13,7 @@ hush_add_library(
              src/Vulkan/VulkanPipelineBuilder.cpp
              src/Vulkan/VulkanFullScreenPass.cpp
              src/Shared/ShaderMaterial.cpp
+             src/Shared/Mesh.cpp
              src/Vulkan/VulkanLoader.cpp
              src/Vulkan/VkDescriptors.cpp
              src/Vulkan/VulkanSwapchain.cpp

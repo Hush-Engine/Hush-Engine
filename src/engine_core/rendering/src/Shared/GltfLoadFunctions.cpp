@@ -57,6 +57,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 	const auto* loadedTexturesImpl = reinterpret_cast<const std::vector<AllocatedImage>*>(loadedTextures);
 	auto* outMaterialResourcesImpl = reinterpret_cast<GLTFMetallicRoughness::MaterialResources*>(outMaterialResources);
 	
+	// TODO: Refactor all this in a function
 	const fastgltf::PBRData& pbrData = material.pbrData;
 	if (pbrData.baseColorTexture.has_value())
 	{
@@ -66,7 +67,6 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		{ 
 			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
 			outMaterialResourcesImpl->colorImage = allocImage;
-			
 		}
 	}
 	
@@ -78,7 +78,16 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		{ 
 			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
 			outMaterialResourcesImpl->metalRoughImage = allocImage;
-			
+		}
+	}
+	if (material.normalTexture.has_value()) {
+		size_t textureDataIdx = material.normalTexture->textureIndex;
+		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+		
+		if (fastgltfTexture.imageIndex.has_value())
+		{ 
+			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
+			outMaterialResourcesImpl->normalImage = allocImage;
 		}
 	}
 	

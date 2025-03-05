@@ -9,7 +9,6 @@
 #define VK_NO_PROTOTYPES
 
 #include "Renderer.hpp"
-#include "Assertions.hpp"
 #include <magic_enum/magic_enum.hpp>
 #include "FrameData.hpp"
 #include "VkTypes.hpp"
@@ -25,12 +24,13 @@
 #include "GPUMeshBuffers.hpp"
 #include "GPUSceneData.hpp"
 #include "GltfMetallicRoughness.hpp"
-#include "VkRenderObject.hpp"
 #include "Shared/RenderableNode.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanFullScreenPass.hpp"
 #include "DrawContext.hpp"
+#include "Shared/Mesh.hpp"
+
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -139,7 +139,7 @@ namespace Hush
 
 		VulkanSwapchain &GetSwapchain();
 
-		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Vertex> &vertices);
+		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Mesh::Vertex> &vertices);
 
 		AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
 								   bool mipmapped = false);

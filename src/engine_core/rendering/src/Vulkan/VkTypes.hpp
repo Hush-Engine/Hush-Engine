@@ -15,19 +15,10 @@
 struct VmaAllocation_T;
 using VmaAllocation = VmaAllocation_T *;
 
-struct Vertex
-{
-	glm::vec3 position;
-	float uv_x = 0.0f;
-	glm::vec3 normal = {1, 0, 0};
-	float uv_y = 0.0f;
-	glm::vec4 color = glm::vec4{1.f};
-};
-
 // push constants for our mesh object draws
 struct GPUDrawPushConstants
 {
-	glm::mat4 worldMatrix;
+	glm::mat4 modelMatrix;
 	VkDeviceAddress vertexBuffer;
 };
 

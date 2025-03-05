@@ -18,6 +18,7 @@
 #include "VkMaterialInstance.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "VulkanMeshNode.hpp"
+#include "Shared/Mesh.hpp"
 
 namespace Hush
 {
@@ -61,9 +62,8 @@ namespace Hush
 	private:
 		static std::vector<AllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine);
 
-		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &accessors,
-													 std::vector<uint32_t> &indicesRef,
-													 std::vector<Vertex> &verticesRef, VulkanRenderer *engine);
+		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
+		                                             Mesh& meshRef, VulkanRenderer *engine);
 
 		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(size_t materialIdx, const fastgltf::Asset &asset,
 																	VulkanRenderer *engine,

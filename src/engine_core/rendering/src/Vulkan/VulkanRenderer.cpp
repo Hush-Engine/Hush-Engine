@@ -905,7 +905,7 @@ void Hush::VulkanRenderer::InitMeshPipeline() noexcept
 
 void Hush::VulkanRenderer::InitDefaultData() noexcept
 {
-	std::array<Vertex, 4> rectVertices;
+	std::array<Mesh::Vertex, 4> rectVertices;
 
 	rectVertices[0].position = {0.5, -0.5, 0};
 	rectVertices[1].position = {0.5, 0.5, 0};
@@ -928,7 +928,7 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 	rectIndices[5] = 3;
 
 	m_rectangle = this->UploadMesh(std::vector<uint32_t>(rectIndices.begin(), rectIndices.end()),
-								   std::vector<Vertex>(rectVertices.begin(), rectVertices.end()));
+								   std::vector<Mesh::Vertex>(rectVertices.begin(), rectVertices.end()));
 
 	// delete the rectangle data on engine shutdown
 	this->m_mainDeletionQueue.PushFunction([&]() {
@@ -1051,9 +1051,9 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 		vkCmdBindIndexBuffer(cmd, draw.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		GPUDrawPushConstants pushConstants;
+		GPUDrawPushConstants pushConstants{};
 		pushConstants.vertexBuffer = draw.vertexBufferAddress;
-		pushConstants.worldMatrix = draw.transform;
+		pushConstants.modelMatrix = draw.transform;
 		vkCmdPushConstants(cmd, draw.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						   sizeof(GPUDrawPushConstants), &pushConstants);
 		vkCmdDrawIndexed(cmd, draw.indexCount, 1, draw.firstIndex, 0, 0);
@@ -1278,9 +1278,9 @@ AllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, VkExtent3D si
 }
 
 Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t> &indices,
-													  const std::vector<Vertex> &vertices)
+													  const std::vector<Mesh::Vertex> &vertices)
 {
-	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
+	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Mesh::Vertex));
 	const uint32_t indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
 
 	GPUMeshBuffers newSurface;

@@ -1,3 +1,5 @@
+#include "Shared/Mesh.hpp"
+#include <SDL_render.h>
 #define VK_NO_PROTOTYPES
 #include <volk.h>
 #include "VulkanLoader.hpp"
@@ -40,20 +42,20 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	HUSH_ASSERT(loadedAsset, "GLTF asset at {} not properly loaded, error: {}!", filePath.string(),
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
-	std::vector<uint32_t> indices;
-	std::vector<Vertex> vertices;
+	Mesh meshInfo{};
 	std::vector<std::shared_ptr<VulkanMeshNode>> meshes;
 	std::vector<std::shared_ptr<VulkanMeshNode>> rootNodes;
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
 		auto node = std::make_shared<VulkanMeshNode>(
-			CreateMeshFromGltfMesh(mesh, loadedAsset.get(), indices, vertices, engine));
+			CreateMeshFromGltfMesh(mesh, loadedAsset.get(), meshInfo, engine));
 		node->SetLocalTransform(glm::mat4{1.F});
 		node->SetWorldTransform(glm::mat4{1.F});
 		meshes.emplace_back(node);
 	}
 
+	// NOTE: Yes, we do need the double iteration 
 	for (const fastgltf::Node &node : loadedAsset->nodes)
 	{
 		if (!node.meshIndex.has_value())
@@ -62,11 +64,11 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 		meshNode->SetLocalTransform(GltfLoadFunctions::GetNodeTransform(node));
 	}
 
-	for (int i = 0; i < loadedAsset->nodes.size(); i++)
+	for (fastgltf::Node & node : loadedAsset->nodes)
 	{
-		fastgltf::Node &node = loadedAsset->nodes[i];
-		if (!node.meshIndex.has_value())
+		if (!node.meshIndex.has_value()) {
 			continue;
+		}
 		std::shared_ptr<VulkanMeshNode> &sceneNode = meshes[node.meshIndex.value()];
 		if (node.children.empty())
 		{
@@ -103,17 +105,13 @@ std::vector<AllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::
 	for (const fastgltf::Image &image : asset.images)
 	{
 		std::shared_ptr<ImageTexture> texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image);
-		AllocatedImage loadedImage = LoadTexture(engine, *texture.get());
+		AllocatedImage loadedImage = LoadTexture(engine, *texture);
 		loadedTexturesResult.emplace_back(loadedImage);
 	}
 	return loadedTexturesResult;
 }
 
-Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh,
-																const fastgltf::Asset &asset,
-																std::vector<uint32_t> &indicesRef,
-																std::vector<Vertex> &verticesRef,
-																VulkanRenderer *engine)
+Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset, Mesh& meshRef, VulkanRenderer *engine)
 {
 	VulkanMeshNode meshNode(std::make_shared<MeshAsset>());
 
@@ -121,8 +119,11 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 	meshAsset.name = mesh.name;
 	// Clear out the vector buffers
-	indicesRef.clear();
-	verticesRef.clear();
+
+	std::vector<uint32_t> &indexRef = meshRef.GetIndexBuffer();
+	std::vector<Mesh::Vertex> &vertexRef = meshRef.GetVertexBuffer();
+	indexRef.clear();
+	vertexRef.clear();
 
 	VulkanAllocatedBuffer materialDataBuffer(
 		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants) * asset.materials.size()),
@@ -141,34 +142,34 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
-		size_t initialVertex = verticesRef.size();
+		size_t initialVertex = vertexRef.size();
 		GeoSurface surfaceToAdd{};
-		surfaceToAdd.startIndex = static_cast<uint32_t>(indicesRef.size());
+		surfaceToAdd.startIndex = static_cast<uint32_t>(indexRef.size());
 		const fastgltf::Accessor &primitiveIdxAccessor = asset.accessors[primitive.indicesAccessor.value()];
 		surfaceToAdd.count = static_cast<uint32_t>(primitiveIdxAccessor.count);
 
 		// TODO: Make a function that can load any arbitrary primitive from glTF
 
 		// load indexes
-		indicesRef.reserve(indicesRef.size() + primitiveIdxAccessor.count);
+		indexRef.reserve(indexRef.size() + primitiveIdxAccessor.count);
 		fastgltf::iterateAccessor<uint32_t>(asset, primitiveIdxAccessor, [&](uint32_t idx) {
-			indicesRef.push_back(idx + static_cast<uint32_t>(initialVertex));
+			indexRef.push_back(idx + static_cast<uint32_t>(initialVertex));
 		});
 
 		std::vector<glm::vec3> vertexBuffer =
 			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, asset, "POSITION");
 		for (const glm::vec3 &v : vertexBuffer)
 		{
-			Vertex vertexToAdd{};
+			Mesh::Vertex vertexToAdd{};
 			vertexToAdd.position = v;
-			verticesRef.push_back(vertexToAdd);
+			vertexRef.push_back(vertexToAdd);
 		}
 
 		std::vector<glm::vec3> normalBuffer =
 			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, asset, "NORMAL");
 		for (uint32_t i = 0; i < normalBuffer.size(); i++)
 		{
-			verticesRef.at(i + initialVertex).normal = normalBuffer.at(i);
+			vertexRef.at(i + initialVertex).normal = normalBuffer.at(i);
 		}
 
 		// load UVs
@@ -177,8 +178,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 		for (uint32_t i = 0; i < texBuffer.size(); i++)
 		{
-			verticesRef.at(i + initialVertex).uv_x = texBuffer.at(i).x;
-			verticesRef.at(i + initialVertex).uv_y = texBuffer.at(i).y;
+			vertexRef.at(i + initialVertex).uv =  { texBuffer.at(i).x, texBuffer.at(i).y };
 		}
 
 		// load vertex colors
@@ -186,7 +186,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 		for (uint32_t i = 0; i < colors.size(); i++)
 		{
-			verticesRef.at(i + initialVertex).color = colors.at(i);
+			vertexRef.at(i + initialVertex).color = colors.at(i);
 		}
 
 		if (primitive.materialIndex.has_value())
@@ -215,7 +215,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 		sampl.mipmapMode = ExtractMipMapMode(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 
-		VkSampler newSampler;
+		VkSampler newSampler = nullptr;
 		vkCreateSampler(engine->GetVulkanDevice(), &sampl, nullptr, &newSampler);
 
 		samplers.push_back(newSampler);
@@ -225,7 +225,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	// for (size_t materialIdx = 0; materialIdx < asset.materials.size(); materialIdx++) {
 	// }
 
-	meshAsset.meshBuffers = engine->UploadMesh(indicesRef, verticesRef); // Here the pipeline layout dies(?
+	meshAsset.meshBuffers = engine->UploadMesh(indexRef, vertexRef); // Here the pipeline layout dies(?
 	meshNode.SetMaterialDataBuffer(materialDataBuffer);
 	return meshNode;
 }
@@ -237,7 +237,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 
-	GLTFMetallicRoughness::MaterialConstants constants;
+	GLTFMetallicRoughness::MaterialConstants constants{};
 	HUSH_STATIC_ASSERT(sizeof(constants.colorFactors) == sizeof(material.pbrData.baseColorFactor),
 					   "Material constants' colors are not the same size as fastgltf pbr data colors, make sure "
 					   "fastgltf is compiled with using num = float");
@@ -248,8 +248,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 
 	// Scene Material buffer writing
 	VmaAllocationInfo &allocInfo = sceneMaterialBuffer->GetAllocationInfo();
-	GLTFMetallicRoughness::MaterialConstants *mappedData =
-		static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo.pMappedData);
+	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo.pMappedData);
 
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
@@ -271,6 +270,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
+	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 
 	// Then actually set them to the material's
 	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
