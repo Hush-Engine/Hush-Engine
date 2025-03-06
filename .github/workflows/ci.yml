@@ -122,7 +122,6 @@ jobs:
      # Diff with the target branch if it's a PR
       - name: Format hush
         run: ./hush-devtool.exe format --check -v --print-files --all-files
-        continue-on-error: true
 
       - name: Build hush
         run: ./hush-devtool.exe build -p windows-x64-${{ matrix.build-type }} -v
