@@ -60,6 +60,11 @@ mat3 TBN;
 void main() 
 {
 
+	vec4 texColor = texture(colorTex,inUV);
+	float alpha = texColor.w;
+	if (alpha < materialData.alphaCutoff) {
+		discard;
+	}
 
 	// Calculate normal related stuff
 	vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
@@ -72,8 +77,8 @@ void main()
 	float lightValue = max(dot(finalNormal, vec3(0.3f,1.f,0.3f)), 0.1f);
 	vec3 irradiance = calcIrradiance(finalNormal);
 
-	vec3 color = inColor * texture(colorTex,inUV).xyz;
+	vec3 color = inColor * texColor.xyz;
 
-	outFragColor = vec4(color * lightValue + color * irradiance.x * vec3(0.2f) ,1.0f);
+	outFragColor = vec4(color * lightValue + color * irradiance.x * vec3(0.2f) , alpha);
 }
 
