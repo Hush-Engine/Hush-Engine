@@ -1,7 +1,7 @@
 #include "Mesh.hpp"
-#include <cstdint>
+#include "Logger.hpp"
 
-constexpr int32_t VERTEX_PER_TRIANGLE = 3;
+constexpr size_t VERTEX_PER_TRIANGLE = 3;
 
 
 void Hush::Mesh::CalculateNormals(Vertex& currentVertex) {
@@ -10,7 +10,8 @@ void Hush::Mesh::CalculateNormals(Vertex& currentVertex) {
 }
 
 void Hush::Mesh::CalculateTangentBasis() {
-	for(int32_t i = 0; i < this->m_vertices.size(); i += VERTEX_PER_TRIANGLE) {
+	size_t verticesSize = this->m_vertices.size();
+	for(size_t i = 0; i < verticesSize - VERTEX_PER_TRIANGLE; i += VERTEX_PER_TRIANGLE) {
 		glm::vec3& vertex0 = this->m_vertices.at(i).position;
 		glm::vec3& vertex1 = this->m_vertices.at(i + 1).position;
 		glm::vec3& vertex2 = this->m_vertices.at(i + 2).position;
@@ -28,17 +29,13 @@ void Hush::Mesh::CalculateTangentBasis() {
 		float r = 1.0F / (deltaUv1.x * deltaUv2.y - deltaUv1.y * deltaUv2.x);
 		
 		glm::vec3 tangent = (deltaPos1 * deltaUv2.y   - deltaPos2 * deltaUv1.y) * r;
-		// Bitangent will be calculated in the GPU, but do come back here if that is a bottleneck
-		// glm::vec3 bitangent = (deltaPos2 * deltaUv1.x   - deltaPos1 * deltaUv2.x) * r;
-
+		// Bitangent will be calculated in the GPU
 		
 		// Set the same tangent for all three vertices of the triangle.
         // They will be merged later, in vboindexer.cpp
         this->m_vertices.at(i + 0).tangent = tangent;
         this->m_vertices.at(i + 1).tangent = tangent;
         this->m_vertices.at(i + 2).tangent = tangent;
-		// TODO: add handedness code
-		
     }
 }
 

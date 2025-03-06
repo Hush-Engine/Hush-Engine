@@ -221,10 +221,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		samplers.push_back(newSampler);
 	}
 
-	// Load mats first, then apply those to the primitives
-	// for (size_t materialIdx = 0; materialIdx < asset.materials.size(); materialIdx++) {
-	// }
-
+	meshRef.CalculateTangentBasis();
 	meshAsset.meshBuffers = engine->UploadMesh(indexRef, vertexRef); // Here the pipeline layout dies(?
 	meshNode.SetMaterialDataBuffer(materialDataBuffer);
 	return meshNode;
@@ -269,6 +266,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	materialResources.colorImage = engine->GetDefaultWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
+	// materialResources.normalImage = engine->GetDefaultNormalImage();
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 
