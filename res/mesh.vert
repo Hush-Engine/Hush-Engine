@@ -9,12 +9,13 @@ layout (location = 0) out vec3 outNormal;
 layout (location = 1) out vec3 outColor;
 layout (location = 2) out vec2 outUV;
 layout (location = 3) out vec3 outTangent;
+layout (location = 4) out float outHandedness;
 
 struct Vertex {
 	vec3 position;
 	vec3 normal;
 	vec4 color;
-	vec3 tangent;
+	vec4 tangent;
 	vec2 uv;
 }; 
 
@@ -40,7 +41,8 @@ void main()
 	
 	mat3 modelMat3 = mat3(PushConstants.modelMatrix);
 	outNormal = normalize(modelMat3 * v.normal);
-	outTangent = normalize(modelMat3 * v.tangent);
+	outTangent = normalize(modelMat3 * v.tangent.xyz);
+	outHandedness = v.tangent.w;
 	outColor = v.color.xyz * materialData.colorFactors.xyz;	
 	
 	outUV.x = v.uv.x;

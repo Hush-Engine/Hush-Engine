@@ -95,6 +95,9 @@ namespace Hush
 
 		[[nodiscard]]
 		AllocatedImage GetDefaultWhiteImage() const noexcept;
+		
+		[[nodiscard]]
+		AllocatedImage GetDefaultNormalImage() const noexcept;
 
 		[[nodiscard]]
 		GLTFMetallicRoughness &GetMetalRoughMaterial() noexcept;
@@ -239,6 +242,7 @@ namespace Hush
 
 		// Test stuff
 		AllocatedImage m_whiteImage{};
+		AllocatedImage m_defaultNormalImage{};
 		AllocatedImage m_blackImage{};
 		AllocatedImage m_greyImage{};
 		AllocatedImage m_errorCheckerboardImage{};

@@ -7,7 +7,7 @@ layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec2 inUV;
 layout (location = 3) in vec3 inTangent;
-
+layout (location = 4) in float inHandedness;
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -68,7 +68,7 @@ void main()
 
 	// Calculate normal related stuff
 	vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
-	vec3 biTangent = cross(inNormal, tangent);
+	vec3 biTangent = cross(inNormal, tangent) * inHandedness;
 	TBN = mat3(tangent, biTangent, inNormal);
 
 	vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;

@@ -18,7 +18,7 @@ namespace Hush {
 			alignas(16) glm::vec3 position{};
 			alignas(16) glm::vec3 normal = Vector3Math::RIGHT;
 			alignas(16) glm::vec4 color = glm::vec4{1.f};
-			alignas(16) glm::vec3 tangent;
+			alignas(16) glm::vec4 tangent;
 			alignas(8) glm::vec2 uv{};
 		};
 

@@ -21,6 +21,7 @@ namespace Hush
 		VkMaterialPipeline m_transparentPipeline{};
 
 		VkDescriptorSetLayout m_materialLayout{};
+
 	public:
 		struct MaterialConstants
 		{
@@ -51,16 +52,20 @@ namespace Hush
 							const std::string_view &vertexShaderPath);
 
 		void ClearResources(VkDevice device);
-		
-        [[nodiscard]] EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
+
+		[[nodiscard]]
+		EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
 
 		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept override;
 
-		[[nodiscard]] ECullMode GetCullMode() const noexcept override;
-		
+		[[nodiscard]]
+		ECullMode GetCullMode() const noexcept override;
+
 		void SetCullMode(ECullMode cullMode) override;
 
-		inline VkMaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable& descriptorAllocator) {
+		inline VkMaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources &resources,
+												DescriptorAllocatorGrowable &descriptorAllocator)
+		{
 
 			Hush::VkMaterialInstance matData{};
 			matData.passType = pass;
@@ -89,7 +94,8 @@ namespace Hush
 			writer.WriteImage(1, resources.colorImage.imageView, resources.colorSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			writer.WriteImage(2, resources.metalRoughImage.imageView, resources.metalRoughSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);			
+
 			writer.WriteImage(3, resources.normalImage.imageView, resources.normalSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 

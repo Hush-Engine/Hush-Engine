@@ -452,6 +452,11 @@ AllocatedImage Hush::VulkanRenderer::GetDefaultWhiteImage() const noexcept
 	return this->m_whiteImage;
 }
 
+AllocatedImage Hush::VulkanRenderer::GetDefaultNormalImage() const noexcept
+{
+	return this->m_defaultNormalImage;
+}
+
 Hush::GLTFMetallicRoughness &Hush::VulkanRenderer::GetMetalRoughMaterial() noexcept
 {
 	return this->m_metalRoughMaterial;
@@ -938,6 +943,10 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 
 	// Default images
 	// 3 default textures, white, grey, black. 1 pixel each
+	uint32_t normalDefault = glm::packUnorm4x8(glm::vec4(0.5F, 0.5F, 1.0F, 1.0F));
+	this->m_defaultNormalImage =
+		CreateImage((void *)&normalDefault, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+	
 	uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
 	m_whiteImage =
 		CreateImage((void *)&white, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -981,6 +990,7 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 		DestroyImage(m_greyImage);
 		DestroyImage(m_blackImage);
 		DestroyImage(m_errorCheckerboardImage);
+		DestroyImage(m_defaultNormalImage);
 	});
 }
 

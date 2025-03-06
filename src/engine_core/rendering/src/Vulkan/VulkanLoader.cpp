@@ -254,7 +254,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	{
 	case EMaterialPass::MainColor:
 	case EMaterialPass::Transparent:
-		constants.alphaThreshold = 0.0f;
+		constants.alphaThreshold = 0.0F;
 		break;
 	case EMaterialPass::Mask:
 		constants.alphaThreshold = material.alphaCutoff;
@@ -266,7 +266,8 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	materialResources.colorImage = engine->GetDefaultWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
-	// materialResources.normalImage = engine->GetDefaultNormalImage();
+	materialResources.normalImage = engine->GetDefaultNormalImage();
+	
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 
