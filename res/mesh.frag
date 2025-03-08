@@ -6,8 +6,12 @@
 layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec2 inUV;
+layout (location = 3) in vec3 inTangent;
+layout (location = 4) in float inHandedness;
 
 layout (location = 0) out vec4 outFragColor;
+
+const vec3 specColor = vec3(1.0f);
 
 struct SHCoefficients {
     vec3 l00, l1m1, l10, l11, l2m2, l2m1, l20, l21, l22;
@@ -46,15 +50,60 @@ vec3 calcIrradiance(vec3 nor) {
     );
 }
 
+// Makes the normal look better for little performance cost
+vec3 calculateTangentGramSchmidt(in vec3 normal, in vec3 tangent) {
+	return (tangent - dot(tangent, normal) * normal);
+}
+
+
+// Based on Blinn-phong reflection model
+vec3 calcSpecular(vec3 normal, vec3 viewDir, vec3 lightDir, float shininess) {
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+    
+    return specColor * spec;
+}
+
+vec3 viewMatExtractFwd(mat4 viewMatrix) {
+	// 8 9 and 10 idx corresponds to -fwd
+	return -vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+}
+
+// Tangent, BiTangent and normal matrix
+// Converts texture space into model space
+mat3 TBN;
+
+const float specShininess = 32.0;
+
 void main() 
 {
-	float lightValue = max(dot(inNormal, vec3(0.3f,1.f,0.3f)), 0.1f);
 
-	vec3 irradiance = calcIrradiance(inNormal); 
+	vec4 texColor = texture(colorTex,inUV);
+	float alpha = texColor.w;
+	if (alpha < materialData.alphaCutoff) {
+		discard;
+	}
 
+	// Calculate normal related stuff
+	vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
+	vec3 biTangent = cross(inNormal, tangent) * inHandedness;
+	TBN = mat3(tangent, biTangent, inNormal);
 
-	vec3 color = inColor * texture(colorTex,inUV).xyz;
+	vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
+	vec3 finalNormal = normalize(TBN * localNormal);
+	
+	// Calculate the light once we're done with normal calculations
+	vec3 viewDirection = viewMatExtractFwd(sceneData.view);
+	
+	float lightValue = max(dot(finalNormal, sceneData.sunlightDirection.xyz), 0.1f);
+	vec3 irradiance = calcIrradiance(finalNormal);
 
-	outFragColor = vec4(color * lightValue + color * irradiance.x * vec3(0.2f) ,1.0f);
+	// Specular calcs
+	vec3 specular = calcSpecular(finalNormal, viewDirection, sceneData.sunlightDirection.xyz, specShininess);
+
+	vec3 color = inColor * texColor.xyz;
+
+	outFragColor = vec4(color * lightValue + color * irradiance.x * vec3(0.2f) + specular , alpha);
 }
 

@@ -6,6 +6,7 @@
 #include "ShaderBindings.hpp"
 #include "Result.hpp"
 #include "Assertions.hpp"
+#include "Shared/IMaterial3D.hpp"
 #include "Shared/MaterialOptions.hpp"
 
 class SpvReflectTypeDescription;
@@ -26,8 +27,7 @@ namespace Hush
 	/// The performance impact of this class is considerable since it needs to keep track of the bindings
 	/// in both RAM and GPU, as well as process the shader initially with Reflection (initialization cost)
 	/// This class's interface is Rendering API agnostic
-	class ShaderMaterial
-	{
+	class ShaderMaterial final : public IMaterial3D {
 	public:
 		enum class EError
 		{
@@ -38,16 +38,6 @@ namespace Hush
 			PipelineLayoutCreationFailed,
 			PropertyNotFound,
 			ShaderNotLoaded
-		};
-
-		enum class EShaderInputType
-		{
-			Float32,
-			Vec2,
-			Vec3,
-			Vec4,
-			Bool,
-			Int
 		};
 
 		ShaderMaterial() = default;
@@ -63,19 +53,16 @@ namespace Hush
 
 		OpaqueMaterialData *GetMaterialData();
 
-		[[nodiscard]]
-		EAlphaBlendMode GetAlphaBlendMode() const noexcept;
+		[[nodiscard]] EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
 
-		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept;
-
-		[[nodiscard]]
-		ECullMode GetCullMode() const noexcept;
-
-		void SetCullMode(ECullMode cullMode);
-
-		template <class T>
-		inline EError SetProperty(const std::string_view &name, T value)
-		{
+		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept override;
+		
+		[[nodiscard]] ECullMode GetCullMode() const noexcept override;
+		
+		void SetCullMode(ECullMode cullMode) override;
+		
+		template<class T>
+		inline EError SetProperty(const std::string_view& name, T value) {
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
 			const ShaderBindings &binding = this->FindBinding(name);

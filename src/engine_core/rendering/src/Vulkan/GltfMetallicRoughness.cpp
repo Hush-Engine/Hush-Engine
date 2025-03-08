@@ -1,8 +1,9 @@
 
 // NOTE: Keep volk at the top to avoid function redefinitions with Vulkan
+#include <cstdint>
 #include <volk.h>
 #include "GltfMetallicRoughness.hpp"
-#include "GltfMetallicRoughness.hpp"
+#include "Shared/MaterialOptions.hpp"
 #include "VulkanRenderer.hpp"
 #include "VulkanPipelineBuilder.hpp"
 #include "VkUtilsFactory.hpp"
@@ -33,14 +34,21 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 
 	// Create the material layout
 	DescriptorLayoutBuilder layoutBuilder{};
-	layoutBuilder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-	layoutBuilder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	layoutBuilder.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-	this->materialLayout = layoutBuilder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+	constexpr uint32_t uniformBufferBinding = 0;
+	constexpr uint32_t albedoBinding = 1;
+	constexpr uint32_t metallicBinding = 2;
+	constexpr uint32_t normalBinding = 3;
+	
+	layoutBuilder.AddBinding(uniformBufferBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	layoutBuilder.AddBinding(albedoBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	layoutBuilder.AddBinding(metallicBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	layoutBuilder.AddBinding(normalBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+	this->m_materialLayout = layoutBuilder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	// Create the mesh layouts
-	VkDescriptorSetLayout layouts[] = {vkEngine->GetGpuSceneDataDescriptorLayout(), this->materialLayout};
+	VkDescriptorSetLayout layouts[] = {vkEngine->GetGpuSceneDataDescriptorLayout(), this->m_materialLayout};
 
 	VkPipelineLayoutCreateInfo meshLayoutInfo = VkUtilsFactory::PipelineLayoutCreateInfo();
 	meshLayoutInfo.setLayoutCount = 2;
@@ -52,8 +60,8 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	VkResult rc = vkCreatePipelineLayout(device, &meshLayoutInfo, nullptr, &newLayout);
 	HUSH_VK_ASSERT(rc, "Failed to create pipeline mesh pipeline layout!");
 
-	this->opaquePipeline.layout = newLayout;
-	this->transparentPipeline.layout = newLayout;
+	this->m_opaquePipeline.layout = newLayout;
+	this->m_transparentPipeline.layout = newLayout;
 
 	// build the stage-create-info for both vertex and fragment stages. This lets
 	// the pipeline know the shader modules per stage
@@ -71,14 +79,14 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	pipelineBuilder.SetDepthFormat(vkEngine->GetDepthImage().imageFormat);
 
 	// Create the opaque variant
-	this->opaquePipeline.pipeline = pipelineBuilder.Build(device);
+	this->m_opaquePipeline.pipeline = pipelineBuilder.Build(device);
 
 	// Create the transparent variant
 	pipelineBuilder.EnableBlendingAdditive();
 
 	pipelineBuilder.EnableDepthTest(false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
-	this->transparentPipeline.pipeline = pipelineBuilder.Build(device);
+	this->m_transparentPipeline.pipeline = pipelineBuilder.Build(device);
 
 	// clean structures
 	vkDestroyShaderModule(device, meshFragmentShader, nullptr);
@@ -89,3 +97,23 @@ void Hush::GLTFMetallicRoughness::ClearResources(VkDevice device)
 {
 	(void)device;
 }
+
+
+
+Hush::EAlphaBlendMode Hush::GLTFMetallicRoughness::GetAlphaBlendMode() const noexcept {
+	return EAlphaBlendMode::None;
+}
+
+Hush::ECullMode Hush::GLTFMetallicRoughness::GetCullMode() const noexcept {
+	return ECullMode::None;	
+}
+
+
+void Hush::GLTFMetallicRoughness::SetCullMode(ECullMode cullMode) {
+	(void)cullMode;
+}
+
+void Hush::GLTFMetallicRoughness::SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept {
+	(void)blendMode;
+}
+

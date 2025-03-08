@@ -2,8 +2,10 @@
 #include "Assertions.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
-#include <cstdint>
+#include "Vulkan/VkTypes.hpp"
+#include "Vulkan/GltfMetallicRoughness.hpp"
 #include <fastgltf/types.hpp>
+#include <vector>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 #include "MaterialPass.hpp"
@@ -44,6 +46,53 @@ Hush::EMaterialPass Hush::GltfLoadFunctions::GetMaterialPassFromFastGltfPass(fas
 	default:
 		return EMaterialPass::Other;
 	}
+}
+
+
+Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(void *outMaterialResources, const fastgltf::Asset &asset,
+						   const fastgltf::Material &material, const void *loadedTextures) {
+	#ifdef HUSH_VULKAN_IMPL
+
+	// Vulkan implementation will cast the out material resources and the loaded textures
+	const auto* loadedTexturesImpl = reinterpret_cast<const std::vector<AllocatedImage>*>(loadedTextures);
+	auto* outMaterialResourcesImpl = reinterpret_cast<GLTFMetallicRoughness::MaterialResources*>(outMaterialResources);
+	
+	// TODO: Refactor all this in a function
+	const fastgltf::PBRData& pbrData = material.pbrData;
+	if (pbrData.baseColorTexture.has_value())
+	{
+		size_t textureDataIdx = material.pbrData.baseColorTexture->textureIndex;
+		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+		if (fastgltfTexture.imageIndex.has_value())
+		{ 
+			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
+			outMaterialResourcesImpl->colorImage = allocImage;
+		}
+	}
+	
+	if (pbrData.metallicRoughnessTexture.has_value()) {
+		size_t textureDataIdx = material.pbrData.metallicRoughnessTexture->textureIndex;
+		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+		
+		if (fastgltfTexture.imageIndex.has_value())
+		{ 
+			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
+			outMaterialResourcesImpl->metalRoughImage = allocImage;
+		}
+	}
+	if (material.normalTexture.has_value()) {
+		size_t textureDataIdx = material.normalTexture->textureIndex;
+		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+		
+		if (fastgltfTexture.imageIndex.has_value())
+		{ 
+			const AllocatedImage& allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());  
+			outMaterialResourcesImpl->normalImage = allocImage;
+		}
+	}
+	
+	return EError::None;
+	#endif
 }
 
 std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
