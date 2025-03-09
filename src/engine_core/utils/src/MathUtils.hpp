@@ -18,8 +18,8 @@ namespace Hush::MathUtils
 			return min;
 		}
 		return value;
-	} 
-
+	}
+	
 	inline float Lerp(float from, float to, float t)
 	{
 		const float tClamped = Clamp(t, 0.0f, 1.0f);

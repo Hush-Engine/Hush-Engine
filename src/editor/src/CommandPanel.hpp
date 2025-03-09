@@ -9,6 +9,12 @@
 namespace Hush {
 	class CommandPanel : public IEditorPanel {
 	public:
+		enum class EState 
+		{
+			None = 0,
+			Editing,
+			ForceFocus	
+		};
 		void OnRender() override;
 		
 	private:
@@ -24,9 +30,7 @@ namespace Hush {
 		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
-		bool m_acceptText = false;
-		
-		Timer m_inputTimer;
+		EState m_currState = EState::None;
 
 		int32_t m_selectedCommandIdx = -1;
 
