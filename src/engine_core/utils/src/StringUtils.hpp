@@ -7,23 +7,24 @@
 
 #pragma once
 #include <array>
-#include <codecvt>
+#include <cstdint>
 #include <string>
 
 /// @brief Provides utility functions for handling strings (C and std strings)
-class StringUtils
+namespace Hush::StringUtils
 {
 
-public:
 	/// @brief Converts the given char* to a standard wstring, used for Windows, since char_t* is wchar_t*
 	/// @param data String to convert
 	/// @return wstring of the converted string, from 8B to 16B chars
-	static std::wstring ToWString(const char *data);
+	std::wstring ToWString(const char *data);
 
-	static std::string FromWString(std::wstring str);
+	std::string FromWString(const std::wstring& str);
 
+	constexpr std::string_view SubstrView(const std::string& str, int32_t offset, int32_t endIdx);
+	
 	template <uint32_t N1, uint32_t N2>
-	static constexpr auto CompileTimeConcat(const char (&str1)[N1], const char (&str2)[N2])
+	constexpr auto CompileTimeConcat(const char (&str1)[N1], const char (&str2)[N2])
 	{
 		std::array<char, N1 + N2 - 1> result{}; // Subtract 1 for the null terminator
 

@@ -90,7 +90,7 @@ void Hush::CommandPanel::UpdateCommandList()
 
 	ImGuiIO &imGuiIO = ImGui::GetIO();
 	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * 4.0F});
-	// ImGui::SetNextWindowPos({ imGuiIO.DisplaySize.x / 2, imGuiIO.DisplaySize.y / 2 });
+
 	ImGui::SetNextWindowPos({this->m_commandPanelPos.x, imGuiIO.DisplaySize.y / 2});
 	ImGui::SetNextWindowBgAlpha(0.5F);
 	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
@@ -102,8 +102,7 @@ void Hush::CommandPanel::UpdateCommandList()
 		bool hovered = false;
 		bool forceHover = this->m_selectedCommandIdx == i;
 		UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
-		std::string_view substr = {this->m_panelText.begin() + 1,
-								   this->m_panelText.begin() + std::min(1 + command.size(), this->m_panelText.size())};
+
 		if (hovered && this->m_currState == EState::ForceFocus)
 		{
 			this->m_panelText = std::string(":") + command.data();

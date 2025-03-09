@@ -2,7 +2,6 @@
 
 #include "IEditorPanel.hpp"
 #include "imgui/imgui.h"
-#include "time/Timer.hpp"
 #include <string>
 #include <string_view>
 
@@ -25,7 +24,7 @@ namespace Hush {
 		void TypeCommand();
 
 		void UpdateCommandList();
-
+		
 		void CloseCommandMode();
 		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
