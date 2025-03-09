@@ -9,8 +9,18 @@
 #include "UI.hpp"
 #include "MathUtils.hpp"
 
+enum class EBuiltinCommands : int32_t {
+	AddEntity,
+	FindEntity,
+	AddComponent
+};
+
 constexpr std::array<std::string_view, 3> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component"};
-constexpr float MILLIS_TO_ACCEPT_BACKSPACE = 100;
+
+
+void Hush::CommandPanel::Init(Scene* activeScene) noexcept {
+	(void)activeScene;
+}
 
 void Hush::CommandPanel::OnRender()
 {

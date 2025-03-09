@@ -14,6 +14,9 @@ namespace Hush {
 			Editing,
 			ForceFocus	
 		};
+
+		void Init(Scene* activeScene) noexcept override;
+		
 		void OnRender() override;
 		
 	private:

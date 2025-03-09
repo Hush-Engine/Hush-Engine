@@ -10,20 +10,23 @@
 #include "DebugTooltip.hpp"
 #include "StatsPanel.hpp"
 
-#define ADD_PANEL(panelsMap, panelType) panelsMap[typeid(panelType)] = CreatePanel<panelType>()
+#define ADD_PANEL(activeScene, panelsMap, panelType) panelsMap[typeid(panelType)] = CreatePanel<panelType>(activeScene)
 
 Hush::UI::UI()
 {
-	ADD_PANEL(this->m_activePanels, TitleBarMenuPanel);
-	ADD_PANEL(this->m_activePanels, TitleBarMenuPanel);
-	ADD_PANEL(this->m_activePanels, ScenePanel);
-	ADD_PANEL(this->m_activePanels, HierarchyPanel);
-	ADD_PANEL(this->m_activePanels, ContentPanel);
-	ADD_PANEL(this->m_activePanels, DebugUI);
-	ADD_PANEL(this->m_activePanels, DebugTooltip);
-	ADD_PANEL(this->m_activePanels, StatsPanel);
-	ADD_PANEL(this->m_activePanels, CommandPanel);
 	s_instance = this;
+}
+
+void Hush::UI::Init(Scene* parentScene) {
+	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
+	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, DebugUI);
+	ADD_PANEL(parentScene, this->m_activePanels, DebugTooltip);
+	ADD_PANEL(parentScene, this->m_activePanels, StatsPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);
 }
 
 void Hush::UI::DrawPanels()

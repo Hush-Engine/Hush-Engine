@@ -13,6 +13,9 @@ namespace Hush
 	class TitleBarMenuPanel final : public IEditorPanel
 	{
 	public:
+		
+		void Init(Scene* activeScene) noexcept override;
+		
 		void OnRender() noexcept override;
 
 	private:

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "Scene.hpp"
 #include "imgui/imgui.h"
 #include <memory>
 #include <unordered_map>
@@ -19,6 +20,8 @@ namespace Hush
 	public:
 		UI();
 
+		void Init(Scene* parentScene);
+		
 		void DrawPanels();
 
 		template <class T>
@@ -42,12 +45,15 @@ namespace Hush
 	private:
 		static void DrawPlayButton();
 
+		//NOLINTNEXTLINE
 		static inline UI *s_instance;
 
 		template <class T>
-		static std::unique_ptr<T> CreatePanel()
+		static std::unique_ptr<T> CreatePanel(Scene* activeScene)
 		{
-			return std::make_unique<T>();
+			auto result = std::make_unique<T>();
+			static_cast<IEditorPanel*>(result.get())->Init(activeScene);
+			return result;
 		}
 		std::unordered_map<std::type_index, std::unique_ptr<IEditorPanel>> m_activePanels;
 	};

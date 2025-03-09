@@ -40,7 +40,7 @@ public:
 	void OnRender() override
 	{
 		this->m_scene->Render();
-		this->userInterface.DrawPanels();
+		this->m_userInterface.DrawPanels();
 	}
 
 	void OnPostRender() override
@@ -59,7 +59,7 @@ public:
 	}
 
 private:
-	Hush::UI userInterface;
+	Hush::UI m_userInterface;
 	std::unique_ptr<Hush::Scene> m_scene;
 };
 

@@ -55,6 +55,11 @@ namespace Hush
 			delete this->m_methodName;
 		}
 
+		
+		void Init(Scene* activeScene) noexcept override 
+		{
+			(void)activeScene;
+		}	
 		void OnRender() override
 		{
 			if (!ImGui::Begin("Debug options"))

@@ -6,14 +6,14 @@
 
 #pragma once
 
+#include "Scene.hpp"
 namespace Hush
 {
-
 	class IEditorPanel
 	{
 	public:
 		IEditorPanel() noexcept = default;
-
+		
 		IEditorPanel(const IEditorPanel &other) = default;
 
 		IEditorPanel(IEditorPanel &&other) = default;
@@ -25,6 +25,8 @@ namespace Hush
 		virtual ~IEditorPanel() = default;
 	
 		virtual void OnRender() = 0;
+
+		virtual void Init(Scene* activeScene) noexcept = 0;
 	};
 
 } // namespace Hush

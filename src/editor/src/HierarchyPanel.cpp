@@ -6,6 +6,11 @@ constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
 	ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
 	ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
+
+void Hush::HierarchyPanel::Init(Scene* activeScene) noexcept {
+	(void)activeScene;
+}
+
 void Hush::HierarchyPanel::OnRender()
 {
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
