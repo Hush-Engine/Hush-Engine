@@ -3,13 +3,18 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "InputManager.hpp"
+#include <array>
+#include <string_view>
+
+constexpr std::array<std::string_view, 3> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component"};
 
 void Hush::CommandPanel::OnRender()
 {
-	this->HandleInput();
-	this->TypeCommand();
 	ImGuiWindowClass windowClass{};
 	windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+	this->HandleInput();
+	this->TypeCommand();
+	this->UpdateCommandList();
 	ImGui::SetNextWindowClass(&windowClass);
 	ImGui::Begin("Command Panel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
 	ImGui::Text("%s", this->m_panelText.c_str());
@@ -20,8 +25,7 @@ void Hush::CommandPanel::HandleInput()
 {
 	if (InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE))
 	{
-		this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
-		this->m_acceptText = false;
+		this->CloseCommandMode();
 		return;
 	}
 	char pressedChar = 0;
@@ -54,3 +58,26 @@ void Hush::CommandPanel::TypeCommand()
 		this->m_panelText = this->m_panelText.substr(0, lastCharacterIdx);
 	}
 }
+
+
+void Hush::CommandPanel::CloseCommandMode() {
+	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
+	this->m_acceptText = false;
+	this->m_selectedCommandIdx = 0;
+}
+
+void Hush::CommandPanel::UpdateCommandList() const {
+	if (!this->m_acceptText) {
+		return;
+	}
+	ImGuiIO& imGuiIO = ImGui::GetIO();
+	ImGui::SetNextWindowPos({ imGuiIO.DisplaySize.x / 2, imGuiIO.DisplaySize.y / 2 });
+	ImGui::Begin("Available commands");
+	// Show all commands that match
+	for(const auto& command : BUILT_IN_COMMANDS) {
+		ImGui::Selectable(command.data());
+		
+	}
+	ImGui::End();
+}
+

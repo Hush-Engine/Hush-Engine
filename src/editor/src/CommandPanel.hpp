@@ -16,12 +16,18 @@ namespace Hush {
 		void HandleInput();
 		
 		void TypeCommand();
+
+		void UpdateCommandList() const;
+
+		void CloseCommandMode();
 		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
 		bool m_acceptText = false;
 		
 		Timer m_inputTimer;
+
+		size_t m_selectedCommandIdx = 0;
 	};
 }
 
