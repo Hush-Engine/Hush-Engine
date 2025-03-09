@@ -8,6 +8,7 @@
 #include <string_view>
 #include "UI.hpp"
 #include "MathUtils.hpp"
+#include "systems/CommandSystem.hpp"
 
 enum class EBuiltinCommands : int32_t {
 	AddEntity,
@@ -19,7 +20,7 @@ constexpr std::array<std::string_view, 3> BUILT_IN_COMMANDS = {"add-entity", "fi
 
 
 void Hush::CommandPanel::Init(Scene* activeScene) noexcept {
-	(void)activeScene;
+	activeScene->AddEngineSystem(nullptr);
 }
 
 void Hush::CommandPanel::OnRender()

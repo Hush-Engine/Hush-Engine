@@ -10,6 +10,7 @@ void Hush::TitleBarMenuPanel::Init(Scene* activeScene) noexcept {
 	(void)activeScene;
 }
 
+
 void Hush::TitleBarMenuPanel::OnRender() noexcept
 {
 	if (ImGui::BeginMainMenuBar())
