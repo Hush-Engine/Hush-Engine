@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "imgui/imgui.h"
 #include "time/Timer.hpp"
 #include <string>
 #include <string_view>
@@ -17,7 +18,7 @@ namespace Hush {
 		
 		void TypeCommand();
 
-		void UpdateCommandList() const;
+		void UpdateCommandList();
 
 		void CloseCommandMode();
 		
@@ -28,6 +29,13 @@ namespace Hush {
 		Timer m_inputTimer;
 
 		size_t m_selectedCommandIdx = 0;
+
+		float m_commandPanelWidth = 0.0F;
+		
+		float m_commandPanelHeight = 0.0F;
+
+		ImVec2 m_commandPanelPos;
+		
 	};
 }
 

@@ -17,6 +17,10 @@ void Hush::CommandPanel::OnRender()
 	this->UpdateCommandList();
 	ImGui::SetNextWindowClass(&windowClass);
 	ImGui::Begin("Command Panel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+	ImVec2 currentsize = ImGui::GetWindowSize();
+	this->m_commandPanelPos = ImGui::GetWindowPos();
+	this->m_commandPanelWidth = currentsize.x;
+	this->m_commandPanelHeight = currentsize.y;
 	ImGui::Text("%s", this->m_panelText.c_str());
 	ImGui::End();
 }
@@ -66,17 +70,20 @@ void Hush::CommandPanel::CloseCommandMode() {
 	this->m_selectedCommandIdx = 0;
 }
 
-void Hush::CommandPanel::UpdateCommandList() const {
+void Hush::CommandPanel::UpdateCommandList() {
 	if (!this->m_acceptText) {
 		return;
 	}
 	ImGuiIO& imGuiIO = ImGui::GetIO();
-	ImGui::SetNextWindowPos({ imGuiIO.DisplaySize.x / 2, imGuiIO.DisplaySize.y / 2 });
-	ImGui::Begin("Available commands");
+	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * 4.0F});
+	// ImGui::SetNextWindowPos({ imGuiIO.DisplaySize.x / 2, imGuiIO.DisplaySize.y / 2 });
+	ImGui::SetNextWindowPos({ this->m_commandPanelPos.x, imGuiIO.DisplaySize.y / 2 });
+	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
 	// Show all commands that match
-	for(const auto& command : BUILT_IN_COMMANDS) {
-		ImGui::Selectable(command.data());
-		
+	for(const std::string_view& command : BUILT_IN_COMMANDS) {
+		if (ImGui::Selectable(command.data())) {
+			this->m_panelText = std::string(":") + command.data();
+		}
 	}
 	ImGui::End();
 }
