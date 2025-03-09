@@ -31,6 +31,8 @@ namespace Hush
 		static bool Spinner(const char *label, float radius, int thickness,
 							const uint32_t &color = 3435973836u /*Default button color*/);
 
+		static bool CustomSelectable(const char* label, bool* isHovered, ImDrawList* drawList, bool forceHover = false);
+		
 		static bool BeginToolBar();
 
 		static ImGuiID DockSpace(const char* dockspaceId, const char* name, ImGuiDockNodeFlags additionalFlags = 0);

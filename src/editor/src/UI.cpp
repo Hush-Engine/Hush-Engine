@@ -84,6 +84,49 @@ bool Hush::UI::Spinner(const char *label, float radius, int thickness, const uin
 	window->DrawList->PathStroke(color, 0, thickness);
 	return true;
 }
+
+
+bool Hush::UI::CustomSelectable(const char* label, bool* isHovered, ImDrawList* drawList, bool forceHover) {
+	
+        ImVec2 textSize = ImGui::CalcTextSize(label);
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        
+        // Add some padding to make the highlight look better
+        float paddingX = 8.0f;
+        float paddingY = 2.0f;
+        
+        // Create a rectangle that covers the text with padding
+        ImRect bbox(
+            ImVec2(pos.x - paddingX, pos.y - paddingY),
+            ImVec2(pos.x + textSize.x + paddingX, pos.y + textSize.y + paddingY)
+        );
+        
+        ImGuiID id = ImGui::GetID(label);
+        
+        // Check hover state using ImGui's hoverability check
+        *isHovered = forceHover || ImGui::ItemHoverable(bbox, id, ImGuiItemFlags_None);
+
+        if (*isHovered) {	
+	        drawList->AddRectFilled(
+	            bbox.Min, 
+	            bbox.Max, 
+	            IM_COL32(70, 70, 120, 200), // Darker blue background
+	            4.0f  // Rounded corners radius
+	        );
+        }
+
+        ImGui::InvisibleButton(label, ImVec2(textSize.x + paddingX * 2, textSize.y + paddingY * 2));
+        
+        if (*isHovered) {
+            drawList->AddText(ImVec2(pos.x, pos.y), IM_COL32(255, 255, 0, 255), label);
+        } else {
+            drawList->AddText(pos, ImGui::GetColorU32(ImGuiCol_Text), label);
+        }
+		
+        
+        return *isHovered && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Enter));
+}
+
 bool Hush::UI::BeginToolBar()
 {
 	constexpr ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_None;

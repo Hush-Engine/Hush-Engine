@@ -28,7 +28,7 @@ namespace Hush {
 		
 		Timer m_inputTimer;
 
-		size_t m_selectedCommandIdx = 0;
+		int32_t m_selectedCommandIdx = -1;
 
 		float m_commandPanelWidth = 0.0F;
 		

@@ -40,9 +40,6 @@ void Hush::Mesh::CalculateTangentBasis()
 		glm::vec3 tangent = (deltaPos1 * deltaUv2.y - deltaPos2 * deltaUv1.y) * r;
 		// Bitangent will be calculated in the GPU
 
-		// Set the same tangent for all three vertices of the triangle.
-		// They will be merged later, in vboindexer.cpp
-
 		glm::vec4 tangWithHandedness = Vector4Math::FromVec3(tangent, handedness);
 		this->m_vertices.at(idx0).tangent = tangWithHandedness;
 		this->m_vertices.at(idx1).tangent = tangWithHandedness;

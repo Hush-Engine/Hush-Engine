@@ -4,7 +4,10 @@
 #include "imgui/imgui_internal.h"
 #include "InputManager.hpp"
 #include <array>
+#include <cstdint>
 #include <string_view>
+#include "UI.hpp"
+#include "MathUtils.hpp"
 
 constexpr std::array<std::string_view, 3> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component"};
 
@@ -67,24 +70,39 @@ void Hush::CommandPanel::TypeCommand()
 void Hush::CommandPanel::CloseCommandMode() {
 	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 	this->m_acceptText = false;
-	this->m_selectedCommandIdx = 0;
+	this->m_selectedCommandIdx = -1;
 }
 
 void Hush::CommandPanel::UpdateCommandList() {
 	if (!this->m_acceptText) {
 		return;
 	}
+
+	if (ImGui::IsKeyPressed(ImGuiKey_Tab, true)) {
+		if (ImGui::IsKeyPressed(ImGuiKey_ModShift, true)) {
+			
+		}
+		this->m_selectedCommandIdx = MathUtils::CircleBack(this->m_selectedCommandIdx + 1, 0, BUILT_IN_COMMANDS.size() - 1);
+	}
+
+		
 	ImGuiIO& imGuiIO = ImGui::GetIO();
 	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * 4.0F});
 	// ImGui::SetNextWindowPos({ imGuiIO.DisplaySize.x / 2, imGuiIO.DisplaySize.y / 2 });
 	ImGui::SetNextWindowPos({ this->m_commandPanelPos.x, imGuiIO.DisplaySize.y / 2 });
+	ImGui::SetNextWindowBgAlpha(0.3F);
 	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
 	// Show all commands that match
-	for(const std::string_view& command : BUILT_IN_COMMANDS) {
-		if (ImGui::Selectable(command.data())) {
-			this->m_panelText = std::string(":") + command.data();
-		}
-	}
-	ImGui::End();
+	ImDrawList* drawList = ImGui::GetWindowDrawList();	
+	for(size_t i = 0; i < BUILT_IN_COMMANDS.size(); i++) {
+		const std::string_view& command = BUILT_IN_COMMANDS.at(i);
+		bool hovered = false;
+		bool forceHover = this->m_selectedCommandIdx == i;
+		UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
+        if (hovered) {
+            this->m_panelText = std::string(":") + command.data();
+        }        
+    }
+    ImGui::End();
 }
 
