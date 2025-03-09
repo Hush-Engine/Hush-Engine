@@ -23,7 +23,7 @@ namespace Hush
 		IEditorPanel &operator=(IEditorPanel &&) = default;
 
 		virtual ~IEditorPanel() = default;
-
+	
 		virtual void OnRender() = 0;
 	};
 

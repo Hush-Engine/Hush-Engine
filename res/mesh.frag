@@ -67,7 +67,7 @@ vec3 calcSpecular(vec3 normal, vec3 viewDir, vec3 lightDir, float shininess) {
 
 vec3 viewMatExtractFwd(mat4 viewMatrix) {
 	// 8 9 and 10 idx corresponds to -fwd
-	return -vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+	return vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 }
 
 // Tangent, BiTangent and normal matrix

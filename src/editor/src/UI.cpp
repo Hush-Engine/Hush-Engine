@@ -1,4 +1,5 @@
 #include "UI.hpp"
+#include "CommandPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
@@ -21,12 +22,13 @@ Hush::UI::UI()
 	ADD_PANEL(this->m_activePanels, DebugUI);
 	ADD_PANEL(this->m_activePanels, DebugTooltip);
 	ADD_PANEL(this->m_activePanels, StatsPanel);
+	ADD_PANEL(this->m_activePanels, CommandPanel);
 	s_instance = this;
 }
 
 void Hush::UI::DrawPanels()
 {
-	UI::DockSpace();
+	UI::DockSpace("HushDockspace", "Demo dockspace");
 	UI::DrawPlayButton();
 	// NOLINTNEXTLINE
 	for (auto &pairEntry : this->m_activePanels)
@@ -87,9 +89,10 @@ bool Hush::UI::BeginToolBar()
 	constexpr ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_None;
 	return ImGui::Begin("##toolbar", nullptr, toolbarFlags);
 }
-void Hush::UI::DockSpace()
+
+ImGuiID Hush::UI::DockSpace(const char* dockspaceId, const char* name, ImGuiDockNodeFlags additionalFlags)
 {
-	static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode;
+	ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_PassthruCentralNode | additionalFlags;
 
 	// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
 	// because it would be confusing to have two docking targets within each others.
@@ -117,9 +120,10 @@ void Hush::UI::DockSpace()
 	ImGui::PopStyleVar();
 	ImGui::PopStyleVar(2);
 
-	ImGuiID dockspaceId = ImGui::GetID("HushDockspace");
-	ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), dockspaceFlags);
+	ImGuiID imguiDockspaceId = ImGui::GetID(dockspaceId);
+	ImGui::DockSpace(imguiDockspaceId, ImVec2(0.0f, 0.0f), dockspaceFlags);
 	ImGui::End();
+	return imguiDockspaceId;
 }
 
 Hush::UI &Hush::UI::Get()

@@ -88,6 +88,7 @@ namespace Hush
 		[[nodiscard]]
 		virtual std::string_view GetName() const = 0;
 
+		[[nodiscard]]
 		Scene &GetScene() const
 		{
 			return *m_scene;

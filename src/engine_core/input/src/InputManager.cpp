@@ -1,5 +1,7 @@
 #include "InputManager.hpp"
 #include "Logger.hpp"
+#include "definitions/KeyCode.hpp"
+#include "definitions/KeyStates.hpp"
 #include <magic_enum/magic_enum.hpp>
 #include <SDL2/SDL_mouse.h>
 
@@ -34,6 +36,23 @@ bool Hush::InputManager::IsKeyHeld(EKeyCode key)
 bool Hush::InputManager::GetMouseButtonPressed(EMouseButton button)
 {
 	return MouseMapContains(button) && IS_CURRENTLY_PRESSED(S_MOUSE_DATA.mouseButtonMap[button]);
+}
+
+
+bool Hush::InputManager::FetchCharThisFrame(char* outChar) {
+	*outChar = s_lastChar;
+	return s_lastChar != 0;
+}
+
+
+void Hush::InputManager::ResetCharData() {
+	s_lastChar = 0;
+	SendKeyEvent((int)EKeyCode::KpColon, EKeyState::Released);
+}
+
+
+void Hush::InputManager::SendCharEvent(char pressedChar) {
+	s_lastChar = pressedChar;
 }
 
 glm::vec2 Hush::InputManager::GetMousePosition()

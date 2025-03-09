@@ -7,6 +7,7 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "imgui/imgui.h"
 #include <memory>
 #include <unordered_map>
 #include <typeindex>
@@ -32,7 +33,7 @@ namespace Hush
 
 		static bool BeginToolBar();
 
-		static void DockSpace();
+		static ImGuiID DockSpace(const char* dockspaceId, const char* name, ImGuiDockNodeFlags additionalFlags = 0);
 
 		static UI &Get();
 
