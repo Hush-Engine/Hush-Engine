@@ -8,7 +8,7 @@ constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
 
 
 void Hush::HierarchyPanel::Init(Scene* activeScene) noexcept {
-	(void)activeScene;
+	this->m_activeScene = activeScene;
 }
 
 void Hush::HierarchyPanel::OnRender()
@@ -19,8 +19,9 @@ void Hush::HierarchyPanel::OnRender()
 	{
 		ImGuiIO &io = ImGui::GetIO();
 		(void)io;
-		ImGui::Text("Camera");
-		ImGui::Text("Directional Light");
+		for (const auto& kv : this->m_activeScene->GetAllEntities()) {
+			ImGui::Text("%s", kv.first.c_str());
+		}
 	}
 	ImGui::End();
 }

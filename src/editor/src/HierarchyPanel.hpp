@@ -18,6 +18,6 @@ namespace Hush
 		
 		void OnRender() override;
 	private:
-		
+		Scene* m_activeScene;
 	};
 } // namespace Hush

@@ -8,6 +8,7 @@ add_executable(HushEditor
         src/StatsPanel.cpp
         src/CommandPanel.cpp
         src/TitleBarMenuPanel.cpp
+        src/systems/CommandSystem.cpp
         src/UI.cpp
         src/DebugTooltip.cpp
         src/EditorApp.cpp

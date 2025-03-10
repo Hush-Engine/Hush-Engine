@@ -117,6 +117,11 @@ namespace Hush
 		RawQuery CreateRawQuery(std::span<Entity::EntityId> components,
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
 
+		/// @brief returns a map of all registered entities without a query (mostly for internal use)
+		const std::unordered_map<std::string, Entity::EntityId>& GetAllEntities() {
+			return this->m_registeredEntities;
+		}
+		
 	private:
 		friend class Entity;
 		friend class RawQuery;

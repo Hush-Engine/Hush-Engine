@@ -1,5 +1,6 @@
 #include "CommandPanel.hpp"
 #include "Assertions.hpp"
+#include "Entity.hpp"
 #include "Scene.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
@@ -92,15 +93,17 @@ void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_vie
 		if (textCmd.empty())
 		{
 			// Open the entity search panel or create a new one
-			return;
+			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
-		this->m_activeScene->CreateEntityWithName(textCmd);
-		return;
+		this->m_activeScene->RegisterComponentId(textCmd, this->m_activeScene->CreateEntityWithName(textCmd).GetId());
+		break;
 	case EBuiltinCommands::FindEntity:
 	case EBuiltinCommands::AddComponent:
+	case EBuiltinCommands::Help:
 		break;
 	}
+	this->CloseCommandMode();
 }
 
 void Hush::CommandPanel::UpdateCommandList()
@@ -147,6 +150,6 @@ void Hush::CommandPanel::UpdateCommandList()
 			);
 		}
 	}
-	this->m_currState = previousState;
+	this->m_currState = this->m_currState != EState::None ? previousState : this->m_currState;
 	ImGui::End();
 }
