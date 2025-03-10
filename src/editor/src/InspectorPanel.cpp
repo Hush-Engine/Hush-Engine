@@ -1,4 +1,5 @@
 #include "InspectorPanel.hpp"
+#include "Assertions.hpp"
 #include "Components/Transform.hpp"
 #include "imgui/imgui.h"
 #include <optional>
@@ -27,9 +28,9 @@ void Hush::InspectorPanel::RenderProperties() {
 	if (!this->m_inspectTarget.has_value()) {
 		return;
 	}
-
-	ImGui::Text("%s", this->m_inspectTarget->GetName().value_or("").data());
+	ImGui::SeparatorText( this->m_inspectTarget->GetName().value_or("").data());
 	Transform *transform = this->m_inspectTarget->GetComponent<Transform>();
+	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	UI::SerializeComponent(transform, UI::ESerializableComponentType::Transform);
 }
 
