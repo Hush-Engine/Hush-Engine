@@ -4,8 +4,6 @@
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
-#include <memory>
-#include <vector>
 
 namespace Hush
 {
@@ -19,12 +17,16 @@ namespace Hush
 		void SetPosition(const glm::vec3 &position) noexcept;
 
 		[[nodiscard]]
-		glm::vec3 GetPosition() const noexcept;
-
+		const glm::vec3& GetPosition() const noexcept;
+		
+		glm::vec3& GetPosition() noexcept;
+		
 		void SetScale(const glm::vec3 &scale) noexcept;
 
 		[[nodiscard]]
-		glm::vec3 GetScale() const noexcept;
+		const glm::vec3& GetScale() const noexcept;
+		
+		glm::vec3& GetScale() noexcept;
 
 		void SetRotationQuat(const glm::quat &rotationQuat) noexcept;
 

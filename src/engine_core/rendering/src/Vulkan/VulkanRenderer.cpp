@@ -892,15 +892,15 @@ void Hush::VulkanRenderer::InitMeshPipeline() noexcept
 	pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	// connect the image format we will draw into, from draw image
-	pipelineBuilder.SetColorAttachmentFormat(this->m_drawImage.imageFormat);
-	pipelineBuilder.SetDepthFormat(this->m_depthImage.imageFormat);
+		pipelineBuilder.SetColorAttachmentFormat(this->m_drawImage.imageFormat);
+		pipelineBuilder.SetDepthFormat(this->m_depthImage.imageFormat);
 
-	// finally build the pipeline
-	this->m_meshPipeline = pipelineBuilder.Build(this->m_device);
+		// finally build the pipeline
+		this->m_meshPipeline = pipelineBuilder.Build(this->m_device);
 
-	// clean structures
-	vkDestroyShaderModule(this->m_device, triangleFragShader, nullptr);
-	vkDestroyShaderModule(this->m_device, triangleVertexShader, nullptr);
+		// clean structures
+		vkDestroyShaderModule(this->m_device, triangleFragShader, nullptr);
+		vkDestroyShaderModule(this->m_device, triangleVertexShader, nullptr);
 
 	this->m_mainDeletionQueue.PushFunction([=]() {
 		vkDestroyPipelineLayout(m_device, m_meshPipelineLayout, nullptr);

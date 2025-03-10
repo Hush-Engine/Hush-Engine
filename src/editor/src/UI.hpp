@@ -15,9 +15,15 @@
 
 namespace Hush
 {
+	class Transform;
 	class UI
 	{
 	public:
+		enum class ESerializableComponentType {
+			Unkwon = 0,
+			Transform	
+		};
+		
 		UI();
 
 		void Init(Scene* parentScene);
@@ -38,14 +44,29 @@ namespace Hush
 		
 		static bool BeginToolBar();
 
+		template<class T>
+		static bool SerializeComponent(T* component, ESerializableComponentType compType) {
+			switch (compType) {
+			case ESerializableComponentType::Unkwon:
+				break;
+			case ESerializableComponentType::Transform:
+				SerializeTransform(component);
+				return true;
+			}
+			return false;
+		}
+
 		static ImGuiID DockSpace(const char* dockspaceId, const char* name, ImGuiDockNodeFlags additionalFlags = 0);
 
 		static UI &Get();
-
+		
 	private:
 		static void DrawPlayButton();
+		
+		static void SerializeTransform(Transform* transform);
 
 		void SetupImGuiStyle();
+
 
 		//NOLINTNEXTLINE
 		static inline UI *s_instance;

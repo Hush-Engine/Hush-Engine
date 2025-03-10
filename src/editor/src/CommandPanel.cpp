@@ -14,6 +14,7 @@
 #include "UI.hpp"
 #include "MathUtils.hpp"
 #include "StringUtils.hpp"
+#include "Components/Transform.hpp"
 
 constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
@@ -100,6 +101,7 @@ void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_vie
 		// Interpret the rest of the text command as the name of the entity to add
 		entityToCreate = this->m_activeScene->CreateEntityWithName(textCmd).GetId();
 		this->m_activeScene->RegisterComponentId(textCmd, entityToCreate);
+		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<Transform>();
 		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
 		break;
 	case EBuiltinCommands::FindEntity:

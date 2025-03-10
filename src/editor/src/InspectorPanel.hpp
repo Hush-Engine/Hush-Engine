@@ -2,6 +2,7 @@
 
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
+#include <optional>
 
 namespace Hush {
 	class InspectorPanel final : public IEditorPanel {
@@ -11,6 +12,8 @@ namespace Hush {
 		void Init(Scene* activeScene) noexcept override;
 
 		void SetInspectTarget(Entity::EntityId entity);
+		
+		const std::optional<Entity>& GetInspectTarget();
 	private:
 		void RenderProperties();
 		

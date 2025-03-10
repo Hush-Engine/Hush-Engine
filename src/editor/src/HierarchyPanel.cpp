@@ -20,10 +20,12 @@ void Hush::HierarchyPanel::OnRender()
 	ImGui::Begin("Hierarchy");
 	
 	for (const auto& kv : this->m_activeScene->GetAllEntities()) {
-		if (!ImGui::Selectable(kv.first.c_str())) {
+		auto& inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
+		bool selected = inspectorPanel.GetInspectTarget().has_value() && inspectorPanel.GetInspectTarget()->GetId() == kv.second;
+		if (!ImGui::Selectable(kv.first.c_str(), selected)) {
 			continue;
 		}
-		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(kv.second);
+		inspectorPanel.SetInspectTarget(kv.second);
 	}
 	
 	ImGui::End();
