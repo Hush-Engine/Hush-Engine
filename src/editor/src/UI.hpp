@@ -45,6 +45,8 @@ namespace Hush
 	private:
 		static void DrawPlayButton();
 
+		void SetupImGuiStyle();
+
 		//NOLINTNEXTLINE
 		static inline UI *s_instance;
 
