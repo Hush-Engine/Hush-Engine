@@ -126,7 +126,7 @@ Hush::Entity Hush::Scene::CreateEntity()
 	return Entity{this, entityId};
 }
 
-Hush::Entity Hush::Scene::CreateEntityWihName(std::string_view name)
+Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 {
 	auto *world = static_cast<ecs_world_t *>(m_world);
 

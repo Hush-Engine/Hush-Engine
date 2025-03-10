@@ -17,5 +17,7 @@ namespace Hush
 		void Init(Scene* activeScene) noexcept override;
 		
 		void OnRender() override;
+	private:
+		
 	};
 } // namespace Hush

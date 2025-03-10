@@ -39,7 +39,7 @@ namespace Hush
 	{
 	public:
 		static constexpr std::uint16_t MAX_ORDER = 255;
-
+		
 		ISystem(Scene &scene)
 			: m_scene(&scene)
 		{

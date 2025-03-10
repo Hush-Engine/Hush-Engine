@@ -1,26 +1,26 @@
 #include "CommandPanel.hpp"
+#include "Assertions.hpp"
+#include "Scene.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "InputManager.hpp"
 #include <array>
 #include <cstdint>
+#include <magic_enum/magic_enum.hpp>
 #include <string_view>
 #include "UI.hpp"
 #include "MathUtils.hpp"
-#include "systems/CommandSystem.hpp"
+#include "StringUtils.hpp"
 
-enum class EBuiltinCommands : int32_t {
-	AddEntity,
-	FindEntity,
-	AddComponent
-};
+constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
-constexpr std::array<std::string_view, 3> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component"};
+HUSH_STATIC_ASSERT(BUILT_IN_COMMANDS.size() == magic_enum::enum_count<Hush::CommandPanel::EBuiltinCommands>(),
+				   "Built-in commands enum does not match with array");
 
-
-void Hush::CommandPanel::Init(Scene* activeScene) noexcept {
-	activeScene->AddEngineSystem(nullptr);
+void Hush::CommandPanel::Init(Scene *activeScene) noexcept
+{
+	this->m_activeScene = activeScene;
 }
 
 void Hush::CommandPanel::OnRender()
@@ -68,7 +68,7 @@ void Hush::CommandPanel::TypeCommand()
 		this->m_panelText += currentInput;
 		return;
 	}
-	
+
 	bool shouldDelete = ImGui::IsKeyPressed(ImGuiKey_Backspace, true) && this->m_panelText.size() > 1;
 	if (shouldDelete)
 	{
@@ -82,6 +82,25 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_currState = EState::None;
 	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 	this->m_selectedCommandIdx = -1;
+}
+
+void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_view textCmd)
+{
+	switch (command)
+	{
+	case EBuiltinCommands::AddEntity:
+		if (textCmd.empty())
+		{
+			// Open the entity search panel or create a new one
+			return;
+		}
+		// Interpret the rest of the text command as the name of the entity to add
+		this->m_activeScene->CreateEntityWithName(textCmd);
+		return;
+	case EBuiltinCommands::FindEntity:
+	case EBuiltinCommands::AddComponent:
+		break;
+	}
 }
 
 void Hush::CommandPanel::UpdateCommandList()
@@ -112,11 +131,20 @@ void Hush::CommandPanel::UpdateCommandList()
 		const std::string_view &command = BUILT_IN_COMMANDS.at(i);
 		bool hovered = false;
 		bool forceHover = this->m_selectedCommandIdx == i;
-		UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
+		bool submitted = UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
 
 		if (hovered && this->m_currState == EState::ForceFocus)
 		{
 			this->m_panelText = std::string(":") + command.data();
+		}
+		if (submitted)
+		{
+			// Next words from space
+			auto offset = static_cast<int32_t>(this->m_panelText.find(' ')) + 1;
+			this->SubmitCommand(
+				static_cast<EBuiltinCommands>(this->m_selectedCommandIdx),
+				StringUtils::SubstrView(this->m_panelText, offset, this->m_panelText.size())
+			);
 		}
 	}
 	this->m_currState = previousState;

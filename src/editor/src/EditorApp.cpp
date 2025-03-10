@@ -26,6 +26,7 @@ public:
 	void Init() override
 	{
 		this->m_scene->Init();
+		this->m_userInterface.Init(this->m_scene.get());
 	}
 
 	void Update(float delta) override

@@ -127,7 +127,7 @@ bool Hush::UI::CustomSelectable(const char* label, bool* isHovered, ImDrawList* 
         }
 		
         
-        return *isHovered && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Enter));
+        return *isHovered && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Enter, false));
 }
 
 bool Hush::UI::BeginToolBar()

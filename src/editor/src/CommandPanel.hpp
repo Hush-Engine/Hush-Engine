@@ -1,6 +1,8 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "Scene.hpp"
+#include "systems/CommandSystem.hpp"
 #include "imgui/imgui.h"
 #include <string>
 #include <string_view>
@@ -13,6 +15,14 @@ namespace Hush {
 			None = 0,
 			Editing,
 			ForceFocus	
+		};
+
+		
+		enum class EBuiltinCommands : int32_t {
+			AddEntity,
+			FindEntity,
+			AddComponent,
+			Help
 		};
 
 		void Init(Scene* activeScene) noexcept override;
@@ -30,6 +40,8 @@ namespace Hush {
 		
 		void CloseCommandMode();
 		
+		void SubmitCommand(EBuiltinCommands command, std::string_view textCmd);
+		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
 		EState m_currState = EState::None;
@@ -41,6 +53,8 @@ namespace Hush {
 		float m_commandPanelHeight = 0.0F;
 
 		ImVec2 m_commandPanelPos;
+
+		Scene* m_activeScene;
 		
 	};
 }

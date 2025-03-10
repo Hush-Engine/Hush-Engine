@@ -81,7 +81,7 @@ namespace Hush
 		/// Creates an entity with a name
 		/// @param name Unique name of the entity
 		/// @return Entity
-		Entity CreateEntityWihName(std::string_view name);
+		Entity CreateEntityWithName(std::string_view name);
 
 		/// Destroy an entity.
 		/// @param entity Entity to destroy
@@ -109,6 +109,10 @@ namespace Hush
 
 			return Query<Components...>(std::move(rawQuery));
 		}
+		
+		/// Add an engine system to the scene
+		/// @param system System to add
+		void AddEngineSystem(ISystem *system);
 
 		RawQuery CreateRawQuery(std::span<Entity::EntityId> components,
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
@@ -137,10 +141,6 @@ namespace Hush
 		{
 			return m_world;
 		}
-
-		/// Add an engine system to the scene
-		/// @param system System to add
-		void AddEngineSystem(ISystem *system);
 
 		/// Sort the systems based on their order and store them in the buckets
 		void SortSystems();

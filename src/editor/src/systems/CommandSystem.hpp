@@ -1,9 +1,15 @@
 #pragma once
 
 #include "ISystem.hpp"
-namespace Hush {
-	class CommandSystem : public ISystem {
-		
+namespace Hush
+{
+	class CommandSystem : public ISystem
+	{
+	public:
+		CommandSystem(Scene &scene)
+			: ISystem(scene)
+		{
+		}
 		void Init() override;
 
 		/// OnShutdown() is called when the system is shutting down.
@@ -15,7 +21,7 @@ namespace Hush {
 
 		/// OnFixedUpdate() is called when the system should update its state.
 		/// @param delta Time since last fixed frame
-		
+
 		void OnFixedUpdate(float delta) override;
 
 		/// OnRender() is called when the system should render.
@@ -26,5 +32,13 @@ namespace Hush {
 
 		/// OnPostRender() is called after rendering.
 		void OnPostRender() override;
+
+		/// GetName() is used to get the name of the system
+		/// @return Name of the system
+		[[nodiscard]]
+		std::string_view GetName() const override
+		{
+			return "CommandSystem";
+		}
 	};
-}
+} // namespace Hush

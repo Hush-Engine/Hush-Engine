@@ -37,9 +37,5 @@ std::string Hush::StringUtils::FromWString(const std::wstring& str)
 	return {buffer.get()};
 }
 
-constexpr std::string_view Hush::StringUtils::SubstrView(const std::string& str, int32_t offset, int32_t endIdx) {
-	return { str.begin() + offset, str.begin() + endIdx };
-}
-
 #endif
 
