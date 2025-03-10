@@ -97,6 +97,8 @@ namespace Hush
 		/// @param id Id of the component
 		void RegisterComponentId(std::string_view name, Entity::EntityId id);
 
+		std::optional<Entity> EntityFromId(EntityId id);
+
 		[[nodiscard]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 

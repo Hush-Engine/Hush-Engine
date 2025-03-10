@@ -1,6 +1,8 @@
 #include "HierarchyPanel.hpp"
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
+#include "InspectorPanel.hpp"
+#include "UI.hpp"
 
 constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
 	ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
@@ -15,13 +17,14 @@ void Hush::HierarchyPanel::OnRender()
 {
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
-	if (ImGui::Begin("Hierarchy"))
-	{
-		ImGuiIO &io = ImGui::GetIO();
-		(void)io;
-		for (const auto& kv : this->m_activeScene->GetAllEntities()) {
-			ImGui::Text("%s", kv.first.c_str());
+	ImGui::Begin("Hierarchy");
+	
+	for (const auto& kv : this->m_activeScene->GetAllEntities()) {
+		if (!ImGui::Selectable(kv.first.c_str())) {
+			continue;
 		}
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(kv.second);
 	}
+	
 	ImGui::End();
 }

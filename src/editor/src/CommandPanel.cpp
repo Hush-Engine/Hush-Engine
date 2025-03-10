@@ -1,6 +1,7 @@
 #include "CommandPanel.hpp"
 #include "Assertions.hpp"
 #include "Entity.hpp"
+#include "InspectorPanel.hpp"
 #include "Scene.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
@@ -87,6 +88,7 @@ void Hush::CommandPanel::CloseCommandMode()
 
 void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_view textCmd)
 {
+	Entity::EntityId entityToCreate = 0;
 	switch (command)
 	{
 	case EBuiltinCommands::AddEntity:
@@ -96,7 +98,9 @@ void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_vie
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
-		this->m_activeScene->RegisterComponentId(textCmd, this->m_activeScene->CreateEntityWithName(textCmd).GetId());
+		entityToCreate = this->m_activeScene->CreateEntityWithName(textCmd).GetId();
+		this->m_activeScene->RegisterComponentId(textCmd, entityToCreate);
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
 		break;
 	case EBuiltinCommands::FindEntity:
 	case EBuiltinCommands::AddComponent:

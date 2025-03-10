@@ -4,6 +4,7 @@ add_executable(HushEditor
         src/ContentPanel.cpp
         src/EditorApp.cpp
         src/HierarchyPanel.cpp
+        src/InspectorPanel.cpp
         src/ScenePanel.cpp
         src/StatsPanel.cpp
         src/CommandPanel.cpp

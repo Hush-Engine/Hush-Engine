@@ -167,6 +167,15 @@ void Hush::Scene::RegisterComponentId(std::string_view name, Entity::EntityId id
 	m_registeredEntities.insert_or_assign(name.data(), id);
 }
 
+
+std::optional<Hush::Entity> Hush::Scene::EntityFromId(EntityId id) {
+	auto *world = static_cast<ecs_world_t *>(m_world);
+	if (!ecs_is_valid(world, id)) {
+		return std::nullopt;
+	}
+	return Entity { this, id };
+}
+
 Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const
 {
 	struct ComponentInfo

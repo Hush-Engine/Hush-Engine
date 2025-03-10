@@ -10,11 +10,13 @@ namespace Hush {
 
 		void Init(Scene* activeScene) noexcept override;
 
-		void SetInspectTarget(Entity* entity);
+		void SetInspectTarget(Entity::EntityId entity);
 	private:
 		void RenderProperties();
 		
-		Entity* m_inspectTarget;
-	}
+		std::optional<Entity> m_inspectTarget = std::nullopt;
+		
+		Scene* m_activeScene;
+	};
 }
 

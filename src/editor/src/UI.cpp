@@ -1,14 +1,12 @@
 #include "UI.hpp"
 #include "CommandPanel.hpp"
 #include "HierarchyPanel.hpp"
+#include "InspectorPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include "ContentPanel.hpp"
-#include "DebugUI.hpp"
-#include "DebugTooltip.hpp"
-#include "StatsPanel.hpp"
 
 #define ADD_PANEL(activeScene, panelsMap, panelType) panelsMap[typeid(panelType)] = CreatePanel<panelType>(activeScene)
 
@@ -23,10 +21,11 @@ void Hush::UI::Init(Scene* parentScene) {
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
-	ADD_PANEL(parentScene, this->m_activePanels, DebugUI);
-	ADD_PANEL(parentScene, this->m_activePanels, DebugTooltip);
-	ADD_PANEL(parentScene, this->m_activePanels, StatsPanel);
+	// ADD_PANEL(parentScene, this->m_activePanels, DebugUI);
+	// ADD_PANEL(parentScene, this->m_activePanels, DebugTooltip);
+	// ADD_PANEL(parentScene, this->m_activePanels, StatsPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, InspectorPanel);
 }
 
 void Hush::UI::DrawPanels()
