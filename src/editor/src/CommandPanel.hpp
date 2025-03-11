@@ -14,7 +14,8 @@ namespace Hush {
 		{
 			None = 0,
 			Editing,
-			ForceFocus	
+			ForceFocus,	
+			SearchMode
 		};
 
 		
@@ -40,6 +41,8 @@ namespace Hush {
 		
 		void CloseCommandMode();
 		
+		void FindEntityPopup();
+		
 		void SubmitCommand(EBuiltinCommands command, std::string_view textCmd);
 		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
@@ -55,6 +58,8 @@ namespace Hush {
 		ImVec2 m_commandPanelPos;
 
 		Scene* m_activeScene;
+
+		bool m_keyboardFocusSet = false;
 		
 	};
 }
