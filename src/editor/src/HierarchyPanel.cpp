@@ -1,6 +1,7 @@
 #include "HierarchyPanel.hpp"
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
+#include "Components/Transform.hpp"
 #include "InspectorPanel.hpp"
 #include "UI.hpp"
 
@@ -18,14 +19,17 @@ void Hush::HierarchyPanel::OnRender()
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
-	
-	for (const auto& kv : this->m_activeScene->GetAllEntities()) {
-		auto& inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
-		bool selected = inspectorPanel.GetInspectTarget().has_value() && inspectorPanel.GetInspectTarget()->GetId() == kv.second;
-		if (!ImGui::Selectable(kv.first.c_str(), selected)) {
-			continue;
+	auto& inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
+	Query<Transform> allEntities = this->m_activeScene->CreateQuery<Transform>();
+	allEntities.Each([&inspectorPanel](Entity& entity, Transform& _) {
+	                 	
+		bool selected = inspectorPanel.GetInspectTarget().has_value() && inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
+		if (!ImGui::Selectable(entity.GetName().value_or("").data(), selected)) {
+			return;
 		}
-		inspectorPanel.SetInspectTarget(kv.second);
+		inspectorPanel.SetInspectTarget(entity.GetId());
+	});
+	for (const auto& kv : this->m_activeScene->GetAllEntities()) {
 	}
 	
 	ImGui::End();

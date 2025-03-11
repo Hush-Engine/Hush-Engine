@@ -403,7 +403,7 @@ Hush::Entity::EntityId Hush::Scene::InternalRegisterCppComponent(
 		{
 			// We need to register the component.
 			*id = RegisterComponentRaw(desc);
-		}
+			RegisterComponentId(desc.name, *id);		}
 	}
 	return *id;
 }

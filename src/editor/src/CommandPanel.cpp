@@ -181,14 +181,14 @@ void Hush::CommandPanel::FindEntityPopup()
 	}
 	ImGui::InputTextWithHint("##Search", "i.e. Player", entityName, maxAllowedEntityName);
 	// Then find all entities in the scene here
-	const std::unordered_map<std::string, Entity::EntityId>& allEntities = this->m_activeScene->GetAllEntities();
-	for (const auto& kv : allEntities) {
-		std::optional<Entity> entity = this->m_activeScene->EntityFromId(kv.second);
-		if (!ImGui::Selectable(entity.value().GetName().value_or("").data())) {
-			continue;
+	Query<Transform> query = this->m_activeScene->CreateQuery<Transform>();
+	query.Each([this](Entity& entity, Transform& transform) {
+		           	           	
+		if (!ImGui::Selectable(entity.GetName().value_or("").data())) {
+			return;
 		}
-		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entity->GetId());
-		this->CloseCommandMode();
-	}
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entity.GetId());
+		this->CloseCommandMode();           
+   });
 	ImGui::End();
 }
