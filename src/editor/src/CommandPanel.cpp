@@ -9,12 +9,15 @@
 #include "InputManager.hpp"
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
 #include "UI.hpp"
 #include "MathUtils.hpp"
 #include "StringUtils.hpp"
 #include "Components/Transform.hpp"
+#include <zadeh/StringArrayFilterer.h>
+#include <zadeh/zadeh.h>
 
 constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
@@ -172,23 +175,52 @@ void Hush::CommandPanel::FindEntityPopup()
 {
 	ImGui::SetNextWindowBgAlpha(0.5F);
 	ImGui::Begin("Entity search");
-	constexpr size_t maxAllowedEntityName = 30;
-	char entityName[maxAllowedEntityName] = {0};
 	ImGui::Text("Search for an entity");
 	if (this->m_keyboardFocusSet) {
 		ImGui::SetKeyboardFocusHere();
+		memset(this->m_searchEntityName, 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
 	}
-	ImGui::InputTextWithHint("##Search", "i.e. Player", entityName, maxAllowedEntityName);
+	// If we type, we set the focus
+	char _ = '0';
+	if (InputManager::FetchCharThisFrame(&_)) {
+		ImGui::SetKeyboardFocusHere();
+	}
+	ImGui::InputTextWithHint("##Search", "i.e. Player", this->m_searchEntityName, MAX_ALLOWED_ENTITY_NAME);
 	// Then find all entities in the scene here
 	Query<Transform> query = this->m_activeScene->CreateQuery<Transform>();
-	query.Each([this](Entity& entity, Transform& transform) {
-		           	           	
-		if (!ImGui::Selectable(entity.GetName().value_or("").data())) {
-			return;
-		}
-		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entity.GetId());
-		this->CloseCommandMode();           
-   });
+	std::vector<std::string> entityNames;
+	std::string_view searchEntityName(this->m_searchEntityName);
+	entityNames.reserve(query.begin().Size());
+	query.Each([&entityNames, &searchEntityName, this](Entity& entity, Transform& transform) {
+       	std::string_view currEntityName = entity.GetName().value_or("");
+    	if (searchEntityName.empty()) {
+    		RenderEntitySelectable(currEntityName, entity.GetId());
+    	}
+       entityNames.emplace_back(currEntityName);
+	});
+	
+	zadeh::StringArrayFilterer<std::vector<std::string>> filterer{};
+	filterer.set_candidates(entityNames);
+
+	std::vector<size_t> indices = filterer.filter_indices(this->m_searchEntityName);
+	for (size_t idx : indices) {
+		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));
+	}
+
 	ImGui::End();
 }
+
+
+void Hush::CommandPanel::RenderEntitySelectable(const std::string_view& entityName, Entity::EntityId entityId) {
+	
+	if (!ImGui::Selectable(entityName.data())) {
+		return;
+	}
+	
+	UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityId);
+	this->CloseCommandMode();
+	
+}
+
+

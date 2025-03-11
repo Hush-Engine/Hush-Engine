@@ -2,7 +2,6 @@
 
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
-#include "systems/CommandSystem.hpp"
 #include "imgui/imgui.h"
 #include <string>
 #include <string_view>
@@ -43,6 +42,8 @@ namespace Hush {
 		
 		void FindEntityPopup();
 		
+		void RenderEntitySelectable(const std::string_view& entityName, Entity::EntityId entityId);
+		
 		void SubmitCommand(EBuiltinCommands command, std::string_view textCmd);
 		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
@@ -60,6 +61,10 @@ namespace Hush {
 		Scene* m_activeScene;
 
 		bool m_keyboardFocusSet = false;
+
+		
+		static constexpr size_t MAX_ALLOWED_ENTITY_NAME = 30;
+		char m_searchEntityName[MAX_ALLOWED_ENTITY_NAME] = {0};
 		
 	};
 }
