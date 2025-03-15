@@ -31,7 +31,6 @@
 #include "DrawContext.hpp"
 #include "Shared/Mesh.hpp"
 
-
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
 constexpr uint32_t FRAME_OVERLAP = 2;
@@ -95,7 +94,7 @@ namespace Hush
 
 		[[nodiscard]]
 		AllocatedImage GetDefaultWhiteImage() const noexcept;
-		
+
 		[[nodiscard]]
 		AllocatedImage GetDefaultNormalImage() const noexcept;
 

@@ -37,7 +37,7 @@ namespace Hush
 		/// @brief Evaluates to true for as long as the mouse button is pressed
 		static bool GetMouseButtonPressed(EMouseButton button);
 
-		static bool FetchCharThisFrame(char* outChar);
+		static bool FetchCharThisFrame(char *outChar);
 
 		/// @brief Gets the vector of the mouse's position in pixels
 		static glm::vec2 GetMousePosition();
@@ -56,7 +56,7 @@ namespace Hush
 		static void SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX, int32_t accelerationY);
 
 		static void SendWheelEvent(float posX, float posY);
-		
+
 		static void ResetMouseAcceleration();
 
 		static void ResetCharData();

@@ -19,12 +19,13 @@ namespace Hush::StringUtils
 	/// @return wstring of the converted string, from 8B to 16B chars
 	std::wstring ToWString(const char *data);
 
-	std::string FromWString(const std::wstring& str);
+	std::string FromWString(const std::wstring &str);
 
-	constexpr inline std::string_view SubstrView(const std::string& str, int32_t offset, int32_t endIdx) {	
-		return { str.begin() + offset, str.begin() + endIdx };
+	constexpr inline std::string_view SubstrView(const std::string &str, int32_t offset, int32_t endIdx)
+	{
+		return {str.begin() + offset, str.begin() + endIdx};
 	}
-	
+
 	template <uint32_t N1, uint32_t N2>
 	constexpr auto CompileTimeConcat(const char (&str1)[N1], const char (&str2)[N2])
 	{
@@ -42,4 +43,4 @@ namespace Hush::StringUtils
 
 		return result;
 	}
-};
+}; // namespace Hush::StringUtils

@@ -9,9 +9,8 @@ namespace Hush
 	{
 
 	public:
-		
-		void Init(Scene* activeScene) noexcept override;
-		
+		void Init(Scene *activeScene) noexcept override;
+
 		void OnRender() noexcept override;
 
 		void SetDeltaTime(float delta);

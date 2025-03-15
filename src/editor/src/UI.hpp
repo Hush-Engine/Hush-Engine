@@ -19,15 +19,16 @@ namespace Hush
 	class UI
 	{
 	public:
-		enum class ESerializableComponentType {
+		enum class ESerializableComponentType
+		{
 			Unkwon = 0,
-			Transform	
+			Transform
 		};
-		
+
 		UI();
 
-		void Init(Scene* parentScene);
-		
+		void Init(Scene *parentScene);
+
 		void DrawPanels();
 
 		template <class T>
@@ -40,13 +41,15 @@ namespace Hush
 		static bool Spinner(const char *label, float radius, int thickness,
 							const uint32_t &color = 3435973836u /*Default button color*/);
 
-		static bool CustomSelectable(const char* label, bool* isHovered, ImDrawList* drawList, bool forceHover = false);
-		
+		static bool CustomSelectable(const char *label, bool *isHovered, ImDrawList *drawList, bool forceHover = false);
+
 		static bool BeginToolBar();
 
-		template<class T>
-		static bool SerializeComponent(T* component, ESerializableComponentType compType) {
-			switch (compType) {
+		template <class T>
+		static bool SerializeComponent(T *component, ESerializableComponentType compType)
+		{
+			switch (compType)
+			{
 			case ESerializableComponentType::Unkwon:
 				break;
 			case ESerializableComponentType::Transform:
@@ -56,26 +59,25 @@ namespace Hush
 			return false;
 		}
 
-		static ImGuiID DockSpace(const char* dockspaceId, const char* name, ImGuiDockNodeFlags additionalFlags = 0);
+		static ImGuiID DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags = 0);
 
 		static UI &Get();
-		
+
 	private:
 		static void DrawPlayButton();
-		
-		static void SerializeTransform(Transform* transform);
+
+		static void SerializeTransform(Transform *transform);
 
 		void SetupImGuiStyle();
 
-
-		//NOLINTNEXTLINE
+		// NOLINTNEXTLINE
 		static inline UI *s_instance;
 
 		template <class T>
-		static std::unique_ptr<T> CreatePanel(Scene* activeScene)
+		static std::unique_ptr<T> CreatePanel(Scene *activeScene)
 		{
 			auto result = std::make_unique<T>();
-			static_cast<IEditorPanel*>(result.get())->Init(activeScene);
+			static_cast<IEditorPanel *>(result.get())->Init(activeScene);
 			return result;
 		}
 		std::unordered_map<std::type_index, std::unique_ptr<IEditorPanel>> m_activePanels;

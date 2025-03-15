@@ -27,9 +27,10 @@ namespace Hush
 
 		HushEngine &operator=(HushEngine &&) noexcept = default;
 
-		/// @brief Intended to be used for engine systems, user-defined systems should be added using `Hush::Scene::AddSystem()`
-		void AddSystem(ISystem* system);
-		
+		/// @brief Intended to be used for engine systems, user-defined systems should be added using
+		/// `Hush::Scene::AddSystem()`
+		void AddSystem(ISystem *system);
+
 		~HushEngine();
 
 		/// <summary>

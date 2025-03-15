@@ -892,15 +892,15 @@ void Hush::VulkanRenderer::InitMeshPipeline() noexcept
 	pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	// connect the image format we will draw into, from draw image
-		pipelineBuilder.SetColorAttachmentFormat(this->m_drawImage.imageFormat);
-		pipelineBuilder.SetDepthFormat(this->m_depthImage.imageFormat);
+	pipelineBuilder.SetColorAttachmentFormat(this->m_drawImage.imageFormat);
+	pipelineBuilder.SetDepthFormat(this->m_depthImage.imageFormat);
 
-		// finally build the pipeline
-		this->m_meshPipeline = pipelineBuilder.Build(this->m_device);
+	// finally build the pipeline
+	this->m_meshPipeline = pipelineBuilder.Build(this->m_device);
 
-		// clean structures
-		vkDestroyShaderModule(this->m_device, triangleFragShader, nullptr);
-		vkDestroyShaderModule(this->m_device, triangleVertexShader, nullptr);
+	// clean structures
+	vkDestroyShaderModule(this->m_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(this->m_device, triangleVertexShader, nullptr);
 
 	this->m_mainDeletionQueue.PushFunction([=]() {
 		vkDestroyPipelineLayout(m_device, m_meshPipelineLayout, nullptr);
@@ -946,7 +946,7 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 	uint32_t normalDefault = glm::packUnorm4x8(glm::vec4(0.5F, 0.5F, 1.0F, 1.0F));
 	this->m_defaultNormalImage =
 		CreateImage((void *)&normalDefault, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-	
+
 	uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
 	m_whiteImage =
 		CreateImage((void *)&white, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);

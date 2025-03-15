@@ -39,7 +39,7 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	constexpr uint32_t albedoBinding = 1;
 	constexpr uint32_t metallicBinding = 2;
 	constexpr uint32_t normalBinding = 3;
-	
+
 	layoutBuilder.AddBinding(uniformBufferBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	layoutBuilder.AddBinding(albedoBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	layoutBuilder.AddBinding(metallicBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -98,22 +98,22 @@ void Hush::GLTFMetallicRoughness::ClearResources(VkDevice device)
 	(void)device;
 }
 
-
-
-Hush::EAlphaBlendMode Hush::GLTFMetallicRoughness::GetAlphaBlendMode() const noexcept {
+Hush::EAlphaBlendMode Hush::GLTFMetallicRoughness::GetAlphaBlendMode() const noexcept
+{
 	return EAlphaBlendMode::None;
 }
 
-Hush::ECullMode Hush::GLTFMetallicRoughness::GetCullMode() const noexcept {
-	return ECullMode::None;	
+Hush::ECullMode Hush::GLTFMetallicRoughness::GetCullMode() const noexcept
+{
+	return ECullMode::None;
 }
 
-
-void Hush::GLTFMetallicRoughness::SetCullMode(ECullMode cullMode) {
+void Hush::GLTFMetallicRoughness::SetCullMode(ECullMode cullMode)
+{
 	(void)cullMode;
 }
 
-void Hush::GLTFMetallicRoughness::SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept {
+void Hush::GLTFMetallicRoughness::SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept
+{
 	(void)blendMode;
 }
-

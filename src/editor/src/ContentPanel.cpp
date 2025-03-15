@@ -3,8 +3,8 @@
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
 
-
-void Hush::ContentPanel::Init(Scene* activeScene) noexcept {
+void Hush::ContentPanel::Init(Scene *activeScene) noexcept
+{
 	(void)activeScene;
 }
 

@@ -5,11 +5,10 @@
 
 constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_MenuBar;
 
-
-void Hush::TitleBarMenuPanel::Init(Scene* activeScene) noexcept {
+void Hush::TitleBarMenuPanel::Init(Scene *activeScene) noexcept
+{
 	(void)activeScene;
 }
-
 
 void Hush::TitleBarMenuPanel::OnRender() noexcept
 {

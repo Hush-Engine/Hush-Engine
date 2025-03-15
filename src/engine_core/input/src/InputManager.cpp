@@ -38,20 +38,20 @@ bool Hush::InputManager::GetMouseButtonPressed(EMouseButton button)
 	return MouseMapContains(button) && IS_CURRENTLY_PRESSED(S_MOUSE_DATA.mouseButtonMap[button]);
 }
 
-
-bool Hush::InputManager::FetchCharThisFrame(char* outChar) {
+bool Hush::InputManager::FetchCharThisFrame(char *outChar)
+{
 	*outChar = s_lastChar;
 	return s_lastChar != 0;
 }
 
-
-void Hush::InputManager::ResetCharData() {
+void Hush::InputManager::ResetCharData()
+{
 	s_lastChar = 0;
 	SendKeyEvent((int)EKeyCode::KpColon, EKeyState::Released);
 }
 
-
-void Hush::InputManager::SendCharEvent(char pressedChar) {
+void Hush::InputManager::SendCharEvent(char pressedChar)
+{
 	s_lastChar = pressedChar;
 }
 

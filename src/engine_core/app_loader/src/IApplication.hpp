@@ -35,9 +35,9 @@ namespace Hush
 		virtual void OnRender() = 0;
 
 		virtual void OnPostRender() = 0;
-		
-		virtual Hush::Scene* GetScene() = 0;
-		
+
+		virtual Hush::Scene *GetScene() = 0;
+
 		[[nodiscard]]
 		virtual std::string_view GetAppName() const noexcept = 0;
 	};

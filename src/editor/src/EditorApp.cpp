@@ -60,7 +60,8 @@ public:
 		return "Hush-Editor";
 	}
 
-	Hush::Scene* GetScene() noexcept override {
+	Hush::Scene *GetScene() noexcept override
+	{
 		return this->m_scene.get();
 	}
 

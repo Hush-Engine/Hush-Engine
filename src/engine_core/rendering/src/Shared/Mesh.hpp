@@ -7,12 +7,15 @@
 #include <glm/vec4.hpp>
 #include <vector>
 
-namespace Hush {
-	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the RenderingAPI specific buffer data
-	class Mesh {
+namespace Hush
+{
+	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the
+	/// RenderingAPI specific buffer data
+	class Mesh
+	{
 	public:
-		#pragma warning(push)
-		#pragma warning(disable: 4324)
+#pragma warning(push)
+#pragma warning(disable : 4324)
 		struct Vertex
 		{
 			alignas(16) glm::vec3 position{};
@@ -22,24 +25,27 @@ namespace Hush {
 			alignas(8) glm::vec2 uv{};
 		};
 
-		#pragma warning(pop)
+#pragma warning(pop)
 
-		 // HUSH_STATIC_ASSERT(sizeof(Vertex) % 16 == 0);
-		
-		[[nodiscard]] inline std::vector<uint32_t>& GetIndexBuffer() {
+		// HUSH_STATIC_ASSERT(sizeof(Vertex) % 16 == 0);
+
+		[[nodiscard]]
+		inline std::vector<uint32_t> &GetIndexBuffer()
+		{
 			return this->m_indices;
 		}
 
-		[[nodiscard]] inline std::vector<Vertex>& GetVertexBuffer() {
+		[[nodiscard]]
+		inline std::vector<Vertex> &GetVertexBuffer()
+		{
 			return this->m_vertices;
 		}
-		
+
 		void CalculateTangentBasis();
+
 	private:
-		void CalculateNormals(Vertex& currentVertex);
+		void CalculateNormals(Vertex &currentVertex);
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 	};
-}
-
-
+} // namespace Hush

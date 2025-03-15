@@ -54,7 +54,9 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 	fseek(file, 0, SEEK_SET);
 
 	// Get last modified
-	struct stat result{};
+	struct stat result
+	{
+	};
 	if (stat(realPathStr.c_str(), &result) != 0)
 	{
 		return IFile::EError::OperationNotSupported;

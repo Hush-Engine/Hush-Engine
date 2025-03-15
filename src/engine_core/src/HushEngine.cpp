@@ -53,7 +53,8 @@ void Hush::HushEngine::Run()
 	}
 }
 
-void Hush::HushEngine::AddSystem(ISystem* system) {
+void Hush::HushEngine::AddSystem(ISystem *system)
+{
 	this->m_app->GetScene()->AddEngineSystem(system);
 }
 

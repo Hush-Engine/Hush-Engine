@@ -17,16 +17,16 @@ namespace Hush
 		void SetPosition(const glm::vec3 &position) noexcept;
 
 		[[nodiscard]]
-		const glm::vec3& GetPosition() const noexcept;
-		
-		glm::vec3& GetPosition() noexcept;
-		
+		const glm::vec3 &GetPosition() const noexcept;
+
+		glm::vec3 &GetPosition() noexcept;
+
 		void SetScale(const glm::vec3 &scale) noexcept;
 
 		[[nodiscard]]
-		const glm::vec3& GetScale() const noexcept;
-		
-		glm::vec3& GetScale() noexcept;
+		const glm::vec3 &GetScale() const noexcept;
+
+		glm::vec3 &GetScale() noexcept;
 
 		void SetRotationQuat(const glm::quat &rotationQuat) noexcept;
 

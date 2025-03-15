@@ -13,7 +13,7 @@ namespace Hush
 	{
 	public:
 		IEditorPanel() noexcept = default;
-		
+
 		IEditorPanel(const IEditorPanel &other) = default;
 
 		IEditorPanel(IEditorPanel &&other) = default;
@@ -23,10 +23,10 @@ namespace Hush
 		IEditorPanel &operator=(IEditorPanel &&) = default;
 
 		virtual ~IEditorPanel() = default;
-	
+
 		virtual void OnRender() = 0;
 
-		virtual void Init(Scene* activeScene) noexcept = 0;
+		virtual void Init(Scene *activeScene) noexcept = 0;
 	};
 
 } // namespace Hush

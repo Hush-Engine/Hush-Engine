@@ -21,7 +21,7 @@ std::wstring Hush::StringUtils::ToWString(const char *data)
 	return {buffer.get()};
 }
 
-std::string Hush::StringUtils::FromWString(const std::wstring& str)
+std::string Hush::StringUtils::FromWString(const std::wstring &str)
 {
 	int bytesToAlloc =
 		WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
@@ -38,4 +38,3 @@ std::string Hush::StringUtils::FromWString(const std::wstring& str)
 }
 
 #endif
-

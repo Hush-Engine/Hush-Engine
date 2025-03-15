@@ -15,7 +15,7 @@ Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float 
 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
-	
+
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
 		return;

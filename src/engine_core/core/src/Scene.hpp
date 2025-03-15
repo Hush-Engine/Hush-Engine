@@ -111,7 +111,7 @@ namespace Hush
 
 			return Query<Components...>(std::move(rawQuery));
 		}
-		
+
 		/// Add an engine system to the scene
 		/// @param system System to add
 		void AddEngineSystem(ISystem *system);
@@ -120,10 +120,11 @@ namespace Hush
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
 
 		/// @brief returns a map of all registered entities without a query (mostly for internal use)
-		const std::unordered_map<std::string, Entity::EntityId>& GetAllEntities() {
+		const std::unordered_map<std::string, Entity::EntityId> &GetAllEntities()
+		{
 			return this->m_registeredEntities;
 		}
-		
+
 	private:
 		friend class Entity;
 		friend class RawQuery;

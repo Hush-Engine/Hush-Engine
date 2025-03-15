@@ -13,7 +13,7 @@ namespace Hush
 	class ScenePanel final : public IEditorPanel
 	{
 	public:
-		void Init(Scene* activeScene) noexcept override;
+		void Init(Scene *activeScene) noexcept override;
 		void OnRender() noexcept override;
 	};
 } // namespace Hush
