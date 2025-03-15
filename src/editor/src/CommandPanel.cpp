@@ -176,14 +176,16 @@ void Hush::CommandPanel::FindEntityPopup()
 	ImGui::SetNextWindowBgAlpha(0.5F);
 	ImGui::Begin("Entity search");
 	ImGui::Text("Search for an entity");
-	if (this->m_keyboardFocusSet) {
+	if (this->m_keyboardFocusSet)
+	{
 		ImGui::SetKeyboardFocusHere();
 		memset(this->m_searchEntityName, 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
 	}
 	// If we type, we set the focus
 	char _ = '0';
-	if (InputManager::FetchCharThisFrame(&_)) {
+	if (InputManager::FetchCharThisFrame(&_))
+	{
 		ImGui::SetKeyboardFocusHere();
 	}
 	ImGui::InputTextWithHint("##Search", "i.e. Player", this->m_searchEntityName, MAX_ALLOWED_ENTITY_NAME);
@@ -192,35 +194,35 @@ void Hush::CommandPanel::FindEntityPopup()
 	std::vector<std::string> entityNames;
 	std::string_view searchEntityName(this->m_searchEntityName);
 	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity& entity, Transform& transform) {
-       	std::string_view currEntityName = entity.GetName().value_or("");
-    	if (searchEntityName.empty()) {
-    		RenderEntitySelectable(currEntityName, entity.GetId());
-    	}
-       entityNames.emplace_back(currEntityName);
+	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Transform &transform) {
+		std::string_view currEntityName = entity.GetName().value_or("");
+		if (searchEntityName.empty())
+		{
+			RenderEntitySelectable(currEntityName, entity.GetId());
+		}
+		entityNames.emplace_back(currEntityName);
 	});
-	
+
 	zadeh::StringArrayFilterer<std::vector<std::string>> filterer{};
 	filterer.set_candidates(entityNames);
 
 	std::vector<size_t> indices = filterer.filter_indices(this->m_searchEntityName);
-	for (size_t idx : indices) {
+	for (size_t idx : indices)
+	{
 		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));
 	}
 
 	ImGui::End();
 }
 
+void Hush::CommandPanel::RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId)
+{
 
-void Hush::CommandPanel::RenderEntitySelectable(const std::string_view& entityName, Entity::EntityId entityId) {
-	
-	if (!ImGui::Selectable(entityName.data())) {
+	if (!ImGui::Selectable(entityName.data()))
+	{
 		return;
 	}
-	
+
 	UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityId);
 	this->CloseCommandMode();
-	
 }
-
-
