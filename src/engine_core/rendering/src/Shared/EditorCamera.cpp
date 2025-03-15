@@ -4,7 +4,6 @@
 #include "InputManager.hpp"
 #include <glm/gtx/quaternion.hpp>
 #include "Vector3Math.hpp"
-#include "Logger.hpp"
 
 Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float nearP, float farP)
 	: Camera(degFov, width, height, nearP, farP)
@@ -16,6 +15,11 @@ Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float 
 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
+
+	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
+	{
+		return;
+	}
 	glm::mat4 viewMatrix = this->GetViewMatrix();
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
@@ -65,10 +69,6 @@ void Hush::EditorCamera::OnUpdate(float delta)
 	else
 	{
 		this->m_blendValue = 0.0f;
-	}
-	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
-	{
-		return;
 	}
 	glm::vec2 mouseAcceleration = InputManager::GetMouseAcceleration();
 	if (mouseAcceleration != glm::vec2{0.0f})

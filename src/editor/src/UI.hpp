@@ -7,16 +7,27 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "Scene.hpp"
+#include "imgui/imgui.h"
 #include <memory>
 #include <unordered_map>
 #include <typeindex>
 
 namespace Hush
 {
+	class Transform;
 	class UI
 	{
 	public:
+		enum class ESerializableComponentType
+		{
+			Unkwon = 0,
+			Transform
+		};
+
 		UI();
+
+		void Init(Scene *parentScene);
 
 		void DrawPanels();
 
@@ -30,21 +41,44 @@ namespace Hush
 		static bool Spinner(const char *label, float radius, int thickness,
 							const uint32_t &color = 3435973836u /*Default button color*/);
 
+		static bool CustomSelectable(const char *label, bool *isHovered, ImDrawList *drawList, bool forceHover = false);
+
 		static bool BeginToolBar();
 
-		static void DockSpace();
+		template <class T>
+		static bool SerializeComponent(T *component, ESerializableComponentType compType)
+		{
+			switch (compType)
+			{
+			case ESerializableComponentType::Unkwon:
+				break;
+			case ESerializableComponentType::Transform:
+				SerializeTransform(component);
+				return true;
+			}
+			return false;
+		}
+
+		static ImGuiID DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags = 0);
 
 		static UI &Get();
 
 	private:
 		static void DrawPlayButton();
 
+		static void SerializeTransform(Transform *transform);
+
+		void SetupImGuiStyle();
+
+		// NOLINTNEXTLINE
 		static inline UI *s_instance;
 
 		template <class T>
-		static std::unique_ptr<T> CreatePanel()
+		static std::unique_ptr<T> CreatePanel(Scene *activeScene)
 		{
-			return std::make_unique<T>();
+			auto result = std::make_unique<T>();
+			static_cast<IEditorPanel *>(result.get())->Init(activeScene);
+			return result;
 		}
 		std::unordered_map<std::type_index, std::unique_ptr<IEditorPanel>> m_activePanels;
 	};

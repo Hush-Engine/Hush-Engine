@@ -48,14 +48,13 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
-		auto node = std::make_shared<VulkanMeshNode>(
-			CreateMeshFromGltfMesh(mesh, loadedAsset.get(), meshInfo, engine));
+		auto node = std::make_shared<VulkanMeshNode>(CreateMeshFromGltfMesh(mesh, loadedAsset.get(), meshInfo, engine));
 		node->SetLocalTransform(glm::mat4{1.F});
 		node->SetWorldTransform(glm::mat4{1.F});
 		meshes.emplace_back(node);
 	}
 
-	// NOTE: Yes, we do need the double iteration 
+	// NOTE: Yes, we do need the double iteration
 	for (const fastgltf::Node &node : loadedAsset->nodes)
 	{
 		if (!node.meshIndex.has_value())
@@ -64,9 +63,10 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 		meshNode->SetLocalTransform(GltfLoadFunctions::GetNodeTransform(node));
 	}
 
-	for (fastgltf::Node & node : loadedAsset->nodes)
+	for (fastgltf::Node &node : loadedAsset->nodes)
 	{
-		if (!node.meshIndex.has_value()) {
+		if (!node.meshIndex.has_value())
+		{
 			continue;
 		}
 		std::shared_ptr<VulkanMeshNode> &sceneNode = meshes[node.meshIndex.value()];
@@ -111,7 +111,9 @@ std::vector<AllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::
 	return loadedTexturesResult;
 }
 
-Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset, Mesh& meshRef, VulkanRenderer *engine)
+Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh,
+																const fastgltf::Asset &asset, Mesh &meshRef,
+																VulkanRenderer *engine)
 {
 	VulkanMeshNode meshNode(std::make_shared<MeshAsset>());
 
@@ -178,7 +180,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 		for (uint32_t i = 0; i < texBuffer.size(); i++)
 		{
-			vertexRef.at(i + initialVertex).uv =  { texBuffer.at(i).x, texBuffer.at(i).y };
+			vertexRef.at(i + initialVertex).uv = {texBuffer.at(i).x, texBuffer.at(i).y};
 		}
 
 		// load vertex colors
@@ -267,7 +269,7 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
 	materialResources.normalImage = engine->GetDefaultNormalImage();
-	
+
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 

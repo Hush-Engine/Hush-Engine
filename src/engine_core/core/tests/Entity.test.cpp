@@ -13,7 +13,7 @@ TEST_CASE("Entity creation", "[entity]")
 	Hush::Scene scene(nullptr);
 
 	Hush::Entity entity = scene.CreateEntity();
-	Hush::Entity entity2 = scene.CreateEntityWihName("MyEntity");
+	Hush::Entity entity2 = scene.CreateEntityWithName("MyEntity");
 
 	SECTION("CreateEntity")
 	{

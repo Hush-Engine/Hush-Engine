@@ -1,12 +1,14 @@
 #include "StringUtils.hpp"
 #include "Logger.hpp"
+#include <cstdint>
+#include <memory>
 
 #if _WIN32
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-std::wstring StringUtils::ToWString(const char *data)
+std::wstring Hush::StringUtils::ToWString(const char *data)
 {
 	int bytesToAlloc = MultiByteToWideChar(CP_UTF8, 0, data, -1, nullptr, 0);
 	if (bytesToAlloc <= 0)
@@ -18,7 +20,8 @@ std::wstring StringUtils::ToWString(const char *data)
 	MultiByteToWideChar(CP_UTF8, 0, data, -1, buffer.get(), bytesToAlloc);
 	return {buffer.get()};
 }
-std::string StringUtils::FromWString(std::wstring str)
+
+std::string Hush::StringUtils::FromWString(const std::wstring &str)
 {
 	int bytesToAlloc =
 		WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
@@ -33,4 +36,5 @@ std::string StringUtils::FromWString(std::wstring str)
 
 	return {buffer.get()};
 }
+
 #endif

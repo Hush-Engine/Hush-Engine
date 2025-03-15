@@ -11,6 +11,11 @@ namespace Hush
 		static inline DebugTooltip *s_debugTooltip = nullptr;
 		void OnRender() noexcept override;
 
+		void Init(Scene *activeScene) noexcept override
+		{
+			(void)activeScene;
+		}
+
 		const glm::vec3 &GetScale() const;
 
 		const glm::vec3 &GetRotation() const;

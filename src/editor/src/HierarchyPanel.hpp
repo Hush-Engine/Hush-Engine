@@ -13,6 +13,11 @@ namespace Hush
 	class HierarchyPanel final : public IEditorPanel
 	{
 	public:
+		void Init(Scene *activeScene) noexcept override;
+
 		void OnRender() override;
+
+	private:
+		Scene *m_activeScene;
 	};
 } // namespace Hush

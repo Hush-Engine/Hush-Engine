@@ -6,6 +6,7 @@
 
 #pragma once
 #include "IApplication.hpp"
+#include "ISystem.hpp"
 
 #include <string_view>
 
@@ -25,6 +26,10 @@ namespace Hush
 		HushEngine(HushEngine &&) noexcept = default;
 
 		HushEngine &operator=(HushEngine &&) noexcept = default;
+
+		/// @brief Intended to be used for engine systems, user-defined systems should be added using
+		/// `Hush::Scene::AddSystem()`
+		void AddSystem(ISystem *system);
 
 		~HushEngine();
 

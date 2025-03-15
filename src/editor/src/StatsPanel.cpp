@@ -1,6 +1,11 @@
 #include "StatsPanel.hpp"
 #include "imgui/imgui.h"
 
+void Hush::StatsPanel::Init(Scene *activeScene) noexcept
+{
+	(void)activeScene;
+}
+
 void Hush::StatsPanel::OnRender() noexcept
 {
 	ImGui::Begin("Hush Engine Stats");

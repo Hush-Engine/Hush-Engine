@@ -1,8 +1,12 @@
 #include "WindowRenderer.hpp"
+#include "InputManager.hpp"
 #include "WindowManager.hpp"
 #include "Logger.hpp"
 #include "Vulkan/VulkanRenderer.hpp"
-#include "Assertions.hpp"
+#include "definitions/KeyCode.hpp"
+#include <SDL_events.h>
+#include <SDL_keyboard.h>
+#include <SDL_video.h>
 
 Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 {
@@ -52,6 +56,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 	SDL_Event event;
 	KeyCode code = 0;
 	InputManager::ResetMouseAcceleration();
+	InputManager::ResetCharData();
 	SDL_PollEvent(&event);
 	// Forward event to the renderer
 	switch (event.type)
@@ -60,12 +65,16 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 		*applicationRunning = false;
 		break;
 	case SDL_KEYDOWN:
-		code = event.key.keysym.scancode;
+		code = SDL_GetScancodeFromKey(event.key.keysym.sym);
 		InputManager::SendKeyEvent(code, EKeyState::Pressed);
 		break;
 	case SDL_KEYUP:
-		code = event.key.keysym.scancode;
+		code = SDL_GetScancodeFromKey(event.key.keysym.sym);
 		InputManager::SendKeyEvent(code, EKeyState::Released);
+		break;
+	case SDL_TEXTINPUT:
+		// HACK: directly handle this
+		InputManager::SendCharEvent(event.text.text[0]);
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 		InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Pressed);
@@ -113,6 +122,7 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 		return true;
 	}
 	int rc = SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_StartTextInput();
 	SDL_SetMainReady();
 	return rc == 0;
 }

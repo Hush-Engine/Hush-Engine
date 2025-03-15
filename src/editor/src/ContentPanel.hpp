@@ -11,6 +11,8 @@ namespace Hush
 {
 	class ContentPanel final : public IEditorPanel
 	{
+		void Init(Scene *activeScene) noexcept override;
+
 		void OnRender() noexcept override;
 	};
 } // namespace Hush

@@ -27,7 +27,8 @@ namespace Hush
 	/// The performance impact of this class is considerable since it needs to keep track of the bindings
 	/// in both RAM and GPU, as well as process the shader initially with Reflection (initialization cost)
 	/// This class's interface is Rendering API agnostic
-	class ShaderMaterial final : public IMaterial3D {
+	class ShaderMaterial final : public IMaterial3D
+	{
 	public:
 		enum class EError
 		{
@@ -53,16 +54,19 @@ namespace Hush
 
 		OpaqueMaterialData *GetMaterialData();
 
-		[[nodiscard]] EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
+		[[nodiscard]]
+		EAlphaBlendMode GetAlphaBlendMode() const noexcept override;
 
 		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept override;
-		
-		[[nodiscard]] ECullMode GetCullMode() const noexcept override;
-		
+
+		[[nodiscard]]
+		ECullMode GetCullMode() const noexcept override;
+
 		void SetCullMode(ECullMode cullMode) override;
-		
-		template<class T>
-		inline EError SetProperty(const std::string_view& name, T value) {
+
+		template <class T>
+		inline EError SetProperty(const std::string_view &name, T value)
+		{
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
 			const ShaderBindings &binding = this->FindBinding(name);

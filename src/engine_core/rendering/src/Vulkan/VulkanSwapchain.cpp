@@ -185,11 +185,11 @@ vkb::Swapchain Hush::VulkanSwapchain::BuildVkbSwapchain(uint32_t width, uint32_t
 	vkb::SwapchainBuilder swapchainBuilder{vulkanPhysicalDevice, device, surface};
 
 	// FIXME: Color info
-	this->m_swapchainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	this->m_swapchainImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
 	auto vkSurfaceFormat = VkSurfaceFormatKHR{};
 	vkSurfaceFormat.format = this->m_swapchainImageFormat;
-	vkSurfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	vkSurfaceFormat.colorSpace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
 
 	return swapchainBuilder.set_desired_format(vkSurfaceFormat)
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)

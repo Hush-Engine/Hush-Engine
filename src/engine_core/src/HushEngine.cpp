@@ -1,5 +1,4 @@
 #include "HushEngine.hpp"
-// #include <editor/UI.hpp>
 #include "ApplicationLoader.hpp"
 #include <WindowManager.hpp>
 #include <imgui/imgui.h>
@@ -52,6 +51,11 @@ void Hush::HushEngine::Run()
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		elapsed = end - start;
 	}
+}
+
+void Hush::HushEngine::AddSystem(ISystem *system)
+{
+	this->m_app->GetScene()->AddEngineSystem(system);
 }
 
 void Hush::HushEngine::Quit()

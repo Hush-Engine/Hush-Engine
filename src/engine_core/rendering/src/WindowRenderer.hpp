@@ -15,8 +15,8 @@
 
 #include "Renderer.hpp"
 
-constexpr int DEFAULT_WINDOW_HEIGHT = 900;
-constexpr int DEFAULT_WINDOW_WIDTH = 1600;
+constexpr int DEFAULT_WINDOW_HEIGHT = 720;
+constexpr int DEFAULT_WINDOW_WIDTH = 1280;
 namespace Hush
 {
 	class WindowRenderer

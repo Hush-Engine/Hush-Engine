@@ -3,6 +3,7 @@
 //
 
 #include "IApplication.hpp"
+#include "Scene.hpp"
 #include "UI.hpp"
 
 #include <memory>
@@ -25,6 +26,7 @@ public:
 	void Init() override
 	{
 		this->m_scene->Init();
+		this->m_userInterface.Init(this->m_scene.get());
 	}
 
 	void Update(float delta) override
@@ -40,7 +42,7 @@ public:
 	void OnRender() override
 	{
 		this->m_scene->Render();
-		this->userInterface.DrawPanels();
+		this->m_userInterface.DrawPanels();
 	}
 
 	void OnPostRender() override
@@ -58,8 +60,13 @@ public:
 		return "Hush-Editor";
 	}
 
+	Hush::Scene *GetScene() noexcept override
+	{
+		return this->m_scene.get();
+	}
+
 private:
-	Hush::UI userInterface;
+	Hush::UI m_userInterface;
 	std::unique_ptr<Hush::Scene> m_scene;
 };
 

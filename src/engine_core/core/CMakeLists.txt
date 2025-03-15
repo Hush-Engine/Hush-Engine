@@ -13,7 +13,7 @@ hush_add_library(
 )
 add_library(Hush::Core ALIAS HushCore)
 
-target_link_libraries(HushCore PUBLIC flecs::flecs_static Hush::Utils Hush::Log)
+target_link_libraries(HushCore PUBLIC flecs::flecs_static Hush::Utils Hush::Log zadeh)
 
 add_test_target(
         TARGET_NAME HushCoreTest

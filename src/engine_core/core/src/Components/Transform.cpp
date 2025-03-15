@@ -15,7 +15,12 @@ void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept
 	this->m_position = position;
 }
 
-glm::vec3 Hush::Transform::GetPosition() const noexcept
+const glm::vec3 &Hush::Transform::GetPosition() const noexcept
+{
+	return this->m_position;
+}
+
+glm::vec3 &Hush::Transform::GetPosition() noexcept
 {
 	return this->m_position;
 }
@@ -25,7 +30,12 @@ void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
 	this->m_scale = scale;
 }
 
-glm::vec3 Hush::Transform::GetScale() const noexcept
+const glm::vec3 &Hush::Transform::GetScale() const noexcept
+{
+	return this->m_scale;
+}
+
+glm::vec3 &Hush::Transform::GetScale() noexcept
 {
 	return this->m_scale;
 }

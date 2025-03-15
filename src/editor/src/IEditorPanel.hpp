@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include "Scene.hpp"
 namespace Hush
 {
-
 	class IEditorPanel
 	{
 	public:
@@ -25,6 +25,8 @@ namespace Hush
 		virtual ~IEditorPanel() = default;
 
 		virtual void OnRender() = 0;
+
+		virtual void Init(Scene *activeScene) noexcept = 0;
 	};
 
 } // namespace Hush

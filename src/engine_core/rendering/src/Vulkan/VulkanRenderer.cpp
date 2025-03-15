@@ -632,8 +632,8 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
 	std::vector<std::shared_ptr<VulkanMeshNode>> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath).value();
 	for (auto &node : nodeVector)
 	{
@@ -946,7 +946,7 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 	uint32_t normalDefault = glm::packUnorm4x8(glm::vec4(0.5F, 0.5F, 1.0F, 1.0F));
 	this->m_defaultNormalImage =
 		CreateImage((void *)&normalDefault, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-	
+
 	uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
 	m_whiteImage =
 		CreateImage((void *)&white, VkExtent3D{1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);

@@ -94,7 +94,7 @@ namespace Hush
 			writer.WriteImage(1, resources.colorImage.imageView, resources.colorSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			writer.WriteImage(2, resources.metalRoughImage.imageView, resources.metalRoughSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);			
+							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 			writer.WriteImage(3, resources.normalImage.imageView, resources.normalSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);

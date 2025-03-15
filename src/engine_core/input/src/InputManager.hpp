@@ -37,6 +37,8 @@ namespace Hush
 		/// @brief Evaluates to true for as long as the mouse button is pressed
 		static bool GetMouseButtonPressed(EMouseButton button);
 
+		static bool FetchCharThisFrame(char *outChar);
+
 		/// @brief Gets the vector of the mouse's position in pixels
 		static glm::vec2 GetMousePosition();
 
@@ -57,6 +59,10 @@ namespace Hush
 
 		static void ResetMouseAcceleration();
 
+		static void ResetCharData();
+
+		static void SendCharEvent(char pressedChar);
+
 		static void SetCursorLock(ECursorLockMode lockMode);
 
 	private:
@@ -66,6 +72,9 @@ namespace Hush
 
 		// NOLINTNEXTLINE
 		static MouseData S_MOUSE_DATA;
+
+		// NOLINTNEXTLINE
+		static inline char s_lastChar = 0;
 
 		static void UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState);
 
