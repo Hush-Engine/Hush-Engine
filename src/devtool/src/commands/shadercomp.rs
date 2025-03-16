@@ -1,6 +1,6 @@
 use crate::commands::clicommand::CliCommand;
 use clap::Parser;
-use std::process::ExitCode;
+use std::process::{ExitCode, Stdio};
 
 /// Build command
 #[derive(Debug, Parser)]
@@ -28,7 +28,7 @@ impl CliCommand for ShaderCompileCommand {
 
         // Get all the .frag and .vert files
         let filter = vec!["frag", "vert"];
-        let resources = std::fs::read_dir("./res/")
+        let commands = std::fs::read_dir("./res/")
             .unwrap()
             .filter_map(|f| f.ok())
             .filter(|file_entry| {
@@ -38,12 +38,20 @@ impl CliCommand for ShaderCompileCommand {
             })
             .map(|entry| {
                 let path = entry.path();
-                return format!("{} {} {}.spv", path.display(), "-V -o", path.display());
+                return format!(
+                    "glslang -V {} -o {}.spv",
+                    path.display(),
+                    path.with_extension("spv").display()
+                );
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+            .join(" && ");
 
-        let compile_command = std::process::Command::new("glslang")
-            .args(resources)
+        let compile_command = std::process::Command::new("sh")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .arg("-c")
+            .arg(commands)
             .output()?;
 
         Ok(if compile_command.status.success() {
