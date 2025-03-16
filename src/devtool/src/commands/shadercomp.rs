@@ -27,7 +27,7 @@ impl CliCommand for ShaderCompileCommand {
         }
 
         // Get all the .frag and .vert files
-        let filter = vec!["frag", "vert"];
+        let filter = vec!["frag", "vert", "comp"];
         let commands = std::fs::read_dir("./res/")
             .unwrap()
             .filter_map(|f| f.ok())
@@ -38,11 +38,7 @@ impl CliCommand for ShaderCompileCommand {
             })
             .map(|entry| {
                 let path = entry.path();
-                return format!(
-                    "glslang -V {} -o {}.spv",
-                    path.display(),
-                    path.with_extension("spv").display()
-                );
+                return format!("glslang -V {} -o {}.spv", path.display(), path.display());
             })
             .collect::<Vec<_>>()
             .join(" && ");
