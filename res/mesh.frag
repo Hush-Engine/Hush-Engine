@@ -2,72 +2,34 @@
 
 #extension GL_GOOGLE_include_directive : require
 #include "input_structures.glsl"
+#include "pbrUtils.glsl"
 
-layout (location = 0) in vec3 inNormal;
-layout (location = 1) in vec3 inColor;
-layout (location = 2) in vec2 inUV;
-layout (location = 3) in vec3 inTangent;
-layout (location = 4) in float inHandedness;
+layout(location = 0) in vec3 inNormal;
+layout(location = 1) in vec3 inColor;
+layout(location = 2) in vec2 inUV;
+layout(location = 3) in vec3 inTangent;
+layout(location = 4) in float inHandedness;
+layout(location = 5) in vec3 inWorldPos;
 
-layout (location = 0) out vec4 outFragColor;
-
-const vec3 specColor = vec3(1.0f);
-
-struct SHCoefficients {
-    vec3 l00, l1m1, l10, l11, l2m2, l2m1, l20, l21, l22;
-};
-
-const SHCoefficients grace = SHCoefficients(
-    vec3( 0.3623915,  0.2624130,  0.2326261 ),
-    vec3( 0.1759131,  0.1436266,  0.1260569 ),
-    vec3(-0.0247311, -0.0101254, -0.0010745 ),
-    vec3( 0.0346500,  0.0223184,  0.0101350 ),
-    vec3( 0.0198140,  0.0144073,  0.0043987 ),
-    vec3(-0.0469596, -0.0254485, -0.0117786 ),
-    vec3(-0.0898667, -0.0760911, -0.0740964 ),
-    vec3( 0.0050194,  0.0038841,  0.0001374 ),
-    vec3(-0.0818750, -0.0321501,  0.0033399 )
-);
-
-vec3 calcIrradiance(vec3 nor) {
-    const SHCoefficients c = grace;
-    const float c1 = 0.429043;
-    const float c2 = 0.511664;
-    const float c3 = 0.743125;
-    const float c4 = 0.886227;
-    const float c5 = 0.247708;
-    return (
-        c1 * c.l22 * (nor.x * nor.x - nor.y * nor.y) +
-        c3 * c.l20 * nor.z * nor.z +
-        c4 * c.l00 -
-        c5 * c.l20 +
-        2.0 * c1 * c.l2m2 * nor.x * nor.y +
-        2.0 * c1 * c.l21  * nor.x * nor.z +
-        2.0 * c1 * c.l2m1 * nor.y * nor.z +
-        2.0 * c2 * c.l11  * nor.x +
-        2.0 * c2 * c.l1m1 * nor.y +
-        2.0 * c2 * c.l10  * nor.z
-    );
-}
+layout(location = 0) out vec4 outFragColor;
 
 // Makes the normal look better for little performance cost
 vec3 calculateTangentGramSchmidt(in vec3 normal, in vec3 tangent) {
-	return (tangent - dot(tangent, normal) * normal);
+    return (tangent - dot(tangent, normal) * normal);
 }
 
-
-// Based on Blinn-phong reflection model
-vec3 calcSpecular(vec3 normal, vec3 viewDir, vec3 lightDir, float shininess) {
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-    
-    return specColor * spec;
+vec3 viewMatExtractFwd(in mat4 viewMatrix) {
+    // 8 9 and 10 idx corresponds to -fwd
+    return vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 }
 
-vec3 viewMatExtractFwd(mat4 viewMatrix) {
-	// 8 9 and 10 idx corresponds to -fwd
-	return vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+vec3 viewMatExtractPos(in mat4 viewMatrix) {
+    // I... think this is correct, we need to negate this
+    return -vec3(viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]);
+}
+
+vec3 scalarPow(in vec3 v, in float n) {
+    return vec3(pow(v.x, n), pow(v.y, n), pow(v.z, n));
 }
 
 // Tangent, BiTangent and normal matrix
@@ -76,34 +38,47 @@ mat3 TBN;
 
 const float specShininess = 32.0;
 
-void main() 
+void main()
 {
+    vec4 texColor = texture(colorTex, inUV);
+    float alpha = texColor.w;
+    if (alpha < materialData.alphaCutoff) {
+        discard;
+    }
 
-	vec4 texColor = texture(colorTex,inUV);
-	float alpha = texColor.w;
-	if (alpha < materialData.alphaCutoff) {
-		discard;
-	}
+    // PBR stuff
+    // vec3 albedo = texColor.rgb * inColor;
+    vec3 albedo = scalarPow(texColor.rgb * inColor, 2.2);
+    vec4 metalRough = texture(metalRoughTex, inUV);
+    float metallic = metalRough.b * materialData.metal_rough_factors.x;
+    float roughness = metalRough.g * materialData.metal_rough_factors.y;
+    // Calculate normal related stuff
+    vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
+    vec3 biTangent = cross(inNormal, tangent) * inHandedness;
+    TBN = mat3(tangent, biTangent, inNormal);
 
-	// Calculate normal related stuff
-	vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
-	vec3 biTangent = cross(inNormal, tangent) * inHandedness;
-	TBN = mat3(tangent, biTangent, inNormal);
+    vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
+    vec3 finalNormal = normalize(TBN * localNormal);
 
-	vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
-	vec3 finalNormal = normalize(TBN * localNormal);
-	
-	// Calculate the light once we're done with normal calculations
-	vec3 viewDirection = viewMatExtractFwd(sceneData.view);
-	
-	float lightValue = max(dot(finalNormal, sceneData.sunlightDirection.xyz), 0.1f);
-	vec3 irradiance = calcIrradiance(finalNormal);
+    // Calculate the light once we're done with normal calculations
+    vec3 viewDirection = viewMatExtractFwd(sceneData.view);
 
-	// Specular calcs
-	vec3 specular = calcSpecular(finalNormal, viewDirection, sceneData.sunlightDirection.xyz, specShininess);
+    // TODO: replace with IBL for point lights
+    vec3 fragToCamDir = normalize(viewMatExtractPos(sceneData.view) - inWorldPos);
+    // vec3 radiance = sceneData.sunlightColor.rgb * sceneData.sunlightDirection.w * PI;
+    vec3 radiance = sceneData.sunlightColor.rgb * 5.0 * PI;
 
-	vec3 color = inColor * texColor.xyz;
+    vec3 directLight = PBR(
+        albedo,
+        metallic,
+        roughness,
+        finalNormal,
+        fragToCamDir,
+        normalize(sceneData.sunlightDirection.xyz),
+        radiance
+    );
 
-	outFragColor = vec4(color * lightValue + color * irradiance.x * vec3(0.2f) + specular , alpha);
+    vec3 ambient = sceneData.ambientColor.rgb * texColor.rgb * 0.1;
+    outFragColor = vec4(ambient + directLight, texColor.a);
+    // outFragColor = vec4(finalNormal + ambient, texColor.a);
 }
-
