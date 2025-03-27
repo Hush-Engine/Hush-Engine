@@ -1,8 +1,9 @@
 #include "CommandPanel.hpp"
-#include "Assertions.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
+#include "Logger.hpp"
 #include "Scene.hpp"
+#include "crypto/Hashing.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
@@ -17,16 +18,26 @@
 #include "StringUtils.hpp"
 #include "Components/Transform.hpp"
 #include <zadeh/StringArrayFilterer.h>
+#include <zadeh/filter.h>
 #include <zadeh/zadeh.h>
 
 constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
-HUSH_STATIC_ASSERT(BUILT_IN_COMMANDS.size() == magic_enum::enum_count<Hush::CommandPanel::EBuiltinCommands>(),
-				   "Built-in commands enum does not match with array");
+// NOLINTNEXTLINE
+#define CALC_CMD_HASH(idx) Hush::Hashing::Fnv1a(BUILT_IN_COMMANDS[idx].data(), BUILT_IN_COMMANDS[idx].size())
+
+enum class EBuiltinCommands : uint32_t
+{
+	AddEntity = CALC_CMD_HASH(0),
+	FindEntity = CALC_CMD_HASH(1),
+	AddComponent = CALC_CMD_HASH(2),
+	Help = CALC_CMD_HASH(3)
+};
 
 void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
+	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 }
 
 void Hush::CommandPanel::OnRender()
@@ -71,11 +82,14 @@ void Hush::CommandPanel::TypeCommand()
 	{
 		return;
 	}
+
 	char currentInput = 0;
+	// When typing the command we should do a pass of available commands to update with fuzzy search
 	if (InputManager::FetchCharThisFrame(&currentInput))
 	{
 		this->m_currState = EState::Editing;
 		this->m_panelText += currentInput;
+		this->RebuildAvailableCommands();
 		return;
 	}
 
@@ -84,6 +98,7 @@ void Hush::CommandPanel::TypeCommand()
 	{
 		size_t lastCharacterIdx = this->m_panelText.size() - 1;
 		this->m_panelText = this->m_panelText.substr(0, lastCharacterIdx);
+		this->RebuildAvailableCommands();
 	}
 }
 
@@ -95,10 +110,10 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_keyboardFocusSet = false;
 }
 
-void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_view textCmd)
+void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view& textCmd)
 {
 	Entity::EntityId entityToCreate = 0;
-	switch (command)
+	switch (static_cast<EBuiltinCommands>(command))
 	{
 	case EBuiltinCommands::AddEntity:
 		if (textCmd.empty())
@@ -119,8 +134,36 @@ void Hush::CommandPanel::SubmitCommand(EBuiltinCommands command, std::string_vie
 	case EBuiltinCommands::AddComponent:
 	case EBuiltinCommands::Help:
 		break;
+	default:
+		// Show error
+		// Then fade out
+		LogFormat(ELogLevel::Error, "No command called {} was found", textCmd);
+		break;
 	}
 	this->CloseCommandMode();
+}
+
+
+void Hush::CommandPanel::RebuildAvailableCommands() {
+	// Update only if the panel text.size() > 1 bc it still counts the colon
+	if (this->m_panelText.size() < 2) {
+		// Hard set to the original state
+		this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
+		return;
+	}
+	// Reconstructing the entire vector is still cheaper than checking for existing instances of a match
+	this->m_currentlyAvailableCommands.clear();
+	using Arr_t = std::array<std::string_view, BUILT_IN_COMMANDS.size()>;
+	zadeh::StringArrayFilterer<Arr_t, Arr_t, std::string_view> filterer{};
+	filterer.set_candidates(BUILT_IN_COMMANDS);
+	// The query string is a substring on start offset 1, and wherever we find a space or nPos
+	const size_t endIdx = this->m_panelText.find(' ');
+	const std::string queryStr = this->m_panelText.substr(1, endIdx);
+	std::vector<size_t> filteredIdx = filterer.filter_indices(queryStr);
+	for (const size_t& idx : filteredIdx) {
+		this->m_currentlyAvailableCommands.emplace_back(BUILT_IN_COMMANDS.at(idx));
+	}
+	
 }
 
 void Hush::CommandPanel::UpdateCommandList()
@@ -146,9 +189,10 @@ void Hush::CommandPanel::UpdateCommandList()
 	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
 	// Show all commands that match
 	ImDrawList *drawList = ImGui::GetWindowDrawList();
-	for (size_t i = 0; i < BUILT_IN_COMMANDS.size(); i++)
+	for (size_t i = 0; i < this->m_currentlyAvailableCommands.size(); i++)
 	{
-		const std::string_view &command = BUILT_IN_COMMANDS.at(i);
+
+		const std::string_view &command = this->m_currentlyAvailableCommands.at(i);
 		bool hovered = false;
 		bool forceHover = this->m_selectedCommandIdx == i;
 		bool submitted = UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
@@ -161,8 +205,14 @@ void Hush::CommandPanel::UpdateCommandList()
 		{
 			// Next words from space
 			auto offset = static_cast<int32_t>(this->m_panelText.find(' ')) + 1;
-			this->SubmitCommand(static_cast<EBuiltinCommands>(this->m_selectedCommandIdx),
-								StringUtils::SubstrView(this->m_panelText, offset, this->m_panelText.size()));
+			std::string_view cmdText;
+			if (offset != 0) {
+				// The command was submitted with additional data
+				cmdText = StringUtils::SubstrView(this->m_panelText, offset, (int32_t)this->m_panelText.size());
+			}
+			std::string pureCommand = this->m_panelText.substr(1, offset - 2);
+			uint32_t commandHash = Hashing::Fnv1a(pureCommand.data(), pureCommand.size());
+			this->SubmitCommand(commandHash, cmdText);
 		}
 	}
 	this->m_currState = this->m_currState != EState::None && this->m_currState != EState::SearchMode

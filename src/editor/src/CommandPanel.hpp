@@ -3,6 +3,7 @@
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
 #include "imgui/imgui.h"
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -17,14 +18,6 @@ namespace Hush
 			Editing,
 			ForceFocus,
 			SearchMode
-		};
-
-		enum class EBuiltinCommands : int32_t
-		{
-			AddEntity,
-			FindEntity,
-			AddComponent,
-			Help
 		};
 
 		void Init(Scene *activeScene) noexcept override;
@@ -46,8 +39,10 @@ namespace Hush
 
 		void RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId);
 
-		void SubmitCommand(EBuiltinCommands command, std::string_view textCmd);
+		void SubmitCommand(uint32_t command, const std::string_view& textCmd);
 
+		void RebuildAvailableCommands();
+		
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
 		EState m_currState = EState::None;
@@ -63,6 +58,8 @@ namespace Hush
 		Scene *m_activeScene;
 
 		bool m_keyboardFocusSet = false;
+
+		std::vector<std::string_view> m_currentlyAvailableCommands;
 
 		static constexpr size_t MAX_ALLOWED_ENTITY_NAME = 30;
 		char m_searchEntityName[MAX_ALLOWED_ENTITY_NAME] = {0};
