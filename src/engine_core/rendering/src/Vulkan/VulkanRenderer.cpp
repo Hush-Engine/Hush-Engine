@@ -284,7 +284,7 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	// some default lighting parameters
 	this->m_sceneData.ambientColor = glm::vec4(.1f);
 	this->m_sceneData.sunlightColor = glm::vec4(1.f);
-	this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, 1.f);
+	this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, 2.f);
 }
 
 void Hush::VulkanRenderer::InitRendering()
@@ -633,7 +633,7 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 void Hush::VulkanRenderer::InitRenderables()
 {
 	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\gun.glb)";
 	std::vector<std::shared_ptr<VulkanMeshNode>> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath).value();
 	for (auto &node : nodeVector)
 	{

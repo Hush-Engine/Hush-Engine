@@ -17,6 +17,7 @@ namespace Hush
 	class IRenderer;
 	class GLTFMetallicRoughness : public IMaterial3D
 	{
+	private:
 		VkMaterialPipeline m_opaquePipeline{};
 		VkMaterialPipeline m_transparentPipeline{};
 
