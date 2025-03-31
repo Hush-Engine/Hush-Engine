@@ -39,6 +39,7 @@
 #include "VulkanFullScreenPass.hpp"
 #include <Shared/ShaderMaterial.hpp>
 #include "Vector3Math.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include <glm/gtx/string_cast.hpp>
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
@@ -283,8 +284,11 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 
 	// some default lighting parameters
 	this->m_sceneData.ambientColor = glm::vec4(.1f);
-	this->m_sceneData.sunlightColor = glm::vec4(1.f);
-	this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, 2.f);
+	if (this->m_directionalLight != nullptr) {
+		this->m_sceneData.sunlightColor = this->m_directionalLight->color.GetRGBA32F();
+		this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, this->m_directionalLight->intensity + 1.0F);
+		
+	}
 }
 
 void Hush::VulkanRenderer::InitRendering()
@@ -558,6 +562,11 @@ void Hush::VulkanRenderer::CreateSyncObjects()
 void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 {
 	return this->m_windowContext;
+}
+
+
+void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight* light) noexcept {
+	this->m_directionalLight = light;
 }
 
 Hush::VulkanSwapchain &Hush::VulkanRenderer::GetSwapchain()
@@ -1095,7 +1104,7 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->m_gradientPipelineLayout, 0, 1,
 							&this->m_drawImageDescriptors, 0, nullptr);
 
-	ComputePushConstants pc;
+	ComputePushConstants pc{};
 	pc.data1 = glm::vec4(1, 0, 0, 1);
 	pc.data2 = glm::vec4(0, 0, 1, 1);
 	constexpr uint32_t computeConstantsSize = sizeof(ComputePushConstants);

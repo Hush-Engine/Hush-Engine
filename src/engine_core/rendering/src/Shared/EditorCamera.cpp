@@ -16,10 +16,10 @@ Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
 
-	// if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
-	// {
-	// 	return;
-	// }
+	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
+	{
+		return;
+	}
 	glm::mat4 viewMatrix = this->GetViewMatrix();
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);

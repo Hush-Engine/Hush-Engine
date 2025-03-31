@@ -27,7 +27,7 @@
 // TODO: Add debug condition
 // NOLINTNEXTLINE
 #define HUSH_ASSERT(condition, fmtFormat, ...)                                                                         \
-	if (!(condition))                                                                                                  \
+	[[unlikely]] if (!(condition))                                                                                                  \
 	{                                                                                                                  \
 		Hush::LogFormat(Hush::ELogLevel::Critical, "Assertion error at {} line {}! " fmtFormat, __FILE__, __LINE__,    \
 						##__VA_ARGS__);                                                                                \

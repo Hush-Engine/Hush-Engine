@@ -5,7 +5,7 @@
 #include <zadeh/StringArrayFilterer.h>
 #include <zadeh/filter.h>
 #include <zadeh/zadeh.h>
-/// @brief Provides utility functions for handling strings (C and std strings)
+/// @brief Provides utility functions for handling  Arrays and collection types
 namespace Hush::ArrayUtils
 {
 
@@ -30,4 +30,4 @@ namespace Hush::ArrayUtils
 		return filterer.filter_indices(query);
 	}
 	
-}; // namespace Hush::StringUtils
+}; // namespace Hush::ArrayUtils

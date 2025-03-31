@@ -18,11 +18,14 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 #include "UI.hpp"
 #include "MathUtils.hpp"
 #include "Components/Transform.hpp"
 #include "ArrayUtils.hpp"
 #include "StringUtils.hpp"
+#include "Shared/DirectionalLight.hpp"
+
 constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
 // NOLINTNEXTLINE
@@ -229,7 +232,7 @@ void Hush::CommandPanel::UpdateCommandList()
 
 void Hush::CommandPanel::AddComponentPopup() {
 	// If we don't have an entity selected in the inspector we should first find one
-	const std::optional<Entity>& inspectTarget = UI::Get().GetPanel<InspectorPanel>().GetInspectTarget();
+	std::optional<Entity>& inspectTarget = UI::Get().GetPanel<InspectorPanel>().GetInspectTarget();
 	if (!inspectTarget.has_value()) {
 		this->FindEntityPopup("No selected entity in the inspector, please select one...");
 		return;
@@ -239,9 +242,32 @@ void Hush::CommandPanel::AddComponentPopup() {
 	if (this->m_keyboardFocusSet) {
 		ImGui::SetKeyboardFocusHere();
 		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
+		this->m_keyboardFocusSet = false;
 	}
 	UI::InputTextWithHint("##Search", "i.e. Rigidbody", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
+	// Find built in components
+	using Arr_t = std::array<std::string_view, 2>;
+	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
+	std::vector<std::string_view> componentNames = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, this->m_searchInputText);
+	for (const std::string_view& componentName : componentNames) {
+		if (!ImGui::Selectable(componentName.data())) {
+			continue;
+		}
+		LogFormat(ELogLevel::Info, "Selected {}", componentName);
+		// Add the component to the currently selected entity
+		switch (Hashing::Fnv1a(componentName)) {
+			case Hashing::Fnv1a("Transform"):
+				inspectTarget.value().AddComponent<Transform>();
+				break;
+			case Hashing::Fnv1a("DirectionalLight"):
+				inspectTarget.value().AddComponent<DirectionalLight>();
+				break;
+		}
+		this->CloseCommandMode();
+	}
+	
 	ImGui::End();
+	
 }
 
 void Hush::CommandPanel::FindEntityPopup(const char* overrideLabel)

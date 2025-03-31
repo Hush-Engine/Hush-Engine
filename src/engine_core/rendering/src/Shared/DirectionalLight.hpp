@@ -1,10 +1,13 @@
 #pragma once
 
-#include <cstdint>
+#include "Types/Color.hpp"
+#include "Vector4Math.hpp"
+
 namespace Hush {
 	struct DirectionalLight {
-		float intensity;
-		uint32_t color;	
-	
+		float intensity = 1.0F;
+		Color color = Vector4Math::ONE;
 	};
+
+	void Serialize(DirectionalLight* component);
 }

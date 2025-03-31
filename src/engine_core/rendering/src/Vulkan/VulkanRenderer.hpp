@@ -40,6 +40,7 @@ constexpr uint32_t VK_OPERATION_TIMEOUT_NS = 1'000'000'000; // This is one secon
 namespace Hush
 {
 	struct MeshAsset;
+	struct DirectionalLight;
 
 	class VulkanRenderer final : public IRenderer
 	{
@@ -139,6 +140,8 @@ namespace Hush
 		[[nodiscard]]
 		void *GetWindowContext() const noexcept override;
 
+		void SetDirectionalLight(DirectionalLight* light) noexcept override;
+		
 		VulkanSwapchain &GetSwapchain();
 
 		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Mesh::Vertex> &vertices);
@@ -255,6 +258,7 @@ namespace Hush
 		VkSampler m_defaultSamplerNearest;
 
 		EditorCamera m_editorCamera;
+		DirectionalLight* m_directionalLight = nullptr;
 
 		// Frame related data
 		std::array<FrameData, FRAME_OVERLAP> m_frames{};

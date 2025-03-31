@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace Hush::Hashing {
+
+
 	constexpr inline uint32_t Fnv1a(const char* data, const uint32_t length) {	
 		// NOLINTNEXTLINE
 		uint32_t hash = 0x811c9dc5;
@@ -16,5 +19,9 @@ namespace Hush::Hashing {
 
 	    return hash;   
 	}
+
+	constexpr inline uint32_t Fnv1a(const std::string_view& data) {
+		return Fnv1a(data.data(), data.size());
+	}	
 }
 
