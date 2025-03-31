@@ -37,7 +37,6 @@ void Hush::HushEngine::Run()
 			continue;
 		}
 
-
 		const float deltaTime = std::chrono::duration<float>(elapsed).count();
 
 		this->m_app->Update(deltaTime);
@@ -71,7 +70,7 @@ void Hush::HushEngine::Init()
 {
 	this->m_app->Init();
 	// Add a default directional light
-	Scene* scene = this->m_app->GetScene();
+	Scene *scene = this->m_app->GetScene();
 	Entity entity = scene->CreateEntityWithName("Directional Light");
 	entity.AddComponent<Transform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();

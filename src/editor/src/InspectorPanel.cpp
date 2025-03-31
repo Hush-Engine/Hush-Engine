@@ -7,14 +7,14 @@
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
 
-void Hush::Serialize(DirectionalLight *component) {
+void Hush::Serialize(DirectionalLight *component)
+{
 	ImGui::CollapsingHeader("Directional Light", ImGuiTreeNodeFlags_DefaultOpen);
-	glm::vec4& rgba = component->color.GetRGBA32F();
-	auto* rgbRegion = reinterpret_cast<float*>(&rgba);
+	glm::vec4 &rgba = component->color.GetRGBA32F();
+	auto *rgbRegion = reinterpret_cast<float *>(&rgba);
 	ImGui::ColorEdit3("Light Color", rgbRegion);
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
-
 
 void Hush::InspectorPanel::OnRender()
 {
@@ -38,8 +38,8 @@ const std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() cons
 	return this->m_inspectTarget;
 }
 
-
-std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() {
+std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
+{
 	return this->m_inspectTarget;
 }
 
@@ -55,8 +55,9 @@ void Hush::InspectorPanel::RenderProperties()
 	UI::SerializeComponent(transform, UI::ESerializableComponentType::Transform);
 	// Get all the other entity's components
 	// TODO: handle this with reflection
-	DirectionalLight* dirLightComponent = this->m_inspectTarget->GetComponent<DirectionalLight>();
-	if (dirLightComponent == nullptr) {
+	DirectionalLight *dirLightComponent = this->m_inspectTarget->GetComponent<DirectionalLight>();
+	if (dirLightComponent == nullptr)
+	{
 		return;
 	}
 	Serialize(dirLightComponent);

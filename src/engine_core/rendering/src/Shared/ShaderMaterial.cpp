@@ -155,7 +155,7 @@ const Hush::GraphicsApiMaterialInstance &Hush::ShaderMaterial::GetInternalMateri
 }
 
 Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hush::ShaderMaterial::ReflectShader(
-	const std::span<uint32_t>& shaderBinary)
+	const std::span<uint32_t> &shaderBinary)
 {
 	size_t byteCodeLength = shaderBinary.size() * sizeof(uint32_t);
 	SpvReflectShaderModule reflectionModule;

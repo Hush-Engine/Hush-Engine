@@ -2,12 +2,13 @@
 
 #include "Entity.hpp"
 
-namespace Hush::DefaultObjects {
+namespace Hush::DefaultObjects
+{
 
-	enum EDefaultObjectType {
+	enum EDefaultObjectType
+	{
 		EntWithDirectionalLight
 	};
 
-	Entity::EntityId MakeDefault(Scene* activeScene, EDefaultObjectType objectType);	
-}
-
+	Entity::EntityId MakeDefault(Scene *activeScene, EDefaultObjectType objectType);
+} // namespace Hush::DefaultObjects

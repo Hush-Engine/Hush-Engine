@@ -284,10 +284,10 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 
 	// some default lighting parameters
 	this->m_sceneData.ambientColor = glm::vec4(.1f);
-	if (this->m_directionalLight != nullptr) {
+	if (this->m_directionalLight != nullptr)
+	{
 		this->m_sceneData.sunlightColor = this->m_directionalLight->color.GetRGBA32F();
 		this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, this->m_directionalLight->intensity + 1.0F);
-		
 	}
 }
 
@@ -564,8 +564,8 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 	return this->m_windowContext;
 }
 
-
-void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight* light) noexcept {
+void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
+{
 	this->m_directionalLight = light;
 }
 

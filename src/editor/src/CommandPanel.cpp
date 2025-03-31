@@ -52,13 +52,14 @@ void Hush::CommandPanel::OnRender()
 	this->HandleInput();
 	this->TypeCommand();
 	this->UpdateCommandList();
-	switch (this->m_currState) {
-		case EState::SearchMode:
-			this->FindEntityPopup();
-			break;
-		case EState::AddComponentMode:
-			this->AddComponentPopup();
-			break;
+	switch (this->m_currState)
+	{
+	case EState::SearchMode:
+		this->FindEntityPopup();
+		break;
+	case EState::AddComponentMode:
+		this->AddComponentPopup();
+		break;
 	}
 
 	ImGui::SetNextWindowClass(&windowClass);
@@ -120,7 +121,7 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_keyboardFocusSet = false;
 }
 
-void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view& textCmd)
+void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view &textCmd)
 {
 	Entity::EntityId entityToCreate = 0;
 	switch (static_cast<EBuiltinCommands>(command))
@@ -156,10 +157,11 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view&
 	this->CloseCommandMode();
 }
 
-
-void Hush::CommandPanel::RebuildAvailableCommands() {
+void Hush::CommandPanel::RebuildAvailableCommands()
+{
 	// Update only if the panel text.size() > 1 bc it still counts the colon
-	if (this->m_panelText.size() < 2) {
+	if (this->m_panelText.size() < 2)
+	{
 		// Hard set to the original state
 		this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 		return;
@@ -170,7 +172,7 @@ void Hush::CommandPanel::RebuildAvailableCommands() {
 	// The query string is a substring on start offset 1, and wherever we find a space or nPos
 	const size_t endIdx = this->m_panelText.find(' ');
 	const std::string queryStr = this->m_panelText.substr(1, endIdx);
-	
+
 	this->m_currentlyAvailableCommands = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(BUILT_IN_COMMANDS, queryStr);
 }
 
@@ -214,7 +216,8 @@ void Hush::CommandPanel::UpdateCommandList()
 			// Next words from space
 			auto offset = static_cast<int32_t>(this->m_panelText.find(' ')) + 1;
 			std::string_view cmdText;
-			if (offset != 0) {
+			if (offset != 0)
+			{
 				// The command was submitted with additional data
 				cmdText = StringUtils::SubstrView(this->m_panelText, offset, (int32_t)this->m_panelText.size());
 			}
@@ -223,23 +226,26 @@ void Hush::CommandPanel::UpdateCommandList()
 			this->SubmitCommand(commandHash, cmdText);
 		}
 	}
-	this->m_currState = this->m_currState != EState::None && !Bitwise::HasCompositeFlag((int32_t)this->m_currState, (int32_t)EState::IsPopupMode) 
+	this->m_currState = this->m_currState != EState::None &&
+								!Bitwise::HasCompositeFlag((int32_t)this->m_currState, (int32_t)EState::IsPopupMode)
 							? previousState
 							: this->m_currState;
 	ImGui::End();
 }
 
-
-void Hush::CommandPanel::AddComponentPopup() {
+void Hush::CommandPanel::AddComponentPopup()
+{
 	// If we don't have an entity selected in the inspector we should first find one
-	std::optional<Entity>& inspectTarget = UI::Get().GetPanel<InspectorPanel>().GetInspectTarget();
-	if (!inspectTarget.has_value()) {
+	std::optional<Entity> &inspectTarget = UI::Get().GetPanel<InspectorPanel>().GetInspectTarget();
+	if (!inspectTarget.has_value())
+	{
 		this->FindEntityPopup("No selected entity in the inspector, please select one...");
 		return;
 	}
 	UI::BeginCenterPopup("Add Component", true);
 	ImGui::Text("Select a component to add");
-	if (this->m_keyboardFocusSet) {
+	if (this->m_keyboardFocusSet)
+	{
 		ImGui::SetKeyboardFocusHere();
 		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
@@ -248,31 +254,34 @@ void Hush::CommandPanel::AddComponentPopup() {
 	// Find built in components
 	using Arr_t = std::array<std::string_view, 2>;
 	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
-	std::vector<std::string_view> componentNames = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, this->m_searchInputText);
-	for (const std::string_view& componentName : componentNames) {
-		if (!ImGui::Selectable(componentName.data())) {
+	std::vector<std::string_view> componentNames =
+		ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, this->m_searchInputText);
+	for (const std::string_view &componentName : componentNames)
+	{
+		if (!ImGui::Selectable(componentName.data()))
+		{
 			continue;
 		}
 		LogFormat(ELogLevel::Info, "Selected {}", componentName);
 		// Add the component to the currently selected entity
-		switch (Hashing::Fnv1a(componentName)) {
-			case Hashing::Fnv1a("Transform"):
-				inspectTarget.value().AddComponent<Transform>();
-				break;
-			case Hashing::Fnv1a("DirectionalLight"):
-				inspectTarget.value().AddComponent<DirectionalLight>();
-				break;
+		switch (Hashing::Fnv1a(componentName))
+		{
+		case Hashing::Fnv1a("Transform"):
+			inspectTarget.value().AddComponent<Transform>();
+			break;
+		case Hashing::Fnv1a("DirectionalLight"):
+			inspectTarget.value().AddComponent<DirectionalLight>();
+			break;
 		}
 		this->CloseCommandMode();
 	}
-	
+
 	ImGui::End();
-	
 }
 
-void Hush::CommandPanel::FindEntityPopup(const char* overrideLabel)
+void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 {
-	const char* label = overrideLabel != nullptr ? overrideLabel : "Entity search";
+	const char *label = overrideLabel != nullptr ? overrideLabel : "Entity search";
 	UI::BeginCenterPopup(label, true);
 	ImGui::Text("Search for an entity");
 	if (this->m_keyboardFocusSet)
@@ -296,8 +305,9 @@ void Hush::CommandPanel::FindEntityPopup(const char* overrideLabel)
 		entityNames.emplace_back(currEntityName);
 	});
 
-	std::vector<size_t> indices = ArrayUtils::FuzzyFindIndices<std::vector<std::string>, std::string>(entityNames, this->m_searchInputText);
-	
+	std::vector<size_t> indices =
+		ArrayUtils::FuzzyFindIndices<std::vector<std::string>, std::string>(entityNames, this->m_searchInputText);
+
 	for (size_t idx : indices)
 	{
 		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));

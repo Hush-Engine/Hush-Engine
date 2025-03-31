@@ -52,7 +52,7 @@ namespace Hush
 
 		virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
 
-		virtual void SetDirectionalLight(DirectionalLight* light) noexcept = 0;
+		virtual void SetDirectionalLight(DirectionalLight *light) noexcept = 0;
 
 		[[nodiscard]]
 		virtual void *GetWindowContext() const noexcept = 0;

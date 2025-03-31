@@ -39,15 +39,15 @@ namespace Hush
 		void CloseCommandMode();
 
 		void AddComponentPopup();
-		
-		void FindEntityPopup(const char* overrideLabel = nullptr);
+
+		void FindEntityPopup(const char *overrideLabel = nullptr);
 
 		void RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId);
 
-		void SubmitCommand(uint32_t command, const std::string_view& textCmd);
+		void SubmitCommand(uint32_t command, const std::string_view &textCmd);
 
 		void RebuildAvailableCommands();
-		
+
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
 		EState m_currState = EState::None;

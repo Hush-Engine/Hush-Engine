@@ -107,7 +107,7 @@ namespace Hush
 		const GraphicsApiMaterialInstance &GetInternalMaterial() const;
 
 	private:
-		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t>& shaderBinary);
+		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t> &shaderBinary);
 
 		uint32_t GetAPIBinding(ShaderBindings::EBindingType agnosticBinding);
 

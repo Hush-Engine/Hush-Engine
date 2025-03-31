@@ -196,10 +196,11 @@ bool Hush::UI::Spinner(const char *label, float radius, int thickness, const uin
 	return true;
 }
 
-
-bool Hush::UI::InputTextWithHint(const char* label, const char* hint, char* buffer, size_t size, bool focusOnInput) {
+bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput)
+{
 	char outChar = 0;
-	if (focusOnInput && InputManager::FetchCharThisFrame(&outChar)) {
+	if (focusOnInput && InputManager::FetchCharThisFrame(&outChar))
+	{
 		ImGui::SetKeyboardFocusHere();
 	}
 	return ImGui::InputTextWithHint(label, hint, buffer, size);
@@ -214,11 +215,10 @@ bool Hush::UI::BeginCenterPopup(const char *label, bool transparent)
 		ImGui::SetNextWindowBgAlpha(transparentWindowAlpha);
 	}
 
-	constexpr ImGuiWindowFlags windowFlags =
-		ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse;
+	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse;
 
 	const ImVec2 screenCenter = ImGui::GetMainViewport()->GetCenter();
-	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));	
+	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	ImGui::Begin(label, nullptr, windowFlags);
 
 	return true;

@@ -1,8 +1,10 @@
 #pragma once
 
-namespace Hush {
-	class IEditorSerializable {
+namespace Hush
+{
+	class IEditorSerializable
+	{
 	public:
 		virtual void Serialize();
 	}
-}
+} // namespace Hush
