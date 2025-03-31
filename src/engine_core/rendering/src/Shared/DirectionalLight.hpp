@@ -4,7 +4,7 @@
 namespace Hush {
 	struct DirectionalLight {
 		float intensity;
-		uint32_t color;			
+		uint32_t color;	
 	
 	};
 }

@@ -107,7 +107,7 @@ namespace Hush
 		const GraphicsApiMaterialInstance &GetInternalMaterial() const;
 
 	private:
-		Result<std::vector<ShaderBindings>, EError> ReflectShader(std::span<std::uint32_t> shaderBinary);
+		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t>& shaderBinary);
 
 		uint32_t GetAPIBinding(ShaderBindings::EBindingType agnosticBinding);
 
@@ -124,11 +124,6 @@ namespace Hush
 
 		IRenderer *m_renderer;
 		OpaqueMaterialData *m_materialData;
-
-		// A large-ish data pool that holds all the inputs
-		// for the data that needs to be sent to the material
-		// womp, womp, malloc it is
-		std::vector<std::byte> m_shaderInputData;
 
 		std::unordered_map<std::string, ShaderBindings> m_bindingsByName;
 

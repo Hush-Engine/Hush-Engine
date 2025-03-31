@@ -1,4 +1,5 @@
 #include "CommandPanel.hpp"
+#include "BitwiseUtils.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
@@ -9,18 +10,19 @@
 #include "imgui/imgui_internal.h"
 #include "InputManager.hpp"
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <flecs.h>
 #include <magic_enum/magic_enum.hpp>
+#include <optional>
+#include <string>
 #include <string_view>
 #include "UI.hpp"
 #include "MathUtils.hpp"
-#include "StringUtils.hpp"
 #include "Components/Transform.hpp"
-#include <zadeh/StringArrayFilterer.h>
-#include <zadeh/filter.h>
-#include <zadeh/zadeh.h>
-
+#include "ArrayUtils.hpp"
+#include "StringUtils.hpp"
 constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
 
 // NOLINTNEXTLINE
@@ -47,10 +49,15 @@ void Hush::CommandPanel::OnRender()
 	this->HandleInput();
 	this->TypeCommand();
 	this->UpdateCommandList();
-	if (this->m_currState == EState::SearchMode)
-	{
-		this->FindEntityPopup();
+	switch (this->m_currState) {
+		case EState::SearchMode:
+			this->FindEntityPopup();
+			break;
+		case EState::AddComponentMode:
+			this->AddComponentPopup();
+			break;
 	}
+
 	ImGui::SetNextWindowClass(&windowClass);
 	ImGui::Begin("Command Panel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
 	ImVec2 currentsize = ImGui::GetWindowSize();
@@ -132,6 +139,9 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view&
 		this->m_keyboardFocusSet = true;
 		return;
 	case EBuiltinCommands::AddComponent:
+		this->m_currState = EState::AddComponentMode;
+		this->m_keyboardFocusSet = true;
+		return;
 	case EBuiltinCommands::Help:
 		break;
 	default:
@@ -154,16 +164,11 @@ void Hush::CommandPanel::RebuildAvailableCommands() {
 	// Reconstructing the entire vector is still cheaper than checking for existing instances of a match
 	this->m_currentlyAvailableCommands.clear();
 	using Arr_t = std::array<std::string_view, BUILT_IN_COMMANDS.size()>;
-	zadeh::StringArrayFilterer<Arr_t, Arr_t, std::string_view> filterer{};
-	filterer.set_candidates(BUILT_IN_COMMANDS);
 	// The query string is a substring on start offset 1, and wherever we find a space or nPos
 	const size_t endIdx = this->m_panelText.find(' ');
 	const std::string queryStr = this->m_panelText.substr(1, endIdx);
-	std::vector<size_t> filteredIdx = filterer.filter_indices(queryStr);
-	for (const size_t& idx : filteredIdx) {
-		this->m_currentlyAvailableCommands.emplace_back(BUILT_IN_COMMANDS.at(idx));
-	}
 	
+	this->m_currentlyAvailableCommands = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(BUILT_IN_COMMANDS, queryStr);
 }
 
 void Hush::CommandPanel::UpdateCommandList()
@@ -215,34 +220,46 @@ void Hush::CommandPanel::UpdateCommandList()
 			this->SubmitCommand(commandHash, cmdText);
 		}
 	}
-	this->m_currState = this->m_currState != EState::None && this->m_currState != EState::SearchMode
+	this->m_currState = this->m_currState != EState::None && !Bitwise::HasCompositeFlag((int32_t)this->m_currState, (int32_t)EState::IsPopupMode) 
 							? previousState
 							: this->m_currState;
 	ImGui::End();
 }
 
-void Hush::CommandPanel::FindEntityPopup()
+
+void Hush::CommandPanel::AddComponentPopup() {
+	// If we don't have an entity selected in the inspector we should first find one
+	const std::optional<Entity>& inspectTarget = UI::Get().GetPanel<InspectorPanel>().GetInspectTarget();
+	if (!inspectTarget.has_value()) {
+		this->FindEntityPopup("No selected entity in the inspector, please select one...");
+		return;
+	}
+	UI::BeginCenterPopup("Add Component", true);
+	ImGui::Text("Select a component to add");
+	if (this->m_keyboardFocusSet) {
+		ImGui::SetKeyboardFocusHere();
+		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
+	}
+	UI::InputTextWithHint("##Search", "i.e. Rigidbody", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
+	ImGui::End();
+}
+
+void Hush::CommandPanel::FindEntityPopup(const char* overrideLabel)
 {
-	ImGui::SetNextWindowBgAlpha(0.5F);
-	ImGui::Begin("Entity search");
+	const char* label = overrideLabel != nullptr ? overrideLabel : "Entity search";
+	UI::BeginCenterPopup(label, true);
 	ImGui::Text("Search for an entity");
 	if (this->m_keyboardFocusSet)
 	{
 		ImGui::SetKeyboardFocusHere();
-		memset(this->m_searchEntityName, 0, MAX_ALLOWED_ENTITY_NAME);
+		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
 	}
-	// If we type, we set the focus
-	char _ = '0';
-	if (InputManager::FetchCharThisFrame(&_))
-	{
-		ImGui::SetKeyboardFocusHere();
-	}
-	ImGui::InputTextWithHint("##Search", "i.e. Player", this->m_searchEntityName, MAX_ALLOWED_ENTITY_NAME);
+	UI::InputTextWithHint("##Search", "i.e. Player", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
 	// Then find all entities in the scene here
 	Query<Transform> query = this->m_activeScene->CreateQuery<Transform>();
 	std::vector<std::string> entityNames;
-	std::string_view searchEntityName(this->m_searchEntityName);
+	std::string_view searchEntityName(this->m_searchInputText);
 	entityNames.reserve(query.begin().Size());
 	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Transform &transform) {
 		std::string_view currEntityName = entity.GetName().value_or("");
@@ -253,10 +270,8 @@ void Hush::CommandPanel::FindEntityPopup()
 		entityNames.emplace_back(currEntityName);
 	});
 
-	zadeh::StringArrayFilterer<std::vector<std::string>> filterer{};
-	filterer.set_candidates(entityNames);
-
-	std::vector<size_t> indices = filterer.filter_indices(this->m_searchEntityName);
+	std::vector<size_t> indices = ArrayUtils::FuzzyFindIndices<std::vector<std::string>, std::string>(entityNames, this->m_searchInputText);
+	
 	for (size_t idx : indices)
 	{
 		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));

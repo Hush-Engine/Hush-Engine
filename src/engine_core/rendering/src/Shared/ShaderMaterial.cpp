@@ -155,7 +155,7 @@ const Hush::GraphicsApiMaterialInstance &Hush::ShaderMaterial::GetInternalMateri
 }
 
 Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hush::ShaderMaterial::ReflectShader(
-	std::span<uint32_t> shaderBinary)
+	const std::span<uint32_t>& shaderBinary)
 {
 	size_t byteCodeLength = shaderBinary.size() * sizeof(uint32_t);
 	SpvReflectShaderModule reflectionModule;
@@ -195,7 +195,6 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 	std::vector<SpvReflectInterfaceVariable *> inputVars(inputVarsCount);
 	spvReflectEnumerateInputVariables(&reflectionModule, &inputVarsCount, inputVars.data());
 
-	size_t inputVarsByteLength = this->m_shaderInputData.size();
 	for (const SpvReflectInterfaceVariable *inputVar : inputVars)
 	{
 		ShaderBindings binding;
@@ -205,11 +204,9 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 		binding.size = static_cast<uint32_t>(calculatedSize);
 		binding.offset = inputVar->word_offset.location;
 		binding.stageFlags = reflectionModule.shader_stage;
-		inputVarsByteLength += calculatedSize;
 		bindings.emplace_back(binding);
 		this->m_bindingsByName.insert_or_assign(inputVar->name, binding);
 	}
-	this->m_shaderInputData.resize(inputVarsByteLength);
 	std::vector<SpvReflectDescriptorBinding *> descriptorBindings(descriptorCount);
 	spvReflectEnumerateDescriptorBindings(&reflectionModule, &descriptorCount, descriptorBindings.data());
 
@@ -271,6 +268,7 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 	spvReflectDestroyShaderModule(&reflectionModule);
 	return bindings;
 }
+
 uint32_t Hush::ShaderMaterial::GetAPIBinding(Hush::ShaderBindings::EBindingType agnosticBinding)
 {
 #ifdef HUSH_VULKAN_IMPL

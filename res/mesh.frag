@@ -65,20 +65,18 @@ void main()
 
     // TODO: replace with IBL for point lights
     vec3 fragToCamDir = normalize(viewMatExtractPos(sceneData.view) - inWorldPos);
-    // vec3 radiance = sceneData.sunlightColor.rgb * sceneData.sunlightDirection.w * PI;
-    vec3 radiance = sceneData.sunlightColor.rgb * 5.0 * PI;
+    vec3 radiance = sceneData.sunlightColor.rgb * sceneData.sunlightDirection.w * PI;
 
     vec3 directLight = PBR(
         albedo,
         metallic,
         roughness,
-        finalNormal,
+        finalNormal, //N
         fragToCamDir,
-        normalize(sceneData.sunlightDirection.xyz),
+        normalize(sceneData.sunlightDirection.xyz), //L
         radiance
     );
 
     vec3 ambient = sceneData.ambientColor.rgb * texColor.rgb * 0.1;
     outFragColor = vec4(ambient + directLight, texColor.a);
-    // outFragColor = vec4(finalNormal + ambient, texColor.a);
 }
