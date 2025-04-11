@@ -95,6 +95,18 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		}
 	}
 
+	if (material.emissiveTexture.has_value()) 
+	{
+		size_t textureDataIdx = material.emissiveTexture->textureIndex;
+		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+
+		if (fastgltfTexture.imageIndex.has_value())
+		{
+			const AllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+			outMaterialResourcesImpl->emissiveImage = allocImage;
+		}
+	}
+
 	return EError::None;
 #endif
 }

@@ -39,11 +39,13 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	constexpr uint32_t albedoBinding = 1;
 	constexpr uint32_t metallicBinding = 2;
 	constexpr uint32_t normalBinding = 3;
+	constexpr uint32_t emissionBinding = 4;
 
 	layoutBuilder.AddBinding(uniformBufferBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	layoutBuilder.AddBinding(albedoBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	layoutBuilder.AddBinding(metallicBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	layoutBuilder.AddBinding(normalBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	layoutBuilder.AddBinding(emissionBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 	this->m_materialLayout = layoutBuilder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 

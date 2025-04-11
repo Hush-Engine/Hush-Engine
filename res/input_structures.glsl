@@ -11,6 +11,7 @@ layout(set = 1, binding = 0) uniform GLTFMaterialData{
 
     vec4 colorFactors;
     vec4 metal_rough_factors;
+    vec4 emissionFactors;
     float alphaCutoff;
     
 } materialData;
@@ -18,3 +19,5 @@ layout(set = 1, binding = 0) uniform GLTFMaterialData{
 layout(set = 1, binding = 1) uniform sampler2D colorTex;
 layout(set = 1, binding = 2) uniform sampler2D metalRoughTex;
 layout(set = 1, binding = 3) uniform sampler2D normalTex;
+layout(set = 1, binding = 4) uniform sampler2D emissiveTex;
+

@@ -67,8 +67,12 @@ void main()
     vec3 fragToCamDir = normalize(viewMatExtractPos(sceneData.view) - inWorldPos);
     vec3 radiance = sceneData.sunlightColor.rgb * sceneData.sunlightDirection.w * PI;
 
+    vec4 texEmission = texture(emissiveTex, inUV);
+    vec3 emission = (scalarPow(texEmission.xyz * materialData.emissionFactors.xyz, 2.2)) * materialData.emissionFactors.w;
+
     vec3 directLight = PBR(
         albedo,
+        emission,
         metallic,
         roughness,
         finalNormal, //N

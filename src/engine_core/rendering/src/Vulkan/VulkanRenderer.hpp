@@ -97,6 +97,9 @@ namespace Hush
 		AllocatedImage GetDefaultWhiteImage() const noexcept;
 
 		[[nodiscard]]
+		AllocatedImage GetDefaultBlackImage() const noexcept;
+
+		[[nodiscard]]
 		AllocatedImage GetDefaultNormalImage() const noexcept;
 
 		[[nodiscard]]

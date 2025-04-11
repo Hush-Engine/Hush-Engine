@@ -31,7 +31,7 @@ float DistributionGGX(vec3 N, vec3 H, float alpha) {
     return num / denom;
 }
 
-vec3 PBR(vec3 albedo, float metallic, float roughness, vec3 N, vec3 V, vec3 L, vec3 radiance)
+vec3 PBR(vec3 albedo, vec3 emission, float metallic, float roughness, vec3 N, vec3 V, vec3 L, vec3 radiance)
 {
     float alpha = roughness * roughness;
     vec3 H = normalize(V + L);
@@ -52,7 +52,7 @@ vec3 PBR(vec3 albedo, float metallic, float roughness, vec3 N, vec3 V, vec3 L, v
     kD *= 1.0 - metallic;
 
     float NdotL = max(dot(N, L), 0.0);
-    vec3 directionalContribution = (kD * albedo / PI + specular) * radiance * NdotL;
+    vec3 directionalContribution = (kD * albedo + specular) * radiance * NdotL;
     
-    return directionalContribution;   
+    return directionalContribution + emission;
 }

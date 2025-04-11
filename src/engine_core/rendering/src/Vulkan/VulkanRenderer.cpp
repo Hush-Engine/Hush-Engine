@@ -456,6 +456,11 @@ AllocatedImage Hush::VulkanRenderer::GetDefaultWhiteImage() const noexcept
 	return this->m_whiteImage;
 }
 
+
+AllocatedImage Hush::VulkanRenderer::GetDefaultBlackImage() const noexcept {
+	return this->m_blackImage;
+}
+
 AllocatedImage Hush::VulkanRenderer::GetDefaultNormalImage() const noexcept
 {
 	return this->m_defaultNormalImage;

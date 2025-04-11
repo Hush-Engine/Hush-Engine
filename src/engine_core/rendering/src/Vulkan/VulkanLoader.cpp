@@ -1,5 +1,6 @@
 #include "Shared/Mesh.hpp"
 #include <SDL_render.h>
+#include <glm/ext/vector_float4.hpp>
 #define VK_NO_PROTOTYPES
 #include <volk.h>
 #include "VulkanLoader.hpp"
@@ -245,6 +246,9 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	constants.metalRoughFactors.x = material.pbrData.metallicFactor;
 	constants.metalRoughFactors.y = material.pbrData.roughnessFactor;
 
+	constants.emissionFactors = glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
+										  material.emissiveFactor.z(), material.emissiveStrength);
+
 	// Scene Material buffer writing
 	VmaAllocationInfo &allocInfo = sceneMaterialBuffer->GetAllocationInfo();
 	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo.pMappedData);
@@ -268,9 +272,11 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	materialResources.colorImage = engine->GetDefaultWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
+	materialResources.emissiveImage = engine->GetDefaultBlackImage();
 	materialResources.normalImage = engine->GetDefaultNormalImage();
 
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
+	materialResources.emissiveSampler = engine->GetDefaultSamplerLinear();
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 
 	// Then actually set them to the material's
