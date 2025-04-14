@@ -4,4 +4,7 @@
 	\brief Hush Engine bindings container
 */
 #include "bindings.hpp"
+
+#if __has_include("HushBindings.cpp")
 #include "HushBindings.cpp"
+#endif
