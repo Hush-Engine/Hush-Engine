@@ -7,6 +7,11 @@ add_subdirectory(engine_core)
 
 add_subdirectory(editor)
 
+hush_add_library(TARGET_NAME HushBindings
+        LIB_TYPE OBJECT
+        SRCS bindings/bindings.cpp
+)
+
 hush_add_library(
         TARGET_NAME HushEngine
         LIB_TYPE STATIC
@@ -20,12 +25,17 @@ target_link_libraries(HushEngine PUBLIC coreclr
         Hush::Libs
 )
 
+add_library(Hush::Bindings ALIAS HushBindings)
+
+target_link_libraries(HushBindings PRIVATE
+        Hush::Engine)
+
 hush_add_executable(
         TARGET_NAME HushRuntime
         SRCS engine_core/src/dummy.cpp
 )
 
-target_link_libraries(HushRuntime PRIVATE Hush::Engine)
+target_link_libraries(HushRuntime PRIVATE Hush::Engine Hush::Bindings)
 
 if (WIN32)
     set_target_properties(HushEngine PROPERTIES

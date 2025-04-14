@@ -221,13 +221,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.ctor(ptr, count, componentDesc);
+			info->ops.ctor(ptr, count, &componentDesc);
 		};
 	}
 
@@ -239,13 +239,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.dtor(ptr, count, componentDesc);
+			info->ops.dtor(ptr, count, &componentDesc);
 		};
 	}
 
@@ -258,13 +258,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.copy(dst, src, count, componentDesc);
+			info->ops.copy(dst, src, count, &componentDesc);
 		};
 	}
 
@@ -276,13 +276,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.move(dst, src, count, componentDesc);
+			info->ops.move(dst, src, count, &componentDesc);
 		};
 	}
 
@@ -295,13 +295,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.copyCtor(dst, src, count, componentDesc);
+			info->ops.copyCtor(dst, src, count, &componentDesc);
 		};
 	}
 
@@ -313,13 +313,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.moveCtor(dst, src, count, componentDesc);
+			info->ops.moveCtor(dst, src, count, &componentDesc);
 		};
 	}
 
@@ -331,13 +331,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.moveDtor(dst, src, count, componentDesc);
+			info->ops.moveDtor(dst, src, count, &componentDesc);
 		};
 	}
 
@@ -349,13 +349,13 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 			ComponentTraits::ComponentInfo componentDesc = {
 				.size = info->size,
 				.alignment = info->alignment,
-				.name = info->name,
+				.name = info->name.c_str(),
 				.ops = info->ops,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
 
-			info->ops.moveAssignDtor(dst, src, count, componentDesc);
+			info->ops.moveAssignDtor(dst, src, count, &componentDesc);
 		};
 	}
 

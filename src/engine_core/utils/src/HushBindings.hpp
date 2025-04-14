@@ -10,6 +10,12 @@
 #pragma once
 
 #include <cstddef>
+#include "Platform.hpp"
+
+#ifdef HUSH_COMPILER_MSVC
+#pragma warning(push)
+#pragma warning(disable : 5030) // Attribute not recognized
+#endif
 
 namespace Hush::Export
 {
