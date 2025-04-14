@@ -1,4 +1,4 @@
-/*! \file bindings.cpp
+/*! \file bindings.hpp
 	\author Alan Ramirez
 	\date 2025-04-11
 	\brief Hush Engine bindings container
