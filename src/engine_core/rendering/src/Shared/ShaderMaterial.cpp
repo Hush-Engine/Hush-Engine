@@ -81,8 +81,8 @@ Hush::ShaderMaterial::EError Hush::ShaderMaterial::LoadShaders(IRenderer *render
 	pipelineBuilder.DisableDepthTest();
 
 	// render format
-	pipelineBuilder.SetColorAttachmentFormat(rendererImpl->GetDrawImage().imageFormat);
-	pipelineBuilder.SetDepthFormat(rendererImpl->GetDepthImage().imageFormat);
+	pipelineBuilder.SetColorAttachmentFormat(static_cast<VkFormat>(rendererImpl->GetDrawImage().imageFormat));
+	pipelineBuilder.SetDepthFormat(static_cast<VkFormat>(rendererImpl->GetDepthImage().imageFormat));
 
 	// finally build the pipeline
 	this->m_materialData->pipeline.pipeline = pipelineBuilder.Build(device);
@@ -430,9 +430,6 @@ size_t Hush::ShaderMaterial::CalculateTypeSize(const SpvReflectTypeDescription *
 	return cumSize; // Handle unsupported types
 }
 
-void Hush::ShaderMaterial::SyncronizeMemory()
-{
-}
 
 const Hush::ShaderBindings &Hush::ShaderMaterial::FindBinding(const std::string_view &name)
 {

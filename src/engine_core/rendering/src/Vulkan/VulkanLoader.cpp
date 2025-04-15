@@ -1,6 +1,9 @@
 #include "Shared/Mesh.hpp"
+#include "Shared/Types/ImageExtent3D.hpp"
 #include <SDL_render.h>
+#include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
+#include <glm/ext/vector_int3.hpp>
 #define VK_NO_PROTOTYPES
 #include <volk.h>
 #include "VulkanLoader.hpp"
@@ -87,26 +90,28 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	return meshes;
 }
 
-AllocatedImage Hush::VulkanLoader::LoadTexture(VulkanRenderer *engine, const ImageTexture &texture)
+// TODO: This is now completely renderer agnostic
+Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(VulkanRenderer *engine, const ImageTexture &texture)
 {
-	VkExtent3D extent{};
-	extent.width = texture.GetWidth();
-	extent.height = texture.GetHeight();
-	extent.depth = 1;
+	ImageExtent3D extent{
+		static_cast<uint32_t>(texture.GetWidth()),
+		static_cast<uint32_t>(texture.GetHeight()),
+		1
+	};
 
-	constexpr VkFormat defaultImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	constexpr Color::EFormat defaultImageFormat = Color::EFormat::RGBA8Unorm;
 
 	return engine->CreateImage(texture.GetImageData(), extent, defaultImageFormat, VK_IMAGE_USAGE_SAMPLED_BIT);
 }
 
-std::vector<AllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine)
+std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine)
 {
-	std::vector<AllocatedImage> loadedTexturesResult;
+	std::vector<GpuAllocatedImage> loadedTexturesResult;
 	loadedTexturesResult.reserve(asset.images.size());
 	for (const fastgltf::Image &image : asset.images)
 	{
 		std::shared_ptr<ImageTexture> texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image);
-		AllocatedImage loadedImage = LoadTexture(engine, *texture);
+		GpuAllocatedImage loadedImage = LoadTexture(engine, *texture);
 		loadedTexturesResult.emplace_back(loadedImage);
 	}
 	return loadedTexturesResult;
@@ -140,7 +145,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 	meshNode.m_descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
-	std::vector<AllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
+	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
 	std::vector<std::shared_ptr<VkMaterialInstance>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
@@ -233,7 +238,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
 	VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
-	const std::vector<AllocatedImage> &loadedTextures)
+	const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 
@@ -269,11 +274,11 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	mappedData[materialIdx] = constants;
 	GLTFMetallicRoughness::MaterialResources materialResources{};
 	// default the material textures
-	materialResources.colorImage = engine->GetDefaultWhiteImage();
+	materialResources.colorImage = engine->GetDefaultImageProvider()->GetWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
-	materialResources.metalRoughImage = engine->GetDefaultWhiteImage();
-	materialResources.emissiveImage = engine->GetDefaultBlackImage();
-	materialResources.normalImage = engine->GetDefaultNormalImage();
+	materialResources.metalRoughImage = engine->GetDefaultImageProvider()->GetWhiteImage();
+	materialResources.emissiveImage = engine->GetDefaultImageProvider()->GetBlackImage();
+	materialResources.normalImage = engine->GetDefaultImageProvider()->GetNormalImage();
 
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
 	materialResources.emissiveSampler = engine->GetDefaultSamplerLinear();
@@ -291,8 +296,8 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 		metallicMatInstance.WriteMaterial(engine->GetVulkanDevice(), passType, materialResources, allocatorPool));
 }
 
-std::optional<AllocatedImage> Hush::VulkanLoader::LoadedTextureFromMaterial(
-	const fastgltf::Asset &asset, const fastgltf::Material &material, const std::vector<AllocatedImage> &loadedTextures)
+std::optional<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadedTextureFromMaterial(
+	const fastgltf::Asset &asset, const fastgltf::Material &material, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	if (!material.pbrData.baseColorTexture.has_value())
 	{

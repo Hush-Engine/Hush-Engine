@@ -2,7 +2,6 @@
 #include "Assertions.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
-#include "Vulkan/VkTypes.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include <fastgltf/types.hpp>
 #include <vector>
@@ -56,7 +55,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 #ifdef HUSH_VULKAN_IMPL
 
 	// Vulkan implementation will cast the out material resources and the loaded textures
-	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<AllocatedImage> *>(loadedTextures);
+	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
 	auto *outMaterialResourcesImpl = reinterpret_cast<GLTFMetallicRoughness::MaterialResources *>(outMaterialResources);
 
 	// TODO: Refactor all this in a function
@@ -67,7 +66,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
 		if (fastgltfTexture.imageIndex.has_value())
 		{
-			const AllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
 			outMaterialResourcesImpl->colorImage = allocImage;
 		}
 	}
@@ -79,7 +78,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 
 		if (fastgltfTexture.imageIndex.has_value())
 		{
-			const AllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
 			outMaterialResourcesImpl->metalRoughImage = allocImage;
 		}
 	}
@@ -90,7 +89,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 
 		if (fastgltfTexture.imageIndex.has_value())
 		{
-			const AllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
 			outMaterialResourcesImpl->normalImage = allocImage;
 		}
 	}
@@ -102,7 +101,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 
 		if (fastgltfTexture.imageIndex.has_value())
 		{
-			const AllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
 			outMaterialResourcesImpl->emissiveImage = allocImage;
 		}
 	}

@@ -12,7 +12,12 @@ struct VulkanDeletionQueue
 {
 	std::deque<std::function<void()>> deletors;
 
-	void PushFunction(std::function<void()> &&function)
+	void PushFunction(std::function<void()>&function)
+	{
+		deletors.push_back(function);
+	}
+	
+	void PushFunction(std::function<void()>&&function)
 	{
 		deletors.push_back(function);
 	}

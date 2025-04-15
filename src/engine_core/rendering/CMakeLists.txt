@@ -20,6 +20,7 @@ hush_add_library(
              src/Shared/Camera.cpp
              src/Shared/ImageTexture.cpp
              src/Shared/EditorCamera.cpp
+             src/Shared/DefaultImages.cpp
              src/Shared/GltfLoadFunctions.cpp
              src/ImGui/VulkanImGuiForwarder.cpp
         PUBLIC_HEADER_DIRS src

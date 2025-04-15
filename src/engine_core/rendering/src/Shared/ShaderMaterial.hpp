@@ -80,7 +80,6 @@ namespace Hush
 			std::byte *dataStartingPoint = static_cast<std::byte *>(this->m_uniformBufferMappedData) + binding.offset;
 			// Memcpy the data with sizeof(T)
 			memcpy(dataStartingPoint, &value, valueSize);
-			this->SyncronizeMemory();
 			return EError::None;
 		}
 
@@ -119,8 +118,6 @@ namespace Hush
 		size_t CalculateTypeSize(const SpvReflectTypeDescription *type);
 
 		const ShaderBindings &FindBinding(const std::string_view &name);
-
-		void SyncronizeMemory();
 
 		IRenderer *m_renderer;
 		OpaqueMaterialData *m_materialData;

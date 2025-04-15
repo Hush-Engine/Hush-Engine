@@ -5,8 +5,8 @@
 */
 
 #pragma once
+#include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/IMaterial3D.hpp"
-#include "VkTypes.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
@@ -38,13 +38,13 @@ namespace Hush
 
 		struct MaterialResources
 		{
-			AllocatedImage colorImage;
+			GpuAllocatedImage colorImage;
 			VkSampler colorSampler;
-			AllocatedImage metalRoughImage;
+			GpuAllocatedImage metalRoughImage;
 			VkSampler metalRoughSampler;
-			AllocatedImage normalImage;
+			GpuAllocatedImage normalImage;
 			VkSampler normalSampler;
-			AllocatedImage emissiveImage;
+			GpuAllocatedImage emissiveImage;
 			VkSampler emissiveSampler;
 			VkBuffer dataBuffer;
 			uint32_t dataBufferOffset;
@@ -110,6 +110,9 @@ namespace Hush
 
 			return matData;
 		}
+
+	private:
+		MaterialConstants* m_materialConstants = nullptr;	
 	};
 
 } // namespace Hush
