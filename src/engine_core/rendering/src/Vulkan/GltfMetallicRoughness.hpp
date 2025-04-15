@@ -5,8 +5,8 @@
 */
 
 #pragma once
+#include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/IMaterial3D.hpp"
-#include "VkTypes.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
@@ -17,6 +17,7 @@ namespace Hush
 	class IRenderer;
 	class GLTFMetallicRoughness : public IMaterial3D
 	{
+	private:
 		VkMaterialPipeline m_opaquePipeline{};
 		VkMaterialPipeline m_transparentPipeline{};
 
@@ -27,21 +28,24 @@ namespace Hush
 		{
 			alignas(16) glm::vec4 colorFactors;
 			alignas(16) glm::vec4 metalRoughFactors;
+			alignas(16) glm::vec4 emissionFactors; // Vec3 for color, w for intensity
 			alignas(4) float alphaThreshold;
 			// padding, we need it anyway for uniform buffers
 			char padding[12];
 		};
 
-		HUSH_STATIC_ASSERT(sizeof(MaterialConstants) == 48, "Metallic Roughness size mismatch!");
+		HUSH_STATIC_ASSERT(sizeof(MaterialConstants) % 16 == 0, "Metallic Roughness size mismatch!");
 
 		struct MaterialResources
 		{
-			AllocatedImage colorImage;
+			GpuAllocatedImage colorImage;
 			VkSampler colorSampler;
-			AllocatedImage metalRoughImage;
+			GpuAllocatedImage metalRoughImage;
 			VkSampler metalRoughSampler;
-			AllocatedImage normalImage;
+			GpuAllocatedImage normalImage;
 			VkSampler normalSampler;
+			GpuAllocatedImage emissiveImage;
+			VkSampler emissiveSampler;
 			VkBuffer dataBuffer;
 			uint32_t dataBufferOffset;
 		};
@@ -99,10 +103,16 @@ namespace Hush
 			writer.WriteImage(3, resources.normalImage.imageView, resources.normalSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
+			writer.WriteImage(4, resources.emissiveImage.imageView, resources.emissiveSampler,
+							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
 			writer.UpdateSet(device, matData.materialSet);
 
 			return matData;
 		}
+
+	private:
+		MaterialConstants *m_materialConstants = nullptr;
 	};
 
 } // namespace Hush

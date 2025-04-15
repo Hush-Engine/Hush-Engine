@@ -3,6 +3,7 @@
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
 #include "imgui/imgui.h"
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -14,17 +15,12 @@ namespace Hush
 		enum class EState
 		{
 			None = 0,
-			Editing,
-			ForceFocus,
-			SearchMode
-		};
+			Editing = 0b00000001,
+			ForceFocus = 0b00000010,
+			SearchMode = 0b00000100,
+			AddComponentMode = 0b00001000,
 
-		enum class EBuiltinCommands : int32_t
-		{
-			AddEntity,
-			FindEntity,
-			AddComponent,
-			Help
+			IsPopupMode = SearchMode | AddComponentMode
 		};
 
 		void Init(Scene *activeScene) noexcept override;
@@ -42,11 +38,15 @@ namespace Hush
 
 		void CloseCommandMode();
 
-		void FindEntityPopup();
+		void AddComponentPopup();
+
+		void FindEntityPopup(const char *overrideLabel = nullptr);
 
 		void RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId);
 
-		void SubmitCommand(EBuiltinCommands command, std::string_view textCmd);
+		void SubmitCommand(uint32_t command, const std::string_view &textCmd);
+
+		void RebuildAvailableCommands();
 
 		std::string m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 
@@ -64,7 +64,9 @@ namespace Hush
 
 		bool m_keyboardFocusSet = false;
 
+		std::vector<std::string_view> m_currentlyAvailableCommands;
+
 		static constexpr size_t MAX_ALLOWED_ENTITY_NAME = 30;
-		char m_searchEntityName[MAX_ALLOWED_ENTITY_NAME] = {0};
+		char m_searchInputText[MAX_ALLOWED_ENTITY_NAME] = {0};
 	};
 } // namespace Hush

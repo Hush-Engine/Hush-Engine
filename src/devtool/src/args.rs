@@ -3,6 +3,7 @@ use crate::commands::clicommand::CliCommand;
 use crate::commands::configure::ConfigureCommand;
 use crate::commands::format::FormatCommand;
 use crate::commands::new_file::NewFileCommand;
+use crate::commands::shadercomp::ShaderCompileCommand;
 use crate::commands::tidy::TidyCommand;
 use clap::{Parser, Subcommand};
 use std::process::ExitCode;
@@ -18,6 +19,7 @@ pub struct DevtoolCliOptions {
 pub enum Cmd {
     /// Configure the engine project
     Configure(ConfigureCommand),
+    CompileShaders(ShaderCompileCommand),
     Build(BuildCommand),
     NewFile(NewFileCommand),
     Format(FormatCommand),
@@ -32,6 +34,7 @@ impl DevtoolCliOptions {
             Cmd::NewFile(new_file) => new_file.run(),
             Cmd::Format(format) => format.run(),
             Cmd::Tidy(tidy) => tidy.run(),
+            Cmd::CompileShaders(shader_compile_command) => shader_compile_command.run(),
         }
     }
 }

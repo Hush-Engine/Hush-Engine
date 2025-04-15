@@ -9,7 +9,6 @@
 #include <array>
 #include <cstdint>
 #include <string>
-
 /// @brief Provides utility functions for handling strings (C and std strings)
 namespace Hush::StringUtils
 {

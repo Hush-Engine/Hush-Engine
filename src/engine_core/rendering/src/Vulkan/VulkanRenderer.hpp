@@ -11,7 +11,6 @@
 #include "Renderer.hpp"
 #include <magic_enum/magic_enum.hpp>
 #include "FrameData.hpp"
-#include "VkTypes.hpp"
 #include "VulkanDeletionQueue.hpp"
 #include "ImGui/IImGuiForwarder.hpp"
 #include "vk_mem_alloc.hpp"
@@ -30,6 +29,10 @@
 #include "VulkanFullScreenPass.hpp"
 #include "DrawContext.hpp"
 #include "Shared/Mesh.hpp"
+#include "Shared/GpuAllocatedImage.hpp"
+#include "Shared/Types/Color.hpp"
+#include "Shared/DefaultImages.hpp"
+#include <cstdint>
 
 ///@brief Double frame buffering, allows for the GPU and CPU to work in parallel. NOTE: increase to 3 if experiencing
 /// jittery framerates
@@ -40,6 +43,7 @@ constexpr uint32_t VK_OPERATION_TIMEOUT_NS = 1'000'000'000; // This is one secon
 namespace Hush
 {
 	struct MeshAsset;
+	struct DirectionalLight;
 
 	class VulkanRenderer final : public IRenderer
 	{
@@ -93,12 +97,6 @@ namespace Hush
 		VkSampler GetDefaultSamplerNearest() noexcept;
 
 		[[nodiscard]]
-		AllocatedImage GetDefaultWhiteImage() const noexcept;
-
-		[[nodiscard]]
-		AllocatedImage GetDefaultNormalImage() const noexcept;
-
-		[[nodiscard]]
 		GLTFMetallicRoughness &GetMetalRoughMaterial() noexcept;
 
 		[[nodiscard]]
@@ -117,18 +115,18 @@ namespace Hush
 		VkDescriptorSetLayout GetGpuSceneDataDescriptorLayout() noexcept;
 
 		[[nodiscard]]
-		const AllocatedImage &GetDrawImage() const noexcept;
+		const GpuAllocatedImage &GetDrawImage() const noexcept;
 
 		// Non const variant
 		[[nodiscard]]
-		AllocatedImage &GetDrawImage() noexcept;
+		GpuAllocatedImage &GetDrawImage() noexcept;
 
 		[[nodiscard]]
-		const AllocatedImage &GetDepthImage() const noexcept;
+		const GpuAllocatedImage &GetDepthImage() const noexcept;
 
 		// Non const variant
 		[[nodiscard]]
-		AllocatedImage &GetDepthImage() noexcept;
+		GpuAllocatedImage &GetDepthImage() noexcept;
 
 		[[nodiscard]]
 		VkPhysicalDevice GetVulkanPhysicalDevice() const noexcept;
@@ -139,16 +137,24 @@ namespace Hush
 		[[nodiscard]]
 		void *GetWindowContext() const noexcept override;
 
+		void SetDirectionalLight(DirectionalLight *light) noexcept override;
+
 		VulkanSwapchain &GetSwapchain();
 
 		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Mesh::Vertex> &vertices);
 
-		AllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
-								   bool mipmapped = false);
+		// GpuAllocatedImage CreateImage(const void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
+		// 						   bool mipmapped = false);
+
+		GpuAllocatedImage CreateImage(const void *data, const ImageExtent3D &size, Color::EFormat format,
+									  uint32_t usage, bool mipmapped = false) override;
 
 		VkSurfaceKHR GetSurface() noexcept;
 
-		VulkanDeletionQueue GetDeletionQueue() noexcept;
+		void AddToDeletionQueue(std::function<void()> &&deleteFunc) override;
+
+		[[nodiscard]]
+		const DefaultImageProvider *GetDefaultImageProvider() const noexcept override;
 
 	private:
 		void Configure(vkb::Instance vkbInstance);
@@ -195,9 +201,15 @@ namespace Hush
 
 		void ResizeSwapchain();
 
-		AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+		// GpuAllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped =
+		// false);
 
-		void DestroyImage(const AllocatedImage &img);
+		GpuAllocatedImage CreateImage(ImageExtent3D size, Color::EFormat format, uint32_t usage,
+									  bool mipmapped = false);
+
+		void DestroyImage(GpuAllocatedImage *img) override;
+
+		constexpr VkFormat HushFormatToVkFormat(const Color::EFormat &format);
 
 		void *m_windowContext;
 		// TODO: Send all of these to a custom struct holding the pointers
@@ -233,18 +245,16 @@ namespace Hush
 		uint32_t m_width = 0u;
 		uint32_t m_height = 0u;
 		// draw resources
-		AllocatedImage m_drawImage{};
-		AllocatedImage m_depthImage{};
+		GpuAllocatedImage m_drawImage{};
+		GpuAllocatedImage m_depthImage{};
 
 		DrawContext m_mainDrawContext;
 		std::unordered_map<std::string, std::shared_ptr<RenderableNode>> m_loadedNodes;
 
 		// Test stuff
-		AllocatedImage m_whiteImage{};
-		AllocatedImage m_defaultNormalImage{};
-		AllocatedImage m_blackImage{};
-		AllocatedImage m_greyImage{};
-		AllocatedImage m_errorCheckerboardImage{};
+		DefaultImageProvider m_defaultImageProvider;
+		GpuAllocatedImage m_greyImage{};
+		GpuAllocatedImage m_errorCheckerboardImage{};
 		VkDescriptorSetLayout m_singleImageDescriptorLayout;
 
 		VkMaterialInstance m_defaultData;
@@ -255,6 +265,7 @@ namespace Hush
 		VkSampler m_defaultSamplerNearest;
 
 		EditorCamera m_editorCamera;
+		DirectionalLight *m_directionalLight = nullptr;
 
 		// Frame related data
 		std::array<FrameData, FRAME_OVERLAP> m_frames{};
