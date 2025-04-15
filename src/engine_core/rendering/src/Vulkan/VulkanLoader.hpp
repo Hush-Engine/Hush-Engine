@@ -66,11 +66,10 @@ namespace Hush
 		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
 													 Mesh &meshRef, VulkanRenderer *engine);
 
-		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(size_t materialIdx, const fastgltf::Asset &asset,
-																	VulkanRenderer *engine,
-																	VulkanAllocatedBuffer *sceneMaterialBuffer,
-																	DescriptorAllocatorGrowable &allocatorPool,
-																	const std::vector<GpuAllocatedImage> &loadedTextures);
+		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(
+			size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
+			VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
+			const std::vector<GpuAllocatedImage> &loadedTextures);
 
 		static std::optional<GpuAllocatedImage> LoadedTextureFromMaterial(
 			const fastgltf::Asset &asset, const fastgltf::Material &material,

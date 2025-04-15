@@ -10,26 +10,27 @@
 namespace Hush
 {
 	class Color final
-	{	
+	{
 	public:
-		enum class EFormat : uint32_t {
+		enum class EFormat : uint32_t
+		{
 			Unknown,
-		    R8Unorm,
-		    RG8Unorm,
-		    RGB8Unorm,
-		    RGBA8Unorm,
-		    R16Float,
-		    RG16Float,
-		    RGB16Float,
-		    RGBA16Float,
-		    R32Float,
-		    RG32Float,
-		    RGB32Float,
-		    RGBA32Float,
-		    D32Float,
-		    D24S8Unorm,
+			R8Unorm,
+			RG8Unorm,
+			RGB8Unorm,
+			RGBA8Unorm,
+			R16Float,
+			RG16Float,
+			RGB16Float,
+			RGBA16Float,
+			R32Float,
+			RG32Float,
+			RGB32Float,
+			RGBA32Float,
+			D32Float,
+			D24S8Unorm,
 		};
-		
+
 		Color() = default;
 
 		constexpr Color(float red, float green, float blue, float alpha)
@@ -39,14 +40,14 @@ namespace Hush
 			this->m_rgba.b = blue;
 			this->m_rgba.a = alpha;
 		}
-		
+
 		constexpr Color(float red, float green, float blue)
 		{
 			this->m_rgba.r = red;
 			this->m_rgba.g = green;
 			this->m_rgba.b = blue;
 		}
-		
+
 		constexpr Color(glm::vec3 rgb)
 		{
 			this->m_rgba = glm::vec4(rgb, 1.0F);
@@ -57,15 +58,18 @@ namespace Hush
 		{
 		}
 
-		constexpr static Color White() {
+		constexpr static Color White()
+		{
 			return glm::vec4(1.0F);
 		}
-		
-		constexpr static Color Black() {
+
+		constexpr static Color Black()
+		{
 			return glm::vec4(0.0F);
 		}
-		
-		constexpr static Color Magenta() {
+
+		constexpr static Color Magenta()
+		{
 			return glm::vec4(1, 0, 1, 1);
 		}
 
@@ -79,7 +83,7 @@ namespace Hush
 		{
 			return this->m_rgba;
 		}
-				
+
 		[[nodiscard]]
 		constexpr uint32_t ToColor32() const
 		{

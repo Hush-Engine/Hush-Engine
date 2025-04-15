@@ -430,7 +430,6 @@ size_t Hush::ShaderMaterial::CalculateTypeSize(const SpvReflectTypeDescription *
 	return cumSize; // Handle unsupported types
 }
 
-
 const Hush::ShaderBindings &Hush::ShaderMaterial::FindBinding(const std::string_view &name)
 {
 	return this->m_bindingsByName.at(name.data());

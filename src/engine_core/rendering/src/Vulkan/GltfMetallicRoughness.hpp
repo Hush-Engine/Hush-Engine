@@ -102,7 +102,7 @@ namespace Hush
 
 			writer.WriteImage(3, resources.normalImage.imageView, resources.normalSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-			
+
 			writer.WriteImage(4, resources.emissiveImage.imageView, resources.emissiveSampler,
 							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
@@ -112,7 +112,7 @@ namespace Hush
 		}
 
 	private:
-		MaterialConstants* m_materialConstants = nullptr;	
+		MaterialConstants *m_materialConstants = nullptr;
 	};
 
 } // namespace Hush

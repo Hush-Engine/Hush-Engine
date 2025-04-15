@@ -94,7 +94,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		}
 	}
 
-	if (material.emissiveTexture.has_value()) 
+	if (material.emissiveTexture.has_value())
 	{
 		size_t textureDataIdx = material.emissiveTexture->textureIndex;
 		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);

@@ -9,21 +9,22 @@ struct VkImage_T;
 struct VkImageView_T;
 
 using VmaAllocation = VmaAllocation_T *;
-using VkImageView = VkImageView_T*;
-using VkImage = VkImage_T*;
+using VkImageView = VkImageView_T *;
+using VkImage = VkImage_T *;
 
 #endif
 
-namespace Hush {
-	
+namespace Hush
+{
+
 	struct GpuAllocatedImage
 	{
-		#if defined(HUSH_VULKAN_IMPL)
+#if defined(HUSH_VULKAN_IMPL)
 		VkImage image = nullptr;
 		VkImageView imageView = nullptr;
 		VmaAllocation allocation = nullptr;
 		uint32_t imageFormat{};
-		#endif
+#endif
 		ImageExtent3D imageExtent;
 	};
-}
+} // namespace Hush

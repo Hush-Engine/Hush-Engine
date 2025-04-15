@@ -175,8 +175,7 @@ void Hush::VulkanRenderer::InitializeCommands() noexcept
 		cmdAllocInfo = VkUtilsFactory::CreateCommandBufferAllocateInfo(this->m_frames.at(i).commandPool);
 		rc = vkAllocateCommandBuffers(this->m_device, &cmdAllocInfo, &this->m_frames.at(i).mainCommandBuffer);
 		HUSH_VK_ASSERT(rc, "Allocating command buffers failed!");
-		this->AddToDeletionQueue(
-			[=, this]() { vkDestroyCommandPool(m_device, m_frames.at(i).commandPool, nullptr); });
+		this->AddToDeletionQueue([=, this]() { vkDestroyCommandPool(m_device, m_frames.at(i).commandPool, nullptr); });
 	}
 }
 
@@ -1176,13 +1175,13 @@ void Hush::VulkanRenderer::ResizeSwapchain()
 	this->m_resizeRequested = false;
 }
 
-Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(Hush::ImageExtent3D size, Color::EFormat format, uint32_t usage,
-												 bool mipmapped /*= false*/)
+Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(Hush::ImageExtent3D size, Color::EFormat format,
+														  uint32_t usage, bool mipmapped /*= false*/)
 {
 	GpuAllocatedImage newImage{};
 	VkFormat vulkanFormat = this->HushFormatToVkFormat(format);
 	newImage.imageFormat = vulkanFormat;
-	auto extent = VkExtent3D { size.width, size.height, size.depth };
+	auto extent = VkExtent3D{size.width, size.height, size.depth};
 	newImage.imageExtent = size;
 
 	VkImageCreateInfo imgInfo = VkUtilsFactory::CreateImageCreateInfo(vulkanFormat, usage, extent);
@@ -1210,7 +1209,8 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(Hush::ImageExtent3D si
 	}
 
 	// build a image-view for the image
-	VkImageViewCreateInfo viewInfo = VkUtilsFactory::CreateImageViewCreateInfo(vulkanFormat, newImage.image, aspectFlag);
+	VkImageViewCreateInfo viewInfo =
+		VkUtilsFactory::CreateImageViewCreateInfo(vulkanFormat, newImage.image, aspectFlag);
 	viewInfo.subresourceRange.levelCount = imgInfo.mipLevels;
 
 	HUSH_VK_ASSERT(vkCreateImageView(this->m_device, &viewInfo, nullptr, &newImage.imageView),
@@ -1224,60 +1224,63 @@ VkSurfaceKHR Hush::VulkanRenderer::GetSurface() noexcept
 	return this->m_surface;
 }
 
-void Hush::VulkanRenderer::AddToDeletionQueue(std::function<void()>&& deleteFunc) {
+void Hush::VulkanRenderer::AddToDeletionQueue(std::function<void()> &&deleteFunc)
+{
 	this->m_mainDeletionQueue.PushFunction(deleteFunc);
 }
 
-
-const Hush::DefaultImageProvider *Hush::VulkanRenderer::GetDefaultImageProvider() const noexcept {
+const Hush::DefaultImageProvider *Hush::VulkanRenderer::GetDefaultImageProvider() const noexcept
+{
 	return &this->m_defaultImageProvider;
 }
 
-void Hush::VulkanRenderer::DestroyImage(Hush::GpuAllocatedImage* img)
+void Hush::VulkanRenderer::DestroyImage(Hush::GpuAllocatedImage *img)
 {
 	vkDestroyImageView(this->m_device, img->imageView, nullptr);
 	vmaDestroyImage(this->m_allocator, img->image, img->allocation);
 }
 
+constexpr VkFormat Hush::VulkanRenderer::HushFormatToVkFormat(const Hush::Color::EFormat &format)
+{
 
-constexpr VkFormat Hush::VulkanRenderer::HushFormatToVkFormat(const Hush::Color::EFormat& format) {
-
-	switch (format) {
-	    case Color::EFormat::R8Unorm:
-	        return VkFormat::VK_FORMAT_R8_UNORM;
-	    case Color::EFormat::RG8Unorm:
-	        return VkFormat::VK_FORMAT_R8G8_UNORM;
-	    case Color::EFormat::RGB8Unorm:
-	        return VkFormat::VK_FORMAT_R8G8B8_UNORM;
-	    case Color::EFormat::RGBA8Unorm:
-	        return VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
-	    case Color::EFormat::R16Float:
-	        return VkFormat::VK_FORMAT_R16_SFLOAT;
-	    case Color::EFormat::RG16Float:
-	        return VkFormat::VK_FORMAT_R16G16_SFLOAT;
-	    case Color::EFormat::RGB16Float:
-	        return VkFormat::VK_FORMAT_R16G16B16_SFLOAT;
-	    case Color::EFormat::RGBA16Float:
-	        return VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT;
-	    case Color::EFormat::R32Float:
-	        return VkFormat::VK_FORMAT_R32_SFLOAT;
-	    case Color::EFormat::RG32Float:
-	        return VkFormat::VK_FORMAT_R32G32_SFLOAT;
-	    case Color::EFormat::RGB32Float:
-	        return VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-	    case Color::EFormat::RGBA32Float:
-	        return VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
-	    case Color::EFormat::D32Float:
-	        return VkFormat::VK_FORMAT_D32_SFLOAT;
-	    case Color::EFormat::D24S8Unorm:
-	        return VkFormat::VK_FORMAT_D24_UNORM_S8_UINT;
-	    default:
-	        return VkFormat::VK_FORMAT_UNDEFINED;
+	switch (format)
+	{
+	case Color::EFormat::R8Unorm:
+		return VkFormat::VK_FORMAT_R8_UNORM;
+	case Color::EFormat::RG8Unorm:
+		return VkFormat::VK_FORMAT_R8G8_UNORM;
+	case Color::EFormat::RGB8Unorm:
+		return VkFormat::VK_FORMAT_R8G8B8_UNORM;
+	case Color::EFormat::RGBA8Unorm:
+		return VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
+	case Color::EFormat::R16Float:
+		return VkFormat::VK_FORMAT_R16_SFLOAT;
+	case Color::EFormat::RG16Float:
+		return VkFormat::VK_FORMAT_R16G16_SFLOAT;
+	case Color::EFormat::RGB16Float:
+		return VkFormat::VK_FORMAT_R16G16B16_SFLOAT;
+	case Color::EFormat::RGBA16Float:
+		return VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT;
+	case Color::EFormat::R32Float:
+		return VkFormat::VK_FORMAT_R32_SFLOAT;
+	case Color::EFormat::RG32Float:
+		return VkFormat::VK_FORMAT_R32G32_SFLOAT;
+	case Color::EFormat::RGB32Float:
+		return VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+	case Color::EFormat::RGBA32Float:
+		return VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
+	case Color::EFormat::D32Float:
+		return VkFormat::VK_FORMAT_D32_SFLOAT;
+	case Color::EFormat::D24S8Unorm:
+		return VkFormat::VK_FORMAT_D24_UNORM_S8_UINT;
+	default:
+		return VkFormat::VK_FORMAT_UNDEFINED;
 	}
 }
 
-Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, const ImageExtent3D& size, Hush::Color::EFormat format,
-												 uint32_t usage, bool mipmapped /*= false*/)
+Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, const ImageExtent3D &size,
+														  Hush::Color::EFormat format, uint32_t usage,
+														  bool mipmapped /*= false*/)
 {
 
 	uint32_t dataSize = size.depth * size.width * size.height * 4;
@@ -1302,7 +1305,7 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 		copyRegion.imageSubresource.baseArrayLayer = 0;
 		copyRegion.imageSubresource.layerCount = 1;
 		// TODO: Maybe implement this conversion as a reinterpret cast
-		copyRegion.imageExtent = { size.width, size.height, size.depth };
+		copyRegion.imageExtent = {size.width, size.height, size.depth};
 
 		// copy the buffer into the image
 		vkCmdCopyBufferToImage(cmd, uploadbuffer.GetBuffer(), newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,

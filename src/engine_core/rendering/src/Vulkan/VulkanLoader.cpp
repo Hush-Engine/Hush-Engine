@@ -93,18 +93,15 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 // TODO: This is now completely renderer agnostic
 Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(VulkanRenderer *engine, const ImageTexture &texture)
 {
-	ImageExtent3D extent{
-		static_cast<uint32_t>(texture.GetWidth()),
-		static_cast<uint32_t>(texture.GetHeight()),
-		1
-	};
+	ImageExtent3D extent{static_cast<uint32_t>(texture.GetWidth()), static_cast<uint32_t>(texture.GetHeight()), 1};
 
 	constexpr Color::EFormat defaultImageFormat = Color::EFormat::RGBA8Unorm;
 
 	return engine->CreateImage(texture.GetImageData(), extent, defaultImageFormat, VK_IMAGE_USAGE_SAMPLED_BIT);
 }
 
-std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine)
+std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset,
+																		 VulkanRenderer *engine)
 {
 	std::vector<GpuAllocatedImage> loadedTexturesResult;
 	loadedTexturesResult.reserve(asset.images.size());
@@ -297,7 +294,8 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 }
 
 std::optional<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadedTextureFromMaterial(
-	const fastgltf::Asset &asset, const fastgltf::Material &material, const std::vector<GpuAllocatedImage> &loadedTextures)
+	const fastgltf::Asset &asset, const fastgltf::Material &material,
+	const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	if (!material.pbrData.baseColorTexture.has_value())
 	{

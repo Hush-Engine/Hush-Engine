@@ -1,37 +1,40 @@
 #pragma once
 
 #include "Shared/GpuAllocatedImage.hpp"
-namespace Hush {
+namespace Hush
+{
 
 	class IRenderer;
 
-	class DefaultImageProvider {
+	class DefaultImageProvider
+	{
 	public:
-		void CreateDefaultImages(IRenderer* renderer);
+		void CreateDefaultImages(IRenderer *renderer);
 
 		[[nodiscard]]
-		const GpuAllocatedImage& GetWhiteImage() const {
+		const GpuAllocatedImage &GetWhiteImage() const
+		{
 			return this->m_whiteImage;
 		}
-		
+
 		[[nodiscard]]
-		const GpuAllocatedImage& GetBlackImage() const {
+		const GpuAllocatedImage &GetBlackImage() const
+		{
 			return this->m_blackImage;
 		}
-		
+
 		[[nodiscard]]
-		const GpuAllocatedImage& GetNormalImage() const {
+		const GpuAllocatedImage &GetNormalImage() const
+		{
 			return this->m_normalImage;
 		}
 
 	private:
-		GpuAllocatedImage m_whiteImage {};
-		
-		GpuAllocatedImage m_blackImage {};
-		
-		GpuAllocatedImage m_normalImage {};
-		
-	};
-	
-}
+		GpuAllocatedImage m_whiteImage{};
 
+		GpuAllocatedImage m_blackImage{};
+
+		GpuAllocatedImage m_normalImage{};
+	};
+
+} // namespace Hush

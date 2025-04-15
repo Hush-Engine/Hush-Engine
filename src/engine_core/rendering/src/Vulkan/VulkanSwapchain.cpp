@@ -24,15 +24,14 @@ void Hush::VulkanSwapchain::Recreate(uint32_t width, uint32_t height, Hush::Vulk
 												  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	ImageExtent3D drawImageExtent = {width, height, 1};
-	VkExtent3D vkExtent = { drawImageExtent.width, drawImageExtent.height, drawImageExtent.depth };
+	VkExtent3D vkExtent = {drawImageExtent.width, drawImageExtent.height, drawImageExtent.depth};
 
 	GpuAllocatedImage &currDrawImage = renderer->GetDrawImage();
 	currDrawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 	currDrawImage.imageExtent = drawImageExtent;
 
-
-	VkImageCreateInfo rimgInfo =
-		VkUtilsFactory::CreateImageCreateInfo(static_cast<VkFormat>(renderer->GetDrawImage().imageFormat), drawImageUsages, vkExtent);
+	VkImageCreateInfo rimgInfo = VkUtilsFactory::CreateImageCreateInfo(
+		static_cast<VkFormat>(renderer->GetDrawImage().imageFormat), drawImageUsages, vkExtent);
 
 	// for the draw image, we want to allocate it from gpu local memory
 	VmaAllocationCreateInfo rimgAllocInfo = {};
@@ -44,8 +43,9 @@ void Hush::VulkanSwapchain::Recreate(uint32_t width, uint32_t height, Hush::Vulk
 				   &currDrawImage.allocation, nullptr);
 
 	// build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo rViewInfo = VkUtilsFactory::CreateImageViewCreateInfo(
-		static_cast<VkFormat>(renderer->GetDrawImage().imageFormat), renderer->GetDrawImage().image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageViewCreateInfo rViewInfo =
+		VkUtilsFactory::CreateImageViewCreateInfo(static_cast<VkFormat>(renderer->GetDrawImage().imageFormat),
+												  renderer->GetDrawImage().image, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	HUSH_VK_ASSERT(vkCreateImageView(renderer->GetVulkanDevice(), &rViewInfo, nullptr, &currDrawImage.imageView),
 				   "Failed to create image view");
@@ -55,16 +55,17 @@ void Hush::VulkanSwapchain::Recreate(uint32_t width, uint32_t height, Hush::Vulk
 	VkImageUsageFlags depthImageUsages{};
 	depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-	VkImageCreateInfo depthImgInfo =
-		VkUtilsFactory::CreateImageCreateInfo(static_cast<VkFormat>(renderer->GetDepthImage().imageFormat), depthImageUsages, vkExtent);
+	VkImageCreateInfo depthImgInfo = VkUtilsFactory::CreateImageCreateInfo(
+		static_cast<VkFormat>(renderer->GetDepthImage().imageFormat), depthImageUsages, vkExtent);
 
 	// allocate and create the image
 	vmaCreateImage(renderer->GetVmaAllocator(), &depthImgInfo, &rimgAllocInfo, &renderer->GetDepthImage().image,
 				   &renderer->GetDepthImage().allocation, nullptr);
 
 	// build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo dviewInfo = VkUtilsFactory::CreateImageViewCreateInfo(
-		static_cast<VkFormat>(renderer->GetDepthImage().imageFormat), renderer->GetDepthImage().image, VK_IMAGE_ASPECT_DEPTH_BIT);
+	VkImageViewCreateInfo dviewInfo =
+		VkUtilsFactory::CreateImageViewCreateInfo(static_cast<VkFormat>(renderer->GetDepthImage().imageFormat),
+												  renderer->GetDepthImage().image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	VkResult rc =
 		vkCreateImageView(renderer->GetVulkanDevice(), &dviewInfo, nullptr, &renderer->GetDepthImage().imageView);
