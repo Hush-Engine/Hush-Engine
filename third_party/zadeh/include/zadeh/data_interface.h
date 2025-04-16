@@ -2,6 +2,8 @@
 #define Zadeh_data_interface_h_
 
 #include "common.h"
+#include <array>
+#include <memory>
 
 namespace zadeh {
 
@@ -9,14 +11,19 @@ namespace zadeh {
 
 /** Initialize array */
 template <typename ArrayType, typename AllocatorType, typename SizeType = size_t>
-ArrayType init(const SizeType len, const AllocatorType &alloc);
+ArrayType init(const SizeType len, const AllocatorType &alloc) {
+  ArrayType out{};
+    return out;
+}
 
 template <typename ObjectType, typename AllocatorType> ObjectType init(const AllocatorType &alloc);
 
 template <typename ObjectType, typename AllocatorType>
 ObjectType copy(const ObjectType &obj, const AllocatorType &alloc);
 
-template <typename ReferenceType, typename ValueType> ReferenceType get_ref(const ValueType &value);
+template <typename ReferenceType, typename ValueType> ReferenceType get_ref(const ValueType &value) {
+  return value;
+}
 
 // TODO do we need manual releasing?
 // template<typename ReferenceType>
@@ -24,10 +31,14 @@ template <typename ReferenceType, typename ValueType> ReferenceType get_ref(cons
 
 /** Index array */
 template <typename ArrayType, typename ElementType, typename IndexType = size_t>
-ElementType get_at(const ArrayType &candidates, const IndexType iCandidate);
+ElementType get_at(const ArrayType &candidates, const IndexType iCandidate) {
+  return candidates[iCandidate];
+}
 
 /** Get size of array */
-template <typename ArrayType, typename SizeType = size_t> SizeType get_size(const ArrayType &candidates);
+template <typename ArrayType, typename SizeType = size_t> SizeType get_size(const ArrayType &candidates) {
+  return candidates.size();
+}
 
 /** Set element of array */
 template <typename ArrayType, typename ElementType, typename IndexType = size_t>
@@ -65,6 +76,7 @@ template <> inline vector<CandidateString> get_ref(const vector<CandidateString>
 // void release_ref(vector<CandidateString> vect) {
 //     /* do nothing */
 // }
+
 
 } // namespace zadeh
 #endif

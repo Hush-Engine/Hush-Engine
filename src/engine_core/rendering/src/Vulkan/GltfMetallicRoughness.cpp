@@ -2,6 +2,7 @@
 // NOTE: Keep volk at the top to avoid function redefinitions with Vulkan
 #include <cstdint>
 #include <volk.h>
+#include <vulkan/vulkan_core.h>
 #include "GltfMetallicRoughness.hpp"
 #include "Shared/MaterialOptions.hpp"
 #include "VulkanRenderer.hpp"
@@ -39,11 +40,13 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	constexpr uint32_t albedoBinding = 1;
 	constexpr uint32_t metallicBinding = 2;
 	constexpr uint32_t normalBinding = 3;
+	constexpr uint32_t emissionBinding = 4;
 
 	layoutBuilder.AddBinding(uniformBufferBinding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	layoutBuilder.AddBinding(albedoBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	layoutBuilder.AddBinding(metallicBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	layoutBuilder.AddBinding(normalBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	layoutBuilder.AddBinding(emissionBinding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 	this->m_materialLayout = layoutBuilder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
@@ -75,8 +78,8 @@ void Hush::GLTFMetallicRoughness::BuildPipelines(IRenderer *engine, const std::s
 	pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	// Render format
-	pipelineBuilder.SetColorAttachmentFormat(vkEngine->GetDrawImage().imageFormat);
-	pipelineBuilder.SetDepthFormat(vkEngine->GetDepthImage().imageFormat);
+	pipelineBuilder.SetColorAttachmentFormat(static_cast<VkFormat>(vkEngine->GetDrawImage().imageFormat));
+	pipelineBuilder.SetDepthFormat(static_cast<VkFormat>(vkEngine->GetDepthImage().imageFormat));
 
 	// Create the opaque variant
 	this->m_opaquePipeline.pipeline = pipelineBuilder.Build(device);

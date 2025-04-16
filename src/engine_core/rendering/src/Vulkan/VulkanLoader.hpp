@@ -2,6 +2,7 @@
 
 // TODO: Move these undefs to the common.hpp file after dev merge
 //  remove stupid MSVC min/max macro definitions
+#include "Shared/GpuAllocatedImage.hpp"
 #ifdef WIN32
 #undef min
 #undef max
@@ -57,23 +58,22 @@ namespace Hush
 		static Result<std::vector<std::shared_ptr<VulkanMeshNode>>, EError> LoadGltfMeshes(
 			VulkanRenderer *engine, std::filesystem::path filePath);
 
-		static AllocatedImage LoadTexture(VulkanRenderer *engine, const ImageTexture &texture);
+		static GpuAllocatedImage LoadTexture(VulkanRenderer *engine, const ImageTexture &texture);
 
 	private:
-		static std::vector<AllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine);
+		static std::vector<GpuAllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine);
 
 		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
 													 Mesh &meshRef, VulkanRenderer *engine);
 
-		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(size_t materialIdx, const fastgltf::Asset &asset,
-																	VulkanRenderer *engine,
-																	VulkanAllocatedBuffer *sceneMaterialBuffer,
-																	DescriptorAllocatorGrowable &allocatorPool,
-																	const std::vector<AllocatedImage> &loadedTextures);
+		static std::shared_ptr<VkMaterialInstance> GenerateMaterial(
+			size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
+			VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
+			const std::vector<GpuAllocatedImage> &loadedTextures);
 
-		static std::optional<AllocatedImage> LoadedTextureFromMaterial(
+		static std::optional<GpuAllocatedImage> LoadedTextureFromMaterial(
 			const fastgltf::Asset &asset, const fastgltf::Material &material,
-			const std::vector<AllocatedImage> &loadedTextures);
+			const std::vector<GpuAllocatedImage> &loadedTextures);
 
 		static constexpr VkFilter ExtractFilter(const fastgltf::Filter &filter);
 		static constexpr VkSamplerMipmapMode ExtractMipMapMode(const fastgltf::Filter &filter);

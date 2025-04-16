@@ -13,7 +13,9 @@
 
 namespace Hush
 {
-	class [[hush::export(Hush::Export::asHandle)]] HushEngine
+  struct DirectionalLight;
+
+  class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 	public:
 		/// <summary>
@@ -51,6 +53,7 @@ namespace Hush
 
 		std::unique_ptr<IApplication> m_app;
 
+		DirectionalLight *m_defaultLight = nullptr;
 		bool m_isApplicationRunning = false;
 		static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
 	};

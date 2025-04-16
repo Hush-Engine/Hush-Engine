@@ -80,7 +80,6 @@ namespace Hush
 			std::byte *dataStartingPoint = static_cast<std::byte *>(this->m_uniformBufferMappedData) + binding.offset;
 			// Memcpy the data with sizeof(T)
 			memcpy(dataStartingPoint, &value, valueSize);
-			this->SyncronizeMemory();
 			return EError::None;
 		}
 
@@ -107,7 +106,7 @@ namespace Hush
 		const GraphicsApiMaterialInstance &GetInternalMaterial() const;
 
 	private:
-		Result<std::vector<ShaderBindings>, EError> ReflectShader(std::span<std::uint32_t> shaderBinary);
+		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t> &shaderBinary);
 
 		uint32_t GetAPIBinding(ShaderBindings::EBindingType agnosticBinding);
 
@@ -120,15 +119,8 @@ namespace Hush
 
 		const ShaderBindings &FindBinding(const std::string_view &name);
 
-		void SyncronizeMemory();
-
 		IRenderer *m_renderer;
 		OpaqueMaterialData *m_materialData;
-
-		// A large-ish data pool that holds all the inputs
-		// for the data that needs to be sent to the material
-		// womp, womp, malloc it is
-		std::vector<std::byte> m_shaderInputData;
 
 		std::unordered_map<std::string, ShaderBindings> m_bindingsByName;
 

@@ -1,5 +1,7 @@
 #include "HushEngine.hpp"
 #include "ApplicationLoader.hpp"
+#include "Components/Transform.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include <WindowManager.hpp>
 #include <imgui/imgui.h>
 #include <spdlog/details/os-inl.h>
@@ -20,6 +22,7 @@ void Hush::HushEngine::Run()
 	// Initialize any static resources we need
 	this->Init();
 
+	mainRenderer.GetInternalRenderer()->SetDirectionalLight(this->m_defaultLight);
 	std::chrono::steady_clock::duration elapsed;
 
 	while (this->m_isApplicationRunning)
@@ -71,4 +74,9 @@ Hush::Scene *Hush::HushEngine::GetScene()
 void Hush::HushEngine::Init()
 {
 	this->m_app->Init();
+	// Add a default directional light
+	Scene *scene = this->m_app->GetScene();
+	Entity entity = scene->CreateEntityWithName("Directional Light");
+	entity.AddComponent<Transform>();
+	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
 }

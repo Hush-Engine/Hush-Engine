@@ -15,7 +15,11 @@ namespace Hush
 
 		void SetInspectTarget(Entity::EntityId entity);
 
-		const std::optional<Entity> &GetInspectTarget();
+		[[nodiscard]]
+		const std::optional<Entity> &GetInspectTarget() const;
+
+		[[nodiscard]]
+		std::optional<Entity> &GetInspectTarget();
 
 	private:
 		void RenderProperties();
