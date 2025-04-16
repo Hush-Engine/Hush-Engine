@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <span>
 #include <traits/EntityTraits.hpp>
+#include <HushBindings.hpp>
 
 namespace Hush
 {
@@ -23,13 +24,13 @@ namespace Hush
 	/// This allows getting raw void pointers to components.
 	/// To iterate, this class provides a \ref Hush::RawQuery::GetIterator function that returns an iterator.
 	/// For more information about the iterator, see \ref QueryIterator.
-	class RawQuery
+	class [[hush::export]] RawQuery
 	{
 		RawQuery(Scene *scene, void *query);
 
 	public:
 		/// Cache mode for the query.
-		enum class ECacheMode
+		enum class [[hush::export]] ECacheMode
 		{
 			Default,
 			Auto,
@@ -38,7 +39,7 @@ namespace Hush
 		};
 
 		/// Component access mode.
-		enum class EComponentAccess
+		enum class [[hush::export]] EComponentAccess
 		{
 			ReadOnly = 0,
 			WriteOnly = 1,
@@ -54,7 +55,7 @@ namespace Hush
 		/// Component1, ...|, |Component2, Component2, ...|, etc. Keep this in mind when using this iterator.
 		///
 		/// For end-users (not scripting), it is recommended to use the \ref Hush::Query class instead.
-		struct QueryIterator
+		struct [[hush::export]] QueryIterator
 		{
 			QueryIterator(Scene *scene) noexcept
 				: m_scene(scene)
@@ -71,25 +72,23 @@ namespace Hush
 
 			/// Move to the next entity.
 			/// @return True if there is a next entity, false otherwise.
-			[[nodiscard]]
+			[[nodiscard, hush::export]]
 			bool Next();
 
 			/// Skip the current entity.
+			[[hush::export]]
 			void Skip();
 
 			/// Check if the iterator has been finished.
 			/// @return True if the iterator has been finished. False otherwise.
-			[[nodiscard]]
-			bool Finished() const
-			{
-				return m_hasBeenDestroyed;
-			}
+			[[nodiscard, hush::export]]
+			bool Finished() const;
 
 			/// Gives the number of entities in the current table.
 			/// This number is updated when using \ref Next.
 			///
 			/// @return The number of entities in the query.
-			[[nodiscard]]
+			[[nodiscard, hush::export]]
 			std::size_t Size() const;
 
 			/// Get an array of components at the given index.
@@ -102,13 +101,13 @@ namespace Hush
 			/// @param index Index of the component.
 			/// @param size Size of the component.
 			/// @return Pointer to the component.
-			[[nodiscard]]
+			[[nodiscard, hush::export]]
 			void *const GetComponentAt(std::int8_t index, std::size_t size) const;
 
 			/// Get the entity id at the given index.
 			/// @param index Index of the entity. This must be in range [0, Size()).
 			/// @return Entity id at the given index.
-			[[nodiscard]]
+			[[nodiscard, hush::export]]
 			std::uint64_t GetEntityAt(std::size_t index) const;
 
 			Scene *GetScene() const
@@ -148,15 +147,12 @@ namespace Hush
 
 		/// Get the scene where the query is running.
 		/// @return Scene where the query is running.
-		[[nodiscard]]
-		Scene *GetScene() const noexcept
-		{
-			return m_scene;
-		}
+		[[nodiscard, hush::export]]
+		Scene *GetScene() const noexcept;
 
 		/// Get an iterator to iterate over the entities in the query.
 		/// @return Iterator to iterate over the entities in the query.
-		[[nodiscard]]
+		[[nodiscard, hush::export]]
 		QueryIterator GetIterator();
 
 	private:

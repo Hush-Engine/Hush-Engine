@@ -7,6 +7,7 @@
 #pragma once
 
 #include "traits/EntityTraits.hpp"
+#include "HushBindings.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -32,7 +33,7 @@ namespace Hush
 	/// For scripting, this class exposes `*ComponentRaw` functions that are used to interact with components using
 	/// raw component ids. These functions are not meant to be used directly, and, while you can, they're inconvenient.
 	/// The `*Component` functions are the ones that should be used.
-	class Entity
+	class [[hush::export]] Entity
 	{
 	public:
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)
@@ -161,29 +162,34 @@ namespace Hush
 		/// Register a component.
 		/// @param desc Component description.
 		/// @return Id of the component.
+		[[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
 		/// Add a component to the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
+		[[hush::export]]
 		void *AddComponentRaw(EntityId componentId);
 
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
 		[[nodiscard]]
+		[[hush::export]]
 		void *GetComponentRaw(EntityId componentId);
 
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
 		[[nodiscard]]
+		[[hush::export]]
 		void *GetComponentRaw(EntityId componentId) const;
 
 		/// Check if the entity has a component.
 		/// @param componentId Id of the component.
 		/// @return True if the entity has the component, false otherwise.
 		[[nodiscard]]
+		[[hush::export]]
 		bool HasComponentRaw(EntityId componentId);
 
 		/// Emplace a component to the entity.
@@ -195,11 +201,13 @@ namespace Hush
 		/// @param isNew Flag to indicate if the component is new. If it is new, user is in charge of constructing it.
 		/// @return Pointer to the component.
 		[[nodiscard]]
+		[[hush::export]]
 		void *EmplaceComponentRaw(EntityId componentId, bool &isNew);
 
 		/// Remove a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return True if the component was removed, false otherwise.
+		[[hush::export]]
 		bool RemoveComponentRaw(EntityId componentId);
 
 		/// Destroy an entity. This will remove all components from the entity and destroy it.
@@ -207,11 +215,8 @@ namespace Hush
 		/// @param entity Entity to destroy.
 		static void Destroy(Entity &&entity);
 
-		[[nodiscard]]
-		EntityId GetId() const
-		{
-			return m_entityId;
-		}
+		[[nodiscard]] [[hush::export]]
+		EntityId GetId() const;
 
 		/// Get the name of the entity.
 		/// @return Name of the entity.

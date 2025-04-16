@@ -29,6 +29,7 @@ function (hush_add_library)
         set_property(TARGET ${LIB_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
     target_link_options(${LIB_TARGET_NAME} PRIVATE ${HUSH_CPU_FLAGS})
+    target_compile_definitions(${LIB_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 endfunction()
 
 # Helper function to add a hush executable
@@ -44,6 +45,7 @@ function (hush_add_executable)
     if (${HUSH_ENABLE_LTO})
         set_property(TARGET ${EXE_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
+    target_compile_definitions(${EXE_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 endfunction()
 
 # Adds a test target to the project
