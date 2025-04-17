@@ -17,6 +17,7 @@ hush_add_library(
              src/Vulkan/VulkanLoader.cpp
              src/Vulkan/VkDescriptors.cpp
              src/Vulkan/VulkanSwapchain.cpp
+             src/Vulkan/ShaderModuleLoader.cpp
              src/Shared/Camera.cpp
              src/Shared/ImageTexture.cpp
              src/Shared/EditorCamera.cpp

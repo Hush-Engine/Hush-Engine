@@ -149,9 +149,18 @@ Hush::ECullMode Hush::ShaderMaterial::GetCullMode() const noexcept
 	return this->m_cullMode;
 }
 
-const Hush::GraphicsApiMaterialInstance &Hush::ShaderMaterial::GetInternalMaterial() const
+
+Hush::EMaterialPass Hush::ShaderMaterial::GetMaterialPass() const noexcept {
+	return this->m_internalMaterial->passType;
+}
+
+void Hush::ShaderMaterial::SetMaterialPass(EMaterialPass pass) {
+	this->m_internalMaterial->passType = pass;
+}
+
+Hush::GraphicsApiMaterialInstance* Hush::ShaderMaterial::GetInternalMaterial()
 {
-	return *this->m_internalMaterial;
+	return this->m_internalMaterial.get();
 }
 
 Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hush::ShaderMaterial::ReflectShader(

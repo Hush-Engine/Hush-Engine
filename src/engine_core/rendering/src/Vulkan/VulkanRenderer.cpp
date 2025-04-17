@@ -773,10 +773,6 @@ void Hush::VulkanRenderer::InitPipelines() noexcept
 	this->InitBackgroundPipelines();
 	this->InitMeshPipeline();
 
-	constexpr std::string_view fragmentShaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.frag.spv)";
-	constexpr std::string_view vertexShaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.vert.spv)";
-	this->m_metalRoughMaterial.BuildPipelines(this, fragmentShaderPath, vertexShaderPath);
-
 	// Just as a test, let's bind some shaders!
 	std::filesystem::path frag(R"(C:\Users\nefes\Personal\Hush-Engine\res\grid.frag.spv)");
 	std::filesystem::path vert(R"(C:\Users\nefes\Personal\Hush-Engine\res\grid.vert.spv)");
@@ -1233,6 +1229,12 @@ const Hush::DefaultImageProvider *Hush::VulkanRenderer::GetDefaultImageProvider(
 {
 	return &this->m_defaultImageProvider;
 }
+
+
+Hush::ShaderModuleLoader &Hush::VulkanRenderer::GetShaderModuleLoader() noexcept {
+	return this->m_shaderModuleLoader;
+}
+
 
 void Hush::VulkanRenderer::DestroyImage(Hush::GpuAllocatedImage *img)
 {

@@ -12,7 +12,7 @@ namespace Hush::Hashing
 		uint32_t hash = 0x811c9dc5;
 		const uint32_t prime = 0x1000193;
 
-		for (int i = 0; i < length; ++i)
+		for (uint32_t i = 0; i < length; ++i)
 		{
 			uint8_t value = data[i];
 			hash = hash ^ value;
@@ -24,6 +24,6 @@ namespace Hush::Hashing
 
 	constexpr inline uint32_t Fnv1a(const std::string_view &data)
 	{
-		return Fnv1a(data.data(), data.size());
+		return Fnv1a(data.data(), static_cast<uint32_t>(data.size()));
 	}
 } // namespace Hush::Hashing

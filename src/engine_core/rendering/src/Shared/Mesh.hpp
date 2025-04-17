@@ -1,14 +1,23 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <memory>
 #include <vector>
 
 namespace Hush
 {
+	struct GeoSurface
+	{
+		uint32_t startIndex;
+		uint32_t count;
+		std::shared_ptr<IMaterial3D> material;
+	};
+	
 	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the
 	/// RenderingAPI specific buffer data
 	class Mesh

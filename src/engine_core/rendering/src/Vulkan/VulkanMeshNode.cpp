@@ -5,8 +5,8 @@
 #include "DrawContext.hpp"
 
 Hush::VulkanMeshNode::VulkanMeshNode(std::shared_ptr<MeshAsset> mesh)
+	: m_mesh(mesh)
 {
-	this->m_mesh = mesh;
 }
 
 void Hush::VulkanMeshNode::Draw(const glm::mat4 &topMatrix, void *drawContext)
@@ -22,11 +22,12 @@ void Hush::VulkanMeshNode::Draw(const glm::mat4 &topMatrix, void *drawContext)
 		def.indexCount = s.count;
 		def.firstIndex = s.startIndex;
 		def.indexBuffer = this->m_mesh->meshBuffers.indexBuffer.GetBuffer();
-		def.material = s.material.get();
+		// Replace with graphics API call
+		def.material = s.material->GetInternalMaterial();
 
 		def.transform = nodeMatrix;
 		def.vertexBufferAddress = this->m_mesh->meshBuffers.vertexBufferAddress;
-		if (s.material->passType == EMaterialPass::Transparent)
+		if (s.material->GetInternalMaterial()->passType == EMaterialPass::Transparent)
 		{
 			drawCtxImpl->transparentSurfaces.push_back(def);
 		}
@@ -41,7 +42,7 @@ void Hush::VulkanMeshNode::Draw(const glm::mat4 &topMatrix, void *drawContext)
 
 Hush::MeshAsset &Hush::VulkanMeshNode::GetMesh()
 {
-	return *this->m_mesh.get();
+	return *this->m_mesh;
 }
 
 void Hush::VulkanMeshNode::SetMaterialDataBuffer(VulkanAllocatedBuffer materialDataBuffer)

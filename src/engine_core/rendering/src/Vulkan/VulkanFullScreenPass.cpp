@@ -24,7 +24,7 @@ void Hush::VulkanFullScreenPass::RecordCommands(VkCommandBuffer cmd, VkDescripto
 	(void)globalDescriptorSet;
 	OpaqueMaterialData *matData = this->m_materialInstance->GetMaterialData();
 	VkPipeline pipeline = matData->pipeline.pipeline;
-	VkDescriptorSet descSet = this->m_materialInstance->GetInternalMaterial().materialSet;
+	VkDescriptorSet descSet = this->m_materialInstance->GetInternalMaterial()->materialSet;
 	// Bind pipeline
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, matData->pipeline.layout, 0, 1, &descSet, 0, nullptr);

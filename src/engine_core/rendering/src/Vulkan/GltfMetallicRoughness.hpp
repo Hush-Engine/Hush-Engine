@@ -7,15 +7,18 @@
 #pragma once
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/IMaterial3D.hpp"
+#include "Shared/Types/MaterialInstance.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
+#include <glm/ext/vector_float4.hpp>
+#include <memory>
 #include <vulkan/vulkan_core.h>
 
 namespace Hush
 {
 	class IRenderer;
-	class GLTFMetallicRoughness : public IMaterial3D
+	class GLTFMetallicRoughness final : public IMaterial3D
 	{
 	private:
 		VkMaterialPipeline m_opaquePipeline{};
@@ -50,10 +53,11 @@ namespace Hush
 			uint32_t dataBufferOffset;
 		};
 
+		GLTFMetallicRoughness() = default;
+
 		DescriptorWriter writer;
 
-		void BuildPipelines(IRenderer *engine, const std::string_view &fragmentShaderPath,
-							const std::string_view &vertexShaderPath);
+		void Init(IRenderer *renderer);
 
 		void ClearResources(VkDevice device);
 
@@ -63,56 +67,67 @@ namespace Hush
 		void SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept override;
 
 		[[nodiscard]]
+		EMaterialPass GetMaterialPass() const noexcept override;
+
+		void SetMaterialPass(EMaterialPass pass) override;
+
+		[[nodiscard]]
 		ECullMode GetCullMode() const noexcept override;
 
 		void SetCullMode(ECullMode cullMode) override;
 
-		inline VkMaterialInstance WriteMaterial(VkDevice device, EMaterialPass pass, const MaterialResources &resources,
-												DescriptorAllocatorGrowable &descriptorAllocator)
-		{
+		void GenerateMaterialInstance(DescriptorAllocatorGrowable *descriptorAllocator);
 
-			Hush::VkMaterialInstance matData{};
-			matData.passType = pass;
+		[[nodiscard]]
+		const glm::vec4 &GetAlbedo() const noexcept;
 
-			switch (pass)
-			{
-			case Hush::EMaterialPass::Mask:
+		glm::vec4 &GetAlbedo() noexcept;
 
-			case Hush::EMaterialPass::MainColor:
-				matData.pipeline = &this->m_opaquePipeline;
-				break;
-			case Hush::EMaterialPass::Transparent:
-				matData.pipeline = &this->m_transparentPipeline;
-				break;
-			default:
-				HUSH_ASSERT(false, "Unkown material pass: {}", magic_enum::enum_name(pass));
-				break;
-			}
+		void SetAlbedo(const glm::vec4 &color) noexcept;
 
-			// Not initialized material layout here from VkLoader
-			matData.materialSet = descriptorAllocator.Allocate(device, this->m_materialLayout);
+		[[nodiscard]]
+		const glm::vec3 &GetEmissionColor() const noexcept;
 
-			writer.Clear();
-			writer.WriteBuffer(0, resources.dataBuffer, sizeof(MaterialConstants), resources.dataBufferOffset,
-							   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-			writer.WriteImage(1, resources.colorImage.imageView, resources.colorSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-			writer.WriteImage(2, resources.metalRoughImage.imageView, resources.metalRoughSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		void SetEmissionColor(const glm::vec3 &color) noexcept;
 
-			writer.WriteImage(3, resources.normalImage.imageView, resources.normalSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		[[nodiscard]]
+		const float &EmissionFactor() const noexcept;
 
-			writer.WriteImage(4, resources.emissiveImage.imageView, resources.emissiveSampler,
-							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		void SetEmissionFactor(float emissionFactor) noexcept;
 
-			writer.UpdateSet(device, matData.materialSet);
+		[[nodiscard]]
+		const float& GetMetallicFactor() const noexcept;
 
-			return matData;
-		}
+		void SetMetallicFactor(float factor) noexcept;
+		
+		[[nodiscard]]
+		const float& GetRoughnessFactor() const noexcept;
 
+		void SetRoughnessFactor(float factor) noexcept;
+		
+		[[nodiscard]]
+		const float& GetAlphaThreshold() const noexcept;
+
+		void SetAlphaThreshold(float alphaThreshold) noexcept;
+
+		GraphicsApiMaterialInstance* GetInternalMaterial() override;
+
+		MaterialResources& GetMaterialResources();
+		
+		MaterialConstants& GetMaterialConstants() noexcept;
+		
 	private:
-		MaterialConstants *m_materialConstants = nullptr;
+		void BuildPipelines();
+
+		MaterialConstants m_materialConstants{};
+
+		MaterialResources m_materialResources;
+
+		EMaterialPass m_materialPass;
+
+		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
+
+		IRenderer *m_renderer;
 	};
 
 } // namespace Hush
