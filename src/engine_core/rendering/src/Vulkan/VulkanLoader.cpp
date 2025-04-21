@@ -15,7 +15,6 @@
 #include "VulkanRenderer.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "VulkanMeshNode.hpp"
-#include "VulkanAllocatedBuffer.hpp"
 #include "vk_mem_alloc.hpp"
 #include "Shared/GltfLoadFunctions.hpp"
 

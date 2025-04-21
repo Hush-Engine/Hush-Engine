@@ -36,7 +36,7 @@ namespace Hush
 
 #pragma warning(pop)
 
-		// HUSH_STATIC_ASSERT(sizeof(Vertex) % 16 == 0);
+		HUSH_STATIC_ASSERT(sizeof(Vertex) % 16 == 0);
 
 		[[nodiscard]]
 		inline std::vector<uint32_t> &GetIndexBuffer()
@@ -52,6 +52,11 @@ namespace Hush
 
 		void CalculateTangentBasis();
 
+		[[nodiscard]]
+		const std::vector<GeoSurface>& GetSurfaces() {
+			return this->m_surfaces;
+		}
+
 	private:
 		void CalculateNormals(Vertex &currentVertex);
 		std::vector<uint32_t> m_indices;
@@ -60,4 +65,6 @@ namespace Hush
 		std::vector<GeoSurface> m_surfaces;
 		
 	};
+
+	void Serialize(Mesh* component);
 } // namespace Hush

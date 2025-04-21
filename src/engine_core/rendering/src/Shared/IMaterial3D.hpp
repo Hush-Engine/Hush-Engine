@@ -27,4 +27,7 @@ namespace Hush
 		virtual GraphicsApiMaterialInstance* GetInternalMaterial() = 0;
 		
 	};
+
+	void Serialize(IMaterial3D* component);
+	
 } // namespace Hush
