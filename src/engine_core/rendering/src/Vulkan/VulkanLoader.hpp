@@ -34,7 +34,7 @@ namespace Hush
 
 	// forward declaration
 	class VulkanRenderer;
-	class VulkanAllocatedBuffer;
+	class GpuAllocatedBuffer;
 
 	// TODO: Make non-static
 	class VulkanLoader
@@ -62,7 +62,7 @@ namespace Hush
 
 		static std::shared_ptr<GLTFMetallicRoughness> GenerateMaterial(
 			size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
-			VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
+			GpuAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
 			const std::vector<GpuAllocatedImage> &loadedTextures);
 
 		static std::optional<GpuAllocatedImage> LoadedTextureFromMaterial(

@@ -1,3 +1,4 @@
+#include "Shared/GpuAllocatedBuffer.hpp"
 #define VK_NO_PROTOTYPES
 #include "Shared/Mesh.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
@@ -60,8 +61,9 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	// NOTE: Yes, we do need the double iteration
 	for (const fastgltf::Node &node : loadedAsset->nodes)
 	{
-		if (!node.meshIndex.has_value())
+		if (!node.meshIndex.has_value()) {
 			continue;
+		}
 		std::shared_ptr<VulkanMeshNode> meshNode = meshes.at(node.meshIndex.value());
 		meshNode->SetLocalTransform(GltfLoadFunctions::GetNodeTransform(node));
 	}
@@ -129,9 +131,9 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	indexRef.clear();
 	vertexRef.clear();
 
-	VulkanAllocatedBuffer materialDataBuffer(
+	GpuAllocatedBuffer materialDataBuffer(
 		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants) * asset.materials.size()),
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, engine->GetVmaAllocator());
+		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, engine->GetVmaAllocator());
 
 	// TODO: constexpr(?
 	const std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
@@ -231,13 +233,13 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
 	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
-	VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
+	GpuAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
 	const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	// Scene Material buffer writing
-	VmaAllocationInfo &allocInfo = sceneMaterialBuffer->GetAllocationInfo();
-	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo.pMappedData);
+	VmaAllocationInfo* allocInfo = sceneMaterialBuffer->GetAllocationInfo();
+	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo->pMappedData);
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
 

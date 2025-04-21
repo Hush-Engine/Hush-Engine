@@ -1,4 +1,5 @@
 #include "ShaderMaterial.hpp"
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/ShaderBindings.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -108,11 +109,11 @@ void Hush::ShaderMaterial::GenerateMaterialInstance(OpaqueDescriptorAllocator *d
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet =
 		realDescriptorAllocator->Allocate(device, this->m_materialData->descriptorLayout);
-	VulkanAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-								 VMA_MEMORY_USAGE_CPU_TO_GPU, rendererImpl->GetVmaAllocator());
+	GpuAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
+								 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, rendererImpl->GetVmaAllocator());
 
 	// Store our mapped data
-	this->m_uniformBufferMappedData = buffer.GetAllocationInfo().pMappedData;
+	this->m_uniformBufferMappedData = buffer.GetAllocationInfo()->pMappedData;
 
 	// Zero out the data
 	memset(this->m_uniformBufferMappedData, 0, this->m_uniformBufferSize);

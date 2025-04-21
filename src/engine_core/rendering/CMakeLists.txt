@@ -6,7 +6,7 @@ hush_add_library(
         TARGET_NAME HushRendering
         LIB_TYPE OBJECT
         SRCS src/WindowRenderer.cpp
-             src/Vulkan/VulkanAllocatedBuffer.cpp
+             src/Shared/GpuAllocatedBuffer.cpp
              src/Vulkan/VulkanRenderer.cpp
              src/Vulkan/GltfMetallicRoughness.cpp
              src/Vulkan/VulkanMeshNode.cpp

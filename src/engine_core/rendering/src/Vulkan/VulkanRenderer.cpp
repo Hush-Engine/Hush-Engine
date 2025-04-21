@@ -4,6 +4,7 @@
 	\brief Vulkan implementation for rendering
 */
 
+#include "Shared/GpuAllocatedBuffer.hpp"
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
@@ -26,7 +27,6 @@
 #include <typeutils/TypeUtils.hpp>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "VulkanAllocatedBuffer.hpp"
 #include "GPUMeshBuffers.hpp"
 #include "VulkanLoader.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -274,7 +274,7 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 		nodeEntry.second->Draw(topMatrix, &this->m_mainDrawContext);
 	}
 
-	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), Vector3Math::ONE);
+	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0F), Vector3Math::ONE);
 	glm::mat4 viewMatrix = this->m_editorCamera.GetViewMatrix() * scaleMat;
 	this->m_sceneData.view = viewMatrix;
 	this->m_sceneData.proj = this->m_editorCamera.GetProjectionMatrix();
@@ -289,14 +289,15 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	if (this->m_directionalLight != nullptr)
 	{
 		this->m_sceneData.sunlightColor = this->m_directionalLight->color.GetRGBA32F();
-		this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5, this->m_directionalLight->intensity + 1.0F);
+		this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5F, this->m_directionalLight->intensity + 1.0F);
 	}
 }
 
 void Hush::VulkanRenderer::InitRendering()
 {
+	constexpr float initialFOV = 70.0F;
 	this->m_editorCamera =
-		EditorCamera(70.0f, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
+		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
 
 	this->CreateSyncObjects();
 
@@ -361,7 +362,7 @@ void Hush::VulkanRenderer::Dispose()
 
 void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)> &&function) noexcept
 {
-	VkResult rc = vkResetFences(this->m_device, 1u, &this->m_immediateFence);
+	VkResult rc = vkResetFences(this->m_device, 1U, &this->m_immediateFence);
 	HUSH_VK_ASSERT(rc, "Failed to reset immediate fence!");
 
 	rc = vkResetCommandBuffer(this->m_immediateCommandBuffer, 0);
@@ -381,10 +382,11 @@ void Hush::VulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer cm
 		VkUtilsFactory::CreateCommandBufferSubmitInfo(this->m_immediateCommandBuffer);
 	VkSubmitInfo2 submit = this->SubmitInfo(&cmdSubmitInfo, nullptr, nullptr);
 
-	rc = vkQueueSubmit2(this->m_graphicsQueue, 1u, &submit, this->m_immediateFence);
+	rc = vkQueueSubmit2(this->m_graphicsQueue, 1U, &submit, this->m_immediateFence);
 	HUSH_VK_ASSERT(rc, "Failed to submit graphics queue!");
 
-	rc = vkWaitForFences(this->m_device, 1u, &this->m_immediateFence, VK_TRUE, 9999999999);
+	constexpr uint64_t fenceTimeout = 9999999999U;
+	rc = vkWaitForFences(this->m_device, 1U, &this->m_immediateFence, VK_TRUE, fenceTimeout);
 	HUSH_VK_ASSERT(rc, "Immediate fence timed out");
 }
 
@@ -840,9 +842,9 @@ void Hush::VulkanRenderer::InitBackgroundPipelines() noexcept
 
 void Hush::VulkanRenderer::InitMeshPipeline() noexcept
 {
-	constexpr std::string_view fragmentShaderPath = "C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\tex_image.frag.spv";
+	constexpr std::string_view fragmentShaderPath = R"(C:\Users\nefes\Personal\Hush-Engine\res\tex_image.frag.spv)";
 	constexpr std::string_view vertexShaderPath =
-		"C:\\Users\\nefes\\Personal\\Hush-Engine\\res\\colored_triangle_mesh.vert.spv";
+		R"(C:\Users\nefes\Personal\Hush-Engine\res\colored_triangle_mesh.vert.spv)";
 
 	VkShaderModule triangleFragShader = nullptr;
 	if (!VulkanHelper::LoadShaderModule(fragmentShaderPath, this->m_device, &triangleFragShader))
@@ -977,8 +979,8 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 {
 	////allocate a new uniform buffer for the scene data
-	VulkanAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-											 VMA_MEMORY_USAGE_CPU_TO_GPU, this->m_allocator);
+	GpuAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
+											 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
 	GPUSceneData *sceneUniformData = (GPUSceneData *)gpuSceneDataBuffer.GetAllocation()->GetMappedData();
@@ -1061,7 +1063,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	}
 
 	////add it to the deletion queue of this frame so it gets deleted once its been used
-	this->GetCurrentFrame().deletionQueue.PushFunction([=, this]() { gpuSceneDataBuffer.Dispose(m_allocator); });
+	this->GetCurrentFrame().deletionQueue.PushFunction([=, this, &gpuSceneDataBuffer]() { gpuSceneDataBuffer.Dispose(m_allocator); });
 
 	vkCmdEndRendering(cmd);
 }
@@ -1286,10 +1288,10 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 {
 
 	uint32_t dataSize = size.depth * size.width * size.height * 4;
-	VulkanAllocatedBuffer uploadbuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU,
+	GpuAllocatedBuffer uploadbuffer(dataSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
 									   this->m_allocator);
 
-	memcpy(uploadbuffer.GetAllocationInfo().pMappedData, data, dataSize);
+	memcpy(uploadbuffer.GetAllocationInfo()->pMappedData, data, dataSize);
 
 	GpuAllocatedImage newImage = this->CreateImage(
 		size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
@@ -1331,10 +1333,9 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 
 	// create vertex buffer
 	newSurface.vertexBuffer =
-		VulkanAllocatedBuffer(vertexBufferSize,
-							  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-								  VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-							  VMA_MEMORY_USAGE_GPU_ONLY, this->m_allocator);
+		GpuAllocatedBuffer(vertexBufferSize,
+							  GpuAllocatedBuffer::EBufferUsage::StorageBuffer | GpuAllocatedBuffer::EBufferUsage::TransferDst | GpuAllocatedBuffer::EBufferUsage::ShaderDeviceAddress,
+							  GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
 
 	// find the adress of the vertex buffer
 	VkBufferDeviceAddressInfo deviceAddressInfo{};
@@ -1344,11 +1345,11 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 
 	// create index buffer
 	newSurface.indexBuffer =
-		VulkanAllocatedBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-							  VMA_MEMORY_USAGE_GPU_ONLY, this->m_allocator);
+		GpuAllocatedBuffer(indexBufferSize, GpuAllocatedBuffer::EBufferUsage::IndexBuffer | GpuAllocatedBuffer::EBufferUsage::TransferDst,
+							  GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
 
-	VulkanAllocatedBuffer staging(vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-								  VMA_MEMORY_USAGE_CPU_ONLY, this->m_allocator);
+	GpuAllocatedBuffer staging(vertexBufferSize + indexBufferSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc,
+								  GpuAllocatedBuffer::EMemoryUsage::CpuOnly, this->m_allocator);
 
 	void *data = staging.GetAllocation()->GetMappedData();
 

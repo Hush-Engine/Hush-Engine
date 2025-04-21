@@ -1,4 +1,5 @@
 #pragma once
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/RenderableNode.hpp"
 #include "VkDescriptors.hpp"
 
@@ -20,13 +21,13 @@ namespace Hush
 
 		MeshAsset &GetMesh();
 
-		void SetMaterialDataBuffer(VulkanAllocatedBuffer materialDataBuffer);
+		void SetMaterialDataBuffer(GpuAllocatedBuffer materialDataBuffer);
 		void SetDescriptorPool(DescriptorAllocatorGrowable descriptorPool);
 
-		const VulkanAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
-		const DescriptorAllocatorGrowable &GetDescriptorPool() const noexcept;
+		[[nodiscard]] const GpuAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
+		[[nodiscard]] const DescriptorAllocatorGrowable &GetDescriptorPool() const noexcept;
 
 	private:
-		VulkanAllocatedBuffer m_materialDataBuffer;
+		GpuAllocatedBuffer m_materialDataBuffer;
 	};
 } // namespace Hush

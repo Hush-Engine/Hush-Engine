@@ -1,11 +1,14 @@
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "VulkanLoader.hpp"
 #include "VulkanMeshNode.hpp"
+
+#include <utility>
 #include "VkRenderObject.hpp"
 #include "Assertions.hpp"
 #include "DrawContext.hpp"
 
 Hush::VulkanMeshNode::VulkanMeshNode(std::shared_ptr<MeshAsset> mesh)
-	: m_mesh(mesh)
+	: m_mesh(std::move(mesh))
 {
 }
 
@@ -45,7 +48,7 @@ Hush::MeshAsset &Hush::VulkanMeshNode::GetMesh()
 	return *this->m_mesh;
 }
 
-void Hush::VulkanMeshNode::SetMaterialDataBuffer(VulkanAllocatedBuffer materialDataBuffer)
+void Hush::VulkanMeshNode::SetMaterialDataBuffer(GpuAllocatedBuffer materialDataBuffer)
 {
 	this->m_materialDataBuffer = materialDataBuffer;
 }
@@ -55,7 +58,7 @@ void Hush::VulkanMeshNode::SetDescriptorPool(DescriptorAllocatorGrowable descrip
 	this->m_descriptorPool = descriptorPool;
 }
 
-const Hush::VulkanAllocatedBuffer &Hush::VulkanMeshNode::GetMaterialDataBuffer() const noexcept
+const Hush::GpuAllocatedBuffer &Hush::VulkanMeshNode::GetMaterialDataBuffer() const noexcept
 {
 	return this->m_materialDataBuffer;
 }

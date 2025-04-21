@@ -56,5 +56,8 @@ namespace Hush
 		void CalculateNormals(Vertex &currentVertex);
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
+		std::string m_name;
+		std::vector<GeoSurface> m_surfaces;
+		
 	};
 } // namespace Hush
