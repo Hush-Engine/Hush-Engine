@@ -1,5 +1,4 @@
 #include "ShaderMaterial.hpp"
-#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/ShaderBindings.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +8,9 @@
 
 #ifdef HUSH_VULKAN_IMPL
 #define VK_NO_PROTOTYPES
+#include <vulkan/vulkan_core.h>
 #include <volk.h>
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Vulkan/VkTypes.hpp"
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Vulkan/VulkanPipelineBuilder.hpp"
@@ -113,14 +114,14 @@ void Hush::ShaderMaterial::GenerateMaterialInstance(OpaqueDescriptorAllocator *d
 								 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, rendererImpl->GetVmaAllocator());
 
 	// Store our mapped data
-	this->m_uniformBufferMappedData = buffer.GetAllocationInfo()->pMappedData;
+	this->m_uniformBufferMappedData = buffer.GetMappedData();
 
 	// Zero out the data
 	memset(this->m_uniformBufferMappedData, 0, this->m_uniformBufferSize);
 
 	this->m_materialData->writer.Clear();
 	constexpr size_t offset = 0;
-	this->m_materialData->writer.WriteBuffer(0, buffer.GetBuffer(), this->m_uniformBufferSize, offset,
+	this->m_materialData->writer.WriteBuffer(0, static_cast<VkBuffer>(buffer.GetBuffer()), this->m_uniformBufferSize, offset,
 											 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	this->m_materialData->writer.UpdateSet(device, this->m_internalMaterial->materialSet);
 }

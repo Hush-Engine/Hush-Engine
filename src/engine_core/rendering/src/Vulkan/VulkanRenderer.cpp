@@ -640,7 +640,7 @@ void Hush::VulkanRenderer::InitRenderables()
 	std::vector<std::shared_ptr<VulkanMeshNode>> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath).value();
 	for (auto &node : nodeVector)
 	{
-		this->m_loadedNodes[node->GetMesh().name] = node;
+		this->m_loadedNodes[node->GetMesh().GetName()] = node;
 	}
 }
 
@@ -983,7 +983,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 											 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
-	GPUSceneData *sceneUniformData = (GPUSceneData *)gpuSceneDataBuffer.GetAllocation()->GetMappedData();
+	auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
 	*sceneUniformData = this->m_sceneData;
 
 	// create a descriptor set that binds that buffer and update it
@@ -993,7 +993,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	// Local scope to use another writer later one
 	{
 		DescriptorWriter writer;
-		writer.WriteBuffer(0, gpuSceneDataBuffer.GetBuffer(), sizeof(GPUSceneData), 0,
+		writer.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
 						   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		writer.UpdateSet(this->m_device, globalDescriptor);
 	}
@@ -1291,7 +1291,7 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 	GpuAllocatedBuffer uploadbuffer(dataSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
 									   this->m_allocator);
 
-	memcpy(uploadbuffer.GetAllocationInfo()->pMappedData, data, dataSize);
+	memcpy(uploadbuffer.GetMappedData(), data, dataSize);
 
 	GpuAllocatedImage newImage = this->CreateImage(
 		size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
@@ -1312,7 +1312,7 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 		copyRegion.imageExtent = {size.width, size.height, size.depth};
 
 		// copy the buffer into the image
-		vkCmdCopyBufferToImage(cmd, uploadbuffer.GetBuffer(), newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+		vkCmdCopyBufferToImage(cmd, static_cast<VkBuffer>(uploadbuffer.GetBuffer()), newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 							   &copyRegion);
 
 		TransitionImage(cmd, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1340,7 +1340,7 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 	// find the adress of the vertex buffer
 	VkBufferDeviceAddressInfo deviceAddressInfo{};
 	deviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-	deviceAddressInfo.buffer = newSurface.vertexBuffer.GetBuffer();
+	deviceAddressInfo.buffer = static_cast<VkBuffer>(newSurface.vertexBuffer.GetBuffer());
 	newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(this->m_device, &deviceAddressInfo);
 
 	// create index buffer
@@ -1351,7 +1351,7 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 	GpuAllocatedBuffer staging(vertexBufferSize + indexBufferSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc,
 								  GpuAllocatedBuffer::EMemoryUsage::CpuOnly, this->m_allocator);
 
-	void *data = staging.GetAllocation()->GetMappedData();
+	void *data = staging.GetMappedData();
 
 	// copy vertex buffer
 	memcpy(data, vertices.data(), vertexBufferSize);
@@ -1364,14 +1364,15 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 		vertexCopy.srcOffset = 0;
 		vertexCopy.size = vertexBufferSize;
 
-		vkCmdCopyBuffer(cmd, staging.GetBuffer(), newSurface.vertexBuffer.GetBuffer(), 1, &vertexCopy);
+		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()), static_cast<VkBuffer>(newSurface.vertexBuffer.GetBuffer()), 1, &vertexCopy);
 
 		VkBufferCopy indexCopy{0};
 		indexCopy.dstOffset = 0;
 		indexCopy.srcOffset = vertexBufferSize;
 		indexCopy.size = indexBufferSize;
 
-		vkCmdCopyBuffer(cmd, staging.GetBuffer(), newSurface.indexBuffer.GetBuffer(), 1, &indexCopy);
+		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()), static_cast<VkBuffer>(newSurface.indexBuffer.GetBuffer()), 1, &indexCopy);
+		
 	});
 
 	staging.Dispose(this->m_allocator);

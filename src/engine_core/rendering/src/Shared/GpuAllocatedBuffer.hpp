@@ -1,20 +1,9 @@
 #pragma once
 
 #include "Shared/GpuAllocatedImage.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <memory>
-
-#if defined(HUSH_VULKAN_IMPL)
-		struct VmaAllocator_T;
-		struct VmaAllocation_T;
-		struct VmaAllocationInfo;
-		struct VkBuffer_T;
-
-		using GraphicsAllocator = VmaAllocator_T *;
-		using GpuAllocation = VmaAllocation_T *;
-		using GpuAllocationInfo = VmaAllocationInfo;
-		using GpuBuffer = VkBuffer_T *;
-#endif
 
 namespace Hush
 {
@@ -22,6 +11,9 @@ namespace Hush
 	class GpuAllocatedBuffer final
 	{
 	public:
+
+		struct OpaqueAllocationData;
+		
 		enum class EBufferUsage : uint32_t
 		{
 			None = 0x0,
@@ -44,25 +36,27 @@ namespace Hush
 
 		GpuAllocatedBuffer() = default;
 
-		GpuAllocatedBuffer(uint32_t size, EBufferUsage usage, EMemoryUsage memoryUsage, GraphicsAllocator allocator);
+		GpuAllocatedBuffer(size_t size, EBufferUsage usage, EMemoryUsage memoryUsage, void* allocator);
 
-		void Dispose(GraphicsAllocator allocator);
+		void Dispose(void* allocator);
 
 		[[nodiscard]]
-		uint32_t GetSize() const noexcept;
+		size_t GetSize() const noexcept;
 
-		GpuAllocation GetAllocation();
+		const OpaqueAllocationData* GetAllocationData();
 
-		GpuBuffer GetBuffer();
+		void* GetBuffer();
 
-		GpuAllocationInfo *GetAllocationInfo();
-
+		void* GetMappedData();
+		
 	private:
-		GpuBuffer m_buffer = nullptr;
-		GpuAllocation m_allocation = nullptr;
-		std::shared_ptr<GpuAllocationInfo> m_allocInfo;
-		uint32_t m_size = 0;
-		uint32_t m_capacity = 0;
+		size_t m_offset;
+		void* m_mappedData;
+		void* m_userData;
+		void* m_buffer;
+		void* m_allocation; // Used for VmaAllocation_T* on Vulkan
+		size_t m_size = 0;
+		size_t m_capacity = 0;
 	};
 
 } // namespace Hush

@@ -1,4 +1,5 @@
 #include "Shared/GpuAllocatedBuffer.hpp"
+#include "Shared/Mesh.hpp"
 #include "VulkanLoader.hpp"
 #include "VulkanMeshNode.hpp"
 
@@ -7,7 +8,7 @@
 #include "Assertions.hpp"
 #include "DrawContext.hpp"
 
-Hush::VulkanMeshNode::VulkanMeshNode(std::shared_ptr<MeshAsset> mesh)
+Hush::VulkanMeshNode::VulkanMeshNode(std::shared_ptr<Mesh> mesh)
 	: m_mesh(std::move(mesh))
 {
 }
@@ -19,17 +20,17 @@ void Hush::VulkanMeshNode::Draw(const glm::mat4 &topMatrix, void *drawContext)
 	auto *drawCtxImpl = static_cast<DrawContext *>(drawContext);
 	glm::mat4 nodeMatrix = topMatrix * this->m_worldTransform;
 
-	for (GeoSurface &s : this->m_mesh->surfaces)
+	for (const GeoSurface &s : this->m_mesh->GetSurfaces())
 	{
 		VkRenderObject def{};
 		def.indexCount = s.count;
 		def.firstIndex = s.startIndex;
-		def.indexBuffer = this->m_mesh->meshBuffers.indexBuffer.GetBuffer();
+		def.indexBuffer = static_cast<VkBuffer>(this->m_mesh->GetMeshBuffers().indexBuffer.GetBuffer());
 		// Replace with graphics API call
 		def.material = s.material->GetInternalMaterial();
 
 		def.transform = nodeMatrix;
-		def.vertexBufferAddress = this->m_mesh->meshBuffers.vertexBufferAddress;
+		def.vertexBufferAddress = this->m_mesh->GetMeshBuffers().vertexBufferAddress;
 		if (s.material->GetInternalMaterial()->passType == EMaterialPass::Transparent)
 		{
 			drawCtxImpl->transparentSurfaces.push_back(def);
@@ -43,7 +44,7 @@ void Hush::VulkanMeshNode::Draw(const glm::mat4 &topMatrix, void *drawContext)
 	RenderableNode::Draw(topMatrix, drawContext);
 }
 
-Hush::MeshAsset &Hush::VulkanMeshNode::GetMesh()
+Hush::Mesh &Hush::VulkanMeshNode::GetMesh()
 {
 	return *this->m_mesh;
 }

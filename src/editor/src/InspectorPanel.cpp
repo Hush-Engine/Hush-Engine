@@ -2,7 +2,6 @@
 #include "Assertions.hpp"
 #include "Components/Transform.hpp"
 #include "Shared/IMaterial3D.hpp"
-#include "Shared/Mesh.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
 #include <glm/ext/vector_float3.hpp>
@@ -10,6 +9,13 @@
 #include <vector>
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
+
+#include <memory>
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
+#include "Vulkan/VkTypes.hpp"
+#include "Vulkan/vk_mem_alloc.hpp"
+#include "Shared/Mesh.hpp"
 
 void Hush::Serialize(DirectionalLight *component)
 {
@@ -28,15 +34,15 @@ void Hush::Serialize(IMaterial3D* component) {
 	if (pbrMaterial == nullptr) {
 		return;
 	}
-	
+
 	// Albedo color
 	glm::vec4& albedo = pbrMaterial->GetAlbedo();
 	ImGui::ColorEdit4("Albedo", reinterpret_cast<float*>(&albedo));
 	float metallic = pbrMaterial->GetMetallicFactor();
-	ImGui::SliderFloat("Metallic factor", &metallic, -100.0F, 100.0F);
+	const float range = 10.0F;
+	ImGui::SliderFloat("Metallic factor", &metallic, -range, range);
 	pbrMaterial->SetMetallicFactor(metallic);
 }
-
 
 void Hush::Serialize(Mesh* component) {
 	ImGui::CollapsingHeader("Mesh Component", ImGuiTreeNodeFlags_DefaultOpen);

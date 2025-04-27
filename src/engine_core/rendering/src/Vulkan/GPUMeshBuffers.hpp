@@ -1,6 +1,5 @@
 #pragma once
 #include "Shared/GpuAllocatedBuffer.hpp"
-#include <vulkan/vulkan_core.h>
 
 namespace Hush
 {

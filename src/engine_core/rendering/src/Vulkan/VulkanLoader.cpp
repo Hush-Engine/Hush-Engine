@@ -118,11 +118,11 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 																const fastgltf::Asset &asset, Mesh &meshRef,
 																VulkanRenderer *engine)
 {
-	VulkanMeshNode meshNode(std::make_shared<MeshAsset>());
+	VulkanMeshNode meshNode(std::make_shared<Mesh>());
 
-	MeshAsset &meshAsset = meshNode.GetMesh();
+	Mesh &meshAsset = meshNode.GetMesh();
 
-	meshAsset.name = mesh.name;
+	meshAsset.SetName(mesh.name);
 	// Clear out the vector buffers
 
 	std::vector<uint32_t> &indexRef = meshRef.GetIndexBuffer();
@@ -201,7 +201,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 			surfaceToAdd.material = materialInstance;
 		}
 
-		meshAsset.surfaces.emplace_back(std::move(surfaceToAdd));
+		meshAsset.AddSurface(std::move(surfaceToAdd));
 	}
 
 	std::vector<VkSampler> samplers;
@@ -225,7 +225,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	}
 
 	meshRef.CalculateTangentBasis();
-	meshAsset.meshBuffers = engine->UploadMesh(indexRef, vertexRef); // Here the pipeline layout dies(?
+	meshAsset.SetMeshBuffers(engine->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
 	meshNode.SetMaterialDataBuffer(materialDataBuffer);
 	return meshNode;
 }
@@ -237,8 +237,7 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	// Scene Material buffer writing
-	VmaAllocationInfo* allocInfo = sceneMaterialBuffer->GetAllocationInfo();
-	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo->pMappedData);
+	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(sceneMaterialBuffer->GetMappedData());
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
 
@@ -286,7 +285,7 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	materialResources.dataBuffer = sceneMaterialBuffer->GetBuffer();
+	materialResources.dataBuffer = static_cast<VkBuffer>(sceneMaterialBuffer->GetBuffer());
 	materialResources.dataBufferOffset =
 		static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
 	materialInstance->GenerateMaterialInstance(&allocatorPool);
