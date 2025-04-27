@@ -96,26 +96,26 @@ namespace Hush
 		void SetEmissionFactor(float emissionFactor) noexcept;
 
 		[[nodiscard]]
-		const float& GetMetallicFactor() const noexcept;
+		const float &GetMetallicFactor() const noexcept;
 
 		void SetMetallicFactor(float factor) noexcept;
-		
+
 		[[nodiscard]]
-		const float& GetRoughnessFactor() const noexcept;
+		const float &GetRoughnessFactor() const noexcept;
 
 		void SetRoughnessFactor(float factor) noexcept;
-		
+
 		[[nodiscard]]
-		const float& GetAlphaThreshold() const noexcept;
+		const float &GetAlphaThreshold() const noexcept;
 
 		void SetAlphaThreshold(float alphaThreshold) noexcept;
 
-		GraphicsApiMaterialInstance* GetInternalMaterial() override;
+		GraphicsApiMaterialInstance *GetInternalMaterial() override;
 
-		MaterialResources& GetMaterialResources();
-		
-		MaterialConstants& GetMaterialConstants() noexcept;
-		
+		MaterialResources &GetMaterialResources();
+
+		MaterialConstants &GetMaterialConstants() noexcept;
+
 	private:
 		void BuildPipelines();
 

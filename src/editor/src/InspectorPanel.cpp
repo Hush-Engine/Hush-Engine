@@ -26,29 +26,33 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-void Hush::Serialize(IMaterial3D* component) {
+void Hush::Serialize(IMaterial3D *component)
+{
 	// ECullMode cullMode = component->GetCullMode();
 	// Check which instance of the material is
 	// TODO: Do this with the reflection API instead of dynamic casting
-	auto* pbrMaterial = dynamic_cast<GLTFMetallicRoughness*>(component);
-	if (pbrMaterial == nullptr) {
+	auto *pbrMaterial = dynamic_cast<GLTFMetallicRoughness *>(component);
+	if (pbrMaterial == nullptr)
+	{
 		return;
 	}
 
 	// Albedo color
-	glm::vec4& albedo = pbrMaterial->GetAlbedo();
-	ImGui::ColorEdit4("Albedo", reinterpret_cast<float*>(&albedo));
+	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
+	ImGui::ColorEdit4("Albedo", reinterpret_cast<float *>(&albedo));
 	float metallic = pbrMaterial->GetMetallicFactor();
 	const float range = 10.0F;
 	ImGui::SliderFloat("Metallic factor", &metallic, -range, range);
 	pbrMaterial->SetMetallicFactor(metallic);
 }
 
-void Hush::Serialize(Mesh* component) {
+void Hush::Serialize(Mesh *component)
+{
 	ImGui::CollapsingHeader("Mesh Component", ImGuiTreeNodeFlags_DefaultOpen);
-	const std::vector<GeoSurface>& surfaces = component->GetSurfaces();
+	const std::vector<GeoSurface> &surfaces = component->GetSurfaces();
 	// Iterate over the surfaces and  serialize their materials as submeshes
-	for (const GeoSurface& surface : surfaces) {
+	for (const GeoSurface &surface : surfaces)
+	{
 		ImGui::CollapsingHeader("Surface", ImGuiTreeNodeFlags_DefaultOpen);
 		Serialize(surface.material.get());
 	}
@@ -98,11 +102,10 @@ void Hush::InspectorPanel::RenderProperties()
 	{
 		Serialize(dirLightComponent);
 	}
-	
-	Mesh* meshComponent = this->m_inspectTarget->GetComponent<Mesh>();
+
+	Mesh *meshComponent = this->m_inspectTarget->GetComponent<Mesh>();
 	if (meshComponent != nullptr)
 	{
 		Serialize(meshComponent);
 	}
-	
 }

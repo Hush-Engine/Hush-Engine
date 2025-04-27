@@ -63,12 +63,11 @@ namespace Hush
 
 		void SetCullMode(ECullMode cullMode) override;
 
-	
 		[[nodiscard]]
 		EMaterialPass GetMaterialPass() const noexcept override;
-		
+
 		void SetMaterialPass(EMaterialPass pass) override;
-		
+
 		template <class T>
 		inline EError SetProperty(const std::string_view &name, T value)
 		{
@@ -107,7 +106,7 @@ namespace Hush
 			return *reinterpret_cast<T *>(dataStartingPoint);
 		}
 
-		GraphicsApiMaterialInstance* GetInternalMaterial() override;
+		GraphicsApiMaterialInstance *GetInternalMaterial() override;
 
 	private:
 		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t> &shaderBinary);

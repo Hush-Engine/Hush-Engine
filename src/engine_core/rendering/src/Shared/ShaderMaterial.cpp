@@ -110,8 +110,9 @@ void Hush::ShaderMaterial::GenerateMaterialInstance(OpaqueDescriptorAllocator *d
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet =
 		realDescriptorAllocator->Allocate(device, this->m_materialData->descriptorLayout);
-	GpuAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
-								 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, rendererImpl->GetVmaAllocator());
+	GpuAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize),
+							  GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
+							  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, rendererImpl->GetVmaAllocator());
 
 	// Store our mapped data
 	this->m_uniformBufferMappedData = buffer.GetMappedData();
@@ -121,8 +122,8 @@ void Hush::ShaderMaterial::GenerateMaterialInstance(OpaqueDescriptorAllocator *d
 
 	this->m_materialData->writer.Clear();
 	constexpr size_t offset = 0;
-	this->m_materialData->writer.WriteBuffer(0, static_cast<VkBuffer>(buffer.GetBuffer()), this->m_uniformBufferSize, offset,
-											 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	this->m_materialData->writer.WriteBuffer(0, static_cast<VkBuffer>(buffer.GetBuffer()), this->m_uniformBufferSize,
+											 offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	this->m_materialData->writer.UpdateSet(device, this->m_internalMaterial->materialSet);
 }
 
@@ -151,16 +152,17 @@ Hush::ECullMode Hush::ShaderMaterial::GetCullMode() const noexcept
 	return this->m_cullMode;
 }
 
-
-Hush::EMaterialPass Hush::ShaderMaterial::GetMaterialPass() const noexcept {
+Hush::EMaterialPass Hush::ShaderMaterial::GetMaterialPass() const noexcept
+{
 	return this->m_internalMaterial->passType;
 }
 
-void Hush::ShaderMaterial::SetMaterialPass(EMaterialPass pass) {
+void Hush::ShaderMaterial::SetMaterialPass(EMaterialPass pass)
+{
 	this->m_internalMaterial->passType = pass;
 }
 
-Hush::GraphicsApiMaterialInstance* Hush::ShaderMaterial::GetInternalMaterial()
+Hush::GraphicsApiMaterialInstance *Hush::ShaderMaterial::GetInternalMaterial()
 {
 	return this->m_internalMaterial.get();
 }

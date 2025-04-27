@@ -11,9 +11,9 @@ namespace Hush
 
 		GpuAllocatedBuffer indexBuffer;
 		GpuAllocatedBuffer vertexBuffer;
-		#if defined(HUSH_VULKAN_IMPL)
+#if defined(HUSH_VULKAN_IMPL)
 		uint64_t vertexBufferAddress = 0U;
-		#endif
+#endif
 	};
 
 } // namespace Hush

@@ -980,7 +980,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 {
 	////allocate a new uniform buffer for the scene data
 	GpuAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
-											 GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
+										  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
 	auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
@@ -1063,7 +1063,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 	}
 
 	////add it to the deletion queue of this frame so it gets deleted once its been used
-	this->GetCurrentFrame().deletionQueue.PushFunction([=, this, &gpuSceneDataBuffer]() { gpuSceneDataBuffer.Dispose(m_allocator); });
+	this->GetCurrentFrame().deletionQueue.PushFunction(
+		[=, this, &gpuSceneDataBuffer]() { gpuSceneDataBuffer.Dispose(m_allocator); });
 
 	vkCmdEndRendering(cmd);
 }
@@ -1232,11 +1233,10 @@ const Hush::DefaultImageProvider *Hush::VulkanRenderer::GetDefaultImageProvider(
 	return &this->m_defaultImageProvider;
 }
 
-
-Hush::ShaderModuleLoader &Hush::VulkanRenderer::GetShaderModuleLoader() noexcept {
+Hush::ShaderModuleLoader &Hush::VulkanRenderer::GetShaderModuleLoader() noexcept
+{
 	return this->m_shaderModuleLoader;
 }
-
 
 void Hush::VulkanRenderer::DestroyImage(Hush::GpuAllocatedImage *img)
 {
@@ -1288,8 +1288,8 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 {
 
 	uint32_t dataSize = size.depth * size.width * size.height * 4;
-	GpuAllocatedBuffer uploadbuffer(dataSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
-									   this->m_allocator);
+	GpuAllocatedBuffer uploadbuffer(dataSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc,
+									GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	memcpy(uploadbuffer.GetMappedData(), data, dataSize);
 
@@ -1312,8 +1312,8 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 		copyRegion.imageExtent = {size.width, size.height, size.depth};
 
 		// copy the buffer into the image
-		vkCmdCopyBufferToImage(cmd, static_cast<VkBuffer>(uploadbuffer.GetBuffer()), newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-							   &copyRegion);
+		vkCmdCopyBufferToImage(cmd, static_cast<VkBuffer>(uploadbuffer.GetBuffer()), newImage.image,
+							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
 		TransitionImage(cmd, newImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1332,10 +1332,11 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 	GPUMeshBuffers newSurface;
 
 	// create vertex buffer
-	newSurface.vertexBuffer =
-		GpuAllocatedBuffer(vertexBufferSize,
-							  GpuAllocatedBuffer::EBufferUsage::StorageBuffer | GpuAllocatedBuffer::EBufferUsage::TransferDst | GpuAllocatedBuffer::EBufferUsage::ShaderDeviceAddress,
-							  GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
+	newSurface.vertexBuffer = GpuAllocatedBuffer(vertexBufferSize,
+												 GpuAllocatedBuffer::EBufferUsage::StorageBuffer |
+													 GpuAllocatedBuffer::EBufferUsage::TransferDst |
+													 GpuAllocatedBuffer::EBufferUsage::ShaderDeviceAddress,
+												 GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
 
 	// find the adress of the vertex buffer
 	VkBufferDeviceAddressInfo deviceAddressInfo{};
@@ -1344,12 +1345,12 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 	newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(this->m_device, &deviceAddressInfo);
 
 	// create index buffer
-	newSurface.indexBuffer =
-		GpuAllocatedBuffer(indexBufferSize, GpuAllocatedBuffer::EBufferUsage::IndexBuffer | GpuAllocatedBuffer::EBufferUsage::TransferDst,
-							  GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
+	newSurface.indexBuffer = GpuAllocatedBuffer(
+		indexBufferSize, GpuAllocatedBuffer::EBufferUsage::IndexBuffer | GpuAllocatedBuffer::EBufferUsage::TransferDst,
+		GpuAllocatedBuffer::EMemoryUsage::GpuOnly, this->m_allocator);
 
 	GpuAllocatedBuffer staging(vertexBufferSize + indexBufferSize, GpuAllocatedBuffer::EBufferUsage::TransferSrc,
-								  GpuAllocatedBuffer::EMemoryUsage::CpuOnly, this->m_allocator);
+							   GpuAllocatedBuffer::EMemoryUsage::CpuOnly, this->m_allocator);
 
 	void *data = staging.GetMappedData();
 
@@ -1364,15 +1365,16 @@ Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t
 		vertexCopy.srcOffset = 0;
 		vertexCopy.size = vertexBufferSize;
 
-		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()), static_cast<VkBuffer>(newSurface.vertexBuffer.GetBuffer()), 1, &vertexCopy);
+		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()),
+						static_cast<VkBuffer>(newSurface.vertexBuffer.GetBuffer()), 1, &vertexCopy);
 
 		VkBufferCopy indexCopy{0};
 		indexCopy.dstOffset = 0;
 		indexCopy.srcOffset = vertexBufferSize;
 		indexCopy.size = indexBufferSize;
 
-		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()), static_cast<VkBuffer>(newSurface.indexBuffer.GetBuffer()), 1, &indexCopy);
-		
+		vkCmdCopyBuffer(cmd, static_cast<VkBuffer>(staging.GetBuffer()),
+						static_cast<VkBuffer>(newSurface.indexBuffer.GetBuffer()), 1, &indexCopy);
 	});
 
 	staging.Dispose(this->m_allocator);

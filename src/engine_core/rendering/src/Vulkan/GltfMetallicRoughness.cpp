@@ -111,7 +111,7 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 {
 	auto *rendererImpl = dynamic_cast<VulkanRenderer *>(this->m_renderer);
 	VkDevice device = rendererImpl->GetVulkanDevice();
-	
+
 	this->m_internalMaterial = std::make_unique<GraphicsApiMaterialInstance>();
 
 	this->m_internalMaterial->passType = this->m_materialPass;
@@ -132,14 +132,15 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet = descriptorAllocator->Allocate(device, this->m_materialLayout);
-	
+
 	writer.Clear();
-	writer.WriteBuffer(0, this->m_materialResources.dataBuffer, sizeof(MaterialConstants), this->m_materialResources.dataBufferOffset,
-					   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	writer.WriteBuffer(0, this->m_materialResources.dataBuffer, sizeof(MaterialConstants),
+					   this->m_materialResources.dataBufferOffset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	writer.WriteImage(1, this->m_materialResources.colorImage.imageView, this->m_materialResources.colorSampler,
 					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	writer.WriteImage(2, this->m_materialResources.metalRoughImage.imageView, this->m_materialResources.metalRoughSampler,
-					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	writer.WriteImage(2, this->m_materialResources.metalRoughImage.imageView,
+					  this->m_materialResources.metalRoughSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 	writer.WriteImage(3, this->m_materialResources.normalImage.imageView, this->m_materialResources.normalSampler,
 					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -225,29 +226,33 @@ void Hush::GLTFMetallicRoughness::SetEmissionFactor(float emissionFactor) noexce
 	this->m_materialConstants.emissionFactors.w = emissionFactor;
 }
 
-
-const float& Hush::GLTFMetallicRoughness::GetMetallicFactor() const noexcept {
+const float &Hush::GLTFMetallicRoughness::GetMetallicFactor() const noexcept
+{
 	return this->m_materialConstants.metalRoughFactors.x;
 }
 
-void Hush::GLTFMetallicRoughness::SetMetallicFactor(float factor) noexcept {
-	this->m_materialConstants.metalRoughFactors.x = factor;	
+void Hush::GLTFMetallicRoughness::SetMetallicFactor(float factor) noexcept
+{
+	this->m_materialConstants.metalRoughFactors.x = factor;
 }
 
-const float& Hush::GLTFMetallicRoughness::GetRoughnessFactor() const noexcept {
+const float &Hush::GLTFMetallicRoughness::GetRoughnessFactor() const noexcept
+{
 	return this->m_materialConstants.metalRoughFactors.y;
 }
 
-void Hush::GLTFMetallicRoughness::SetRoughnessFactor(float factor) noexcept {
-	this->m_materialConstants.metalRoughFactors.y = factor;	
-	
+void Hush::GLTFMetallicRoughness::SetRoughnessFactor(float factor) noexcept
+{
+	this->m_materialConstants.metalRoughFactors.y = factor;
 }
 
-const float& Hush::GLTFMetallicRoughness::GetAlphaThreshold() const noexcept {
+const float &Hush::GLTFMetallicRoughness::GetAlphaThreshold() const noexcept
+{
 	return this->m_materialConstants.alphaThreshold;
 }
 
-void Hush::GLTFMetallicRoughness::SetAlphaThreshold(float alphaThreshold) noexcept {
+void Hush::GLTFMetallicRoughness::SetAlphaThreshold(float alphaThreshold) noexcept
+{
 	this->m_materialConstants.alphaThreshold = alphaThreshold;
 }
 
@@ -256,12 +261,12 @@ Hush::GraphicsApiMaterialInstance *Hush::GLTFMetallicRoughness::GetInternalMater
 	return this->m_internalMaterial.get();
 }
 
-
-Hush::GLTFMetallicRoughness::MaterialConstants& Hush::GLTFMetallicRoughness::GetMaterialConstants() noexcept {
+Hush::GLTFMetallicRoughness::MaterialConstants &Hush::GLTFMetallicRoughness::GetMaterialConstants() noexcept
+{
 	return this->m_materialConstants;
 }
 
-Hush::GLTFMetallicRoughness::MaterialResources& Hush::GLTFMetallicRoughness::GetMaterialResources() {
+Hush::GLTFMetallicRoughness::MaterialResources &Hush::GLTFMetallicRoughness::GetMaterialResources()
+{
 	return this->m_materialResources;
 }
-

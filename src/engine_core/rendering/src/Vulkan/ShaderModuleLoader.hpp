@@ -4,16 +4,17 @@
 #include <string_view>
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
-namespace Hush {
-	
-	class ShaderModuleLoader {
+namespace Hush
+{
 
-		public:
-			bool LoadShaderModule(const std::string_view &filePath, VkDevice device, VkShaderModule *outShaderModule, std::vector<uint32_t> *outBuffer = nullptr);
+	class ShaderModuleLoader
+	{
 
-		private:
-			std::unordered_map<uint32_t, VkShaderModule> m_loadedShaderModules;
-	
+	public:
+		bool LoadShaderModule(const std::string_view &filePath, VkDevice device, VkShaderModule *outShaderModule,
+							  std::vector<uint32_t> *outBuffer = nullptr);
+
+	private:
+		std::unordered_map<uint32_t, VkShaderModule> m_loadedShaderModules;
 	};
-}
-
+} // namespace Hush

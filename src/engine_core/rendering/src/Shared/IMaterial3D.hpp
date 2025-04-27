@@ -21,13 +21,12 @@ namespace Hush
 
 		[[nodiscard]]
 		virtual EMaterialPass GetMaterialPass() const noexcept = 0;
-		
+
 		virtual void SetMaterialPass(EMaterialPass pass) = 0;
 
-		virtual GraphicsApiMaterialInstance* GetInternalMaterial() = 0;
-		
+		virtual GraphicsApiMaterialInstance *GetInternalMaterial() = 0;
 	};
 
-	void Serialize(IMaterial3D* component);
-	
+	void Serialize(IMaterial3D *component);
+
 } // namespace Hush

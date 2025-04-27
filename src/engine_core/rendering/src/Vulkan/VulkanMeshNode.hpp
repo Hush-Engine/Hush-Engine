@@ -24,8 +24,10 @@ namespace Hush
 		void SetMaterialDataBuffer(GpuAllocatedBuffer materialDataBuffer);
 		void SetDescriptorPool(DescriptorAllocatorGrowable descriptorPool);
 
-		[[nodiscard]] const GpuAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
-		[[nodiscard]] const DescriptorAllocatorGrowable &GetDescriptorPool() const noexcept;
+		[[nodiscard]]
+		const GpuAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
+		[[nodiscard]]
+		const DescriptorAllocatorGrowable &GetDescriptorPool() const noexcept;
 
 	private:
 		GpuAllocatedBuffer m_materialDataBuffer;
