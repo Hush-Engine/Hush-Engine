@@ -46,6 +46,11 @@ void Hush::RawQuery::QueryIterator::Skip()
 	ecs_iter_skip(queryIter);
 }
 
+bool Hush::RawQuery::QueryIterator::Finished() const
+{
+	return m_hasBeenDestroyed;
+}
+
 std::size_t Hush::RawQuery::QueryIterator::Size() const
 {
 	auto *queryIter = reinterpret_cast<const ecs_iter_t *>(m_iterData.data());
@@ -123,6 +128,11 @@ Hush::RawQuery::~RawQuery() noexcept
 	}
 
 	ecs_query_fini(query);
+}
+
+Hush::Scene *Hush::RawQuery::GetScene() const noexcept
+{
+	return m_scene;
 }
 
 Hush::RawQuery::QueryIterator Hush::RawQuery::GetIterator()

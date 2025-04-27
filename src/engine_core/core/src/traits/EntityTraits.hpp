@@ -8,6 +8,7 @@
 
 #include "EnumFlags.hpp"
 #include "Platform.hpp"
+#include "HushBindings.hpp"
 
 #include <Result.hpp>
 #include <cstdint>
@@ -30,14 +31,15 @@ namespace Hush::ComponentTraits
 {
 	struct ComponentInfo;
 
-	using ComponentCtor = void (*)(void *array, std::int32_t count, const ComponentInfo &info);
-	using ComponentDtor = void (*)(void *array, std::int32_t count, const ComponentInfo &info);
-	using ComponentCopy = void (*)(void *dst, const void *src, std::int32_t count, const ComponentInfo &info);
-	using ComponentMove = void (*)(void *dst, void *src, std::int32_t count, const ComponentInfo &info);
-	using ComponentCopyCtor = void (*)(void *dst, const void *src, std::int32_t count, const ComponentInfo &info);
-	using ComponentMoveCtor = void (*)(void *dst, void *src, std::int32_t count, const ComponentInfo &info);
+	using ComponentCtor = void (*)(void *array, std::int32_t count, const void *componentInfo);
+	using ComponentDtor = void (*)(void *array, std::int32_t count, const void *componentInfo);
+	using ComponentCopy = void (*)(void *dst, const void *src, std::int32_t count, const void *componentInfo);
+	using ComponentMove = void (*)(void *dst, void *src, std::int32_t count, const void *componentInfo);
+	using ComponentCopyCtor = void (*)(void *dst, const void *src, std::int32_t count, const void *componentInfo);
+	using ComponentMoveCtor = void (*)(void *dst, void *src, std::int32_t count, const void *componentInfo);
 
-	enum class EComponentOpsFlags : std::uint32_t
+
+	enum class [[hush::export]] EComponentOpsFlags : std::uint32_t
 	{
 		None = 0,
 
@@ -63,7 +65,7 @@ namespace Hush::ComponentTraits
 		NoMoveAssignDtor = 1 << 15,
 	};
 
-	struct ComponentOps
+	struct [[hush::export]] ComponentOps
 	{
 		ComponentCtor ctor;
 		ComponentDtor dtor;
@@ -75,11 +77,11 @@ namespace Hush::ComponentTraits
 		ComponentMoveCtor moveAssignDtor;
 	};
 
-	struct ComponentInfo
+	struct [[hush::export]] ComponentInfo
 	{
 		std::size_t size;
 		std::size_t alignment;
-		std::string_view name;
+		const char *name;
 		ComponentOps ops;
 		EComponentOpsFlags opsFlags;
 
@@ -88,7 +90,7 @@ namespace Hush::ComponentTraits
 	};
 
 	template <typename T>
-	void CtorImpl(void *array, std::int32_t count, const ComponentInfo &)
+	void CtorImpl(void *array, std::int32_t count, const void *)
 	{
 		T *ptr = static_cast<T *>(array);
 		for (std::int32_t i = 0; i < count; ++i)
@@ -98,7 +100,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void DtorImpl(void *array, std::int32_t count, const ComponentInfo &)
+	void DtorImpl(void *array, std::int32_t count, const void *)
 	{
 		T *ptr = static_cast<T *>(array);
 		for (std::int32_t i = 0; i < count; ++i)
@@ -108,7 +110,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void CopyImpl(void *dst, const void *src, std::int32_t count, const ComponentInfo &)
+	void CopyImpl(void *dst, const void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		const T *srcPtr = static_cast<const T *>(src);
@@ -119,7 +121,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void MoveImpl(void *dst, void *src, std::int32_t count, const ComponentInfo &)
+	void MoveImpl(void *dst, void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		T *srcPtr = static_cast<T *>(src);
@@ -130,7 +132,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void CopyCtorImpl(void *dst, const void *src, std::int32_t count, const ComponentInfo &)
+	void CopyCtorImpl(void *dst, const void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		const T *srcPtr = static_cast<const T *>(src);
@@ -141,7 +143,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void MoveCtorImpl(void *dst, void *src, std::int32_t count, const ComponentInfo &)
+	void MoveCtorImpl(void *dst, void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		T *srcPtr = static_cast<T *>(src);
@@ -152,7 +154,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void MoveCtorDtorImpl(void *dst, void *src, std::int32_t count, const ComponentInfo &)
+	void MoveCtorDtorImpl(void *dst, void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		T *srcPtr = static_cast<T *>(src);
@@ -164,7 +166,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-	void MoveAssignDtorImpl(void *dst, void *src, std::int32_t count, const ComponentInfo &)
+	void MoveAssignDtorImpl(void *dst, void *src, std::int32_t count, const void *)
 	{
 		T *dstPtr = static_cast<T *>(dst);
 		T *srcPtr = static_cast<T *>(src);
@@ -189,23 +191,23 @@ namespace Hush::ComponentTraits
 	/// @tparam T Type of the component.
 	/// @return Nullptr
 	template <typename T>
-		requires std::is_trivially_constructible_v<T> && !std::is_default_constructible_v<T>
-													 constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags &)
+		requires(std::is_trivially_constructible_v<T> && !std::is_default_constructible_v<T>)
+	constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags &)
 	{
 		return nullptr;
 	}
 
 	template <typename T>
-		requires !std::is_default_constructible_v<T>
-				 constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags & flags)
+		requires(!std::is_default_constructible_v<T>)
+	constexpr ComponentCtor GetCtorImpl(EComponentOpsFlags &flags)
 	{
 		flags |= EComponentOpsFlags::NoCtor;
 		return nullptr;
 	}
 
 	template <typename T>
-		requires std::is_destructible_v<T> && !std::is_trivially_destructible_v<T>
-										  constexpr ComponentDtor GetDtorImpl(EComponentOpsFlags &)
+		requires(std::is_destructible_v<T> && !std::is_trivially_destructible_v<T>)
+	constexpr ComponentDtor GetDtorImpl(EComponentOpsFlags &)
 	{
 		return &DtorImpl<T>;
 	}
@@ -218,8 +220,8 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-		requires !std::is_destructible_v<T>
-				 constexpr ComponentDtor GetDtorImpl(EComponentOpsFlags & flags)
+		requires(!std::is_destructible_v<T>)
+	constexpr ComponentDtor GetDtorImpl(EComponentOpsFlags &flags)
 	{
 		static_assert(std::is_destructible_v<T>, "Component must be destructible");
 		flags |= EComponentOpsFlags::NoDtor;
@@ -234,15 +236,15 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-		requires !std::is_trivially_copyable_v<T> && std::is_copy_assignable_v<T>
+		requires(!std::is_trivially_copyable_v<T> && std::is_copy_assignable_v<T>)
 	constexpr ComponentCopy GetCopyImpl(EComponentOpsFlags &)
 	{
 		return &CopyImpl<T>;
 	}
 
 	template <typename T>
-		requires !(std::is_trivially_copyable_v<T> || std::is_copy_assignable_v<T>)
-				 constexpr ComponentCopy GetCopyImpl(EComponentOpsFlags & flags)
+		requires(!(std::is_trivially_copyable_v<T> || std::is_copy_assignable_v<T>))
+	constexpr ComponentCopy GetCopyImpl(EComponentOpsFlags &flags)
 	{
 		flags |= EComponentOpsFlags::NoCopy;
 		return nullptr;
@@ -293,7 +295,7 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-		requires std::is_trivially_move_constructible_v<T>
+		requires(std::is_trivially_move_constructible_v<T>)
 	constexpr ComponentMoveCtor GetMoveCtorImpl(EComponentOpsFlags &)
 	{
 		return nullptr;
@@ -315,8 +317,8 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-		requires !(std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<T>) &&
-				 (std::is_move_constructible_v<T> && std::is_destructible_v<T>)
+		requires(!(std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<T>) &&
+				 (std::is_move_constructible_v<T> && std::is_destructible_v<T>))
 	constexpr ComponentMoveCtor GetMoveDtorImpl(EComponentOpsFlags &)
 	{
 		return &MoveCtorDtorImpl<T>;
@@ -345,16 +347,16 @@ namespace Hush::ComponentTraits
 	}
 
 	template <typename T>
-		requires !(std::is_move_assignable_v<T> && std::is_destructible_v<T>)
-				 constexpr ComponentMoveCtor GetMoveAssignDtorImpl(EComponentOpsFlags & flags)
+		requires(!(std::is_move_assignable_v<T> && std::is_destructible_v<T>))
+	constexpr ComponentMoveCtor GetMoveAssignDtorImpl(EComponentOpsFlags &flags)
 	{
 		flags |= EComponentOpsFlags::NoMoveAssignDtor;
 		return nullptr;
 	}
 
 	template <typename T>
-		requires !(std::is_trivially_move_assignable_v<T> && std::is_trivially_destructible_v<T>) &&
-				 (std::is_move_assignable_v<T> && std::is_destructible_v<T>)
+		requires(!(std::is_trivially_move_assignable_v<T> && std::is_trivially_destructible_v<T>) &&
+				 (std::is_move_assignable_v<T> && std::is_destructible_v<T>))
 	constexpr ComponentMoveCtor GetMoveAssignDtorImpl(EComponentOpsFlags &)
 	{
 		return &MoveAssignDtorImpl<T>;
@@ -364,8 +366,8 @@ namespace Hush::ComponentTraits
 	/// @tparam T Type of the component.
 	/// @return Operations for the component.
 	template <typename T>
-		requires !std::is_reference_v<T>
-				 constexpr ComponentOps GetOps(EComponentOpsFlags & flags)
+		requires(!std::is_reference_v<T>)
+	constexpr ComponentOps GetOps(EComponentOpsFlags &flags)
 	{
 		return ComponentOps{
 			.ctor = GetCtorImpl<std::remove_cvref_t<T>>(flags),

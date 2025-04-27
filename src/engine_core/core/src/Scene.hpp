@@ -9,6 +9,7 @@
 #include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
+#include "HushBindings.hpp"
 
 #include <array>
 #include <memory>
@@ -24,7 +25,7 @@ namespace Hush
 	// TODO: this class is expected to change a lot, it's just a placeholder for now.
 	// The API is not ready and I would like to think about implementing it considering scripting in the future and
 	// bindings.
-	class Scene
+	class [[hush::export(Hush::Export::asHandle)]] Scene
 	{
 		constexpr static std::uint16_t ORDER_BUCKET_SIZE = ISystem::MAX_ORDER + 1;
 
@@ -73,14 +74,17 @@ namespace Hush
 
 		/// Remove a system from the scene by name.
 		/// @param name Name of the system to remove.
+		[[hush::export]]
 		void RemoveSystem(std::string_view name);
 
 		/// Creates an entity
+		[[hush::export]]
 		Entity CreateEntity();
 
 		/// Creates an entity with a name
 		/// @param name Unique name of the entity
 		/// @return Entity
+		[[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
 
 		/// Destroy an entity.
@@ -95,11 +99,13 @@ namespace Hush
 		/// Register a component id
 		/// @param name Name of the component
 		/// @param id Id of the component
+		[[hush::export]]
 		void RegisterComponentId(std::string_view name, Entity::EntityId id);
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
 		[[nodiscard]]
+		[[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
 		template <typename... Components>
@@ -116,6 +122,7 @@ namespace Hush
 		/// @param system System to add
 		void AddEngineSystem(ISystem *system);
 
+		[[hush::export]]
 		RawQuery CreateRawQuery(std::span<Entity::EntityId> components,
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
 
