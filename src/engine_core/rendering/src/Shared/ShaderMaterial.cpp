@@ -8,7 +8,9 @@
 
 #ifdef HUSH_VULKAN_IMPL
 #define VK_NO_PROTOTYPES
+#include <vulkan/vulkan_core.h>
 #include <volk.h>
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Vulkan/VkTypes.hpp"
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Vulkan/VulkanPipelineBuilder.hpp"
@@ -108,19 +110,20 @@ void Hush::ShaderMaterial::GenerateMaterialInstance(OpaqueDescriptorAllocator *d
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet =
 		realDescriptorAllocator->Allocate(device, this->m_materialData->descriptorLayout);
-	VulkanAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-								 VMA_MEMORY_USAGE_CPU_TO_GPU, rendererImpl->GetVmaAllocator());
+	GpuAllocatedBuffer buffer(static_cast<uint32_t>(this->m_uniformBufferSize),
+							  GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
+							  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, rendererImpl->GetVmaAllocator());
 
 	// Store our mapped data
-	this->m_uniformBufferMappedData = buffer.GetAllocationInfo().pMappedData;
+	this->m_uniformBufferMappedData = buffer.GetMappedData();
 
 	// Zero out the data
 	memset(this->m_uniformBufferMappedData, 0, this->m_uniformBufferSize);
 
 	this->m_materialData->writer.Clear();
 	constexpr size_t offset = 0;
-	this->m_materialData->writer.WriteBuffer(0, buffer.GetBuffer(), this->m_uniformBufferSize, offset,
-											 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	this->m_materialData->writer.WriteBuffer(0, static_cast<VkBuffer>(buffer.GetBuffer()), this->m_uniformBufferSize,
+											 offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	this->m_materialData->writer.UpdateSet(device, this->m_internalMaterial->materialSet);
 }
 
@@ -149,9 +152,19 @@ Hush::ECullMode Hush::ShaderMaterial::GetCullMode() const noexcept
 	return this->m_cullMode;
 }
 
-const Hush::GraphicsApiMaterialInstance &Hush::ShaderMaterial::GetInternalMaterial() const
+Hush::EMaterialPass Hush::ShaderMaterial::GetMaterialPass() const noexcept
 {
-	return *this->m_internalMaterial;
+	return this->m_internalMaterial->passType;
+}
+
+void Hush::ShaderMaterial::SetMaterialPass(EMaterialPass pass)
+{
+	this->m_internalMaterial->passType = pass;
+}
+
+Hush::GraphicsApiMaterialInstance *Hush::ShaderMaterial::GetInternalMaterial()
+{
+	return this->m_internalMaterial.get();
 }
 
 Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hush::ShaderMaterial::ReflectShader(

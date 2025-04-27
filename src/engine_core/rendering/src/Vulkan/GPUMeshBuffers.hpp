@@ -1,6 +1,5 @@
 #pragma once
-#include "VulkanAllocatedBuffer.hpp"
-#include <vulkan/vulkan_core.h>
+#include "Shared/GpuAllocatedBuffer.hpp"
 
 namespace Hush
 {
@@ -10,16 +9,11 @@ namespace Hush
 	{
 		GPUMeshBuffers() = default;
 
-		GPUMeshBuffers(VulkanAllocatedBuffer indexBuffer, VulkanAllocatedBuffer vertexBuffer)
-		{
-			this->indexBuffer = indexBuffer;
-			this->vertexBuffer = vertexBuffer;
-			this->vertexBufferAddress = 0u;
-		}
-
-		VulkanAllocatedBuffer indexBuffer{};
-		VulkanAllocatedBuffer vertexBuffer{};
-		VkDeviceAddress vertexBufferAddress = 0u;
+		GpuAllocatedBuffer indexBuffer;
+		GpuAllocatedBuffer vertexBuffer;
+#if defined(HUSH_VULKAN_IMPL)
+		uint64_t vertexBufferAddress = 0U;
+#endif
 	};
 
 } // namespace Hush

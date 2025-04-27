@@ -8,6 +8,7 @@
 #include "Assertions.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Shared/MaterialOptions.hpp"
+#include "Shared/Types/MaterialInstance.hpp"
 
 class SpvReflectTypeDescription;
 
@@ -16,9 +17,7 @@ namespace Hush
 	struct OpaqueMaterialData;
 #if defined(HUSH_VULKAN_IMPL)
 	struct DescriptorAllocatorGrowable;
-	struct VkMaterialInstance;
 	class VulkanAllocatedBuffer;
-	using GraphicsApiMaterialInstance = VkMaterialInstance;
 	using OpaqueDescriptorAllocator = DescriptorAllocatorGrowable;
 #endif
 
@@ -64,6 +63,11 @@ namespace Hush
 
 		void SetCullMode(ECullMode cullMode) override;
 
+		[[nodiscard]]
+		EMaterialPass GetMaterialPass() const noexcept override;
+
+		void SetMaterialPass(EMaterialPass pass) override;
+
 		template <class T>
 		inline EError SetProperty(const std::string_view &name, T value)
 		{
@@ -102,8 +106,7 @@ namespace Hush
 			return *reinterpret_cast<T *>(dataStartingPoint);
 		}
 
-		[[nodiscard]]
-		const GraphicsApiMaterialInstance &GetInternalMaterial() const;
+		GraphicsApiMaterialInstance *GetInternalMaterial() override;
 
 	private:
 		Result<std::vector<ShaderBindings>, EError> ReflectShader(const std::span<std::uint32_t> &shaderBinary);

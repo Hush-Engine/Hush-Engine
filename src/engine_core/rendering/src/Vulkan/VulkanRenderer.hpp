@@ -26,6 +26,7 @@
 #include "Shared/RenderableNode.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "VulkanSwapchain.hpp"
+#include "Vulkan/ShaderModuleLoader.hpp"
 #include "VulkanFullScreenPass.hpp"
 #include "DrawContext.hpp"
 #include "Shared/Mesh.hpp"
@@ -156,6 +157,9 @@ namespace Hush
 		[[nodiscard]]
 		const DefaultImageProvider *GetDefaultImageProvider() const noexcept override;
 
+		[[nodiscard]]
+		ShaderModuleLoader &GetShaderModuleLoader() noexcept;
+
 	private:
 		void Configure(vkb::Instance vkbInstance);
 
@@ -253,11 +257,11 @@ namespace Hush
 
 		// Test stuff
 		DefaultImageProvider m_defaultImageProvider;
+		ShaderModuleLoader m_shaderModuleLoader{};
 		GpuAllocatedImage m_greyImage{};
 		GpuAllocatedImage m_errorCheckerboardImage{};
 		VkDescriptorSetLayout m_singleImageDescriptorLayout;
 
-		VkMaterialInstance m_defaultData;
 		GLTFMetallicRoughness m_metalRoughMaterial;
 		VulkanFullScreenPass m_gridEffect;
 
