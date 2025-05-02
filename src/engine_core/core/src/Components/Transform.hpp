@@ -5,9 +5,11 @@
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 
+#include "HushBindings.hpp"
+
 namespace Hush
 {
-	struct Transform
+	struct [[hush::export]] Transform
 	{
 	public:
 		Transform() = default;
