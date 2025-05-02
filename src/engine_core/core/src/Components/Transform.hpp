@@ -50,9 +50,17 @@ namespace Hush
 		[[nodiscard]]
 		glm::vec3 Right() const noexcept;
 
-	private:
-		glm::mat4 TransformationMatrix();
+		void SetTransformationMatrix(const glm::mat4 &xform);
 
+		[[nodiscard]]
+		glm::mat4 GetTransformationMatrix() const;
+
+		[[nodiscard]]
+		glm::mat4 XForm(const Transform &other) const;
+
+		glm::mat4 operator*(const Transform &other);
+
+	private:
 		glm::vec3 m_position = Vector3Math::ZERO;
 		glm::vec3 m_scale = Vector3Math::ONE;
 		glm::quat m_rotation{};

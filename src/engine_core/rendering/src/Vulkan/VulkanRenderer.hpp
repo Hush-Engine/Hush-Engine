@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include <utility>
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define VK_NO_PROTOTYPES
 
@@ -20,7 +21,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "VkDescriptors.hpp"
-#include "GPUMeshBuffers.hpp"
 #include "GPUSceneData.hpp"
 #include "GltfMetallicRoughness.hpp"
 #include "Shared/RenderableNode.hpp"
@@ -45,6 +45,7 @@ namespace Hush
 {
 	struct MeshAsset;
 	struct DirectionalLight;
+	struct WorldTransform;
 
 	class VulkanRenderer final : public IRenderer
 	{
@@ -63,6 +64,8 @@ namespace Hush
 
 		~VulkanRenderer() override;
 
+		void SetActiveScene(Scene* scene) override;
+
 		void CreateSwapChain(uint32_t width, uint32_t height) override;
 
 		void InitRendering() override;
@@ -70,6 +73,11 @@ namespace Hush
 		void InitializeCommands() noexcept;
 
 		void InitImGui() override;
+
+		
+		void PushMesh(const glm::mat4& globalTransform, std::shared_ptr<Mesh> mesh) override;
+
+		void DestroyMesh(const std::string_view& name) override;
 
 		void Draw(float delta) override;
 
@@ -236,9 +244,7 @@ namespace Hush
 		VkPipeline m_meshPipeline = nullptr;
 		GPUSceneData m_sceneData;
 		VkDescriptorSetLayout m_gpuSceneDataDescriptorLayout;
-
-		std::vector<std::shared_ptr<MeshAsset>> m_testMeshes;
-
+		
 		GPUMeshBuffers m_rectangle;
 
 		uint32_t m_graphicsQueueFamily = 0u;
@@ -253,8 +259,7 @@ namespace Hush
 		GpuAllocatedImage m_depthImage{};
 
 		DrawContext m_mainDrawContext;
-		std::unordered_map<std::string, std::shared_ptr<RenderableNode>> m_loadedNodes;
-
+		std::vector<std::pair<WorldTransform*, Mesh*>> m_loadedMeshes;
 		// Test stuff
 		DefaultImageProvider m_defaultImageProvider;
 		ShaderModuleLoader m_shaderModuleLoader{};
@@ -269,6 +274,7 @@ namespace Hush
 		VkSampler m_defaultSamplerNearest;
 
 		EditorCamera m_editorCamera;
+		Scene* m_activeScene;
 		DirectionalLight *m_directionalLight = nullptr;
 
 		// Frame related data

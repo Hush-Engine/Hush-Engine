@@ -6,12 +6,12 @@
 
 #pragma once
 
-#include <Entity.hpp>
+#include "Entity.hpp"
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <span>
-#include <traits/EntityTraits.hpp>
+#include "traits/EntityTraits.hpp"
 
 namespace Hush
 {

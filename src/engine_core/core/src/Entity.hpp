@@ -58,8 +58,8 @@ namespace Hush
 		{
 			if (this != &other)
 			{
-				m_entityId = std::exchange(other.m_entityId, 0);
-				m_ownerScene = std::exchange(other.m_ownerScene, nullptr);
+				this->m_entityId = std::exchange(other.m_entityId, 0);
+				this->m_ownerScene = std::exchange(other.m_ownerScene, nullptr);
 			}
 
 			return *this;

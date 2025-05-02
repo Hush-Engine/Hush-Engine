@@ -1,7 +1,9 @@
 #pragma once
 
 #include "MathUtils.hpp"
+#include <cmath>
 #include <glm/ext/vector_float4.hpp>
+#include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
 namespace Hush::Vector3Math
@@ -27,5 +29,10 @@ namespace Hush::Vector3Math
 	{
 		return {vec};
 	}
+
+	inline float Magnitude(const glm::vec3& vec) {
+		return glm::length(vec);
+	}
+
 
 } // namespace Hush::Vector3Math

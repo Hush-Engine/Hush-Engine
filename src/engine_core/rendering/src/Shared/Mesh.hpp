@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
-#include "Vulkan/GPUMeshBuffers.hpp"
+#include "Shared/GPUMeshBuffers.hpp"
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -90,9 +91,10 @@ namespace Hush
 		{
 			return this->m_meshBuffers;
 		}
-
+		
 	private:
 		void CalculateNormals(Vertex &currentVertex);
+
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 		std::string m_name;

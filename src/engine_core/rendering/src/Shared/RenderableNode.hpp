@@ -1,9 +1,10 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
-#include <vector>
 #include <memory>
+#include <utility>
 #include "IRenderable.hpp"
+#include "Shared/Mesh.hpp"
 namespace Hush
 {
 	/// @brief Common renderable node for scenes with multiple children to render
@@ -13,58 +14,27 @@ namespace Hush
 	{
 
 	public:
-		void RefreshTransform(const glm::mat4 &parentMatrix)
-		{
-			this->m_worldTransform = parentMatrix * this->m_localTransform;
-			for (std::shared_ptr<RenderableNode> &child : this->m_children)
-			{
-				child->RefreshTransform(this->m_worldTransform);
-			}
+
+		RenderableNode() = default;
+		
+		RenderableNode(std::shared_ptr<Mesh> mesh) : m_mesh(std::move(mesh)) {
+			
 		}
 
 		void Draw(const glm::mat4 &topMatrix, void *drawContext) override
 		{
-			for (std::shared_ptr<RenderableNode> &child : this->m_children)
-			{
-				child->Draw(topMatrix, drawContext);
-			}
+			(void)topMatrix;
+			(void)drawContext;
 		}
-
-		void SetLocalTransform(const glm::mat4 &localTransform)
-		{
-			this->m_localTransform = localTransform;
+		
+		Mesh &GetMesh() {
+			return *this->m_mesh;
 		}
-
-		void SetWorldTransform(const glm::mat4 &worldTransform)
-		{
-			this->m_worldTransform = worldTransform;
-		}
-
-		const glm::mat4 &GetLocalTransform() const noexcept
-		{
-			return this->m_localTransform;
-		}
-
-		const glm::mat4 &GetWorldTransform() const noexcept
-		{
-			return this->m_worldTransform;
-		}
-
-		void AddChild(std::shared_ptr<RenderableNode> child)
-		{
-			this->m_children.emplace_back(child);
-		}
-
-		void SetParent(std::weak_ptr<RenderableNode> parent)
-		{
-			this->m_parent = parent;
-		}
-
+		
 	protected:
-		std::weak_ptr<RenderableNode> m_parent;
-		std::vector<std::shared_ptr<RenderableNode>> m_children;
-
-		glm::mat4 m_localTransform;
-		glm::mat4 m_worldTransform;
+		// NOLINTNEXTLINE
+		glm::mat4 m_worldTransform{};
+	private:
+		std::shared_ptr<Mesh> m_mesh = nullptr;
 	};
 } // namespace Hush

@@ -1,7 +1,10 @@
+#include "../../base/src/Common.hpp"
 #include "Transform.hpp"
 #include <glm/ext/vector_float3.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include "Mat4Math.hpp"
 
 Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, const glm::quat &rotation)
 	: m_position(position),
@@ -73,4 +76,24 @@ glm::vec3 Hush::Transform::Up() const noexcept
 glm::vec3 Hush::Transform::Right() const noexcept
 {
 	return this->m_rotation * glm::vec3(this->m_scale.x, 0.0F, 0.0F);
+}
+
+void Hush::Transform::SetTransformationMatrix(const glm::mat4 &xform)
+{
+	Mat4Math::DecomposeTRS(xform, this->m_position, this->m_rotation, this->m_scale);
+}
+
+
+glm::mat4 Hush::Transform::GetTransformationMatrix() const {
+	return Mat4Math::ComposeTRS(this->m_position, this->m_rotation, this->m_scale);
+}
+
+
+glm::mat4 Hush::Transform::XForm(const Transform& other) const {
+	return this->GetTransformationMatrix() * other.GetTransformationMatrix();
+}
+
+glm::mat4 Hush::Transform::operator*(const Transform &other)
+{
+	return this->XForm(other);
 }

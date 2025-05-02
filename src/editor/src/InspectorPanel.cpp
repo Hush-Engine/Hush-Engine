@@ -1,6 +1,6 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
-#include "Components/Transform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
@@ -92,7 +92,7 @@ void Hush::InspectorPanel::RenderProperties()
 		return;
 	}
 	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
-	Transform *transform = this->m_inspectTarget->GetComponent<Transform>();
+	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	UI::SerializeComponent(transform, UI::ESerializableComponentType::Transform);
 	// Get all the other entity's components

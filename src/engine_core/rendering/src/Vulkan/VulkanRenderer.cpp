@@ -5,6 +5,7 @@
 */
 
 #include "Shared/GpuAllocatedBuffer.hpp"
+#include <memory>
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
@@ -27,11 +28,10 @@
 #include <typeutils/TypeUtils.hpp>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "GPUMeshBuffers.hpp"
+#include "Shared/GPUMeshBuffers.hpp"
 #include "VulkanLoader.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
-#include "VulkanMeshNode.hpp"
 #include "VulkanFullScreenPass.hpp"
 #include <Shared/ShaderMaterial.hpp>
 #include "Vector3Math.hpp"
@@ -44,6 +44,7 @@
 #include <cstdint>
 #include "Vulkan/VkTypes.hpp"
 #include <magic_enum/magic_enum.hpp>
+#include "../../core/src/Components/WorldTransform.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -139,6 +140,10 @@ Hush::VulkanRenderer::~VulkanRenderer()
 	this->Dispose();
 }
 
+void Hush::VulkanRenderer::SetActiveScene(Scene* scene) {
+	this->m_activeScene = scene;
+}
+
 // Called on resize and window init
 void Hush::VulkanRenderer::CreateSwapChain(uint32_t width, uint32_t height)
 {
@@ -183,6 +188,18 @@ void Hush::VulkanRenderer::InitImGui()
 {
 	this->m_uiForwarder = std::make_unique<VulkanImGuiForwarder>();
 	this->m_uiForwarder->SetupImGui(this);
+}
+
+
+void Hush::VulkanRenderer::PushMesh(const glm::mat4& globalTransform, std::shared_ptr<Mesh> mesh) {
+	// TODO: Make this take an entity or something like that so we have access to its transform
+	// this->m_loadedNodes.emplace(std::make_shared<VulkanMeshNode>(mesh), mesh->GetName());
+	(void)globalTransform;
+	(void)mesh;
+}
+
+void Hush::VulkanRenderer::DestroyMesh(const std::string_view& name) {
+	(void)name;	
 }
 
 void Hush::VulkanRenderer::Draw(float delta)
@@ -262,16 +279,44 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 	this->m_uiForwarder->HandleEvent(event);
 }
 
+void DrawMesh(Hush::Mesh* mesh, const Hush::WorldTransform* transform, void* drawContext) {
+	
+	// Interpret drawContext as: std::vector<VkRenderObject>* OpaqueSurfaces;
+	HUSH_ASSERT(drawContext != nullptr, "Draw context should not be null for any render node");
+	auto *drawCtxImpl = static_cast<Hush::DrawContext *>(drawContext);
+
+	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
+	{
+		Hush::VkRenderObject def{};
+		def.indexCount = s.count;
+		def.firstIndex = s.startIndex;
+		def.indexBuffer = static_cast<VkBuffer>(mesh->GetMeshBuffers().indexBuffer.GetBuffer());
+		// Replace with graphics API call
+		def.material = s.material->GetInternalMaterial();
+
+		def.transform = transform->GetTransformationMatrix();
+		def.vertexBufferAddress = mesh->GetMeshBuffers().vertexBufferAddress;
+		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
+		{
+			drawCtxImpl->transparentSurfaces.push_back(def);
+		}
+		else
+		{
+			drawCtxImpl->opaqueSurfaces.push_back(def);
+		}
+	}
+}
+
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
 	this->m_editorCamera.OnUpdate(delta);
 	this->m_mainDrawContext.opaqueSurfaces.clear();
 	this->m_mainDrawContext.transparentSurfaces.clear();
 	// Test stuff just to show that it works... to be refactored into a more dynamic approach
-	glm::mat4 topMatrix{1.0f};
-	for (auto &nodeEntry : this->m_loadedNodes)
+	glm::mat4 topMatrix{1.0F};
+	for (auto &nodeEntry : this->m_loadedMeshes)
 	{
-		nodeEntry.second->Draw(topMatrix, &this->m_mainDrawContext);
+		DrawMesh(nodeEntry.second, nodeEntry.first, &this->m_mainDrawContext);
 	}
 
 	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0F), Vector3Math::ONE);
@@ -321,10 +366,10 @@ void Hush::VulkanRenderer::Dispose()
 	{
 		vkDeviceWaitIdle(this->m_device);
 
-		for (auto &mesh : this->m_testMeshes)
+		for (auto &mesh : this->m_loadedMeshes)
 		{
-			mesh->meshBuffers.indexBuffer.Dispose(this->m_allocator);
-			mesh->meshBuffers.vertexBuffer.Dispose(this->m_allocator);
+			mesh.second->GetMeshBuffers().indexBuffer.Dispose(this->m_allocator);
+			mesh.second->GetMeshBuffers().vertexBuffer.Dispose(this->m_allocator);
 		}
 
 		this->m_mainDeletionQueue.Flush();
@@ -636,11 +681,15 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 void Hush::VulkanRenderer::InitRenderables()
 {
 	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
+	// Create an example entity with a Mesh component here
 	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
-	std::vector<std::shared_ptr<VulkanMeshNode>> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath).value();
-	for (auto &node : nodeVector)
+	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
+	for (Entity &node : nodeVector)
 	{
-		this->m_loadedNodes[node->GetMesh().GetName()] = node;
+		WorldTransform* xform = node.GetComponent<WorldTransform>();
+		Mesh* mesh = node.GetComponent<Mesh>();
+		std::pair<WorldTransform*, Mesh*> entry(xform, mesh);
+		this->m_loadedMeshes.emplace_back(entry);
 	}
 }
 

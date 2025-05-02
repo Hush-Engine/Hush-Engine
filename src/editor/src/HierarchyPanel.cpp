@@ -1,7 +1,7 @@
 #include "HierarchyPanel.hpp"
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
-#include "Components/Transform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "InspectorPanel.hpp"
 #include "UI.hpp"
 
@@ -20,7 +20,7 @@ void Hush::HierarchyPanel::OnRender()
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
-	Query<Transform> allEntities = this->m_activeScene->CreateQuery<Transform>();
+	Query<WorldTransform> allEntities = this->m_activeScene->CreateQuery<WorldTransform>();
 	allEntities.Each([&inspectorPanel](Entity &entity, Transform &_) {
 		bool selected = inspectorPanel.GetInspectTarget().has_value() &&
 						inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();

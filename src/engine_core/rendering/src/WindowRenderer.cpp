@@ -8,7 +8,7 @@
 #include <SDL_keyboard.h>
 #include <SDL_video.h>
 
-Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
+Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene* activeScene) noexcept
 {
 	if (!InitSDLIfNotStarted())
 	{
@@ -45,6 +45,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName) noexcept
 	}
 
 	this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
+	this->m_windowRenderer->SetActiveScene(activeScene);
 	this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 	this->m_windowRenderer->InitImGui();
 	this->m_windowRenderer->InitRendering();

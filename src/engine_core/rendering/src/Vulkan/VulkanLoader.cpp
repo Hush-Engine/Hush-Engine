@@ -1,25 +1,26 @@
-#include "Shared/GpuAllocatedBuffer.hpp"
 #define VK_NO_PROTOTYPES
+#include <glm/ext/matrix_float4x4.hpp>
+#include "VulkanLoader.hpp"
+#include "VulkanRenderer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
+#include "Vulkan/VkDescriptors.hpp"
 #include <SDL_render.h>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 #include <glm/ext/vector_int3.hpp>
-#include <volk.h>
-#include "VulkanLoader.hpp"
 #include <fastgltf/types.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/core.hpp>
-#include "VulkanRenderer.hpp"
 #include "Shared/ImageTexture.hpp"
-#include "VulkanMeshNode.hpp"
-#include "vk_mem_alloc.hpp"
 #include "Shared/GltfLoadFunctions.hpp"
+#include "../../core/src/Scene.hpp"
+#include "../../core/src/Components/WorldTransform.hpp"
+#include "../../core/src/Components/LocalTransform.hpp"
 
-Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoader::EError> Hush::VulkanLoader::
-	LoadGltfMeshes(VulkanRenderer *engine, std::filesystem::path filePath)
+Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::VulkanLoader::
+	LoadGltfMeshes(VulkanRenderer *engine, std::filesystem::path filePath, Scene *activeScene)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -41,31 +42,21 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 
 	fastgltf::Expected<fastgltf::Asset> loadedAsset =
 		parser.loadGltfBinary(data, filePath.parent_path(), loadingOptions);
-
+	
 	HUSH_ASSERT(loadedAsset, "GLTF asset at {} not properly loaded, error: {}!", filePath.string(),
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
-	Mesh meshInfo{};
-	std::vector<std::shared_ptr<VulkanMeshNode>> meshes;
-	std::vector<std::shared_ptr<VulkanMeshNode>> rootNodes;
+	std::vector<Entity> entities;
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
-		auto node = std::make_shared<VulkanMeshNode>(CreateMeshFromGltfMesh(mesh, loadedAsset.get(), meshInfo, engine));
-		node->SetLocalTransform(glm::mat4{1.F});
-		node->SetWorldTransform(glm::mat4{1.F});
-		meshes.emplace_back(node);
-	}
-
-	// NOTE: Yes, we do need the double iteration
-	for (const fastgltf::Node &node : loadedAsset->nodes)
-	{
-		if (!node.meshIndex.has_value())
-		{
-			continue;
-		}
-		std::shared_ptr<VulkanMeshNode> meshNode = meshes.at(node.meshIndex.value());
-		meshNode->SetLocalTransform(GltfLoadFunctions::GetNodeTransform(node));
+		Entity entity = activeScene->CreateEntityWithName(mesh.name);
+		entity.AddComponent<WorldTransform>();
+		entity.AddComponent<LocalTransform>();
+		// This also adds the component to the entity
+		// TODO: We should probably change this so that it returns void and we add the component a line before calling the function
+		CreateMeshFromGltfMesh(mesh, loadedAsset.get(), entity, engine);
+		entities.emplace_back(std::move(entity));
 	}
 
 	for (fastgltf::Node &node : loadedAsset->nodes)
@@ -74,21 +65,31 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 		{
 			continue;
 		}
-		std::shared_ptr<VulkanMeshNode> &sceneNode = meshes[node.meshIndex.value()];
+		
+		Entity& entity = entities[node.meshIndex.value()];
+		WorldTransform *xformComponent = entity.GetComponent<WorldTransform>();
+		LocalTransform *localXformComponent = entity.GetComponent<LocalTransform>();
+		
+		glm::mat4 nodeXform = GltfLoadFunctions::GetNodeTransform(node);
+		
+		xformComponent->SetTransformationMatrix(nodeXform);
+		localXformComponent->SetTransformationMatrix(nodeXform);
+
 		if (node.children.empty())
 		{
-			// If there are no children, we'll set the transform to global(???
-			sceneNode->SetWorldTransform(sceneNode->GetLocalTransform());
 			continue;
 		}
 		for (size_t &c : node.children)
 		{
-			sceneNode->AddChild(meshes[c]);
-			meshes[c]->SetParent(sceneNode);
+			// Foreach node, we need to adjust the transformation so that the world xform is the world * local
+			Entity& childEntity = entities[c];
+			// At this point world and local transforms are the same, so we can just fetch the world and apply the parent transformation to it
+			WorldTransform* childXform = childEntity.GetComponent<WorldTransform>();
+			childXform->SetTransformationMatrix(xformComponent->XForm(*childXform));			
 		}
 	}
 
-	return meshes;
+	return entities;
 }
 
 // TODO: This is now completely renderer agnostic
@@ -115,19 +116,17 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 	return loadedTexturesResult;
 }
 
-Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh,
-																const fastgltf::Asset &asset, Mesh &meshRef,
+Hush::Mesh* Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh,
+																const fastgltf::Asset &asset, Entity &entityRef,
 																VulkanRenderer *engine)
 {
-	VulkanMeshNode meshNode(std::make_shared<Mesh>());
-
-	Mesh &meshAsset = meshNode.GetMesh();
+	Mesh& meshAsset = entityRef.AddComponent<Mesh>();
 
 	meshAsset.SetName(mesh.name);
-	// Clear out the vector buffers
 
-	std::vector<uint32_t> &indexRef = meshRef.GetIndexBuffer();
-	std::vector<Mesh::Vertex> &vertexRef = meshRef.GetVertexBuffer();
+	// Clear out the vector buffers
+	std::vector<uint32_t> &indexRef = meshAsset.GetIndexBuffer();
+	std::vector<Mesh::Vertex> &vertexRef = meshAsset.GetVertexBuffer();
 	indexRef.clear();
 	vertexRef.clear();
 
@@ -142,7 +141,8 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
 		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}};
 
-	meshNode.m_descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
+	DescriptorAllocatorGrowable descriptorPool;
+	descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
 	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
 
@@ -199,7 +199,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		{
 			size_t materialIdx = primitive.materialIndex.value();
 			std::shared_ptr<IMaterial3D> materialInstance = GenerateMaterial(
-				materialIdx, asset, engine, &materialDataBuffer, meshNode.m_descriptorPool, loadedTextures);
+				materialIdx, asset, engine, &materialDataBuffer, descriptorPool, loadedTextures);
 			surfaceToAdd.material = materialInstance;
 		}
 
@@ -226,10 +226,9 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		samplers.push_back(newSampler);
 	}
 
-	meshRef.CalculateTangentBasis();
+	meshAsset.CalculateTangentBasis();
 	meshAsset.SetMeshBuffers(engine->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
-	meshNode.SetMaterialDataBuffer(materialDataBuffer);
-	return meshNode;
+	return &meshAsset;
 }
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(

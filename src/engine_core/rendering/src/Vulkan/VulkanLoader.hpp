@@ -1,36 +1,20 @@
 #pragma once
 
-// TODO: Move these undefs to the common.hpp file after dev merge
-//  remove stupid MSVC min/max macro definitions
-#ifdef WIN32
-#undef min
-#undef max
-#endif
-
+#include "../../base/src/Common.hpp"
 #include <vector>
-#include <string>
 #include <optional>
 #include <memory>
 #include <filesystem>
-#include "GPUMeshBuffers.hpp"
 #include <fastgltf/types.hpp>
 #include <Result.hpp>
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
-#include "VulkanMeshNode.hpp"
 #include "Shared/Mesh.hpp"
+#include "../../core/src/Entity.hpp"
 
 namespace Hush
 {
-
-	struct MeshAsset
-	{
-		std::string name;
-
-		std::vector<GeoSurface> surfaces;
-		GPUMeshBuffers meshBuffers;
-	};
 
 	// forward declaration
 	class VulkanRenderer;
@@ -49,16 +33,16 @@ namespace Hush
 			FormatNotSupported
 		};
 
-		static Result<std::vector<std::shared_ptr<VulkanMeshNode>>, EError> LoadGltfMeshes(
-			VulkanRenderer *engine, std::filesystem::path filePath);
+		static Result<std::vector<Entity>, EError> LoadGltfMeshes(
+			VulkanRenderer *engine, std::filesystem::path filePath, Scene *activeScene);
 
 		static GpuAllocatedImage LoadTexture(VulkanRenderer *engine, const ImageTexture &texture);
 
 	private:
 		static std::vector<GpuAllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, VulkanRenderer *engine);
 
-		static VulkanMeshNode CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
-													 Mesh &meshRef, VulkanRenderer *engine);
+		static Mesh* CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
+													 Entity &entityRef, VulkanRenderer *engine);
 
 		static std::shared_ptr<GLTFMetallicRoughness> GenerateMaterial(
 			size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,

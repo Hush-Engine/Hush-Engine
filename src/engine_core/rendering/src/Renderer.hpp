@@ -8,15 +8,19 @@
 
 #include "Shared/DefaultImages.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
+#include "Shared/Mesh.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include <SDL2/SDL.h>
 #include <cstdint>
 #include <functional>
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/vec3.hpp>
+#include <memory>
 
 namespace Hush
 {
+	class Scene;
 	struct DirectionalLight;
 	/// @brief A common interface for renderers, Hush supports many graphics APIs, and this is the interface
 	/// that allows us to standardize all of them...
@@ -38,8 +42,14 @@ namespace Hush
 
 		virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
 
+		virtual void SetActiveScene(Scene* scene) = 0;
+		
 		virtual void InitImGui() = 0;
 
+		virtual void PushMesh(const glm::mat4& globalTransform, std::shared_ptr<Mesh> mesh) = 0;
+
+		virtual void DestroyMesh(const std::string_view& name) = 0;
+		
 		virtual void Draw(float delta) = 0;
 
 		/// @brief Each renderer will have to implement a way of updating all the objects
