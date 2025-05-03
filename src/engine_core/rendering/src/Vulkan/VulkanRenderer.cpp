@@ -683,6 +683,7 @@ void Hush::VulkanRenderer::InitRenderables()
 	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\sponza.glb)";
 	// Create an example entity with a Mesh component here
 	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
 	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
 	for (Entity &node : nodeVector)
 	{

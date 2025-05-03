@@ -58,7 +58,7 @@ namespace Hush
 		[[nodiscard]]
 		glm::mat4 XForm(const Transform &other) const;
 
-		glm::mat4 operator*(const Transform &other);
+		glm::mat4 operator*(const Transform &other) const;
 
 	private:
 		glm::vec3 m_position = Vector3Math::ZERO;

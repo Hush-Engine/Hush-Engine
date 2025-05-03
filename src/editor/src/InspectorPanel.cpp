@@ -17,6 +17,8 @@
 #include "Vulkan/vk_mem_alloc.hpp"
 #include "Shared/Mesh.hpp"
 
+constexpr float NESTED_INDENT_SIZE = 10.0f;
+
 void Hush::Serialize(DirectionalLight *component)
 {
 	ImGui::CollapsingHeader("Directional Light", ImGuiTreeNodeFlags_DefaultOpen);
@@ -36,25 +38,48 @@ void Hush::Serialize(IMaterial3D *component)
 	{
 		return;
 	}
+	const float range = 10.0F;
 
 	// Albedo color
 	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
 	ImGui::ColorEdit4("Albedo", reinterpret_cast<float *>(&albedo));
+
+	glm::vec3 &emission = pbrMaterial->GetEmissionColor();
+	ImGui::ColorEdit3("Emission", reinterpret_cast<float *>(&emission));
+
+	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
+	
+	float emissionFactor = pbrMaterial->EmissionFactor();
+	ImGui::SliderFloat("Emission factor", &emissionFactor, -range, range);
+	
+	pbrMaterial->SetEmissionFactor(emissionFactor);
+
+	float roughness = pbrMaterial->GetRoughnessFactor();
+
+	ImGui::SliderFloat("Roughness factor", &roughness, -range, range);
+	pbrMaterial->SetRoughnessFactor(roughness);
+
 	float metallic = pbrMaterial->GetMetallicFactor();
-	const float range = 10.0F;
 	ImGui::SliderFloat("Metallic factor", &metallic, -range, range);
 	pbrMaterial->SetMetallicFactor(metallic);
 }
 
 void Hush::Serialize(Mesh *component)
 {
-	ImGui::CollapsingHeader("Mesh Component", ImGuiTreeNodeFlags_DefaultOpen);
+	if (!ImGui::CollapsingHeader("Mesh Component", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		return;
+	}
+	// TODO: Maybe write this as a table
+	ImGui::Indent(NESTED_INDENT_SIZE);
 	const std::vector<GeoSurface> &surfaces = component->GetSurfaces();
 	// Iterate over the surfaces and  serialize their materials as submeshes
 	for (const GeoSurface &surface : surfaces)
 	{
-		ImGui::CollapsingHeader("Surface", ImGuiTreeNodeFlags_DefaultOpen);
-		Serialize(surface.material.get());
+		if (ImGui::CollapsingHeader("Surface", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			Serialize(surface.material.get());
+		}
 	}
 }
 

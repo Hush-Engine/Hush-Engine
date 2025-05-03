@@ -23,7 +23,6 @@
 #include "VkDescriptors.hpp"
 #include "GPUSceneData.hpp"
 #include "GltfMetallicRoughness.hpp"
-#include "Shared/RenderableNode.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "VulkanSwapchain.hpp"
 #include "Vulkan/ShaderModuleLoader.hpp"
@@ -274,7 +273,7 @@ namespace Hush
 		VkSampler m_defaultSamplerNearest;
 
 		EditorCamera m_editorCamera;
-		Scene* m_activeScene;
+		Scene* m_activeScene = nullptr;
 		DirectionalLight *m_directionalLight = nullptr;
 
 		// Frame related data

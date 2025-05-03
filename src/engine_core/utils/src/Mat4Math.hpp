@@ -5,6 +5,7 @@
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Hush::Mat4Math {
 	constexpr glm::mat4 IDENTITY = glm::mat4(1.0F);

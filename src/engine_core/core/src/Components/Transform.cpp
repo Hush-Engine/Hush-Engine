@@ -93,7 +93,7 @@ glm::mat4 Hush::Transform::XForm(const Transform& other) const {
 	return this->GetTransformationMatrix() * other.GetTransformationMatrix();
 }
 
-glm::mat4 Hush::Transform::operator*(const Transform &other)
+glm::mat4 Hush::Transform::operator*(const Transform &other) const
 {
 	return this->XForm(other);
 }

@@ -87,6 +87,8 @@ namespace Hush
 
 		[[nodiscard]]
 		const glm::vec3 &GetEmissionColor() const noexcept;
+		
+		glm::vec3 &GetEmissionColor() noexcept;
 
 		void SetEmissionColor(const glm::vec3 &color) noexcept;
 

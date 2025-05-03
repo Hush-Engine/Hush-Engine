@@ -5,7 +5,7 @@ namespace Hush {
 
 	// Takes care of all transformation calculations per entity
 	// this also determines how entities are rendered since their global transform component is updated
-	class TransformationSystem : ISystem {
+	class TransformationSystem : public ISystem {
 	public:			
 		void Init() override;
 

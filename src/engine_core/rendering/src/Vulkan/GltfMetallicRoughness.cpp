@@ -208,6 +208,13 @@ const glm::vec3 &Hush::GLTFMetallicRoughness::GetEmissionColor() const noexcept
 	return *reinterpret_cast<const glm::vec3 *>(&this->m_materialConstants.emissionFactors);
 }
 
+glm::vec3 &Hush::GLTFMetallicRoughness::GetEmissionColor() noexcept
+{
+	// Reinterpret the vec4 into a vec3, we'll be leaving out the w component in the memory span, this is worth it since
+	// we're returning a reference
+	return *reinterpret_cast<glm::vec3 *>(&this->m_materialConstants.emissionFactors);
+}
+
 void Hush::GLTFMetallicRoughness::SetEmissionColor(const glm::vec3 &color) noexcept
 {
 	// TODO: Optimize this
