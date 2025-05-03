@@ -67,6 +67,11 @@ void Hush::HushEngine::Quit()
 	this->m_isApplicationRunning = false;
 }
 
+Hush::Scene *Hush::HushEngine::GetScene()
+{
+	return this->m_app->GetScene();
+}
+
 void Hush::HushEngine::Init()
 {
 	this->m_app->Init();

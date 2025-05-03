@@ -7,13 +7,15 @@
 #pragma once
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "HushBindings.hpp"
 
 #include <string_view>
 
 namespace Hush
 {
-	struct DirectionalLight;
-	class HushEngine
+  struct DirectionalLight;
+
+  class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 	public:
 		/// <summary>
@@ -44,6 +46,8 @@ namespace Hush
 		/// </summary>
 		void Quit();
 
+		[[hush::export]]
+		Scene* GetScene();
 	private:
 		void Init();
 
