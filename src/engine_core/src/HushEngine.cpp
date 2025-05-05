@@ -1,11 +1,9 @@
 #include "HushEngine.hpp"
 #include "ApplicationLoader.hpp"
-#include "Components/Transform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <WindowManager.hpp>
 #include <imgui/imgui.h>
-#include <spdlog/details/os-inl.h>
 
 Hush::HushEngine::~HushEngine()
 {

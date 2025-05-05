@@ -28,6 +28,12 @@ namespace Hush
 		{
 			return this->m_normalImage;
 		}
+		
+		[[nodiscard]]
+		const GpuAllocatedImage &GetTransparentImage() const
+		{
+			return this->m_transparentImage;
+		}
 
 	private:
 		GpuAllocatedImage m_whiteImage{};
@@ -35,6 +41,9 @@ namespace Hush
 		GpuAllocatedImage m_blackImage{};
 
 		GpuAllocatedImage m_normalImage{};
+		
+		GpuAllocatedImage m_transparentImage{};
+		
 	};
 
 } // namespace Hush

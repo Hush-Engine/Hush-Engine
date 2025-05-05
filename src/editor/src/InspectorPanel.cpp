@@ -1,11 +1,13 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Logger.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
 #include <glm/ext/vector_float3.hpp>
 #include <optional>
+#include <string>
 #include <vector>
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -13,11 +15,9 @@
 #include <memory>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-#include "Vulkan/VkTypes.hpp"
-#include "Vulkan/vk_mem_alloc.hpp"
 #include "Shared/Mesh.hpp"
 
-constexpr float NESTED_INDENT_SIZE = 10.0f;
+constexpr float NESTED_INDENT_SIZE = 10.0F;
 
 void Hush::Serialize(DirectionalLight *component)
 {
@@ -74,13 +74,15 @@ void Hush::Serialize(Mesh *component)
 	ImGui::Indent(NESTED_INDENT_SIZE);
 	const std::vector<GeoSurface> &surfaces = component->GetSurfaces();
 	// Iterate over the surfaces and  serialize their materials as submeshes
-	for (const GeoSurface &surface : surfaces)
+	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		if (ImGui::CollapsingHeader("Surface", ImGuiTreeNodeFlags_DefaultOpen))
+		const GeoSurface& surface = surfaces[i];
+		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			Serialize(surface.material.get());
 		}
 	}
+	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
 void Hush::InspectorPanel::OnRender()

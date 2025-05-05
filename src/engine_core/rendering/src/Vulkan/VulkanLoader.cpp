@@ -237,11 +237,10 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	// Scene Material buffer writing
-	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(sceneMaterialBuffer->GetMappedData());
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
 	auto materialInstance = std::make_shared<GLTFMetallicRoughness>();
-	materialInstance->Init(engine);
+	materialInstance->Init(engine, *sceneMaterialBuffer, materialIdx);
 	materialInstance->SetAlbedo(*reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetEmissionColor(
 		glm::vec3(material.emissiveFactor.x(), material.emissiveFactor.y(), material.emissiveFactor.z()));
@@ -266,25 +265,22 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 
 	materialInstance->SetAlphaThreshold(alphaThreshold);
 
-	mappedData[materialIdx] = materialInstance->GetMaterialConstants();
-
 	GLTFMetallicRoughness::MaterialResources &materialResources = materialInstance->GetMaterialResources();
 	// default the material textures
 	materialResources.colorImage = engine->GetDefaultImageProvider()->GetWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
 	materialResources.metalRoughImage = engine->GetDefaultImageProvider()->GetWhiteImage();
-	materialResources.emissiveImage = engine->GetDefaultImageProvider()->GetBlackImage();
+	materialResources.emissiveImage = engine->GetDefaultImageProvider()->GetTransparentImage();
 	materialResources.normalImage = engine->GetDefaultImageProvider()->GetNormalImage();
 
 	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
 	materialResources.emissiveSampler = engine->GetDefaultSamplerLinear();
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
-
+	
 	// Then actually set them to the material's
 	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	materialResources.dataBuffer = static_cast<VkBuffer>(sceneMaterialBuffer->GetBuffer());
 	materialResources.dataBufferOffset =
 		static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
 	materialInstance->GenerateMaterialInstance(&allocatorPool);

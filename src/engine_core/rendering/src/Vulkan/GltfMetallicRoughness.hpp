@@ -5,12 +5,15 @@
 */
 
 #pragma once
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/IMaterial3D.hpp"
+#include "Shared/MaterialOptions.hpp"
 #include "Shared/Types/MaterialInstance.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
+#include <cstdint>
 #include <glm/ext/vector_float4.hpp>
 #include <memory>
 #include <vulkan/vulkan_core.h>
@@ -49,6 +52,7 @@ namespace Hush
 			VkSampler normalSampler;
 			GpuAllocatedImage emissiveImage;
 			VkSampler emissiveSampler;
+			GpuAllocatedBuffer gpuDataBuffer;
 			VkBuffer dataBuffer;
 			uint32_t dataBufferOffset;
 		};
@@ -57,7 +61,8 @@ namespace Hush
 
 		DescriptorWriter writer;
 
-		void Init(IRenderer *renderer);
+		// TODO: Maybe make a version that does not require a previous material buffer
+		void Init(IRenderer *renderer, GpuAllocatedBuffer materialBuffer, size_t materialIdx, uint32_t dataBufferOffset = 0);
 
 		void ClearResources(VkDevice device);
 
@@ -118,10 +123,12 @@ namespace Hush
 
 		MaterialConstants &GetMaterialConstants() noexcept;
 
+		void SetMaterialConstants(const MaterialConstants& values);
+		
 	private:
 		void BuildPipelines();
 
-		MaterialConstants m_materialConstants{};
+		MaterialConstants* m_materialConstants = nullptr;
 
 		MaterialResources m_materialResources;
 
@@ -130,6 +137,12 @@ namespace Hush
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 
 		IRenderer *m_renderer;
+
+		// Original material index
+		// TODO: Check if we *actually* need this
+		size_t m_materialIdx;
+		
+		EAlphaBlendMode m_alphaBlendMode;
 	};
 
 } // namespace Hush

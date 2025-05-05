@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Shared/GpuAllocatedImage.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 
 namespace Hush
 {

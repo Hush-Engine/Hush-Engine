@@ -318,7 +318,7 @@ ImGuiID Hush::UI::DockSpace(const char *dockspaceId, const char *name, ImGuiDock
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+	ImGui::Begin(name, nullptr, window_flags);
 	ImGui::PopStyleVar();
 	ImGui::PopStyleVar(2);
 
