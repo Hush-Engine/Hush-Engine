@@ -53,7 +53,6 @@ namespace Hush
 			GpuAllocatedImage emissiveImage;
 			VkSampler emissiveSampler;
 			GpuAllocatedBuffer gpuDataBuffer;
-			VkBuffer dataBuffer;
 			uint32_t dataBufferOffset;
 		};
 
