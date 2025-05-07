@@ -130,19 +130,19 @@ namespace Hush
 
 		MaterialConstants* m_materialConstants = nullptr;
 
-		MaterialResources m_materialResources;
+		MaterialResources m_materialResources{};
 
-		EMaterialPass m_materialPass;
+		EMaterialPass m_materialPass = EMaterialPass::MainColor;
 
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 
-		IRenderer *m_renderer;
+		IRenderer *m_renderer = nullptr;
 
 		// Original material index
 		// TODO: Check if we *actually* need this
-		size_t m_materialIdx;
+		size_t m_materialIdx = 0;
 		
-		EAlphaBlendMode m_alphaBlendMode;
+		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 	};
 
 } // namespace Hush

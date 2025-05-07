@@ -1,8 +1,16 @@
+#ifndef PBR_UTILS
+#define PBR_UTILS
 const float PI = 3.14159265;
 const float EPSILON = 0.00001f;
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+
+vec3 FresnelSchlickRoughness(vec3 F0, float cosTheta, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 float GeometrySchlickGGX(float NdotV, float alpha) {
@@ -18,6 +26,19 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float alpha) {
     float ggx2 = GeometrySchlickGGX(NdotV, alpha);
     float ggx1 = GeometrySchlickGGX(NdotL, alpha);
     return ggx1 * ggx2;
+}
+
+
+float GaSchlickG1(float cosTheta, float k)
+{
+	return cosTheta / (cosTheta * (1.0 - k) + k);
+}
+
+float GaSchlickGGX(float cosLi, float NdotV, float roughness)
+{
+	float r = roughness + 1.0;
+	float k = (r * r) / 8.0; // Epic suggests using this roughness remapping for analytic lights.
+	return GaSchlickG1(cosLi, k) * GaSchlickG1(NdotV, k);
 }
 
 float DistributionGGX(vec3 N, vec3 H, float alpha) {
@@ -38,7 +59,7 @@ vec3 PBR(vec3 albedo, vec3 emission, float metallic, float roughness, vec3 N, ve
     float cosTheta = max(dot(N, L), 0.0);
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
-    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
     
     float NDF = DistributionGGX(N, H, alpha);    
     float G = GeometrySmith(N, V, L, alpha);
@@ -56,3 +77,4 @@ vec3 PBR(vec3 albedo, vec3 emission, float metallic, float roughness, vec3 N, ve
     
     return directionalContribution + emission;
 }
+#endif
