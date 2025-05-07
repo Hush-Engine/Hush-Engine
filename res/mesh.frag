@@ -52,6 +52,8 @@ void main()
     m_params.View = fragToCamDir;
     vec3 radiance = u_sceneData.sunlightColor.rgb * u_sceneData.sunlightDirection.w * PI;
 
+	m_params.NdotV = max(dot(m_params.Normal, m_params.View), 0.0);
+
     vec4 texEmission = texture(emissiveTex, inUV);
     vec3 emission = (scalarPow(texEmission.xyz, 2.2) * materialData.emissionFactors.xyz) * materialData.emissionFactors.w;
     
