@@ -45,6 +45,7 @@
 #include "Vulkan/VkTypes.hpp"
 #include <magic_enum/magic_enum.hpp>
 #include "../../core/src/Components/WorldTransform.hpp"
+#include "../../core/src/Scene.hpp"
 
 PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *functionName, void *userData)
 {
@@ -334,7 +335,8 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	if (this->m_directionalLight != nullptr)
 	{
 		this->m_sceneData.sunlightColor = this->m_directionalLight->color.GetRGBA32F();
-		this->m_sceneData.sunlightDirection = glm::vec4(0, 1, 0.5F, this->m_directionalLight->intensity + 1.0F);
+		glm::vec3 sunDir = this->m_sunTransform->Forward();
+		this->m_sceneData.sunlightDirection = glm::vec4(sunDir, this->m_directionalLight->intensity + 1.0F);
 	}
 }
 
@@ -605,7 +607,12 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 
 void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
 {
-	this->m_directionalLight = light;
+	(void)light;
+	Query<DirectionalLight, WorldTransform> queryRes = this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
+	queryRes.Each([this](DirectionalLight& lightComponent, WorldTransform& transformComponent){
+  		this->m_directionalLight = &lightComponent;
+  		this->m_sunTransform = &transformComponent;
+	});
 }
 
 Hush::VulkanSwapchain &Hush::VulkanRenderer::GetSwapchain()
@@ -680,9 +687,9 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
+	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
 	// Create an example entity with a Mesh component here
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
 	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
 	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
 	for (Entity &node : nodeVector)

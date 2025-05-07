@@ -56,11 +56,11 @@ void Hush::Serialize(IMaterial3D *component)
 
 	float roughness = pbrMaterial->GetRoughnessFactor();
 
-	ImGui::SliderFloat("Roughness factor", &roughness, -range, range);
+	ImGui::SliderFloat("Roughness factor", &roughness, 0.F, 1.0F);
 	pbrMaterial->SetRoughnessFactor(roughness);
 
 	float metallic = pbrMaterial->GetMetallicFactor();
-	ImGui::SliderFloat("Metallic factor", &metallic, -range, range);
+	ImGui::SliderFloat("Metallic factor", &metallic, -1.0F, 1.0F);
 	pbrMaterial->SetMetallicFactor(metallic);
 }
 

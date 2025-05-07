@@ -19,8 +19,12 @@ struct PBRParameters
 	float NdotV;
 } m_params;
 
-vec3 CalculateDirLights(vec3 F0)
+vec3 CalculateDirLights()
 {
+	
+    const vec3 Fdielectric = vec3(0.04);
+    vec3 F0 = mix(Fdielectric, m_params.Albedo, m_params.Metalness);
+    
 	vec3 result = vec3(0.0);
 	for (int i = 0; i < 1; i++) //Only one light for now
 	{
@@ -37,7 +41,6 @@ vec3 CalculateDirLights(vec3 F0)
 		// float cosLh = max(0.0, dot(m_params.Normal, Lh)); // This is just NdotH
 
 		vec3 F = FresnelSchlickRoughness(F0, max(0.0, dot(Lh, m_params.View)), m_params.Roughness);
-		// ERR: This does not take a float on its implementation
 		float D = DistributionGGX(m_params.Normal, Lh, m_params.Roughness);
 		float G = GaSchlickGGX(cosLi, m_params.NdotV, m_params.Roughness);
 

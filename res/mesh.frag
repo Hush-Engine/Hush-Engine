@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : require
 #include "input_structures.glsl"
 #include "pbrUtils.glsl"
+#include "shaderMath.glsl"
 #include "lighting.glsl"
 
 layout(location = 0) in vec3 inNormal;
@@ -14,24 +15,6 @@ layout(location = 5) in vec3 inWorldPos;
 
 layout(location = 0) out vec4 outFragColor;
 
-// Makes the normal look better for little performance cost
-vec3 calculateTangentGramSchmidt(in vec3 normal, in vec3 tangent) {
-    return (tangent - dot(tangent, normal) * normal);
-}
-
-vec3 viewMatExtractFwd(in mat4 viewMatrix) {
-    // 8 9 and 10 idx corresponds to -fwd
-    return vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-}
-
-vec3 viewMatExtractPos(in mat4 viewMatrix) {
-    // I... think this is correct, we need to negate this
-    return -vec3(viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]);
-}
-
-vec3 scalarPow(in vec3 v, in float n) {
-    return vec3(pow(v.x, n), pow(v.y, n), pow(v.z, n));
-}
 
 // Tangent, BiTangent and normal matrix
 // Converts texture space into model space
@@ -48,7 +31,6 @@ void main()
     }
 
     // PBR stuff
-    // vec3 m_params.Albedo = texColor.rgb * inColor;
     m_params.Albedo = scalarPow(texColor.rgb * inColor, 2.2);
     vec4 metalRough = texture(metalRoughTex, inUV);
     m_params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
@@ -67,29 +49,14 @@ void main()
 
     // TODO: replace with IBL for point lights
     vec3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - inWorldPos);
+    m_params.View = fragToCamDir;
     vec3 radiance = u_sceneData.sunlightColor.rgb * u_sceneData.sunlightDirection.w * PI;
 
     vec4 texEmission = texture(emissiveTex, inUV);
     vec3 emission = (scalarPow(texEmission.xyz, 2.2) * materialData.emissionFactors.xyz) * materialData.emissionFactors.w;
-
     
-    const vec3 Fdielectric = vec3(0.04);
-    
-    vec3 directLight = CalculateDirLights(Fdielectric);
-    vec3 F0 = mix(Fdielectric, m_params.Albedo, m_params.Metalness);
-
-    
-    // vec3 directLight = PBR(
-    //     m_params.Albedo,
-    //     emission,
-    //     m_params.Metalness,
-    //     m_params.Roughness,
-    //     m_params.Normal, //N
-    //     fragToCamDir,
-    //     normalize(u_sceneData.sunlightDirection.xyz), //L
-    //     radiance
-    // );
+    vec3 directLight = CalculateDirLights();
 
     vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.1;
-    outFragColor = vec4(ambient + directLight, texColor.a);
+    outFragColor = vec4(ambient + directLight + emission, texColor.a);
 }

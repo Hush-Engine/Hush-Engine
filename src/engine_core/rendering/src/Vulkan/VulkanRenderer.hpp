@@ -275,6 +275,7 @@ namespace Hush
 		EditorCamera m_editorCamera;
 		Scene* m_activeScene = nullptr;
 		DirectionalLight *m_directionalLight = nullptr;
+		WorldTransform* m_sunTransform = nullptr;
 
 		// Frame related data
 		std::array<FrameData, FRAME_OVERLAP> m_frames{};
