@@ -28,7 +28,7 @@ vec3 CalculateDirLights()
 	vec3 result = vec3(0.0);
 	for (int i = 0; i < 1; i++) //Only one light for now
 	{
-		float sunPower = u_sceneData.sunlightDirection.w;
+		float sunPower = u_sceneData.sunlightDirection.w * PI;
 		if (sunPower == 0.0)
 			continue;
 

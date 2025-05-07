@@ -50,7 +50,6 @@ void main()
     // TODO: replace with IBL for point lights
     vec3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - inWorldPos);
     m_params.View = fragToCamDir;
-    vec3 radiance = u_sceneData.sunlightColor.rgb * u_sceneData.sunlightDirection.w * PI;
 
 	m_params.NdotV = max(dot(m_params.Normal, m_params.View), 0.0);
 
