@@ -336,7 +336,7 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	{
 		this->m_sceneData.sunlightColor = this->m_directionalLight->color.GetRGBA32F();
 		glm::vec3 sunDir = this->m_sunTransform->Forward();
-		this->m_sceneData.sunlightDirection = glm::vec4(sunDir, this->m_directionalLight->intensity + 1.0F);
+		this->m_sceneData.sunlightDirection = glm::vec4(sunDir, this->m_directionalLight->intensity);
 	}
 }
 
@@ -687,9 +687,9 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
 	// Create an example entity with a Mesh component here
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
 	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
 	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
 	for (Entity &node : nodeVector)

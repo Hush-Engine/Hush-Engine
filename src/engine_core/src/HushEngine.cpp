@@ -1,8 +1,11 @@
 #include "HushEngine.hpp"
 #include "ApplicationLoader.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <WindowManager.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/trigonometric.hpp>
 #include <imgui/imgui.h>
 
 Hush::HushEngine::~HushEngine()
@@ -76,6 +79,8 @@ void Hush::HushEngine::Init()
 	// Add a default directional light
 	Scene *scene = this->m_app->GetScene();
 	Entity entity = scene->CreateEntityWithName("Directional Light");
-	entity.AddComponent<WorldTransform>();
+	WorldTransform& transform = entity.AddComponent<WorldTransform>();
+	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
+	entity.AddComponent<LocalTransform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
 }

@@ -3,7 +3,7 @@
 const float PI = 3.14159265;
 const float EPSILON = 0.00001f;
 
-vec3 FresnelSchlick(float cosTheta, vec3 F0) {
+vec3 FresnelSchlick(vec3 F0, float cosTheta) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
@@ -50,31 +50,5 @@ float DistributionGGX(vec3 N, vec3 H, float alpha) {
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
     return num / denom;
-}
-
-vec3 PBR(vec3 albedo, vec3 emission, float metallic, float roughness, vec3 N, vec3 V, vec3 L, vec3 radiance)
-{
-    float alpha = roughness * roughness;
-    vec3 H = normalize(V + L);
-    float cosTheta = max(dot(N, L), 0.0);
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, metallic);
-    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
-    
-    float NDF = DistributionGGX(N, H, alpha);    
-    float G = GeometrySmith(N, V, L, alpha);
-
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + EPSILON;
-    vec3 specular = numerator / denominator;
-
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - metallic;
-
-    float NdotL = max(dot(N, L), 0.0);
-    vec3 directionalContribution = (kD * albedo + specular) * radiance * NdotL;
-    
-    return directionalContribution + emission;
 }
 #endif

@@ -270,27 +270,6 @@ bool Hush::UI::BeginToolBar()
 	return ImGui::Begin("##toolbar", nullptr, toolbarFlags);
 }
 
-void Hush::UI::SerializeTransform(Transform *transform)
-{
-	if (!ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		return;
-	}
-
-	glm::vec3 &pos = transform->GetPosition();
-	glm::vec3 &scale = transform->GetScale();
-	glm::vec3 rot = glm::degrees(transform->GetEulerAngles());
-	ImGui::Text("Position");
-	ImGui::InputFloat3("##Position", reinterpret_cast<float *>(&pos));
-
-	ImGui::Text("Rotation");
-	ImGui::InputFloat3("##Rotation", reinterpret_cast<float *>(&rot));
-
-	ImGui::Text("Scale");
-	ImGui::InputFloat3("##Scale", reinterpret_cast<float *>(&scale));
-	transform->SetRotationQuat(glm::quat(glm::radians(rot)));
-}
-
 ImGuiID Hush::UI::DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags)
 {
 	ImGuiDockNodeFlags dockspaceFlags =

@@ -58,6 +58,6 @@ void main()
     
     vec3 directLight = CalculateDirLights();
 
-    vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.1;
+    vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.3;
     outFragColor = vec4(ambient + directLight + emission, texColor.a);
 }

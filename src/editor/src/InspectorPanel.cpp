@@ -5,7 +5,9 @@
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
+#include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/trigonometric.hpp>
 #include <optional>
 #include <string>
 #include <vector>
@@ -85,6 +87,33 @@ void Hush::Serialize(Mesh *component)
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
+
+void Hush::Serialize(Transform* component) 
+{
+	if (!ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		return;
+	}
+
+	glm::vec3* pos = component->GetPosition();
+	glm::vec3 scale = component->GetScale();
+	glm::vec3 rot = glm::degrees(component->GetEulerAngles());
+	ImGui::Text("Position");
+	ImGui::InputFloat3("##Position", reinterpret_cast<float *>(pos));
+
+	ImGui::Text("Rotation");
+	ImGui::InputFloat3("##Rotation", reinterpret_cast<float *>(&rot));
+
+	ImGui::Text("Scale");
+	ImGui::InputFloat3("##Scale", reinterpret_cast<float *>(&scale));
+	if (scale != component->GetScale()) {
+		component->SetScale(scale);
+	}
+	if (rot != glm::degrees(component->GetEulerAngles())) {
+		component->SetRotationQuat(glm::quat(glm::radians(rot)));
+	}
+}
+
 void Hush::InspectorPanel::OnRender()
 {
 	ImGui::Begin("Inspector");
@@ -121,7 +150,7 @@ void Hush::InspectorPanel::RenderProperties()
 	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
-	UI::SerializeComponent(transform, UI::ESerializableComponentType::Transform);
+	Serialize(transform);
 	// Get all the other entity's components
 	// TODO: handle this with reflection
 	DirectionalLight *dirLightComponent = this->m_inspectTarget->GetComponent<DirectionalLight>();

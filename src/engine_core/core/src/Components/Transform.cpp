@@ -7,30 +7,32 @@
 #include "Mat4Math.hpp"
 
 Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, const glm::quat &rotation)
-	: m_position(position),
-	  m_scale(scale),
-	  m_rotation(rotation)
 {
+	this->m_transform = Mat4Math::ComposeTRS(position, rotation, scale);
 }
 
 void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept
 {
-	this->m_position = position;
+	this->m_transform[Mat4Math::TRANSLATION_COLUMN] = glm::vec4(position, 1.0F);
 }
 
-const glm::vec3 &Hush::Transform::GetPosition() const noexcept
-{
-	return this->m_position;
+const glm::vec3* Hush::Transform::GetPosition() const noexcept {
+	// WARN: This is potentially undefined behaviour, but, should work for all compilers
+	// NOLINTNEXTLINE
+	return reinterpret_cast<const glm::vec3*>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
-glm::vec3 &Hush::Transform::GetPosition() noexcept
+glm::vec3* Hush::Transform::GetPosition() noexcept
 {
-	return this->m_position;
+	// WARN: This is potentially undefined behaviour, but, should work for all compilers
+	// NOLINTNEXTLINE
+	return reinterpret_cast<glm::vec3*>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
 void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
 {
 	this->m_scale = scale;
+	this->m_dirty = true;
 }
 
 const glm::vec3 &Hush::Transform::GetScale() const noexcept
@@ -46,6 +48,7 @@ glm::vec3 &Hush::Transform::GetScale() noexcept
 void Hush::Transform::SetRotationQuat(const glm::quat &rotationQuat) noexcept
 {
 	this->m_rotation = rotationQuat;
+	this->m_dirty = true;
 }
 
 glm::quat Hush::Transform::GetRotationQuat() const noexcept
@@ -56,6 +59,7 @@ glm::quat Hush::Transform::GetRotationQuat() const noexcept
 void Hush::Transform::SetEulerAngles(const glm::vec3 &euler) noexcept
 {
 	this->m_rotation = glm::quat(euler);
+	this->m_dirty = true;
 }
 
 glm::vec3 Hush::Transform::GetEulerAngles() const noexcept
@@ -65,6 +69,7 @@ glm::vec3 Hush::Transform::GetEulerAngles() const noexcept
 
 glm::vec3 Hush::Transform::Forward() const noexcept
 {
+	// TODO: Make this a direct access
 	return this->m_rotation * glm::vec3(0.0F, 0.0F, this->m_scale.z);
 }
 
@@ -80,12 +85,22 @@ glm::vec3 Hush::Transform::Right() const noexcept
 
 void Hush::Transform::SetTransformationMatrix(const glm::mat4 &xform)
 {
-	Mat4Math::DecomposeTRS(xform, this->m_position, this->m_rotation, this->m_scale);
+	// This overrides any other previous setters we made
+	this->m_dirty = false;
+	this->m_transform = xform;
+	glm::vec3 discarded;
+	Mat4Math::DecomposeTRS(this->m_transform, discarded, this->m_rotation, this->m_scale);
 }
 
 
 glm::mat4 Hush::Transform::GetTransformationMatrix() const {
-	return Mat4Math::ComposeTRS(this->m_position, this->m_rotation, this->m_scale);
+	if (!this->m_dirty) {
+		return this->m_transform;
+	}
+	const glm::vec3* position = this->GetPosition();
+	this->m_transform = Mat4Math::ComposeTRS(*position, this->m_rotation, this->m_scale);
+	this->m_dirty = false;
+	return this->m_transform;
 }
 
 

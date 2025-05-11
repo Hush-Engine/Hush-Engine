@@ -1,3 +1,4 @@
+#include "Assertions.hpp"
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
 #include "VulkanLoader.hpp"
@@ -48,6 +49,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 
 	std::vector<Entity> entities;
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
+	// HUSH_ASSERT(loadedAsset->meshes.size() != loadedAsset->nodes.size(), "Meshes vector size does not match nodes size");
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
 		Entity entity = activeScene->CreateEntityWithName(mesh.name);
@@ -85,7 +87,9 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 			Entity& childEntity = entities[c];
 			// At this point world and local transforms are the same, so we can just fetch the world and apply the parent transformation to it
 			WorldTransform* childXform = childEntity.GetComponent<WorldTransform>();
-			childXform->SetTransformationMatrix(xformComponent->XForm(*childXform));			
+			LocalTransform* childlocalXform = childEntity.GetComponent<LocalTransform>();
+			childXform->SetTransformationMatrix(xformComponent->XForm(*childXform));
+			childlocalXform->SetParent(entity.GetId());
 		}
 	}
 
