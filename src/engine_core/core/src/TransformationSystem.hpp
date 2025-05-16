@@ -1,12 +1,14 @@
 #pragma once
 
 #include "ISystem.hpp"
-namespace Hush {
+namespace Hush
+{
 
 	// Takes care of all transformation calculations per entity
 	// this also determines how entities are rendered since their global transform component is updated
-	class TransformationSystem : public ISystem {
-	public:			
+	class TransformationSystem : public ISystem
+	{
+	public:
 		void Init() override;
 
 		/// OnShutdown() is called when the system is shutting down.
@@ -29,4 +31,4 @@ namespace Hush {
 		/// OnPostRender() is called after rendering.
 		void OnPostRender() override;
 	};
-}
+} // namespace Hush

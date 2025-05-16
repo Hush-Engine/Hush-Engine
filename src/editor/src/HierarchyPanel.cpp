@@ -22,12 +22,14 @@ void Hush::HierarchyPanel::OnRender()
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
-	Query<WorldTransform, LocalTransform> allEntities = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform>();
-	allEntities.Each([&inspectorPanel](Entity &entity, WorldTransform &_, LocalTransform& localxForm) {
+	Query<WorldTransform, LocalTransform> allEntities =
+		this->m_activeScene->CreateQuery<WorldTransform, LocalTransform>();
+	allEntities.Each([&inspectorPanel](Entity &entity, WorldTransform &_, LocalTransform &localxForm) {
 		bool selected = inspectorPanel.GetInspectTarget().has_value() &&
 						inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
 		// Get the selectable that's related to the parent
-		if (localxForm.HasParent()) {
+		if (localxForm.HasParent())
+		{
 			// localxForm.GetParentId();
 		}
 		if (!ImGui::Selectable(entity.GetName().value_or("").data(), selected))

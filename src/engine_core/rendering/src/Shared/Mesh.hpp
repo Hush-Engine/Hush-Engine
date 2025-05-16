@@ -91,11 +91,10 @@ namespace Hush
 		{
 			return this->m_meshBuffers;
 		}
-		
+
 		void CalculateNormals();
 
 	private:
-
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 		std::string m_name;

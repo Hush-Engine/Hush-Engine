@@ -73,7 +73,8 @@ namespace Hush
 			return glm::vec4(1, 0, 1, 1);
 		}
 
-		constexpr static Color Transparent() {
+		constexpr static Color Transparent()
+		{
 			return glm::vec4(1.0F, 1.0F, 1.0F, 0.0F);
 		}
 

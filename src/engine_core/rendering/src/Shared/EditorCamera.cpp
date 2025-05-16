@@ -23,7 +23,7 @@ void Hush::EditorCamera::OnUpdate(float delta)
 		constexpr float zoomSpeed = 100.f;
 		this->m_position += forward * InputManager::GetMouseScrollAcceleration().y * zoomSpeed * delta;
 	}
-	
+
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
 		return;

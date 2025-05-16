@@ -171,4 +171,3 @@ namespace Hush
 
 // NOLINTNEXTLINE
 HUSH_GENERATE_FLAGS(Hush::EPbrOptions, int32_t);
-

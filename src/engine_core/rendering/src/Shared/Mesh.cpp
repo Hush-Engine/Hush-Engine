@@ -7,8 +7,9 @@ constexpr size_t VERTEX_PER_TRIANGLE = 3;
 
 void Hush::Mesh::CalculateNormals()
 {
-	for(size_t i = 0; i < this->m_indices.size(); i += VERTEX_PER_TRIANGLE) {
-		
+	for (size_t i = 0; i < this->m_indices.size(); i += VERTEX_PER_TRIANGLE)
+	{
+
 		size_t idx0 = this->m_indices.at(i);
 		size_t idx1 = this->m_indices.at(i + 1);
 		size_t idx2 = this->m_indices.at(i + 2);

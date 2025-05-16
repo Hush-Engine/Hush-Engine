@@ -50,10 +50,10 @@ void Hush::Serialize(IMaterial3D *component)
 	ImGui::ColorEdit3("Emission", reinterpret_cast<float *>(&emission));
 
 	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
-	
+
 	float emissionFactor = pbrMaterial->EmissionFactor();
 	ImGui::SliderFloat("Emission factor", &emissionFactor, -range, range);
-	
+
 	pbrMaterial->SetEmissionFactor(emissionFactor);
 
 	float roughness = pbrMaterial->GetRoughnessFactor();
@@ -68,7 +68,6 @@ void Hush::Serialize(IMaterial3D *component)
 	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
 	ImGui::SliderFloat("Alpha threshold", &alphaThreshold, 0.0F, 1.0F);
 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
-	
 }
 
 void Hush::Serialize(Mesh *component)
@@ -83,8 +82,9 @@ void Hush::Serialize(Mesh *component)
 	// Iterate over the surfaces and  serialize their materials as submeshes
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
-		const GeoSurface& surface = surfaces[i];
-		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		const GeoSurface &surface = surfaces[i];
+		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
+									ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			Serialize(surface.material.get());
 		}
@@ -92,15 +92,14 @@ void Hush::Serialize(Mesh *component)
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
-
-void Hush::Serialize(Transform* component) 
+void Hush::Serialize(Transform *component)
 {
 	if (!ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		return;
 	}
 
-	glm::vec3* pos = component->GetPosition();
+	glm::vec3 *pos = component->GetPosition();
 	glm::vec3 scale = component->GetScale();
 	glm::vec3 rot = glm::degrees(component->GetEulerAngles());
 	ImGui::Text("Position");
@@ -111,10 +110,12 @@ void Hush::Serialize(Transform* component)
 
 	ImGui::Text("Scale");
 	ImGui::InputFloat3("##Scale", reinterpret_cast<float *>(&scale));
-	if (scale != component->GetScale()) {
+	if (scale != component->GetScale())
+	{
 		component->SetScale(scale);
 	}
-	if (rot != glm::degrees(component->GetEulerAngles())) {
+	if (rot != glm::degrees(component->GetEulerAngles()))
+	{
 		component->SetRotationQuat(glm::quat(glm::radians(rot)));
 	}
 }

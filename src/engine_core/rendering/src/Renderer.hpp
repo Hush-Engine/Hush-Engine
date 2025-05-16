@@ -42,14 +42,14 @@ namespace Hush
 
 		virtual void CreateSwapChain(uint32_t width, uint32_t height) = 0;
 
-		virtual void SetActiveScene(Scene* scene) = 0;
-		
+		virtual void SetActiveScene(Scene *scene) = 0;
+
 		virtual void InitImGui() = 0;
 
-		virtual void PushMesh(const glm::mat4& globalTransform, std::shared_ptr<Mesh> mesh) = 0;
+		virtual void PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh) = 0;
 
-		virtual void DestroyMesh(const std::string_view& name) = 0;
-		
+		virtual void DestroyMesh(const std::string_view &name) = 0;
+
 		virtual void Draw(float delta) = 0;
 
 		/// @brief Each renderer will have to implement a way of updating all the objects

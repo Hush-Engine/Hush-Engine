@@ -59,6 +59,5 @@ namespace Hush
 
 } // namespace Hush
 
-
 // NOLINTNEXTLINE
 HUSH_GENERATE_FLAGS(Hush::GpuAllocatedBuffer::EBufferUsage, uint32_t);

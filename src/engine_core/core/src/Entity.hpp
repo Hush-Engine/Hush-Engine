@@ -174,22 +174,19 @@ namespace Hush
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
-		[[nodiscard]]
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		void *GetComponentRaw(EntityId componentId);
 
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
-		[[nodiscard]]
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		void *GetComponentRaw(EntityId componentId) const;
 
 		/// Check if the entity has a component.
 		/// @param componentId Id of the component.
 		/// @return True if the entity has the component, false otherwise.
-		[[nodiscard]]
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		bool HasComponentRaw(EntityId componentId);
 
 		/// Emplace a component to the entity.
@@ -200,8 +197,7 @@ namespace Hush
 		/// @param componentId Id of the component.
 		/// @param isNew Flag to indicate if the component is new. If it is new, user is in charge of constructing it.
 		/// @return Pointer to the component.
-		[[nodiscard]]
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		void *EmplaceComponentRaw(EntityId componentId, bool &isNew);
 
 		/// Remove a component from the entity.

@@ -19,9 +19,10 @@ namespace Hush
 
 		void SetPosition(const glm::vec3 &position) noexcept;
 
-		[[nodiscard]] const glm::vec3* GetPosition() const noexcept;
+		[[nodiscard]]
+		const glm::vec3 *GetPosition() const noexcept;
 
-		glm::vec3* GetPosition() noexcept;
+		glm::vec3 *GetPosition() noexcept;
 
 		void SetScale(const glm::vec3 &scale) noexcept;
 
@@ -63,15 +64,13 @@ namespace Hush
 		glm::mat4 operator*(const Transform &other) const;
 
 	private:
-		
 		mutable glm::mat4 m_transform = Mat4Math::IDENTITY;
 		glm::vec3 m_scale = Vector3Math::ONE;
 		glm::quat m_rotation{};
 
 		mutable bool m_dirty = false;
-		
 	};
 
-	void Serialize(Transform* component);
-	
+	void Serialize(Transform *component);
+
 } // namespace Hush

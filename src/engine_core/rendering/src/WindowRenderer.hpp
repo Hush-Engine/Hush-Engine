@@ -22,7 +22,7 @@ namespace Hush
 	class WindowRenderer
 	{
 	public:
-		WindowRenderer(const char *windowName, Scene* activeScene) noexcept;
+		WindowRenderer(const char *windowName, Scene *activeScene) noexcept;
 
 		WindowRenderer(WindowRenderer &&other) = default;
 

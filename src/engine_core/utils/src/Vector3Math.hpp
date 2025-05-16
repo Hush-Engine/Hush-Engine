@@ -30,9 +30,9 @@ namespace Hush::Vector3Math
 		return {vec};
 	}
 
-	inline float Magnitude(const glm::vec3& vec) {
+	inline float Magnitude(const glm::vec3 &vec)
+	{
 		return glm::length(vec);
 	}
-
 
 } // namespace Hush::Vector3Math

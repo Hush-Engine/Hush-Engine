@@ -47,10 +47,9 @@ Hush::EMaterialPass Hush::GltfLoadFunctions::GetMaterialPassFromFastGltfPass(fas
 	}
 }
 
-Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(Hush::GLTFMetallicRoughness *outMaterialResources,
-																			 const fastgltf::Asset &asset,
-																			 const fastgltf::Material &material,
-																			 const void *loadedTextures)
+Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
+	Hush::GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset, const fastgltf::Material &material,
+	const void *loadedTextures)
 {
 #ifdef HUSH_VULKAN_IMPL
 

@@ -8,7 +8,7 @@
 #include <SDL_keyboard.h>
 #include <SDL_video.h>
 
-Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene* activeScene) noexcept
+Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene *activeScene) noexcept
 {
 	if (!InitSDLIfNotStarted())
 	{

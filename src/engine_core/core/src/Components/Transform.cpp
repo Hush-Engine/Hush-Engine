@@ -16,17 +16,18 @@ void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept
 	this->m_transform[Mat4Math::TRANSLATION_COLUMN] = glm::vec4(position, 1.0F);
 }
 
-const glm::vec3* Hush::Transform::GetPosition() const noexcept {
-	// WARN: This is potentially undefined behaviour, but, should work for all compilers
-	// NOLINTNEXTLINE
-	return reinterpret_cast<const glm::vec3*>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
-}
-
-glm::vec3* Hush::Transform::GetPosition() noexcept
+const glm::vec3 *Hush::Transform::GetPosition() const noexcept
 {
 	// WARN: This is potentially undefined behaviour, but, should work for all compilers
 	// NOLINTNEXTLINE
-	return reinterpret_cast<glm::vec3*>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
+	return reinterpret_cast<const glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
+}
+
+glm::vec3 *Hush::Transform::GetPosition() noexcept
+{
+	// WARN: This is potentially undefined behaviour, but, should work for all compilers
+	// NOLINTNEXTLINE
+	return reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
 void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
@@ -92,19 +93,20 @@ void Hush::Transform::SetTransformationMatrix(const glm::mat4 &xform)
 	Mat4Math::DecomposeTRS(this->m_transform, discarded, this->m_rotation, this->m_scale);
 }
 
-
-glm::mat4 Hush::Transform::GetTransformationMatrix() const {
-	if (!this->m_dirty) {
+glm::mat4 Hush::Transform::GetTransformationMatrix() const
+{
+	if (!this->m_dirty)
+	{
 		return this->m_transform;
 	}
-	const glm::vec3* position = this->GetPosition();
+	const glm::vec3 *position = this->GetPosition();
 	this->m_transform = Mat4Math::ComposeTRS(*position, this->m_rotation, this->m_scale);
 	this->m_dirty = false;
 	return this->m_transform;
 }
 
-
-glm::mat4 Hush::Transform::XForm(const Transform& other) const {
+glm::mat4 Hush::Transform::XForm(const Transform &other) const
+{
 	return this->GetTransformationMatrix() * other.GetTransformationMatrix();
 }
 

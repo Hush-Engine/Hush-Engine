@@ -17,12 +17,14 @@
 constexpr std::string_view FRAGMENT_SHADER_PATH = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.frag.spv)";
 constexpr std::string_view VERTEX_SHADER_PATH = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.vert.spv)";
 
-void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer, GpuAllocatedBuffer materialBuffer, size_t materialIdx, uint32_t dataBufferOffset)
+void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer, GpuAllocatedBuffer materialBuffer, size_t materialIdx,
+									   uint32_t dataBufferOffset)
 {
 	this->m_renderer = renderer;
 	this->m_materialResources.gpuDataBuffer = materialBuffer;
 	this->m_materialResources.dataBufferOffset = dataBufferOffset;
-	this->m_materialConstants = reinterpret_cast<MaterialConstants*>(this->m_materialResources.gpuDataBuffer.GetMappedData());
+	this->m_materialConstants =
+		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData());
 	// We have to manually set the options here lol
 	this->m_materialConstants->options = 0;
 	this->m_materialIdx = materialIdx;
@@ -281,16 +283,17 @@ Hush::GraphicsApiMaterialInstance *Hush::GLTFMetallicRoughness::GetInternalMater
 
 Hush::GLTFMetallicRoughness::MaterialConstants &Hush::GLTFMetallicRoughness::GetMaterialConstants() noexcept
 {
-	HUSH_ASSERT(this->m_materialConstants != nullptr, "No data in material, did you forget to call GenerateMaterialInstance?");
+	HUSH_ASSERT(this->m_materialConstants != nullptr,
+				"No data in material, did you forget to call GenerateMaterialInstance?");
 	return this->m_materialConstants[this->m_materialIdx]; // Uuuuh, yeah, that works I guess
 }
 
-
-void Hush::GLTFMetallicRoughness::SetMaterialConstants(const MaterialConstants& values) {
-	HUSH_ASSERT(this->m_materialConstants != nullptr, "No data in material, did you forget to call GenerateMaterialInstance?");
+void Hush::GLTFMetallicRoughness::SetMaterialConstants(const MaterialConstants &values)
+{
+	HUSH_ASSERT(this->m_materialConstants != nullptr,
+				"No data in material, did you forget to call GenerateMaterialInstance?");
 	this->m_materialConstants[this->m_materialIdx] = values;
 }
-
 
 Hush::GLTFMetallicRoughness::MaterialResources &Hush::GLTFMetallicRoughness::GetMaterialResources()
 {

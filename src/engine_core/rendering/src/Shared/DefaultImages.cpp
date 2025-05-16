@@ -10,7 +10,6 @@ void Hush::DefaultImageProvider::CreateDefaultImages(IRenderer *renderer)
 	constexpr Color white = Color::White();
 	constexpr Color transparent = Color::Transparent();
 	constexpr Color normal = {0.5F, 0.5F, 1.0F, 1.0F};
-	
 
 	constexpr uint32_t vkImgUsageSampledBit = 0x00000004;
 
@@ -27,7 +26,7 @@ void Hush::DefaultImageProvider::CreateDefaultImages(IRenderer *renderer)
 		renderer->CreateImage(&storedNormal, defaultExtent, Color::EFormat::RGBA8Unorm, vkImgUsageSampledBit);
 
 	uint32_t storedTransparent = transparent.ToColor32();
-	this->m_transparentImage  =
+	this->m_transparentImage =
 		renderer->CreateImage(&storedTransparent, defaultExtent, Color::EFormat::RGBA8Unorm, vkImgUsageSampledBit);
 
 	renderer->AddToDeletionQueue([this, &renderer]() {

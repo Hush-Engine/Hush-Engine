@@ -141,7 +141,8 @@ Hush::VulkanRenderer::~VulkanRenderer()
 	this->Dispose();
 }
 
-void Hush::VulkanRenderer::SetActiveScene(Scene* scene) {
+void Hush::VulkanRenderer::SetActiveScene(Scene *scene)
+{
 	this->m_activeScene = scene;
 }
 
@@ -191,16 +192,17 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-
-void Hush::VulkanRenderer::PushMesh(const glm::mat4& globalTransform, std::shared_ptr<Mesh> mesh) {
+void Hush::VulkanRenderer::PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh)
+{
 	// TODO: Make this take an entity or something like that so we have access to its transform
 	// this->m_loadedNodes.emplace(std::make_shared<VulkanMeshNode>(mesh), mesh->GetName());
 	(void)globalTransform;
 	(void)mesh;
 }
 
-void Hush::VulkanRenderer::DestroyMesh(const std::string_view& name) {
-	(void)name;	
+void Hush::VulkanRenderer::DestroyMesh(const std::string_view &name)
+{
+	(void)name;
 }
 
 void Hush::VulkanRenderer::Draw(float delta)
@@ -280,8 +282,9 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 	this->m_uiForwarder->HandleEvent(event);
 }
 
-void DrawMesh(Hush::Mesh* mesh, const Hush::WorldTransform* transform, void* drawContext) {
-	
+void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *drawContext)
+{
+
 	// Interpret drawContext as: std::vector<VkRenderObject>* OpaqueSurfaces;
 	HUSH_ASSERT(drawContext != nullptr, "Draw context should not be null for any render node");
 	auto *drawCtxImpl = static_cast<Hush::DrawContext *>(drawContext);
@@ -608,10 +611,11 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
 {
 	(void)light;
-	Query<DirectionalLight, WorldTransform> queryRes = this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
-	queryRes.Each([this](DirectionalLight& lightComponent, WorldTransform& transformComponent){
-  		this->m_directionalLight = &lightComponent;
-  		this->m_sunTransform = &transformComponent;
+	Query<DirectionalLight, WorldTransform> queryRes =
+		this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
+	queryRes.Each([this](DirectionalLight &lightComponent, WorldTransform &transformComponent) {
+		this->m_directionalLight = &lightComponent;
+		this->m_sunTransform = &transformComponent;
 	});
 }
 
@@ -687,16 +691,16 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
+	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\AlphaBlendModeTest.glb)";
 	// Create an example entity with a Mesh component here
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\DamagedHelmet.glb)";
 	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
 	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
 	for (Entity &node : nodeVector)
 	{
-		WorldTransform* xform = node.GetComponent<WorldTransform>();
-		Mesh* mesh = node.GetComponent<Mesh>();
-		std::pair<WorldTransform*, Mesh*> entry(xform, mesh);
+		WorldTransform *xform = node.GetComponent<WorldTransform>();
+		Mesh *mesh = node.GetComponent<Mesh>();
+		std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
 		this->m_loadedMeshes.emplace_back(entry);
 	}
 }
