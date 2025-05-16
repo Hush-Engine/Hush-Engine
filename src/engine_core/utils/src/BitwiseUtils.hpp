@@ -40,4 +40,4 @@ namespace Hush::Bitwise
 	{
 		return (base & compositeFlag) != 0;
 	}
-}; // namespace Hush::Bitwise
+} // namespace Hush::Bitwise
