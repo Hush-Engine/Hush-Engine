@@ -64,6 +64,11 @@ void Hush::Serialize(IMaterial3D *component)
 	float metallic = pbrMaterial->GetMetallicFactor();
 	ImGui::SliderFloat("Metallic factor", &metallic, -1.0F, 1.0F);
 	pbrMaterial->SetMetallicFactor(metallic);
+
+	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
+	ImGui::SliderFloat("Alpha threshold", &alphaThreshold, 0.0F, 1.0F);
+	pbrMaterial->SetAlphaThreshold(alphaThreshold);
+	
 }
 
 void Hush::Serialize(Mesh *component)

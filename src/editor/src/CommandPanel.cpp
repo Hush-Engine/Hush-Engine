@@ -1,5 +1,6 @@
 #include "CommandPanel.hpp"
 #include "BitwiseUtils.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
@@ -136,6 +137,7 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		entityToCreate = this->m_activeScene->CreateEntityWithName(textCmd).GetId();
 		this->m_activeScene->RegisterComponentId(textCmd, entityToCreate);
 		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<WorldTransform>();
+		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<LocalTransform>();
 		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
 		break;
 	case EBuiltinCommands::FindEntity:

@@ -70,7 +70,7 @@ glm::vec3 Hush::Transform::GetEulerAngles() const noexcept
 glm::vec3 Hush::Transform::Forward() const noexcept
 {
 	// TODO: Make this a direct access
-	return this->m_rotation * glm::vec3(0.0F, 0.0F, this->m_scale.z);
+	return this->m_rotation * glm::vec3(0.0F, 0.0F, 1.0F);
 }
 
 glm::vec3 Hush::Transform::Up() const noexcept

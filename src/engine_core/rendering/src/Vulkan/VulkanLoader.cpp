@@ -207,6 +207,11 @@ Hush::Mesh* Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 			surfaceToAdd.material = materialInstance;
 		}
 
+		// Correct normals if empty
+		if (normalBuffer.empty()) {
+			meshAsset.CalculateNormals();
+		}
+		
 		meshAsset.AddSurface(std::move(surfaceToAdd));
 	}
 
@@ -282,11 +287,12 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
 	
 	// Then actually set them to the material's
-	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
+	GltfLoadFunctions::SetMaterialTextures(materialInstance.get(), asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	materialResources.dataBufferOffset =
-		static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
+	// materialResources.dataBufferOffset =
+	// 	static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
+	materialResources.dataBufferOffset = 0;
 	materialInstance->GenerateMaterialInstance(&allocatorPool);
 	return materialInstance;
 }

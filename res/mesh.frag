@@ -22,6 +22,9 @@ mat3 TBN;
 
 const float specShininess = 32.0;
 
+const int USE_NORMALS_FLAG = 0x1;
+const int DEBUG_NORMALS_FLAG = 0x2;
+
 void main()
 {
     vec4 texColor = texture(colorTex, inUV);
@@ -31,18 +34,29 @@ void main()
     }
 
     // PBR stuff
-    m_params.Albedo = scalarPow(texColor.rgb * inColor, 2.2);
+    m_params.Albedo = texColor.rgb * scalarPow(inColor, 2.2);
     vec4 metalRough = texture(metalRoughTex, inUV);
     m_params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
     m_params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
     m_params.Roughness = max(m_params.Roughness, 0.05);
+    
     // Calculate normal related stuff
-    vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
-    vec3 biTangent = cross(inNormal, tangent) * inHandedness;
-    TBN = mat3(tangent, biTangent, inNormal);
+    if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG)) {
+        vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
+        vec3 biTangent = cross(inNormal, tangent) * inHandedness;
+        TBN = mat3(tangent, biTangent, inNormal);
+        vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
+        m_params.Normal = normalize(TBN * localNormal);
+    }
+    else {
+        // Default normal when no texture is provided
+        m_params.Normal = normalize(inNormal);
+    }
 
-    vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
-    m_params.Normal = normalize(TBN * localNormal);
+    if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG)) {
+        outFragColor = vec4(m_params.Normal, alpha);
+        return;
+    }
 
     // Calculate the light once we're done with normal calculations
     vec3 viewDirection = viewMatExtractFwd(u_sceneData.view);
@@ -58,6 +72,6 @@ void main()
     
     vec3 directLight = CalculateDirLights();
 
-    vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.3;
+    vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
     outFragColor = vec4(ambient + directLight + emission, texColor.a);
 }

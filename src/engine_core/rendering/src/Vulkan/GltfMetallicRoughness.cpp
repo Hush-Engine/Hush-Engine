@@ -22,7 +22,9 @@ void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer, GpuAllocatedBuffer m
 	this->m_renderer = renderer;
 	this->m_materialResources.gpuDataBuffer = materialBuffer;
 	this->m_materialResources.dataBufferOffset = dataBufferOffset;
-	this->m_materialConstants = static_cast<MaterialConstants*>(this->m_materialResources.gpuDataBuffer.GetMappedData());
+	this->m_materialConstants = reinterpret_cast<MaterialConstants*>(this->m_materialResources.gpuDataBuffer.GetMappedData());
+	// We have to manually set the options here lol
+	this->m_materialConstants->options = 0;
 	this->m_materialIdx = materialIdx;
 	this->BuildPipelines();
 }

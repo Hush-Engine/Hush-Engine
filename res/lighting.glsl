@@ -38,8 +38,8 @@ vec3 CalculateDirLights()
 		float cosLi = max(0.0, dot(m_params.Normal, Li));
 		// float cosLh = max(0.0, dot(m_params.Normal, Lh)); // This is just NdotH
 
-		vec3 F = FresnelSchlickRoughness(F0, max(0.0, dot(Lh, m_params.View)), m_params.Roughness);
-		// vec3 F = FresnelSchlick(F0, max(0.0, dot(Lh, m_params.View)));		
+		// vec3 F = FresnelSchlickRoughness(F0, max(0.0, dot(Lh, m_params.View)), m_params.Roughness);
+		vec3 F = FresnelSchlick(F0, max(0.0, dot(Lh, m_params.View)));		
 		float D = DistributionGGX(m_params.Normal, Lh, m_params.Roughness);
 		float G = GaSchlickGGX(cosLi, m_params.NdotV, m_params.Roughness);
 
@@ -48,7 +48,7 @@ vec3 CalculateDirLights()
 
 		// Cook-Torrance
 		vec3 specularBRDF = (F * D * G) / max(Epsilon, 4.0 * cosLi * m_params.NdotV);
-		// specularBRDF = clamp(specularBRDF, vec3(0.0f), vec3(10.0f));
+		specularBRDF = clamp(specularBRDF, vec3(0.0f), vec3(10.0f));
 		result += (diffuseBRDF + specularBRDF) * Lradiance * cosLi;
 	}
 	return result;

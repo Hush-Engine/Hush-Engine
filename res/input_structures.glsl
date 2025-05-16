@@ -13,6 +13,7 @@ layout(set = 1, binding = 0) uniform GLTFMaterialData{
     vec4 metal_rough_factors;
     vec4 emissionFactors;
     float alphaCutoff;
+    int optionFlags;
     
 } materialData;
 

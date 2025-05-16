@@ -32,5 +32,9 @@ vec4 ToLinear(vec4 sRGB)
 	return mix(higher, lower, cutoff);
 }
 
+bool HasCompositeFlag(int base, int compositeFlag) {
+	return (base & compositeFlag) != 0;
+}
+
 
 #endif
