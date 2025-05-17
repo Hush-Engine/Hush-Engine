@@ -1,4 +1,9 @@
 #include "Assertions.hpp"
+#include "Shared/IMaterial3D.hpp"
+#include <cstdint>
+#include <memory>
+#include <string_view>
+#include <unordered_map>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
 #include "VulkanLoader.hpp"
@@ -53,7 +58,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 	// size");
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
-		Entity entity = activeScene->CreateEntityWithName(mesh.name);
+		Entity entity = activeScene->CreateEntityWithName(mesh.name.empty() ? "LoadedMesh" : mesh.name);
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// This also adds the component to the entity
@@ -151,6 +156,7 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 	descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
 	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
+	std::unordered_map<std::uintptr_t, std::shared_ptr<IMaterial3D>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
@@ -293,8 +299,6 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	GltfLoadFunctions::SetMaterialTextures(materialInstance.get(), asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	// materialResources.dataBufferOffset =
-	// 	static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
 	materialResources.dataBufferOffset = 0;
 	materialInstance->GenerateMaterialInstance(&allocatorPool);
 	return materialInstance;

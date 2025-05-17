@@ -1,6 +1,8 @@
 #include "HierarchyPanel.hpp"
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
+#include <optional>
+#include <string_view>
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "InspectorPanel.hpp"
@@ -32,8 +34,8 @@ void Hush::HierarchyPanel::OnRender()
 		{
 			// localxForm.GetParentId();
 		}
-		if (!ImGui::Selectable(entity.GetName().value_or("").data(), selected))
-		{
+		const std::optional<std::string_view>& name = entity.GetName();
+		if (!ImGui::Selectable(name.value().data(), selected)) {
 			return;
 		}
 		inspectorPanel.SetInspectTarget(entity.GetId());

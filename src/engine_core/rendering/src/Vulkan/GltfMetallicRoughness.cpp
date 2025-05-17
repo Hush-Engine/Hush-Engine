@@ -1,5 +1,6 @@
 
 // NOTE: Keep volk at the top to avoid function redefinitions with Vulkan
+#include <cstddef>
 #include <cstdint>
 #include <glm/ext/vector_float3.hpp>
 #include <string_view>
@@ -24,7 +25,7 @@ void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer, GpuAllocatedBuffer m
 	this->m_materialResources.gpuDataBuffer = materialBuffer;
 	this->m_materialResources.dataBufferOffset = dataBufferOffset;
 	this->m_materialConstants =
-		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData());
+		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData()) + (materialIdx * sizeof(MaterialConstants));
 	// We have to manually set the options here lol
 	this->m_materialConstants->options = 0;
 	this->m_materialIdx = materialIdx;
@@ -143,11 +144,14 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet = descriptorAllocator->Allocate(device, this->m_materialLayout);
 
+
+	// Ptr offsetting
+	// auto* offsetPtr = reinterpret_cast<std::byte*>()) + this->m_materialResources.dataBufferOffset;
 	auto *rawDataBuffer = reinterpret_cast<VkBuffer>(this->m_materialResources.gpuDataBuffer.GetBuffer());
 
 	// Write the resources to the buffer
 	writer.Clear();
-	writer.WriteBuffer(0, rawDataBuffer, sizeof(MaterialConstants), this->m_materialResources.dataBufferOffset,
+	writer.WriteBuffer(0, rawDataBuffer, sizeof(MaterialConstants), 0,
 					   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	writer.WriteImage(1, this->m_materialResources.colorImage.imageView, this->m_materialResources.colorSampler,
 					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
