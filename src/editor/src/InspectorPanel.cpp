@@ -57,7 +57,7 @@ void Hush::Serialize(IMaterial3D *component, const char* uniqueName)
 	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
 
 	float emissionFactor = pbrMaterial->EmissionFactor();
-	ImGui::SliderFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor, -range, range);
+	ImGui::InputFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor);
 
 	pbrMaterial->SetEmissionFactor(emissionFactor);
 
@@ -77,7 +77,7 @@ void Hush::Serialize(IMaterial3D *component, const char* uniqueName)
 
 void Hush::Serialize(Mesh *component, const char* entityName)
 {
-	if (!ImGui::CollapsingHeader((std::string("Mesh Component#") + entityName).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+	if (!ImGui::CollapsingHeader((std::string("Mesh Component##") + entityName).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		return;
 	}
