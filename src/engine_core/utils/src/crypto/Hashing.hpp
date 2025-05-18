@@ -6,6 +6,13 @@
 namespace Hush::Hashing
 {
 
+	/**
+	 * @brief Computes a 32-bit FNV-1a hash for a byte array.
+	 *
+	 * @param data Pointer to the input data.
+	 * @param length Number of bytes to hash.
+	 * @return 32-bit FNV-1a hash of the input data.
+	 */
 	constexpr uint32_t Fnv1a(const char *data, const uint32_t length)
 	{
 		// NOLINTNEXTLINE
@@ -22,6 +29,13 @@ namespace Hush::Hashing
 		return hash;
 	}
 
+	/**
+	 * @brief Computes a 64-bit FNV-1a hash for a byte array.
+	 *
+	 * @param data Pointer to the input byte array.
+	 * @param length Number of bytes to hash.
+	 * @return 64-bit FNV-1a hash of the input data.
+	 */
 	constexpr std::uint64_t Fnv1a64(const char *data, const uint32_t length)
 	{
 		// NOLINTNEXTLINE
@@ -38,11 +52,23 @@ namespace Hush::Hashing
 		return hash;
 	}
 
+	/**
+	 * @brief Computes the 32-bit FNV-1a hash of a string view.
+	 *
+	 * @param data The input data as a string view.
+	 * @return uint32_t The 32-bit FNV-1a hash value.
+	 */
 	constexpr uint32_t Fnv1a(const std::string_view &data)
 	{
 		return Fnv1a(data.data(), static_cast<uint32_t>(data.size()));
 	}
 
+	/**
+	 * @brief Computes the 64-bit FNV-1a hash of a string view.
+	 *
+	 * @param data The input data to hash.
+	 * @return std::uint64_t The 64-bit FNV-1a hash value.
+	 */
 	constexpr std::uint64_t Fnv1a64(const std::string_view &data)
 	{
 		return Fnv1a64(data.data(), static_cast<uint32_t>(data.size()));

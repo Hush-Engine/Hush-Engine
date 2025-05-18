@@ -33,6 +33,14 @@ namespace Hush
 
 		Color() = default;
 
+		/**
+		 * @brief Constructs a Color with specified red, green, blue, and alpha components.
+		 *
+		 * @param red Red component in the range [0, 1].
+		 * @param green Green component in the range [0, 1].
+		 * @param blue Blue component in the range [0, 1].
+		 * @param alpha Alpha (opacity) component in the range [0, 1].
+		 */
 		constexpr Color(float red, float green, float blue, float alpha)
 		{
 			this->m_rgba.x = red;
@@ -41,6 +49,13 @@ namespace Hush
 			this->m_rgba.w = alpha;
 		}
 
+		/**
+		 * @brief Constructs a color from red, green, and blue components with alpha set to 1.0.
+		 *
+		 * @param red Red component in the range [0.0, 1.0].
+		 * @param green Green component in the range [0.0, 1.0].
+		 * @param blue Blue component in the range [0.0, 1.0].
+		 */
 		constexpr Color(float red, float green, float blue)
 		{
 			this->m_rgba.x = red;
@@ -48,6 +63,11 @@ namespace Hush
 			this->m_rgba.z = blue;
 		}
 
+		/**
+		 * @brief Constructs a Color from a 3-component RGB vector with alpha set to 1.0.
+		 *
+		 * @param rgb The RGB color components as a glm::vec3.
+		 */
 		constexpr Color(glm::vec3 rgb)
 		{
 			this->m_rgba = glm::vec4(rgb, 1.0F);
@@ -84,6 +104,13 @@ namespace Hush
 			return this->m_rgba;
 		}
 
+		/**
+		 * @brief Converts the color to a 32-bit packed ARGB integer.
+		 *
+		 * Clamps each RGBA component to [0, 1], scales to 8 bits, and packs them into a single uint32_t in ARGB order (alpha in the highest 8 bits, red, green, blue in decreasing order).
+		 *
+		 * @return uint32_t The color represented as a packed 32-bit ARGB value.
+		 */
 		[[nodiscard]]
 		constexpr uint32_t ToColor32() const
 		{

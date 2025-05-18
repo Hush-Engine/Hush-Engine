@@ -26,6 +26,11 @@ namespace Hush::Serialization
 	class JsonSerializer
 	{
 	public:
+		/**
+		 * @brief Constructs a JsonSerializer with an empty buffer and writer.
+		 *
+		 * Initializes the internal RapidJSON buffer and writer for subsequent JSON serialization operations.
+		 */
 		JsonSerializer()
 			: m_writer(m_buffer)
 		{
@@ -33,7 +38,12 @@ namespace Hush::Serialization
 
 		/// Sets the key for the next value to be serialized.
 		/// @param key Key to serialize
-		/// @return SerializationError
+		/**
+		 * @brief Sets the key for the next JSON value in the serialization process.
+		 *
+		 * @param key The key to use for the next JSON value.
+		 * @return ESerializationError Returns None on success, or InvalidData if the key is invalid or cannot be set.
+		 */
 		[[nodiscard]]
 		ESerializationError SetKey(std::string_view key)
 		{
@@ -43,7 +53,11 @@ namespace Hush::Serialization
 		}
 
 		/// Begins an object in the JSON string.
-		/// @return SerializationError
+		/**
+		 * @brief Begins a new JSON object in the serialization stream.
+		 *
+		 * @return ESerializationError Returns None on success, or InvalidData if the object could not be started.
+		 */
 		[[nodiscard]]
 		ESerializationError BeginObject()
 		{
@@ -51,7 +65,11 @@ namespace Hush::Serialization
 		}
 
 		/// Ends an object in the JSON string.
-		/// @return SerializationError
+		/**
+		 * @brief Ends the current JSON object in the serialization stream.
+		 *
+		 * @return ESerializationError Returns None on success, or InvalidData if ending the object fails.
+		 */
 		[[nodiscard]]
 		ESerializationError EndObject()
 		{
@@ -64,6 +82,15 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <IsSerializable<JsonSerializer> T>
+		/**
+		 * @brief Serializes a custom object as a JSON object.
+		 *
+		 * Calls the object's `Serialize` method, writing its contents between JSON object delimiters.
+		 *
+		 * @tparam T Type that implements a `Serialize(JsonSerializer&)` method.
+		 * @param value The object to serialize.
+		 * @return ESerializationError Error code indicating success or failure.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const T &value)
 		{
@@ -76,6 +103,13 @@ namespace Hush::Serialization
 
 		template <typename T>
 			requires(sizeof(T) > 16 && !IsSerializable<T, JsonSerializer>)
+		/**
+		 * @brief Fallback serialization method for unsupported types.
+		 *
+		 * This method triggers a compile-time error if called with a type that does not satisfy the serialization constraints.
+		 *
+		 * @return ESerializationError::InvalidType Always returned to indicate the type is not serializable.
+		 */
 		ESerializationError Serialize(const T &)
 		{
 			static_assert(false, "Type is not serializable");
@@ -85,6 +119,13 @@ namespace Hush::Serialization
 
 		template <typename T>
 			requires(sizeof(T) <= 16 && !IsSerializable<T, JsonSerializer>)
+		/**
+		 * @brief Fallback serialization method for unsupported types.
+		 *
+		 * This method triggers a compile-time error if instantiated, indicating that the type is not serializable.
+		 *
+		 * @return ESerializationError Always returns ESerializationError::InvalidType.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const T)
 		{
@@ -99,6 +140,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a double-precision floating-point value to JSON.
+		 *
+		 * @param value The double value to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const double value)
 		{
@@ -111,6 +158,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a float value as a JSON number.
+		 *
+		 * @param value The float to serialize.
+		 * @return ESerializationError None on success, or an error code on failure.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const float value)
 		{
@@ -122,6 +175,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a boolean value into the JSON output.
+		 *
+		 * @param value The boolean value to serialize.
+		 * @return ESerializationError None on success, InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const bool value)
 		{
@@ -133,6 +192,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes an 8-bit unsigned integer as a JSON number.
+		 *
+		 * @param value The uint8_t value to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::uint8_t value)
 		{
@@ -144,6 +209,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 16-bit unsigned integer as a JSON number.
+		 *
+		 * @param value The uint16_t value to serialize.
+		 * @return ESerializationError None on success, InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::uint16_t value)
 		{
@@ -155,6 +226,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 32-bit unsigned integer as a JSON number.
+		 *
+		 * @param value The unsigned integer to serialize.
+		 * @return ESerializationError Returns InvalidData if serialization fails; otherwise, None.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::uint32_t value)
 		{
@@ -166,6 +243,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 64-bit unsigned integer as a JSON value.
+		 *
+		 * @param value The unsigned 64-bit integer to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::uint64_t value)
 		{
@@ -177,6 +260,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes an 8-bit signed integer as a JSON number.
+		 *
+		 * @param value The 8-bit signed integer to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::int8_t value)
 		{
@@ -188,6 +277,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 16-bit signed integer value into the JSON output.
+		 *
+		 * @param value The 16-bit signed integer to serialize.
+		 * @return ESerializationError Returns InvalidData if serialization fails, otherwise None.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::int16_t value)
 		{
@@ -199,6 +294,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 32-bit signed integer as a JSON number.
+		 *
+		 * @param value The integer value to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::int32_t value)
 		{
@@ -210,6 +311,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a 64-bit signed integer as a JSON number.
+		 *
+		 * @param value The 64-bit signed integer to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::int64_t value)
 		{
@@ -220,6 +327,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a std::string value as a JSON string.
+		 *
+		 * @param value The string to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::string &value)
 		{
@@ -232,6 +345,12 @@ namespace Hush::Serialization
 		/// @param value Value to serialize
 		/// @return SerializationError
 		template <>
+		/**
+		 * @brief Serializes a string view as a JSON string value.
+		 *
+		 * @param value The string view to serialize.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(const std::string_view value)
 		{
@@ -244,6 +363,15 @@ namespace Hush::Serialization
 		/// @param values Value to serialize
 		/// @return SerializationError
 		template <typename T>
+		/**
+		 * @brief Serializes a span of values as a JSON array.
+		 *
+		 * Each element in the span is serialized in sequence. Returns an error if array boundaries cannot be written or if any element fails to serialize.
+		 *
+		 * @tparam T Type of elements to serialize.
+		 * @param values Span of values to serialize as a JSON array.
+		 * @return ESerializationError None on success, InvalidData on failure.
+		 */
 		[[nodiscard]]
 		ESerializationError SerializeArray(const std::span<const T> values)
 		{
@@ -276,6 +404,16 @@ namespace Hush::Serialization
 		/// @param end End iterator
 		/// @return SerializationError
 		template <typename V, IsMapIterator<std::string, V> It>
+		/**
+		 * @brief Serializes a map of key-value pairs as a JSON object.
+		 *
+		 * The keys must be serializable as JSON strings, and the values must be serializable by this serializer.
+		 *
+		 * @tparam It Iterator type pointing to pairs of (key, value).
+		 * @param begin Iterator to the beginning of the map.
+		 * @param end Iterator to the end of the map.
+		 * @return ESerializationError None on success, or InvalidData if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError SerializeMap(It begin, It end)
 		{
@@ -302,6 +440,15 @@ namespace Hush::Serialization
 		/// @param value Value
 		/// @return SerializationError
 		template <typename T>
+		/**
+		 * @brief Serializes a key-value pair into the current JSON object.
+		 *
+		 * Sets the specified key and serializes the associated value. Returns an error if the key is invalid or serialization fails.
+		 *
+		 * @param key The JSON key to associate with the value.
+		 * @param value The value to serialize.
+		 * @return ESerializationError None on success, or an error code on failure.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(std::string_view key, const T &value)
 		{
@@ -320,6 +467,15 @@ namespace Hush::Serialization
 		/// @param values Values
 		/// @return SerializationError
 		template <typename T>
+		/**
+		 * @brief Serializes an array of values under the specified JSON key.
+		 *
+		 * Associates the given key with a JSON array containing the provided values.
+		 *
+		 * @param key The JSON key to associate with the array.
+		 * @param values The array of values to serialize.
+		 * @return ESerializationError None on success, or an error code if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(std::string_view key, const std::span<const T> values)
 		{
@@ -340,6 +496,16 @@ namespace Hush::Serialization
 		/// @param end Iterator end
 		/// @return SerializationError
 		template <typename V, IsMapIterator<std::string, V> It>
+		/**
+		 * @brief Serializes a map of key-value pairs under a specified JSON key.
+		 *
+		 * Serializes the range of map elements defined by the iterators [begin, end) as a JSON object, associating it with the given key.
+		 *
+		 * @param key The JSON key under which the map will be serialized.
+		 * @param begin Iterator to the beginning of the map range.
+		 * @param end Iterator to the end of the map range.
+		 * @return ESerializationError Returns None on success, or an error code if serialization fails.
+		 */
 		[[nodiscard]]
 		ESerializationError Serialize(std::string_view key, It begin, It end)
 		{
@@ -354,7 +520,13 @@ namespace Hush::Serialization
 		/// Finalizes the serialization process and returns the serialized JSON string.
 		/// You should not call any other function after this one.
 		///
-		/// @return Serialized JSON string
+		/**
+		 * @brief Returns the finalized JSON string after serialization.
+		 *
+		 * No further serialization operations should be performed after calling this method.
+		 *
+		 * @return Serialized JSON string.
+		 */
 		std::string FinishSerialization()
 		{
 			return m_buffer.GetString();
@@ -373,6 +545,11 @@ namespace Hush::Serialization
 		{
 			IVisitor *visitor{nullptr};
 
+			/**
+			 * @brief Constructs a RapidjsonVisitor with a null visitor pointer.
+			 *
+			 * Initializes the RapidjsonVisitor handler for use in JSON parsing.
+			 */
 			RapidjsonVisitor()
 			{
 			}
@@ -393,6 +570,16 @@ namespace Hush::Serialization
 
 			bool RawNumber(const Ch *str, rapidjson::SizeType length, bool copy);
 
+			/**
+			 * @brief Handles a JSON string value during deserialization.
+			 *
+			 * Invokes the visitor's string handler with the parsed string value and updates the visitor pointer if successful.
+			 *
+			 * @param str Pointer to the string data.
+			 * @param length Length of the string.
+			 * @param copy Unused parameter required by RapidJSON's interface.
+			 * @return true if the string was successfully processed by the visitor; false otherwise.
+			 */
 			bool String(const Ch *str, rapidjson::SizeType length, bool copy)
 			{
 				(void)copy;
@@ -420,6 +607,13 @@ namespace Hush::Serialization
 		static constexpr EFormatDescribingType JSON_DESCRIBING_TYPE = EFormatDescribingType::SelfDescribing;
 
 	public:
+		/**
+		 * @brief Constructs a JsonDeserializer for the given JSON string.
+		 *
+		 * Initializes the internal stream with the provided JSON data for subsequent deserialization operations.
+		 *
+		 * @param json The JSON string to be deserialized.
+		 */
 		JsonDeserializer(std::string_view json)
 			: m_stream(json.data())
 		{
@@ -427,6 +621,13 @@ namespace Hush::Serialization
 
 		template <typename T>
 			requires(BuiltinVisitors::ExistsBuiltinVisitor<T>)
+		/**
+		 * @brief Deserializes the JSON input into a value of type T using a built-in visitor.
+		 *
+		 * Uses RapidJSON's SAX parser and a built-in visitor to convert the JSON string into an object of type T.
+		 *
+		 * @return Result containing the deserialized value or an EDeserializationError if parsing fails.
+		 */
 		Result<T, EDeserializationError> Deserialize()
 		{
 			BuiltinVisitors::Visitor<T> visitor(this, JSON_DESCRIBING_TYPE);
@@ -446,6 +647,11 @@ namespace Hush::Serialization
 
 		template <typename T>
 			requires(IsDeserializable<T>)
+		/**
+		 * @brief Deserializes the JSON input into an object of type T using its custom deserialization logic.
+		 *
+		 * @return Result containing the deserialized object on success, or an error code if deserialization fails.
+		 */
 		[[nodiscard]]
 		Result<T, EDeserializationError> Deserialize()
 		{
@@ -470,6 +676,14 @@ namespace Hush::Serialization
 	};
 
 	template <typename T>
+	/**
+	 * @brief Deserializes a JSON string into an object of type T.
+	 *
+	 * Attempts to parse the provided JSON string and construct an object of type T. Returns either the deserialized object or an error if parsing fails or the data is invalid.
+	 *
+	 * @param json The JSON string to deserialize.
+	 * @return Result<T, EDeserializationError> The deserialized object or an error code.
+	 */
 	[[nodiscard]]
 	inline Result<T, EDeserializationError> DeserializeJson(std::string_view json)
 	{
@@ -486,6 +700,13 @@ namespace Hush::Serialization
 	}
 
 	template <typename T>
+	/**
+	 * @brief Serializes a value to a JSON string.
+	 *
+	 * Serializes the given value into a JSON string using the JsonSerializer. Returns either the resulting JSON string or a serialization error.
+	 *
+	 * @return Result containing the JSON string on success, or an ESerializationError on failure.
+	 */
 	[[nodiscard]]
 	inline Result<std::string, ESerializationError> SerializeJson(const T &value)
 	{

@@ -21,9 +21,22 @@ namespace Hush::Reflection
 			NonSameType = 0,
 		};
 
-		VariantView() : m_value(nullptr), m_typeId(TypeId{}) {}
+		/**
+ * @brief Constructs an empty VariantView with no referenced value.
+ *
+ * The resulting VariantView does not reference any value and its type identifier is unset.
+ */
+VariantView() : m_value(nullptr), m_typeId(TypeId{}) {}
 
 		template <typename T>
+		/**
+		 * @brief Constructs a VariantView referencing a value of type T.
+		 *
+		 * @tparam T The type of the referenced value. Must not be void.
+		 * @param value Pointer to the value to reference.
+		 *
+		 * @note The VariantView does not take ownership of the referenced value.
+		 */
 		explicit VariantView(T *value)
 			: m_value(value),
 			  m_typeId(Hush::Reflection::GetTypeId<T>())
@@ -32,6 +45,14 @@ namespace Hush::Reflection
 		}
 
 		template <typename T> requires (!std::is_pointer_v<T>)
+		/**
+		 * @brief Constructs a VariantView referencing a value of type T.
+		 *
+		 * Stores a non-owning pointer to the provided value and its runtime type identifier.
+		 *
+		 * @tparam T The type of the referenced value. Must not be void or a pointer type.
+		 * @param value Reference to the value to be referenced.
+		 */
 		explicit VariantView(T &value)
 			: m_value(&value),
 			  m_typeId(Hush::Reflection::GetTypeId<T>())
@@ -39,6 +60,12 @@ namespace Hush::Reflection
 			static_assert(!std::is_same_v<T, void>, "VariantView cannot hold void type");
 		}
 
+		/**
+		 * @brief Constructs a VariantView from a raw pointer and a type identifier.
+		 *
+		 * @param value Pointer to the value to reference.
+		 * @param typeId Runtime type identifier of the referenced value.
+		 */
 		explicit VariantView(void *value, std::uint64_t typeId)
 			: m_value(value),
 			  m_typeId(typeId)
@@ -46,6 +73,13 @@ namespace Hush::Reflection
 		}
 
 		template <typename T>
+		/**
+		 * @brief Returns a pointer to the referenced value if its type matches the requested type.
+		 *
+		 * Performs a runtime type check and returns a typed pointer if the stored value's type matches `T`. Returns an error if the types do not match.
+		 *
+		 * @return Result<T*, EVariantError> Typed pointer to the value on success, or `EVariantError::NonSameType` if the type does not match.
+		 */
 		[[nodiscard]]
 		Result<T *, EVariantError> Get() const
 		{
@@ -58,6 +92,12 @@ namespace Hush::Reflection
 		}
 
 
+		/**
+		 * @brief Returns the stored pointer if its type matches the given type identifier.
+		 *
+		 * @param id The type identifier to check against the stored value.
+		 * @return void* Pointer to the stored value if the type matches; otherwise, nullptr.
+		 */
 		[[nodiscard]]
 		void *GetRaw(TypeId id) const
 		{
@@ -69,6 +109,11 @@ namespace Hush::Reflection
 			return m_value;
 		}
 
+		/**
+		 * @brief Returns the runtime type identifier of the stored value.
+		 *
+		 * @return TypeId The type identifier associated with the referenced value.
+		 */
 		TypeId GetTypeId() const
 		{
 			return m_typeId;
@@ -93,6 +138,9 @@ namespace Hush::Reflection
 	public:
 		using EVariantError = VariantView::EVariantError;
 
+		/**
+		 * @brief Constructs an empty Variant with no stored value.
+		 */
 		Variant()
 			: m_ptr(nullptr),
 			  m_typeId(TypeId{})
@@ -100,6 +148,14 @@ namespace Hush::Reflection
 		}
 
 		template <typename T>
+		/**
+		 * @brief Constructs a Variant by storing a value of any type, using small object optimization when possible.
+		 *
+		 * Stores the given value either in an internal buffer (if its size is at most 16 bytes) or on the heap for larger types. The constructor sets up appropriate destruction logic based on the type's characteristics.
+		 *
+		 * @tparam T The type of the value to store.
+		 * @param value The value to be stored in the variant.
+		 */
 		explicit Variant(T &&value)
 			: m_typeId(GetTypeId<T>())
 		{
@@ -124,9 +180,22 @@ namespace Hush::Reflection
 			}
 		}
 
-		Variant(const Variant &) = delete;
-		Variant &operator=(const Variant &) = delete;
+		/**
+ * @brief Copy constructor is deleted to prevent copying of Variant instances.
+ */
+Variant(const Variant &) = delete;
+		/**
+ * @brief Copy assignment is disabled for Variant.
+ *
+ * Prevents copying of Variant instances to ensure unique ownership and correct resource management.
+ */
+Variant &operator=(const Variant &) = delete;
 
+		/**
+		 * @brief Move constructs a Variant, transferring ownership of the stored value from another Variant.
+		 *
+		 * After the move, the source Variant is left empty and its destructor is reset.
+		 */
 		Variant(Variant &&rhs) noexcept
 			: m_dtor(std::exchange(rhs.m_dtor, nullptr)),
 			  m_status(std::exchange(rhs.m_status, EVariantStatus::None)),
@@ -135,6 +204,14 @@ namespace Hush::Reflection
 			memmove_s(m_data, sizeof(m_data), rhs.m_data, sizeof(m_data));
 		}
 
+		/**
+		 * @brief Moves the contents of another Variant into this one, releasing any previously held value.
+		 *
+		 * Transfers ownership of the stored value, destructor, status, and type identifier from the source Variant. Any value previously held by this Variant is properly destroyed. The source Variant is left in an empty state.
+		 *
+		 * @param rhs The Variant to move from.
+		 * @return Reference to this Variant.
+		 */
 		Variant &operator=(Variant &&rhs) noexcept
 		{
 			if (this != &rhs)
@@ -155,6 +232,13 @@ namespace Hush::Reflection
 		}
 
 		template <typename T>
+		/**
+		 * @brief Returns a pointer to the stored value if its type matches the requested type.
+		 *
+		 * Performs a runtime type check and returns a pointer to the stored value of type `T` if the variant is not empty and the stored type matches `T`. Returns an error if the types do not match or if the variant is empty.
+		 *
+		 * @return Result<T*, EVariantError> Pointer to the stored value on success, or `EVariantError::NonSameType` on type mismatch or if empty.
+		 */
 		[[nodiscard]]
 		Result<T *, EVariantError> Get() const
 		{
@@ -176,6 +260,14 @@ namespace Hush::Reflection
 			return static_cast<T *>(m_ptr);
 		}
 
+		/**
+		 * @brief Returns a raw pointer to the stored value if the type identifier matches.
+		 *
+		 * If the variant is empty or the stored type does not match the provided type identifier, returns an error.
+		 *
+		 * @param id The runtime type identifier to check against the stored value.
+		 * @return Result<void*, EVariantError> Raw pointer to the stored value on success, or EVariantError::NonSameType on type mismatch or if empty.
+		 */
 		[[nodiscard]]
 		Result<void *, EVariantError> GetRaw(TypeId id) const
 		{
