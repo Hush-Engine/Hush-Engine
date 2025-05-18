@@ -46,8 +46,7 @@ namespace Hush
 
 		static std::shared_ptr<GLTFMetallicRoughness> GenerateMaterial(
 			size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
-			GpuAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
-			const std::vector<GpuAllocatedImage> &loadedTextures);
+			DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures);
 
 		static std::optional<GpuAllocatedImage> LoadedTextureFromMaterial(
 			const fastgltf::Asset &asset, const fastgltf::Material &material,

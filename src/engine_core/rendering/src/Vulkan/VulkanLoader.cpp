@@ -1,4 +1,9 @@
 #include "Assertions.hpp"
+#include "Shared/IMaterial3D.hpp"
+#include <cstdint>
+#include <memory>
+#include <string_view>
+#include <unordered_map>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
 #include "VulkanLoader.hpp"
@@ -53,7 +58,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 	// size");
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
-		Entity entity = activeScene->CreateEntityWithName(mesh.name);
+		Entity entity = activeScene->CreateEntityWithName(mesh.name.empty() ? "LoadedMesh" : mesh.name);
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// This also adds the component to the entity
@@ -136,11 +141,6 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 	indexRef.clear();
 	vertexRef.clear();
 
-	GpuAllocatedBuffer materialDataBuffer(
-		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants) * asset.materials.size()),
-		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
-		engine->GetVmaAllocator());
-
 	// TODO: constexpr(?
 	const std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
 		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
@@ -151,6 +151,7 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 	descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
 	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
+	std::unordered_map<std::uintptr_t, std::shared_ptr<IMaterial3D>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
@@ -205,7 +206,7 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 		{
 			size_t materialIdx = primitive.materialIndex.value();
 			std::shared_ptr<IMaterial3D> materialInstance =
-				GenerateMaterial(materialIdx, asset, engine, &materialDataBuffer, descriptorPool, loadedTextures);
+				GenerateMaterial(materialIdx, asset, engine, descriptorPool, loadedTextures);
 			surfaceToAdd.material = materialInstance;
 		}
 
@@ -244,15 +245,14 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 }
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
-	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine, GpuAllocatedBuffer *sceneMaterialBuffer,
+	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
 	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
-	// Scene Material buffer writing
-	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
-
+	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);	
+	
 	auto materialInstance = std::make_shared<GLTFMetallicRoughness>();
-	materialInstance->Init(engine, *sceneMaterialBuffer, materialIdx);
+	materialInstance->Init(engine);
 	materialInstance->SetAlbedo(*reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetEmissionColor(
 		glm::vec3(material.emissiveFactor.x(), material.emissiveFactor.y(), material.emissiveFactor.z()));
@@ -260,7 +260,7 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	materialInstance->SetRoughnessFactor(material.pbrData.roughnessFactor);
 	materialInstance->SetEmissionFactor(material.emissiveStrength);
 	materialInstance->SetMaterialPass(passType);
-
+	materialInstance->SetName(material.name);
 	// Handle custom alpha cutoffs
 	float alphaThreshold{};
 	switch (passType)
@@ -293,8 +293,6 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	GltfLoadFunctions::SetMaterialTextures(materialInstance.get(), asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	// materialResources.dataBufferOffset =
-	// 	static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
 	materialResources.dataBufferOffset = 0;
 	materialInstance->GenerateMaterialInstance(&allocatorPool);
 	return materialInstance;

@@ -1,7 +1,6 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "Components/WorldTransform.hpp"
-#include "Logger.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
@@ -10,6 +9,7 @@
 #include <glm/trigonometric.hpp>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -21,6 +21,11 @@
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
+// Some temp auxiliar functions
+std::string ConcatCStr(const std::string_view& base, const std::string_view& other) {
+	return std::string(base) + other.data();
+}
+
 void Hush::Serialize(DirectionalLight *component)
 {
 	ImGui::CollapsingHeader("Directional Light", ImGuiTreeNodeFlags_DefaultOpen);
@@ -30,7 +35,7 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-void Hush::Serialize(IMaterial3D *component)
+void Hush::Serialize(IMaterial3D *component, const char* uniqueName)
 {
 	// ECullMode cullMode = component->GetCullMode();
 	// Check which instance of the material is
@@ -44,35 +49,35 @@ void Hush::Serialize(IMaterial3D *component)
 
 	// Albedo color
 	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
-	ImGui::ColorEdit4("Albedo", reinterpret_cast<float *>(&albedo));
+	ImGui::ColorEdit4(ConcatCStr("Albedo##", component->GetName()).c_str(), reinterpret_cast<float *>(&albedo));
 
 	glm::vec3 &emission = pbrMaterial->GetEmissionColor();
-	ImGui::ColorEdit3("Emission", reinterpret_cast<float *>(&emission));
+	ImGui::ColorEdit3(ConcatCStr("Emission##", component->GetName()).c_str(), reinterpret_cast<float *>(&emission));
 
 	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
 
 	float emissionFactor = pbrMaterial->EmissionFactor();
-	ImGui::SliderFloat("Emission factor", &emissionFactor, -range, range);
+	ImGui::InputFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor);
 
 	pbrMaterial->SetEmissionFactor(emissionFactor);
 
 	float roughness = pbrMaterial->GetRoughnessFactor();
 
-	ImGui::SliderFloat("Roughness factor", &roughness, 0.F, 1.0F);
+	ImGui::SliderFloat(ConcatCStr("Roughness Factor##", component->GetName()).c_str(), &roughness, 0.F, 1.0F);
 	pbrMaterial->SetRoughnessFactor(roughness);
 
 	float metallic = pbrMaterial->GetMetallicFactor();
-	ImGui::SliderFloat("Metallic factor", &metallic, -1.0F, 1.0F);
+	ImGui::SliderFloat(ConcatCStr("Metallic Factor##", component->GetName()).c_str(), &metallic, -1.0F, 1.0F);
 	pbrMaterial->SetMetallicFactor(metallic);
 
 	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
-	ImGui::SliderFloat("Alpha threshold", &alphaThreshold, 0.0F, 1.0F);
+	ImGui::SliderFloat(ConcatCStr("Alpha Threshold##", component->GetName()).c_str(), &alphaThreshold, 0.0F, 1.0F);
 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
 }
 
-void Hush::Serialize(Mesh *component)
+void Hush::Serialize(Mesh *component, const char* entityName)
 {
-	if (!ImGui::CollapsingHeader("Mesh Component", ImGuiTreeNodeFlags_DefaultOpen))
+	if (!ImGui::CollapsingHeader((std::string("Mesh Component##") + entityName).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		return;
 	}
@@ -86,7 +91,7 @@ void Hush::Serialize(Mesh *component)
 		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
 									ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			Serialize(surface.material.get());
+			Serialize(surface.material.get(), std::to_string(i).c_str());
 		}
 	}
 	ImGui::Unindent(NESTED_INDENT_SIZE);
@@ -168,6 +173,6 @@ void Hush::InspectorPanel::RenderProperties()
 	Mesh *meshComponent = this->m_inspectTarget->GetComponent<Mesh>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent);
+		Serialize(meshComponent, this->m_inspectTarget.value().GetName().value().data());
 	}
 }
