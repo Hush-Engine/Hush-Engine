@@ -72,8 +72,7 @@ namespace Hush
 		DescriptorWriter writer;
 
 		// TODO: Maybe make a version that does not require a previous material buffer
-		void Init(IRenderer *renderer, GpuAllocatedBuffer materialBuffer, size_t materialIdx,
-				  uint32_t dataBufferOffset = 0);
+		void Init(IRenderer *renderer);
 
 		void ClearResources(VkDevice device);
 
@@ -147,6 +146,15 @@ namespace Hush
 			this->m_materialConstants->options = static_cast<int32_t>(options);
 		}
 
+		
+		void SetName(const std::string_view& name) override {
+			this->m_name = name;
+		}
+
+		[[nodiscard]] std::string_view GetName() const noexcept override {
+			return this->m_name;
+		}
+
 	private:
 		void BuildPipelines();
 
@@ -159,6 +167,8 @@ namespace Hush
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 
 		IRenderer *m_renderer = nullptr;
+
+		std::string m_name;
 
 		// Original material index
 		// TODO: Check if we *actually* need this

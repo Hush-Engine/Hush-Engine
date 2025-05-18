@@ -141,11 +141,6 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 	indexRef.clear();
 	vertexRef.clear();
 
-	GpuAllocatedBuffer materialDataBuffer(
-		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants) * asset.materials.size()),
-		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
-		engine->GetVmaAllocator());
-
 	// TODO: constexpr(?
 	const std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
 		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
@@ -211,7 +206,7 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 		{
 			size_t materialIdx = primitive.materialIndex.value();
 			std::shared_ptr<IMaterial3D> materialInstance =
-				GenerateMaterial(materialIdx, asset, engine, &materialDataBuffer, descriptorPool, loadedTextures);
+				GenerateMaterial(materialIdx, asset, engine, descriptorPool, loadedTextures);
 			surfaceToAdd.material = materialInstance;
 		}
 
@@ -250,15 +245,14 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 }
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
-	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine, GpuAllocatedBuffer *sceneMaterialBuffer,
+	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
 	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
-	// Scene Material buffer writing
-	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
-
+	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);	
+	
 	auto materialInstance = std::make_shared<GLTFMetallicRoughness>();
-	materialInstance->Init(engine, *sceneMaterialBuffer, materialIdx);
+	materialInstance->Init(engine);
 	materialInstance->SetAlbedo(*reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetEmissionColor(
 		glm::vec3(material.emissiveFactor.x(), material.emissiveFactor.y(), material.emissiveFactor.z()));
@@ -266,7 +260,7 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	materialInstance->SetRoughnessFactor(material.pbrData.roughnessFactor);
 	materialInstance->SetEmissionFactor(material.emissiveStrength);
 	materialInstance->SetMaterialPass(passType);
-
+	materialInstance->SetName(material.name);
 	// Handle custom alpha cutoffs
 	float alphaThreshold{};
 	switch (passType)

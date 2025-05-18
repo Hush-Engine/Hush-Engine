@@ -8,8 +8,10 @@
 #include <vulkan/vulkan_core.h>
 #include "GltfMetallicRoughness.hpp"
 #include "Assertions.hpp"
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
+#include "Shared/ShaderMaterial.hpp"
 #include "VulkanRenderer.hpp"
 #include "VulkanPipelineBuilder.hpp"
 #include "VkUtilsFactory.hpp"
@@ -18,17 +20,23 @@
 constexpr std::string_view FRAGMENT_SHADER_PATH = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.frag.spv)";
 constexpr std::string_view VERTEX_SHADER_PATH = R"(C:\Users\nefes\Personal\Hush-Engine\res\mesh.vert.spv)";
 
-void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer, GpuAllocatedBuffer materialBuffer, size_t materialIdx,
-									   uint32_t dataBufferOffset)
+void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer)
 {
 	this->m_renderer = renderer;
-	this->m_materialResources.gpuDataBuffer = materialBuffer;
-	this->m_materialResources.dataBufferOffset = dataBufferOffset;
+
+	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(renderer);	
+	// 
+	// Scene Material buffer writing
+	this->m_materialResources.gpuDataBuffer = GpuAllocatedBuffer(
+		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants)),
+		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
+		rendererImpl->GetVmaAllocator());
+	
+	this->m_materialResources.dataBufferOffset = 0;
 	this->m_materialConstants =
-		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData()) + (materialIdx * sizeof(MaterialConstants));
+		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData());
 	// We have to manually set the options here lol
 	this->m_materialConstants->options = 0;
-	this->m_materialIdx = materialIdx;
 	this->BuildPipelines();
 }
 
@@ -151,7 +159,7 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 
 	// Write the resources to the buffer
 	writer.Clear();
-	writer.WriteBuffer(0, rawDataBuffer, sizeof(MaterialConstants), 0,
+	writer.WriteBuffer(0, rawDataBuffer, sizeof(MaterialConstants), this->m_materialResources.dataBufferOffset,
 					   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	writer.WriteImage(1, this->m_materialResources.colorImage.imageView, this->m_materialResources.colorSampler,
 					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
