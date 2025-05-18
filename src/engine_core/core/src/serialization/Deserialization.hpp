@@ -329,7 +329,7 @@ namespace Hush::Serialization
 					}
 				}
 
-				*value = v;
+				*value = static_cast<IntType>(v);
 
 				return parentVisitor;
 			}
