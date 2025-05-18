@@ -14,6 +14,7 @@ namespace Hush::Reflection
 {
 	class FunctionInfo
 	{
+		static constexpr std::uint8_t MAX_ARGS = 16;
 	public:
 		enum class EFunctionInfoError : uint8_t
 		{
@@ -25,15 +26,14 @@ namespace Hush::Reflection
 		};
 		using CallFunc = Result<Variant, EFunctionInfoError> (*)(std::span<VariantView>);
 
-		template <typename... Args>
-		FunctionInfo(std::uint8_t argsCount, CallFunc callFunc, std::string name)
+		template <typename... Args> requires (sizeof...(Args) <= MAX_ARGS)
+		FunctionInfo(CallFunc callFunc, std::string name)
 			: m_argsType({GetTypeId<std::remove_reference_t<Args>>()...}),
 			  m_name(std::move(name)),
 			  m_callFunc(callFunc),
-			  m_argsCount(argsCount)
+			  m_argsCount(static_cast<uint8_t>(sizeof...(Args)))
 
 		{
-			static_assert(sizeof...(Args) <= MAX_ARGS, "Too many arguments");
 		}
 
 		///
@@ -93,7 +93,6 @@ namespace Hush::Reflection
 		}
 
 	private:
-		static constexpr std::uint8_t MAX_ARGS = 16;
 
 		std::array<TypeId, MAX_ARGS> m_argsType;
 		std::string m_name;

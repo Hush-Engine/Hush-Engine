@@ -93,153 +93,6 @@ namespace Hush::Serialization
 			return ESerializationError::InvalidType;
 		}
 
-		/// Serializes a double value to a JSON string.
-		///
-		/// @param key Key to serialize
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const double value)
-		{
-			return m_writer.Double(value) ? ESerializationError::None : ESerializationError::InvalidData;
-		}
-
-		/// Serializes a float value to a JSON string.
-		///
-		/// @param key Key to serialize
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const float value)
-		{
-			return Serialize<double>(value);
-		}
-
-		/// Serializes a boolean value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const bool value)
-		{
-			return m_writer.Bool(value) ? ESerializationError::None : ESerializationError::InvalidData;
-		}
-
-		/// Serializes an uint8 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::uint8_t value)
-		{
-			return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an uint16 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::uint16_t value)
-		{
-			return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an uint32 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::uint32_t value)
-		{
-			return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an uint64 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::uint64_t value)
-		{
-			return !m_writer.Uint64(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an int8 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::int8_t value)
-		{
-			return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an int16 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::int16_t value)
-		{
-			return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an int32 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::int32_t value)
-		{
-			return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes an int64 value to a JSON string.
-		///
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::int64_t value)
-		{
-			return !m_writer.Int64(value) ? ESerializationError::InvalidData : ESerializationError::None;
-		}
-
-		/// Serializes a string value to a JSON string.
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::string &value)
-		{
-			return !m_writer.String(value.c_str(), static_cast<rapidjson::SizeType>(value.size()))
-					   ? ESerializationError::InvalidData
-					   : ESerializationError::None;
-		}
-
-		/// Serializes a string_view value to a JSON string.
-		/// @param value Value to serialize
-		/// @return SerializationError
-		template <>
-		[[nodiscard]]
-		ESerializationError Serialize(const std::string_view value)
-		{
-			return !m_writer.String(value.data(), static_cast<rapidjson::SizeType>(value.size()))
-					   ? ESerializationError::InvalidData
-					   : ESerializationError::None;
-		}
-
 		/// Serializes a span of values to a JSON array.
 		/// @param values Value to serialize
 		/// @return SerializationError
@@ -287,7 +140,7 @@ namespace Hush::Serialization
 			for (auto it = begin; it != end; ++it)
 			{
 				// Serialize with "key": value
-				if (!Serialize(it->first, it->second))
+				if (Serialize(it->first, it->second) != ESerializationError::None)
 				{
 					return ESerializationError::InvalidData;
 				}
@@ -393,18 +246,7 @@ namespace Hush::Serialization
 
 			bool RawNumber(const Ch *str, rapidjson::SizeType length, bool copy);
 
-			bool String(const Ch *str, rapidjson::SizeType length, bool copy)
-			{
-				(void)copy;
-
-				auto result = visitor->VisitString(std::string_view(str, length));
-				if (result.has_error())
-				{
-					return false;
-				}
-				visitor = result.value();
-				return true;
-			}
+			bool String(const Ch *str, rapidjson::SizeType length, bool copy);
 
 			bool StartObject();
 
@@ -468,6 +310,151 @@ namespace Hush::Serialization
 		rapidjson::StringStream m_stream;
 		rapidjson::Reader m_reader;
 	};
+
+	/// Serializes a double value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	inline ESerializationError JsonSerializer::Serialize<double>(const double value)
+	{
+		return m_writer.Double(value) ? ESerializationError::None : ESerializationError::InvalidData;
+	}
+
+	/// Serializes a float value to a JSON string.
+	///
+	/// @param key Key to serialize
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const float value)
+	{
+		return Serialize<double>(value);
+	}
+
+	/// Serializes a boolean value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const bool value)
+	{
+		return m_writer.Bool(value) ? ESerializationError::None : ESerializationError::InvalidData;
+	}
+
+	/// Serializes an uint8 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::uint8_t value)
+	{
+		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an uint16 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::uint16_t value)
+	{
+		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an uint32 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::uint32_t value)
+	{
+		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an uint64 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::uint64_t value)
+	{
+		return !m_writer.Uint64(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an int8 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::int8_t value)
+	{
+		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an int16 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::int16_t value)
+	{
+		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an int32 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::int32_t value)
+	{
+		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes an int64 value to a JSON string.
+	///
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::int64_t value)
+	{
+		return !m_writer.Int64(value) ? ESerializationError::InvalidData : ESerializationError::None;
+	}
+
+	/// Serializes a string value to a JSON string.
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::string &value)
+	{
+		return !m_writer.String(value.c_str(), static_cast<rapidjson::SizeType>(value.size()))
+				   ? ESerializationError::InvalidData
+				   : ESerializationError::None;
+	}
+
+	/// Serializes a string_view value to a JSON string.
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const std::string_view value)
+	{
+		return !m_writer.String(value.data(), static_cast<rapidjson::SizeType>(value.size()))
+				   ? ESerializationError::InvalidData
+				   : ESerializationError::None;
+	}
 
 	template <typename T>
 	[[nodiscard]]

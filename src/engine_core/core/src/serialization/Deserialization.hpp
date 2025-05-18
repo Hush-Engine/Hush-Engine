@@ -67,7 +67,8 @@ namespace Hush::Serialization
 	/// that a format passes. For instance, when a JSON parser sees a number, it will call the VisitInt method of the
 	/// visitor.
 	///
-	/// TODO: how a non-self-describing format will work? We might need to implement a VisitRaw(const char* data, size_t maxSize, size_t currentOffset)?
+	/// TODO: how a non-self-describing format will work? We might need to implement a VisitRaw(const char* data, size_t
+	/// maxSize, size_t currentOffset)?
 	class IVisitor
 	{
 	public:
@@ -328,7 +329,7 @@ namespace Hush::Serialization
 					}
 				}
 
-				*value = static_cast<std::uint8_t>(v);
+				*value = v;
 
 				return parentVisitor;
 			}
@@ -557,12 +558,11 @@ namespace Hush::Serialization
 			{
 				if constexpr (std::numeric_limits<F>::max() < std::numeric_limits<double>::max())
 				{
-					if (*value > std::numeric_limits<F>::max())
+					if (v > std::numeric_limits<F>::max())
 					{
-						*value = std::numeric_limits<F>::max();
+						v = std::numeric_limits<F>::max();
 					}
 				}
-
 				*this->value = static_cast<F>(v);
 
 				return parentVisitor;
@@ -615,11 +615,12 @@ namespace Hush::Serialization
 			bool insideObject{false};
 
 			Visitor(IVisitor *parent, std::map<std::string, std::string> *value, EFormatDescribingType describingType)
-				: IVisitor(parent, describingType), value(value)
+				: IVisitor(parent, describingType),
+				  value(value)
 			{
 			}
 
-			std::map<std::string, std::string>* value{};
+			std::map<std::string, std::string> *value{};
 			std::string currentKey{};
 
 			Result VisitObjectStart() override
@@ -654,7 +655,7 @@ namespace Hush::Serialization
 
 				this->value->insert_or_assign(std::move(currentKey), std::string(v));
 
-				return EDeserializationError::NotSupported;
+				return this;
 			}
 		};
 

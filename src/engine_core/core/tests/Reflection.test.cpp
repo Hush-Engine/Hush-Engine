@@ -31,7 +31,7 @@ public:
 		typeInfo.SetSize(sizeof(MyTest));
 		typeInfo.SetAlignment(alignof(MyTest));
 
-		Hush::Reflection::FieldInfo::Getter aGetter = [](std::span<Hush::Reflection::VariantView> params)
+		Hush::Reflection::FieldInfo::Getter aGetter = [](std::span<const Hush::Reflection::VariantView> params)
 			-> Hush::Result<Hush::Reflection::Variant, Hush::Reflection::Variant::EVariantError> {
 			if (params.size() != 1)
 			{
@@ -49,7 +49,7 @@ public:
 		};
 
 		Hush::Reflection::FieldInfo::Setter aSetter =
-			[](std::span<Hush::Reflection::VariantView> params) -> Hush::Reflection::Variant::EVariantError {
+			[](std::span<const Hush::Reflection::VariantView> params) -> Hush::Reflection::Variant::EVariantError {
 			if (params.size() != 2)
 			{
 				return Hush::Reflection::Variant::EVariantError::NonSameType;
@@ -82,7 +82,7 @@ public:
 
 	static void RegisterReflection(Hush::Reflection::ReflectionDB &db)
 	{
-		Hush::Reflection::FieldInfo::Getter aGetter = [](std::span<Hush::Reflection::VariantView> params)
+		Hush::Reflection::FieldInfo::Getter aGetter = [](std::span<const Hush::Reflection::VariantView> params)
 			-> Hush::Result<Hush::Reflection::Variant, Hush::Reflection::Variant::EVariantError> {
 			if (params.size() != 1)
 			{
@@ -100,7 +100,7 @@ public:
 		};
 
 		Hush::Reflection::FieldInfo::Setter aSetter =
-			[](std::span<Hush::Reflection::VariantView> params) -> Hush::Reflection::Variant::EVariantError {
+			[](std::span<const Hush::Reflection::VariantView> params) -> Hush::Reflection::Variant::EVariantError {
 			if (params.size() != 2)
 			{
 				return Hush::Reflection::Variant::EVariantError::NonSameType;
@@ -151,7 +151,7 @@ TEST_CASE("Reflection", "[reflection]")
 
 		const Hush::Reflection::FieldInfo &fieldInfo = typeInfo->GetFields()[0];
 
-		(void)fieldInfo.Set(Hush::Reflection::VariantView(&test), Hush::Reflection::VariantView(&value));
+		(void)fieldInfo.Set({Hush::Reflection::VariantView(&test), Hush::Reflection::VariantView(&value)});
 
 		REQUIRE(test.a == 0);
 	}

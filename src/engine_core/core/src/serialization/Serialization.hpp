@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <concepts>
 #include <optional>
+#include <utility>
 
 namespace Hush::Serialization
 {
@@ -39,9 +40,8 @@ namespace Hush::Serialization
 
 	template <typename It, typename K, typename V>
 	concept IsMapIterator = requires(It it) {
-		{ *it } -> std::same_as<std::pair<K, V>>;
-		{ It::value_type } -> std::same_as<std::pair<K, V>>;
-		{ It::value_type::first } -> std::same_as<K>;
-		{ It::value_type::second } -> std::same_as<V>;
+		typename It::value_type;
+		requires std::same_as<typename It::value_type, std::pair<K, V>>;
+		{ *it } -> std::convertible_to<typename It::value_type>;
 	};
-} // namespace Hush
+} // namespace Hush::Serialization

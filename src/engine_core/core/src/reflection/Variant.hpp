@@ -21,7 +21,11 @@ namespace Hush::Reflection
 			NonSameType = 0,
 		};
 
-		VariantView() : m_value(nullptr), m_typeId(TypeId{}) {}
+		VariantView()
+			: m_value(nullptr),
+			  m_typeId(TypeId{})
+		{
+		}
 
 		template <typename T>
 		explicit VariantView(T *value)
@@ -31,7 +35,8 @@ namespace Hush::Reflection
 			static_assert(!std::is_same_v<T, void>, "VariantView cannot hold void type");
 		}
 
-		template <typename T> requires (!std::is_pointer_v<T>)
+		template <typename T>
+			requires(!std::is_pointer_v<T>)
 		explicit VariantView(T &value)
 			: m_value(&value),
 			  m_typeId(Hush::Reflection::GetTypeId<T>())
@@ -56,7 +61,6 @@ namespace Hush::Reflection
 
 			return static_cast<T *>(m_value);
 		}
-
 
 		[[nodiscard]]
 		void *GetRaw(TypeId id) const
@@ -132,23 +136,22 @@ namespace Hush::Reflection
 			  m_status(std::exchange(rhs.m_status, EVariantStatus::None)),
 			  m_typeId(std::exchange(rhs.m_typeId, TypeId{}))
 		{
-			memmove_s(m_data, sizeof(m_data), rhs.m_data, sizeof(m_data));
+			std::memcpy(m_data, rhs.m_data, sizeof(m_data));
 		}
+
+		~Variant();
 
 		Variant &operator=(Variant &&rhs) noexcept
 		{
 			if (this != &rhs)
 			{
-				if (m_dtor != nullptr)
-				{
-					m_dtor(m_ptr);
-				}
+				Clear();
 
 				m_dtor = std::exchange(rhs.m_dtor, nullptr);
 				m_status = std::exchange(rhs.m_status, EVariantStatus::None);
 				m_typeId = std::exchange(rhs.m_typeId, TypeId{});
 
-				memmove_s(m_data, sizeof(m_data), rhs.m_data, sizeof(m_data));
+				std::memcpy(&m_data, &rhs.m_data, sizeof(m_data));
 			}
 
 			return *this;
@@ -197,6 +200,19 @@ namespace Hush::Reflection
 			return m_ptr;
 		}
 
+		void Clear()
+		{
+			if (m_dtor != nullptr && m_status != EVariantStatus::None)
+			{
+				void *ptrToFree = m_status == EVariantStatus::Small ? reinterpret_cast<void *>(m_data) : m_ptr;
+				m_dtor(ptrToFree);
+			}
+
+			m_status = EVariantStatus::None;
+			m_dtor = nullptr;
+			m_typeId = TypeId{};
+		}
+
 	private:
 		static constexpr std::size_t MAX_SMALL_SIZE = 16;
 
@@ -209,4 +225,9 @@ namespace Hush::Reflection
 		TypeId m_typeId;
 	};
 
-}
+	inline Variant::~Variant()
+	{
+		Clear();
+	}
+
+} // namespace Hush::Reflection

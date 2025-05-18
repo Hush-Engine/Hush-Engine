@@ -10,6 +10,8 @@
 #include <span>
 #include <initializer_list>
 #include <functional>
+#include <array>
+#include <algorithm>
 
 namespace Hush::Reflection
 {
@@ -18,8 +20,8 @@ namespace Hush::Reflection
 	public:
 		using EVariantError = Variant::EVariantError;
 
-		using Setter = std::function<EVariantError(std::span<VariantView>)>;
-		using Getter = std::function<Result<Variant, EVariantError>(std::span<VariantView>)>;
+		using Setter = std::function<EVariantError(std::span<const VariantView>)>;
+		using Getter = std::function<Result<Variant, EVariantError>(std::span<const VariantView>)>;
 
 		FieldInfo(TypeId typeId, std::string name, Setter setter, Getter getter)
 			: m_typeId(typeId),
@@ -42,7 +44,7 @@ namespace Hush::Reflection
 		}
 
 		[[nodiscard]]
-		Result<Variant, Variant::EVariantError> Get(const std::span<VariantView> args) const
+		Result<Variant, Variant::EVariantError> Get(std::span<const VariantView> args) const
 		{
 			if (m_getter != nullptr)
 			{
@@ -51,17 +53,24 @@ namespace Hush::Reflection
 			return EVariantError::NonSameType;
 		}
 
+		template <typename... Args>
+			requires(std::is_same_v<Args, VariantView> && ...)
 		[[nodiscard]]
 		Result<Variant, Variant::EVariantError> Get(std::initializer_list<VariantView> args) const
 		{
-			std::array<VariantView, sizeof (args)> argArray;
+			std::array<VariantView, sizeof...(args)> argArray;
 			std::copy(args.begin(), args.end(), argArray.begin());
 
 			return Get(argArray);
 		}
 
+		Result<Variant, Variant::EVariantError> Get(std::initializer_list<const VariantView> args) const
+		{
+			return Get(std::span(args));
+		}
+
 		[[nodiscard]]
-		EVariantError Set(const std::span<VariantView> args) const
+		EVariantError Set(const std::span<const VariantView> args) const
 		{
 			if (m_setter != nullptr)
 			{
@@ -70,13 +79,12 @@ namespace Hush::Reflection
 			return EVariantError::NonSameType;
 		}
 
-		template <typename... Args> requires (std::is_same_v<Args, VariantView> && ...)
 		[[nodiscard]]
-		EVariantError Set(Args... args) const
+		EVariantError Set(std::initializer_list<VariantView> args) const
 		{
-			std::array argArray{args...};
-			return Set(argArray);
+			return Set(std::span(args));
 		}
+
 
 	private:
 		TypeId m_typeId;

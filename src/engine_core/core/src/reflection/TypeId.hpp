@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <functional>
+
 namespace Hush::Reflection
 {
 	struct TypeId
