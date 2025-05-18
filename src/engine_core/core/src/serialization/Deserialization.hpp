@@ -521,7 +521,7 @@ namespace Hush::Serialization
 			Result VisitBool(bool v) override
 			{
 				*value = v;
-				return this;
+				return parentVisitor;
 			}
 		};
 

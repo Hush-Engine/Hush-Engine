@@ -66,7 +66,7 @@ struct Vector3
 					startingVisitor = &xVisitor;
 					xVisitor.SetParent(&yVisitor);
 					yVisitor.SetParent(&zVisitor);
-					zVisitor.SetParent(this);
+					zVisitor.SetParent(parentVisitor);
 				}
 			}
 
