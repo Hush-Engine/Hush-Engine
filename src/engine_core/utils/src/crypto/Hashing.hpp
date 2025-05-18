@@ -46,6 +46,5 @@ namespace Hush::Hashing
 	constexpr std::uint64_t Fnv1a64(const std::string_view &data)
 	{
 		return Fnv1a64(data.data(), static_cast<uint32_t>(data.size()));
-
 	}
 } // namespace Hush::Hashing

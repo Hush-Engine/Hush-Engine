@@ -1,32 +1,35 @@
 #pragma once
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/RenderableNode.hpp"
 #include "VkDescriptors.hpp"
 
 namespace Hush
 {
-	struct MeshAsset;
+	class Mesh;
 
 	class VulkanMeshNode final : public RenderableNode
 	{
 
 	public:
 		// TODO: remove from public stuff
-		std::shared_ptr<MeshAsset> m_mesh;
+		std::shared_ptr<Mesh> m_mesh;
 		DescriptorAllocatorGrowable m_descriptorPool;
 
-		VulkanMeshNode(std::shared_ptr<MeshAsset> mesh);
+		VulkanMeshNode(std::shared_ptr<Mesh> mesh);
 
 		void Draw(const glm::mat4 &topMatrix, void *drawContext) override;
 
-		MeshAsset &GetMesh();
+		Mesh &GetMesh();
 
-		void SetMaterialDataBuffer(VulkanAllocatedBuffer materialDataBuffer);
+		void SetMaterialDataBuffer(GpuAllocatedBuffer materialDataBuffer);
 		void SetDescriptorPool(DescriptorAllocatorGrowable descriptorPool);
 
-		const VulkanAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
+		[[nodiscard]]
+		const GpuAllocatedBuffer &GetMaterialDataBuffer() const noexcept;
+		[[nodiscard]]
 		const DescriptorAllocatorGrowable &GetDescriptorPool() const noexcept;
 
 	private:
-		VulkanAllocatedBuffer m_materialDataBuffer;
+		GpuAllocatedBuffer m_materialDataBuffer;
 	};
 } // namespace Hush
