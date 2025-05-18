@@ -271,7 +271,7 @@ namespace Hush::Serialization
 			requires(BuiltinVisitors::ExistsBuiltinVisitor<T>)
 		Result<T, EDeserializationError> Deserialize()
 		{
-			BuiltinVisitors::Visitor<T> visitor(this, JSON_DESCRIBING_TYPE);
+			BuiltinVisitors::Visitor<T> visitor(nullptr, JSON_DESCRIBING_TYPE);
 
 			RapidjsonVisitor rapidjsonVisitor;
 			rapidjsonVisitor.visitor = &visitor;
@@ -292,10 +292,10 @@ namespace Hush::Serialization
 		Result<T, EDeserializationError> Deserialize()
 		{
 			T finalResult;
-			auto visitor = finalResult.Deserialize(JSON_DESCRIBING_TYPE);
+			auto visitor = finalResult.Deserialize(nullptr, JSON_DESCRIBING_TYPE);
 
 			RapidjsonVisitor rapidjsonVisitor;
-			rapidjsonVisitor.visitor = &visitor;
+			rapidjsonVisitor.visitor = visitor.GetStartVisitor();
 
 			auto result = m_reader.Parse(m_stream, rapidjsonVisitor);
 			if (result.IsError())
@@ -466,7 +466,7 @@ namespace Hush::Serialization
 
 		if (result.has_error())
 		{
-			return EDeserializationError::InvalidData;
+			return result.error();
 		}
 
 		return result.value();

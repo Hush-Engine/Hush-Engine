@@ -1,4 +1,4 @@
-/*! \file Entity.test.cpp
+/*! \file Serialization.test.cpp
 	\author Alan Ramirez
 	\date 2025-02-10
 	\brief Entity test implementation
@@ -35,7 +35,7 @@ struct Vector3
 		return serializer.Serialize("z", z);
 	}
 
-	auto Deserialize(Hush::Serialization::EFormatDescribingType format)
+	auto Deserialize(Hush::Serialization::IVisitor *parent, Hush::Serialization::EFormatDescribingType format)
 	{
 		struct Visitor : public Hush::Serialization::IVisitor
 		{
@@ -54,19 +54,22 @@ struct Vector3
 			EVisitorStatus status = EVisitorStatus::None;
 			bool insideObject{false};
 
-			explicit Visitor(Vector3 &vec, Hush::Serialization::EFormatDescribingType format)
-				: IVisitor(nullptr, format),
+			explicit Visitor(IVisitor *parent, Vector3 &vec, Hush::Serialization::EFormatDescribingType format)
+				: IVisitor(parent, format),
 				  xVisitor(this, &vec.x, format),
 				  yVisitor(this, &vec.y, format),
-				  zVisitor(this, &vec.z, format),
-				  startingVisitor(nullptr)
+				  zVisitor(this, &vec.z, format)
 			{
-				if (format == Hush::Serialization::EFormatDescribingType::SelfDescribing)
+				if (format == Hush::Serialization::EFormatDescribingType::NonSelfDescribing)
 				{
-					startingVisitor = &xVisitor;
-					xVisitor.SetParent(&yVisitor);
-					yVisitor.SetParent(&zVisitor);
-					zVisitor.SetParent(parentVisitor);
+					SetStartingVisitor(&xVisitor);
+					xVisitor.SetParentVisitor(&yVisitor);
+					yVisitor.SetParentVisitor(&zVisitor);
+					zVisitor.SetParentVisitor(GetParentVisitor());
+				}
+				else
+				{
+					SetStartingVisitor(this);
 				}
 			}
 
@@ -117,17 +120,9 @@ struct Vector3
 
 				return Hush::Serialization::EDeserializationError::InvalidKey;
 			}
-
-			bool autoDescribe{false};
-			IVisitor *startingVisitor;
-
-			IVisitor *GetStartVisitor()
-			{
-				return startingVisitor;
-			}
 		};
 
-		return Visitor{*this, format};
+		return Visitor{parent, *this, format};
 	}
 };
 
@@ -174,7 +169,8 @@ TEST_CASE("Serialization", "[serialization]")
 	{
 		Hush::Serialization::JsonSerializer jsonSerializer;
 
-		constexpr std::string_view EXPECTED_JSON = R"({"__type":"SerializableStruct","a":10,"b":20.0,"c":{"__type":"Vector3","x":0.0,"y":0.0,"z":0.0},"d":["","",""]})";
+		constexpr std::string_view EXPECTED_JSON =
+			R"({"__type":"SerializableStruct","a":10,"b":20.0,"c":{"__type":"Vector3","x":0.0,"y":0.0,"z":0.0},"d":["","",""]})";
 
 		SerializableStruct serializableStruct;
 		serializableStruct.a = 10;

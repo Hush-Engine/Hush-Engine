@@ -33,7 +33,7 @@ namespace Hush::Serialization
 		/// Self-describing format.
 		SelfDescribing,
 		/// Non-self-describing format.
-		NoneSelfDescribing,
+		NonSelfDescribing,
 	};
 
 	///
@@ -58,7 +58,7 @@ namespace Hush::Serialization
 	// Is deserialize returns an instance of a class derived from IVisitor
 	template <typename T>
 	concept IsDeserializable = requires(T t) {
-		{ t.Deserialize(EFormatDescribingType::NoneSelfDescribing) };
+		{ t.Deserialize(static_cast<IVisitor *>(nullptr), EFormatDescribingType::NonSelfDescribing) };
 	};
 
 	///
@@ -67,16 +67,15 @@ namespace Hush::Serialization
 	/// that a format passes. For instance, when a JSON parser sees a number, it will call the VisitInt method of the
 	/// visitor.
 	///
-	/// TODO: how a non-self-describing format will work? We might need to implement a VisitRaw(const char* data, size_t
-	/// maxSize, size_t currentOffset)?
+	/// TODO(Alan): how a non-self-describing format will work? We might need to implement a VisitRaw(const char* data,
+	/// size_t maxSize, size_t currentOffset)?
 	class IVisitor
 	{
 	public:
-		IVisitor *parentVisitor{nullptr};
 		using Result = Hush::Result<IVisitor *, EDeserializationError>;
 
 		IVisitor(IVisitor *parent, EFormatDescribingType format)
-			: parentVisitor(parent)
+			: m_parentVisitor(parent)
 		{
 			// Do we need it in the visitor or just ot enforce a contract?
 			(void)format;
@@ -203,14 +202,14 @@ namespace Hush::Serialization
 			return EDeserializationError::NotSupported;
 		}
 
-		/// Visit a raw number value.
+		/// Visit a null value.
 		/// @return Result with the next visitor or an error.
 		virtual Result VisitNull()
 		{
 			return EDeserializationError::NotSupported;
 		}
 
-		/// Visit a raw number value.
+		/// Visit an array start.
 		/// @return Result with the next visitor or an error.
 		virtual Result VisitArrayStart()
 		{
@@ -250,10 +249,37 @@ namespace Hush::Serialization
 
 		/// Visit a key in an object.
 		/// @param parent Parent visitor
-		void SetParent(IVisitor *parent)
+		void SetParentVisitor(IVisitor *parent)
 		{
-			parentVisitor = parent;
+			m_parentVisitor = parent;
 		}
+
+		/// Get the parent visitor.
+		/// @return Parent visitor
+		[[nodiscard]]
+		IVisitor *GetParentVisitor() const
+		{
+			return m_parentVisitor;
+		}
+
+		/// Get the starting visitor.
+		/// @return Starting visitor
+		[[nodiscard]]
+		IVisitor *GetStartVisitor() const
+		{
+			return m_startingVisitor;
+		}
+
+	protected:
+		IVisitor *SetStartingVisitor(IVisitor *startingVisitor)
+		{
+			m_startingVisitor = startingVisitor;
+			return m_startingVisitor;
+		}
+
+	private:
+		IVisitor *m_parentVisitor{nullptr};
+		IVisitor *m_startingVisitor{nullptr};
 	};
 
 	namespace BuiltinVisitors
@@ -284,7 +310,7 @@ namespace Hush::Serialization
 			{
 				*value = v;
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitUInt16(std::uint16_t v) override
@@ -299,7 +325,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitUInt32(std::uint32_t v) override
@@ -315,7 +341,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitUInt64(std::uint64_t v) override
@@ -331,7 +357,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitInt8(std::int8_t v) override
@@ -355,7 +381,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitInt16(std::int16_t v) override
@@ -379,7 +405,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitInt32(std::int32_t v) override
@@ -403,7 +429,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitInt64(std::int64_t v) override
@@ -429,7 +455,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<IntType>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 		};
 
@@ -521,7 +547,7 @@ namespace Hush::Serialization
 			Result VisitBool(bool v) override
 			{
 				*value = v;
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 		};
 
@@ -551,7 +577,7 @@ namespace Hush::Serialization
 
 				*value = static_cast<F>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 
 			Result VisitDouble(double v) override
@@ -565,7 +591,7 @@ namespace Hush::Serialization
 				}
 				*this->value = static_cast<F>(v);
 
-				return parentVisitor;
+				return GetParentVisitor();
 			}
 		};
 
@@ -603,7 +629,7 @@ namespace Hush::Serialization
 			Result VisitString(std::string_view v) override
 			{
 				*value = std::string(v);
-				return this;
+				return GetParentVisitor();
 			}
 		};
 
@@ -631,7 +657,7 @@ namespace Hush::Serialization
 
 			Result VisitObjectEnd() override
 			{
-				return this->parentVisitor;
+				return this->GetParentVisitor();
 			}
 
 			Result VisitKey(std::string_view v) override
