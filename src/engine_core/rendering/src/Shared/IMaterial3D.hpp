@@ -1,8 +1,10 @@
 #pragma once
 #include "Shared/MaterialOptions.hpp"
+#include "Shared/MaterialPass.hpp"
 
 namespace Hush
 {
+	struct GraphicsApiMaterialInstance;
 	class IMaterial3D
 	{
 
@@ -16,5 +18,15 @@ namespace Hush
 		virtual ECullMode GetCullMode() const noexcept = 0;
 
 		virtual void SetCullMode(ECullMode cullMode) = 0;
+
+		[[nodiscard]]
+		virtual EMaterialPass GetMaterialPass() const noexcept = 0;
+
+		virtual void SetMaterialPass(EMaterialPass pass) = 0;
+
+		virtual GraphicsApiMaterialInstance *GetInternalMaterial() = 0;
 	};
+
+	void Serialize(IMaterial3D *component);
+
 } // namespace Hush

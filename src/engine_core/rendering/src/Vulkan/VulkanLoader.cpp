@@ -1,21 +1,20 @@
+#include "Shared/GpuAllocatedBuffer.hpp"
+#define VK_NO_PROTOTYPES
 #include "Shared/Mesh.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
+#include "Vulkan/GltfMetallicRoughness.hpp"
 #include <SDL_render.h>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 #include <glm/ext/vector_int3.hpp>
-#define VK_NO_PROTOTYPES
 #include <volk.h>
 #include "VulkanLoader.hpp"
 #include <fastgltf/types.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/core.hpp>
-#include "VkTypes.hpp"
 #include "VulkanRenderer.hpp"
 #include "Shared/ImageTexture.hpp"
-#include "VkMaterialInstance.hpp"
 #include "VulkanMeshNode.hpp"
-#include "VulkanAllocatedBuffer.hpp"
 #include "vk_mem_alloc.hpp"
 #include "Shared/GltfLoadFunctions.hpp"
 
@@ -62,7 +61,9 @@ Hush::Result<std::vector<std::shared_ptr<Hush::VulkanMeshNode>>, Hush::VulkanLoa
 	for (const fastgltf::Node &node : loadedAsset->nodes)
 	{
 		if (!node.meshIndex.has_value())
+		{
 			continue;
+		}
 		std::shared_ptr<VulkanMeshNode> meshNode = meshes.at(node.meshIndex.value());
 		meshNode->SetLocalTransform(GltfLoadFunctions::GetNodeTransform(node));
 	}
@@ -118,11 +119,11 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 																const fastgltf::Asset &asset, Mesh &meshRef,
 																VulkanRenderer *engine)
 {
-	VulkanMeshNode meshNode(std::make_shared<MeshAsset>());
+	VulkanMeshNode meshNode(std::make_shared<Mesh>());
 
-	MeshAsset &meshAsset = meshNode.GetMesh();
+	Mesh &meshAsset = meshNode.GetMesh();
 
-	meshAsset.name = mesh.name;
+	meshAsset.SetName(mesh.name);
 	// Clear out the vector buffers
 
 	std::vector<uint32_t> &indexRef = meshRef.GetIndexBuffer();
@@ -130,9 +131,10 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	indexRef.clear();
 	vertexRef.clear();
 
-	VulkanAllocatedBuffer materialDataBuffer(
+	GpuAllocatedBuffer materialDataBuffer(
 		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants) * asset.materials.size()),
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, engine->GetVmaAllocator());
+		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
+		engine->GetVmaAllocator());
 
 	// TODO: constexpr(?
 	const std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
@@ -143,7 +145,6 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	meshNode.m_descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
 	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
-	std::vector<std::shared_ptr<VkMaterialInstance>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
@@ -197,20 +198,18 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		if (primitive.materialIndex.has_value())
 		{
 			size_t materialIdx = primitive.materialIndex.value();
-			std::shared_ptr<VkMaterialInstance> materialInstance = GenerateMaterial(
+			std::shared_ptr<IMaterial3D> materialInstance = GenerateMaterial(
 				materialIdx, asset, engine, &materialDataBuffer, meshNode.m_descriptorPool, loadedTextures);
 			surfaceToAdd.material = materialInstance;
-			loadedMaterials.emplace_back(materialInstance);
 		}
 
-		meshAsset.surfaces.emplace_back(std::move(surfaceToAdd));
+		meshAsset.AddSurface(std::move(surfaceToAdd));
 	}
 
 	std::vector<VkSampler> samplers;
 
 	for (const fastgltf::Sampler &sampler : asset.samplers)
 	{
-		// Layouts seem to be deleted here
 		VkSamplerCreateInfo sampl = {.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, .pNext = nullptr};
 		sampl.maxLod = VK_LOD_CLAMP_NONE;
 		sampl.minLod = 0;
@@ -219,6 +218,7 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 		sampl.minFilter = ExtractFilter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 
 		sampl.mipmapMode = ExtractMipMapMode(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
+		// Layouts seem to be deleted materialInstance->GetMaterialConstants()e
 
 		VkSampler newSampler = nullptr;
 		vkCreateSampler(engine->GetVulkanDevice(), &sampl, nullptr, &newSampler);
@@ -227,49 +227,49 @@ Hush::VulkanMeshNode Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	}
 
 	meshRef.CalculateTangentBasis();
-	meshAsset.meshBuffers = engine->UploadMesh(indexRef, vertexRef); // Here the pipeline layout dies(?
+	meshAsset.SetMeshBuffers(engine->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
 	meshNode.SetMaterialDataBuffer(materialDataBuffer);
 	return meshNode;
 }
 
-std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
-	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
-	VulkanAllocatedBuffer *sceneMaterialBuffer, DescriptorAllocatorGrowable &allocatorPool,
-	const std::vector<GpuAllocatedImage> &loadedTextures)
+std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
+	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine, GpuAllocatedBuffer *sceneMaterialBuffer,
+	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
-
-	GLTFMetallicRoughness::MaterialConstants constants{};
-	HUSH_STATIC_ASSERT(sizeof(constants.colorFactors) == sizeof(material.pbrData.baseColorFactor),
-					   "Material constants' colors are not the same size as fastgltf pbr data colors, make sure "
-					   "fastgltf is compiled with using num = float");
-	constants.colorFactors = *reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor);
-
-	constants.metalRoughFactors.x = material.pbrData.metallicFactor;
-	constants.metalRoughFactors.y = material.pbrData.roughnessFactor;
-
-	constants.emissionFactors = glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
-										  material.emissiveFactor.z(), material.emissiveStrength);
-
 	// Scene Material buffer writing
-	VmaAllocationInfo &allocInfo = sceneMaterialBuffer->GetAllocationInfo();
-	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(allocInfo.pMappedData);
-
+	auto *mappedData = static_cast<GLTFMetallicRoughness::MaterialConstants *>(sceneMaterialBuffer->GetMappedData());
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
+	auto materialInstance = std::make_shared<GLTFMetallicRoughness>();
+	materialInstance->Init(engine);
+	materialInstance->SetAlbedo(*reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
+	materialInstance->SetEmissionColor(
+		glm::vec3(material.emissiveFactor.x(), material.emissiveFactor.y(), material.emissiveFactor.z()));
+	materialInstance->SetMetallicFactor(material.pbrData.metallicFactor);
+	materialInstance->SetRoughnessFactor(material.pbrData.roughnessFactor);
+	materialInstance->SetEmissionFactor(material.emissiveStrength);
+	materialInstance->SetMaterialPass(passType);
+
 	// Handle custom alpha cutoffs
+	float alphaThreshold{};
 	switch (passType)
 	{
+	case EMaterialPass::Other:
 	case EMaterialPass::MainColor:
 	case EMaterialPass::Transparent:
-		constants.alphaThreshold = 0.0F;
+		alphaThreshold = 0.0F;
 		break;
 	case EMaterialPass::Mask:
-		constants.alphaThreshold = material.alphaCutoff;
+		alphaThreshold = material.alphaCutoff;
+		break;
 	}
 
-	mappedData[materialIdx] = constants;
-	GLTFMetallicRoughness::MaterialResources materialResources{};
+	materialInstance->SetAlphaThreshold(alphaThreshold);
+
+	mappedData[materialIdx] = materialInstance->GetMaterialConstants();
+
+	GLTFMetallicRoughness::MaterialResources &materialResources = materialInstance->GetMaterialResources();
 	// default the material textures
 	materialResources.colorImage = engine->GetDefaultImageProvider()->GetWhiteImage();
 	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
@@ -285,12 +285,11 @@ std::shared_ptr<Hush::VkMaterialInstance> Hush::VulkanLoader::GenerateMaterial(
 	GltfLoadFunctions::SetMaterialTextures(&materialResources, asset, material, &loadedTextures);
 
 	// set the uniform buffer for the material data
-	materialResources.dataBuffer = sceneMaterialBuffer->GetBuffer();
+	materialResources.dataBuffer = static_cast<VkBuffer>(sceneMaterialBuffer->GetBuffer());
 	materialResources.dataBufferOffset =
 		static_cast<uint32_t>(materialIdx * sizeof(GLTFMetallicRoughness::MaterialConstants));
-	GLTFMetallicRoughness &metallicMatInstance = engine->GetMetalRoughMaterial();
-	return std::make_shared<VkMaterialInstance>(
-		metallicMatInstance.WriteMaterial(engine->GetVulkanDevice(), passType, materialResources, allocatorPool));
+	materialInstance->GenerateMaterialInstance(&allocatorPool);
+	return materialInstance;
 }
 
 std::optional<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadedTextureFromMaterial(

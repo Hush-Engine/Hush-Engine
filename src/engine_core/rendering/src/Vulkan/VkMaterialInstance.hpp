@@ -11,10 +11,4 @@ namespace Hush
 		VkPipelineLayout layout; // Check deletion queue?
 	};
 
-	struct VkMaterialInstance
-	{
-		VkMaterialPipeline *pipeline;
-		VkDescriptorSet materialSet;
-		EMaterialPass passType;
-	};
 } // namespace Hush

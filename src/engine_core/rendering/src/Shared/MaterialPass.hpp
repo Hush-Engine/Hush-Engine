@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 namespace Hush
 {
 	enum class EMaterialPass : uint8_t
