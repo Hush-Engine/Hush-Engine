@@ -1,8 +1,12 @@
 #include "HierarchyPanel.hpp"
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
-#include "Components/Transform.hpp"
+#include <optional>
+#include <string_view>
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "InspectorPanel.hpp"
+#include "Logger.hpp"
 #include "UI.hpp"
 
 constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
@@ -20,19 +24,23 @@ void Hush::HierarchyPanel::OnRender()
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
-	Query<Transform> allEntities = this->m_activeScene->CreateQuery<Transform>();
-	allEntities.Each([&inspectorPanel](Entity &entity, Transform &_) {
+	Query<WorldTransform, LocalTransform> allEntities =
+		this->m_activeScene->CreateQuery<WorldTransform, LocalTransform>();
+	allEntities.Each([&inspectorPanel](Entity &entity, WorldTransform &_, LocalTransform &localxForm) {
 		bool selected = inspectorPanel.GetInspectTarget().has_value() &&
 						inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
-		if (!ImGui::Selectable(entity.GetName().value_or("").data(), selected))
+		// Get the selectable that's related to the parent
+		if (localxForm.HasParent())
+		{
+			// localxForm.GetParentId();
+		}
+		const std::optional<std::string_view> &name = entity.GetName();
+		if (!ImGui::Selectable(name.value().data(), selected))
 		{
 			return;
 		}
 		inspectorPanel.SetInspectTarget(entity.GetId());
 	});
-	for (const auto &kv : this->m_activeScene->GetAllEntities())
-	{
-	}
 
 	ImGui::End();
 }

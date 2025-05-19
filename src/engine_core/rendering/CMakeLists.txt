@@ -9,7 +9,6 @@ hush_add_library(
              src/Shared/GpuAllocatedBuffer.cpp
              src/Vulkan/VulkanRenderer.cpp
              src/Vulkan/GltfMetallicRoughness.cpp
-             src/Vulkan/VulkanMeshNode.cpp
              src/Vulkan/VulkanPipelineBuilder.cpp
              src/Vulkan/VulkanFullScreenPass.cpp
              src/Shared/ShaderMaterial.cpp

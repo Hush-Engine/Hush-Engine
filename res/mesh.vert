@@ -37,7 +37,7 @@ void main()
 	
 	vec4 position = vec4(v.position, 1.0f);
 
-	gl_Position =  sceneData.viewproj * PushConstants.modelMatrix * position;
+	gl_Position =  u_sceneData.viewproj * PushConstants.modelMatrix * position;
 	outWorldPos = (PushConstants.modelMatrix * vec4(v.position, 1.0f)).xyz;
 	
 	mat3 modelMat3 = mat3(PushConstants.modelMatrix);

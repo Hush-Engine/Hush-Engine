@@ -24,3 +24,13 @@
 #else
 #define HUSH_EXPORT
 #endif
+
+//  remove stupid MSVC min/max macro definitions
+#if HUSH_PLATFORM_WIN
+#undef min
+#undef max
+#endif
+
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL
+#endif

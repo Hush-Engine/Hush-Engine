@@ -68,6 +68,17 @@ namespace Hush
 
 		void SetMaterialPass(EMaterialPass pass) override;
 
+		void SetName(const std::string_view &name) override
+		{
+			this->m_name = name;
+		}
+
+		[[nodiscard]]
+		const std::string &GetName() const noexcept override
+		{
+			return this->m_name;
+		}
+
 		template <class T>
 		inline EError SetProperty(const std::string_view &name, T value)
 		{
@@ -130,6 +141,8 @@ namespace Hush
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 
 		size_t m_uniformBufferSize;
+
+		std::string m_name;
 
 		void *m_uniformBufferMappedData = nullptr;
 

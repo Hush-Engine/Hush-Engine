@@ -13,9 +13,9 @@
 
 namespace Hush
 {
-  struct DirectionalLight;
+	struct DirectionalLight;
 
-  class [[hush::export(Hush::Export::asHandle)]] HushEngine
+	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 	public:
 		/// <summary>
@@ -47,7 +47,8 @@ namespace Hush
 		void Quit();
 
 		[[hush::export]]
-		Scene* GetScene();
+		Scene *GetScene();
+
 	private:
 		void Init();
 

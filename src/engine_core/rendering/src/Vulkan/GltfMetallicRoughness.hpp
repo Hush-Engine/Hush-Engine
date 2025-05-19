@@ -5,12 +5,16 @@
 */
 
 #pragma once
+#include "BitwiseUtils.hpp"
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/IMaterial3D.hpp"
+#include "Shared/MaterialOptions.hpp"
 #include "Shared/Types/MaterialInstance.hpp"
 #include "VkDescriptors.hpp"
 #include "VkMaterialInstance.hpp"
 #include "Shared/MaterialPass.hpp"
+#include <cstdint>
 #include <glm/ext/vector_float4.hpp>
 #include <memory>
 #include <vulkan/vulkan_core.h>
@@ -18,6 +22,14 @@
 namespace Hush
 {
 	class IRenderer;
+
+	enum class EPbrOptions : int32_t
+	{
+		None = 0,
+		UseNormalTexture = 0x1,
+		DebugNormals = 0x2
+	};
+
 	class GLTFMetallicRoughness final : public IMaterial3D
 	{
 	private:
@@ -33,8 +45,10 @@ namespace Hush
 			alignas(16) glm::vec4 metalRoughFactors;
 			alignas(16) glm::vec4 emissionFactors; // Vec3 for color, w for intensity
 			alignas(4) float alphaThreshold;
+			// TODO: Turn this into Material flags and control them in a single 32 bit integer
+			alignas(4) int32_t options = 0;
 			// padding, we need it anyway for uniform buffers
-			char padding[12];
+			char padding[8];
 		};
 
 		HUSH_STATIC_ASSERT(sizeof(MaterialConstants) % 16 == 0, "Metallic Roughness size mismatch!");
@@ -49,7 +63,7 @@ namespace Hush
 			VkSampler normalSampler;
 			GpuAllocatedImage emissiveImage;
 			VkSampler emissiveSampler;
-			VkBuffer dataBuffer;
+			GpuAllocatedBuffer gpuDataBuffer;
 			uint32_t dataBufferOffset;
 		};
 
@@ -57,6 +71,7 @@ namespace Hush
 
 		DescriptorWriter writer;
 
+		// TODO: Maybe make a version that does not require a previous material buffer
 		void Init(IRenderer *renderer);
 
 		void ClearResources(VkDevice device);
@@ -88,6 +103,8 @@ namespace Hush
 		[[nodiscard]]
 		const glm::vec3 &GetEmissionColor() const noexcept;
 
+		glm::vec3 &GetEmissionColor() noexcept;
+
 		void SetEmissionColor(const glm::vec3 &color) noexcept;
 
 		[[nodiscard]]
@@ -116,18 +133,49 @@ namespace Hush
 
 		MaterialConstants &GetMaterialConstants() noexcept;
 
+		void SetMaterialConstants(const MaterialConstants &values);
+
+		[[nodiscard]]
+		EPbrOptions GetPbrOptions() const
+		{
+			return static_cast<EPbrOptions>(this->m_materialConstants->options);
+		}
+
+		void SetPbrOptions(EPbrOptions options)
+		{
+			this->m_materialConstants->options = static_cast<int32_t>(options);
+		}
+
+		void SetName(const std::string_view &name) override
+		{
+			this->m_name = name;
+		}
+
+		[[nodiscard]]
+		const std::string &GetName() const noexcept override
+		{
+			return this->m_name;
+		}
+
 	private:
 		void BuildPipelines();
 
-		MaterialConstants m_materialConstants{};
+		MaterialConstants *m_materialConstants = nullptr;
 
-		MaterialResources m_materialResources;
+		MaterialResources m_materialResources{};
 
-		EMaterialPass m_materialPass;
+		EMaterialPass m_materialPass = EMaterialPass::MainColor;
 
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 
-		IRenderer *m_renderer;
+		IRenderer *m_renderer = nullptr;
+
+		std::string m_name;
+
+		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 	};
 
 } // namespace Hush
+
+// NOLINTNEXTLINE
+HUSH_GENERATE_FLAGS(Hush::EPbrOptions, int32_t);

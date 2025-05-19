@@ -1,5 +1,6 @@
 #include "CommandPanel.hpp"
 #include "BitwiseUtils.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
@@ -21,7 +22,7 @@
 #include <vector>
 #include "UI.hpp"
 #include "MathUtils.hpp"
-#include "Components/Transform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "ArrayUtils.hpp"
 #include "StringUtils.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -135,7 +136,8 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		// Interpret the rest of the text command as the name of the entity to add
 		entityToCreate = this->m_activeScene->CreateEntityWithName(textCmd).GetId();
 		this->m_activeScene->RegisterComponentId(textCmd, entityToCreate);
-		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<Transform>();
+		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<WorldTransform>();
+		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<LocalTransform>();
 		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
 		break;
 	case EBuiltinCommands::FindEntity:
@@ -267,7 +269,7 @@ void Hush::CommandPanel::AddComponentPopup()
 		switch (Hashing::Fnv1a(componentName))
 		{
 		case Hashing::Fnv1a("Transform"):
-			inspectTarget.value().AddComponent<Transform>();
+			inspectTarget.value().AddComponent<WorldTransform>();
 			break;
 		case Hashing::Fnv1a("DirectionalLight"):
 			inspectTarget.value().AddComponent<DirectionalLight>();
@@ -292,11 +294,11 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	}
 	UI::InputTextWithHint("##Search", "i.e. Player", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
 	// Then find all entities in the scene here
-	Query<Transform> query = this->m_activeScene->CreateQuery<Transform>();
+	Query<WorldTransform> query = this->m_activeScene->CreateQuery<WorldTransform>();
 	std::vector<std::string> entityNames;
 	std::string_view searchEntityName(this->m_searchInputText);
 	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Transform &transform) {
+	query.Each([&entityNames, &searchEntityName, this](Entity &entity, WorldTransform &transform) {
 		std::string_view currEntityName = entity.GetName().value_or("");
 		if (searchEntityName.empty())
 		{

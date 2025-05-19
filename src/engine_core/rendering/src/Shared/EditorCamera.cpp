@@ -16,14 +16,20 @@ Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float 
 void Hush::EditorCamera::OnUpdate(float delta)
 {
 
+	glm::mat4 viewMatrix = this->GetViewMatrix();
+	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+	if (InputManager::GetMouseScrollAcceleration().y != 0.0f)
+	{
+		constexpr float zoomSpeed = 100.f;
+		this->m_position += forward * InputManager::GetMouseScrollAcceleration().y * zoomSpeed * delta;
+	}
+
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
 		return;
 	}
-	glm::mat4 viewMatrix = this->GetViewMatrix();
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 
 	glm::vec3 cameraDir(0.f);
 
@@ -51,13 +57,6 @@ void Hush::EditorCamera::OnUpdate(float delta)
 	{
 		cameraDir += up;
 	}
-
-	if (InputManager::GetMouseScrollAcceleration().y != 0.0f)
-	{
-		constexpr float zoomSpeed = 100.f;
-		this->m_position += forward * InputManager::GetMouseScrollAcceleration().y * zoomSpeed * delta;
-	}
-
 	if (cameraDir != Vector3Math::ZERO)
 	{
 		// constexpr float maxSpeed = 5000.0F;

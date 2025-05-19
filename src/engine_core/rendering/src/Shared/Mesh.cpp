@@ -1,12 +1,29 @@
 #include "Mesh.hpp"
 #include "Vector4Math.hpp"
+#include <glm/ext/vector_float3.hpp>
+#include <glm/geometric.hpp>
 
 constexpr size_t VERTEX_PER_TRIANGLE = 3;
 
-void Hush::Mesh::CalculateNormals(Vertex &currentVertex)
+void Hush::Mesh::CalculateNormals()
 {
-	(void)currentVertex;
-	// NYI: We assume the model already has normals for now
+	for (size_t i = 0; i < this->m_indices.size(); i += VERTEX_PER_TRIANGLE)
+	{
+
+		size_t idx0 = this->m_indices.at(i);
+		size_t idx1 = this->m_indices.at(i + 1);
+		size_t idx2 = this->m_indices.at(i + 2);
+
+		Vertex &vertex0 = this->m_vertices.at(idx0);
+		Vertex &vertex1 = this->m_vertices.at(idx1);
+		Vertex &vertex2 = this->m_vertices.at(idx2);
+		// n = normalize(cross(b-a, c-a))
+		glm::vec3 faceCross = glm::cross(vertex1.position - vertex0.position, vertex2.position - vertex0.position);
+		glm::vec3 normal = glm::normalize(faceCross);
+		vertex0.normal = normal;
+		vertex1.normal = normal;
+		vertex2.normal = normal;
+	}
 }
 
 void Hush::Mesh::CalculateTangentBasis()
@@ -36,7 +53,7 @@ void Hush::Mesh::CalculateTangentBasis()
 
 		float r = 1.0F / (deltaUv1.x * deltaUv2.y - deltaUv1.y * deltaUv2.x);
 
-		float handedness = ((deltaPos1.y * deltaPos2.x - deltaPos2.y * deltaPos1.x) < 0.0F) ? -1.0F : 0.0F;
+		float handedness = ((deltaPos1.y * deltaPos2.x - deltaPos2.y * deltaPos1.x) < 0.0F) ? -1.0F : 1.0F;
 		glm::vec3 tangent = (deltaPos1 * deltaUv2.y - deltaPos2 * deltaUv1.y) * r;
 		// Bitangent will be calculated in the GPU
 
