@@ -102,5 +102,5 @@ namespace Hush
 		GPUMeshBuffers m_meshBuffers;
 	};
 
-	void Serialize(Mesh *component, const char* entityName);
+	void Serialize(Mesh *component, const char *entityName);
 } // namespace Hush

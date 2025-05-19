@@ -24,14 +24,14 @@ void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer)
 {
 	this->m_renderer = renderer;
 
-	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(renderer);	
-	// 
+	auto *rendererImpl = dynamic_cast<VulkanRenderer *>(renderer);
+	//
 	// Scene Material buffer writing
-	this->m_materialResources.gpuDataBuffer = GpuAllocatedBuffer(
-		static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants)),
-		GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
-		rendererImpl->GetVmaAllocator());
-	
+	this->m_materialResources.gpuDataBuffer =
+		GpuAllocatedBuffer(static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants)),
+						   GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
+						   rendererImpl->GetVmaAllocator());
+
 	this->m_materialResources.dataBufferOffset = 0;
 	this->m_materialConstants =
 		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData());
@@ -151,7 +151,6 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet = descriptorAllocator->Allocate(device, this->m_materialLayout);
-
 
 	// Ptr offsetting
 	// auto* offsetPtr = reinterpret_cast<std::byte*>()) + this->m_materialResources.dataBufferOffset;

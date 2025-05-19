@@ -27,11 +27,12 @@ namespace Hush
 
 		virtual GraphicsApiMaterialInstance *GetInternalMaterial() = 0;
 
-		virtual void SetName(const std::string_view& name) = 0;
-		
-		[[nodiscard]] virtual std::string_view GetName() const noexcept = 0;
+		virtual void SetName(const std::string_view &name) = 0;
+
+		[[nodiscard]]
+		virtual const std::string &GetName() const noexcept = 0;
 	};
 
-	void Serialize(IMaterial3D *component, const char* uniqueName);
+	void Serialize(IMaterial3D *component, const char *uniqueName);
 
 } // namespace Hush
