@@ -34,3 +34,9 @@ find_package(flecs CONFIG REQUIRED)
 
 # SPIR-V reflect
 find_package(unofficial-spirv-reflect CONFIG REQUIRED)
+
+# RapidJSON
+find_package(RapidJSON CONFIG REQUIRED)
+
+# Abseil
+find_package(absl CONFIG REQUIRED)
