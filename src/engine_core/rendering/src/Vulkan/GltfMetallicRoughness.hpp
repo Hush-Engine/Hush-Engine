@@ -146,12 +146,14 @@ namespace Hush
 			this->m_materialConstants->options = static_cast<int32_t>(options);
 		}
 
-		
-		void SetName(const std::string_view& name) override {
+		void SetName(const std::string_view &name) override
+		{
 			this->m_name = name;
 		}
 
-		[[nodiscard]] std::string_view GetName() const noexcept override {
+		[[nodiscard]]
+		const std::string &GetName() const noexcept override
+		{
 			return this->m_name;
 		}
 

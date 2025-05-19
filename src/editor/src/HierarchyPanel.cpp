@@ -34,8 +34,9 @@ void Hush::HierarchyPanel::OnRender()
 		{
 			// localxForm.GetParentId();
 		}
-		const std::optional<std::string_view>& name = entity.GetName();
-		if (!ImGui::Selectable(name.value().data(), selected)) {
+		const std::optional<std::string_view> &name = entity.GetName();
+		if (!ImGui::Selectable(name.value().data(), selected))
+		{
 			return;
 		}
 		inspectorPanel.SetInspectTarget(entity.GetId());

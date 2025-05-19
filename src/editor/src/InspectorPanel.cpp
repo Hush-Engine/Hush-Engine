@@ -22,7 +22,8 @@
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
 // Some temp auxiliar functions
-std::string ConcatCStr(const std::string_view& base, const std::string_view& other) {
+std::string ConcatCStr(const std::string_view &base, const std::string_view &other)
+{
 	return std::string(base) + other.data();
 }
 
@@ -35,8 +36,11 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-void Hush::Serialize(IMaterial3D *component, const char* uniqueName)
+void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
 {
+
+	ImGui::Text("Material: %s", component->GetName().c_str());
+
 	// ECullMode cullMode = component->GetCullMode();
 	// Check which instance of the material is
 	// TODO: Do this with the reflection API instead of dynamic casting
@@ -75,12 +79,14 @@ void Hush::Serialize(IMaterial3D *component, const char* uniqueName)
 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
 }
 
-void Hush::Serialize(Mesh *component, const char* entityName)
+void Hush::Serialize(Mesh *component, const char *entityName)
 {
-	if (!ImGui::CollapsingHeader((std::string("Mesh Component##") + entityName).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+	if (!ImGui::CollapsingHeader((std::string("Mesh Component##") + entityName).c_str(),
+								 ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		return;
 	}
+	ImGui::Text("Name: %s", component->GetName().c_str());
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
 	const std::vector<GeoSurface> &surfaces = component->GetSurfaces();
