@@ -35,17 +35,17 @@ namespace Hush
 
 		constexpr Color(float red, float green, float blue, float alpha)
 		{
-			this->m_rgba.r = red;
-			this->m_rgba.g = green;
-			this->m_rgba.b = blue;
-			this->m_rgba.a = alpha;
+			this->m_rgba.x = red;
+			this->m_rgba.y = green;
+			this->m_rgba.z = blue;
+			this->m_rgba.w = alpha;
 		}
 
 		constexpr Color(float red, float green, float blue)
 		{
-			this->m_rgba.r = red;
-			this->m_rgba.g = green;
-			this->m_rgba.b = blue;
+			this->m_rgba.x = red;
+			this->m_rgba.y = green;
+			this->m_rgba.z = blue;
 		}
 
 		constexpr Color(glm::vec3 rgb)
@@ -88,10 +88,10 @@ namespace Hush
 		constexpr uint32_t ToColor32() const
 		{
 			constexpr float maxFloatColorValue = 255.0F;
-			auto rComponent = static_cast<uint8_t>(glm::clamp(m_rgba.r, 0.0F, 1.0F) * maxFloatColorValue);
-			auto gComponent = static_cast<uint8_t>(glm::clamp(m_rgba.g, 0.0F, 1.0F) * maxFloatColorValue);
-			auto bComponent = static_cast<uint8_t>(glm::clamp(m_rgba.b, 0.0F, 1.0F) * maxFloatColorValue);
-			auto aComponent = static_cast<uint8_t>(glm::clamp(m_rgba.a, 0.0F, 1.0F) * maxFloatColorValue);
+			auto rComponent = static_cast<uint8_t>(glm::clamp(m_rgba.x, 0.0F, 1.0F) * maxFloatColorValue);
+			auto gComponent = static_cast<uint8_t>(glm::clamp(m_rgba.y, 0.0F, 1.0F) * maxFloatColorValue);
+			auto bComponent = static_cast<uint8_t>(glm::clamp(m_rgba.z, 0.0F, 1.0F) * maxFloatColorValue);
+			auto aComponent = static_cast<uint8_t>(glm::clamp(m_rgba.w, 0.0F, 1.0F) * maxFloatColorValue);
 
 			// Pack into a single 32-bit value as ARGB
 			return (static_cast<uint32_t>(aComponent) << 24) | (static_cast<uint32_t>(rComponent) << 16) |

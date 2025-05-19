@@ -23,6 +23,8 @@
     "outcome",
     "fastgltf",
     "catch2",
-    "spirv-reflect"
+    "spirv-reflect",
+    "rapidjson",
+    "abseil"
   ]
 }

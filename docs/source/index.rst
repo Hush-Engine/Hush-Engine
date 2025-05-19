@@ -13,4 +13,5 @@ To get started, check out `Getting started <getting-started/index.html>`_.
 
    Home <self>
    getting-started/index
+   hush-internals/index
    API reference <api-reference>
