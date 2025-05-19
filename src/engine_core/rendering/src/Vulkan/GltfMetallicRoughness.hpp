@@ -172,10 +172,6 @@ namespace Hush
 
 		std::string m_name;
 
-		// Original material index
-		// TODO: Check if we *actually* need this
-		size_t m_materialIdx = 0;
-
 		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 	};
 

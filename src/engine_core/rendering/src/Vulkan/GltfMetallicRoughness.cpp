@@ -296,14 +296,14 @@ Hush::GLTFMetallicRoughness::MaterialConstants &Hush::GLTFMetallicRoughness::Get
 {
 	HUSH_ASSERT(this->m_materialConstants != nullptr,
 				"No data in material, did you forget to call GenerateMaterialInstance?");
-	return this->m_materialConstants[this->m_materialIdx]; // Uuuuh, yeah, that works I guess
+	return *this->m_materialConstants; // Uuuuh, yeah, that works I guess
 }
 
 void Hush::GLTFMetallicRoughness::SetMaterialConstants(const MaterialConstants &values)
 {
 	HUSH_ASSERT(this->m_materialConstants != nullptr,
 				"No data in material, did you forget to call GenerateMaterialInstance?");
-	this->m_materialConstants[this->m_materialIdx] = values;
+	*this->m_materialConstants = values;
 }
 
 Hush::GLTFMetallicRoughness::MaterialResources &Hush::GLTFMetallicRoughness::GetMaterialResources()
