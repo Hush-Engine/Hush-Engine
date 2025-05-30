@@ -215,7 +215,7 @@ struct SerializableDemo
 
 				insideObject = false;
 
-				return nullptr;
+				return GetParentVisitor();
 			}
 
 			Result VisitKey(std::string_view value) override

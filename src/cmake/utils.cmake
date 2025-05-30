@@ -6,15 +6,19 @@
 if (MSVC)
     # Check if the file exists
     if (NOT EXISTS "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+        set(EXPECTED_SHA256 "bfc0460bf5119a3cc29db7c40740fc64b353065209d09a8c63bcc472f15093e0")
         file(
                 DOWNLOAD "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.1.0/hush-reflection.exe"
                 "${CMAKE_BINARY_DIR}/hush-reflection.exe"
                 STATUS download_status
+                EXPECTED_HASH SHA256=${EXPECTED_SHA256}
         )
+        if (NOT download_status EQUAL 0)
+            message(FATAL_ERROR "Failed to download hush-reflection.exe: ${download_status}")
+        endif ()
     else ()
         message(STATUS "hush-reflection.exe already exists, skipping download.")
     endif ()
-
 
     set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
 endif ()
@@ -75,7 +79,7 @@ macro(enable_reflection)
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp
             COMMAND ${HUSH_REFLECTION_BIN}
             ARGS -p ${CMAKE_BINARY_DIR}/compile_commands.json --output-stamp=${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp ${LIB_SRCS_ABSOLUTE}
-            DEPENDS ${PUBLIC_HEADERS} ${PRIVATE_HEADERS} ${HUSH_REFLECTION_BIN}
+            DEPENDS ${PUBLIC_HEADERS_FILES} ${PRIVATE_HEADERS_FILES} ${LIB_SRCS_ABSOLUTE} ${HUSH_REFLECTION_BIN}
             WORKING_DIRECTORY ${WORKING_DIR}
             VERBATIM
     )
@@ -123,7 +127,7 @@ endmacro()
 macro(hush_add_executable)
     cmake_parse_arguments(EXE "" "TARGET_NAME" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
     add_executable(${EXE_TARGET_NAME} ${EXE_SRCS})
-    target_include_directories(${EXE_TARGET_NAME} PRIVATE ${EXE_HEADER_DIRS})
+    target_include_directories(${EXE_TARGET_NAME} PRIVATE ${EXE_PUBLIC_HEADER_DIRS} ${EXE_PRIVATE_HEADER_DIRS})
     set_all_warnings(${EXE_TARGET_NAME})
 
     if (${HUSH_ENABLE_LTO})
