@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "Deserialization.hpp"
+
 #include <Result.hpp>
 #include <cstdint>
 #include <concepts>
@@ -598,6 +600,7 @@ namespace Hush::Serialization
 		template <>
 		struct Visitor<float> : public FloatVisitor<float>
 		{
+			using Exists = std::true_type;
 			Visitor(IVisitor *parent, float *value, EFormatDescribingType describingType)
 				: FloatVisitor<float>(parent, value, describingType)
 			{
@@ -686,9 +689,40 @@ namespace Hush::Serialization
 		};
 
 		template <typename T>
-		concept ExistsBuiltinVisitor = requires() {
-			{ BuiltinVisitors::Visitor<T>::Exists } -> std::same_as<std::true_type>;
-		};
-
+		concept ExistsBuiltinVisitor = std::same_as<typename BuiltinVisitors::Visitor<T>::Exists, std::true_type>;
 	} // namespace BuiltinVisitors
+
+	template <typename T, typename = void>
+	struct Visitor : public IVisitor
+	{
+		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType) : IVisitor(parent, describingType)
+		{
+			(void)parent;
+			(void)value;
+			(void)describingType;
+		}
+	};
+
+	template <typename T> requires (BuiltinVisitors::ExistsBuiltinVisitor<T> && !IsDeserializable<T>)
+	struct Visitor<T> : public BuiltinVisitors::Visitor<T>
+	{
+		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType)
+			: BuiltinVisitors::Visitor<T>(parent, value, describingType)
+		{
+		}
+	};
+
+	template <IsDeserializable T>
+	struct Visitor<T> : public decltype(std::declval<T&>().Deserialize(std::declval<IVisitor*>(), EFormatDescribingType::NonSelfDescribing))
+	{
+		using Parent = decltype(std::declval<T&>().Deserialize(std::declval<IVisitor*>(), EFormatDescribingType::NonSelfDescribing));
+		using Type = T;
+
+		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType)
+			: Parent(parent, value, describingType)
+		{
+		}
+	};
+
+
 } // namespace Hush::Serialization

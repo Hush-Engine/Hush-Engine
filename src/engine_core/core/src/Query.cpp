@@ -58,7 +58,7 @@ std::size_t Hush::RawQuery::QueryIterator::Size() const
 	return queryIter->count;
 }
 
-void *const Hush::RawQuery::QueryIterator::GetComponentAt(std::int8_t index, std::size_t size) const
+void *Hush::RawQuery::QueryIterator::GetComponentAt(std::int8_t index, std::size_t size) const
 {
 	auto *queryIter = reinterpret_cast<const ecs_iter_t *>(m_iterData.data());
 

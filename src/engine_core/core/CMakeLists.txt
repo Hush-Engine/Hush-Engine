@@ -14,6 +14,7 @@ hush_add_library(
              src/reflection/Type.cpp
         PUBLIC_HEADER_DIRS src
         PRIVATE_HEADER_DIRS private
+        ENABLE_REFLECTION ON
 )
 add_library(Hush::Core ALIAS HushCore)
 
@@ -24,4 +25,5 @@ add_test_target(
         ENGINE_TARGET HushCore
         SRCS tests/Entity.test.cpp tests/Query.test.cpp tests/Reflection.test.cpp tests/Serialization.test.cpp
         HEADER_DIRS tests
+        ENABLE_REFLECTION ON
 )

@@ -14,8 +14,16 @@
 #include "TypeTraits.hpp"
 #include "TypeId.hpp"
 #include "TypeInfo.hpp"
+#include "Platform.hpp"
+#include "../serialization/Serialization.hpp"
+#include "../serialization/Deserialization.hpp"
 
 #include <crypto/Hashing.hpp>
+
+#ifdef HUSH_COMPILER_MSVC
+#pragma warning(push)
+#pragma warning(disable : 5030) // Attribute not recognized
+#endif
 
 namespace Hush::Reflection
 {

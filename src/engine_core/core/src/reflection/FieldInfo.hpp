@@ -53,17 +53,6 @@ namespace Hush::Reflection
 			return EVariantError::NonSameType;
 		}
 
-		template <typename... Args>
-			requires(std::is_same_v<Args, VariantView> && ...)
-		[[nodiscard]]
-		Result<Variant, Variant::EVariantError> Get(std::initializer_list<VariantView> args) const
-		{
-			std::array<VariantView, sizeof...(args)> argArray;
-			std::copy(args.begin(), args.end(), argArray.begin());
-
-			return Get(argArray);
-		}
-
 		Result<Variant, Variant::EVariantError> Get(std::initializer_list<const VariantView> args) const
 		{
 			return Get(std::span(args));

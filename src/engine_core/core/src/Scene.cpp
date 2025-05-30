@@ -130,9 +130,8 @@ Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 {
 	auto *world = static_cast<ecs_world_t *>(m_world);
 
-	const ecs_entity_desc_t desc = {
-		.name = name.data(),
-	};
+	ecs_entity_desc_t desc = {};
+	desc.name = name.data();
 
 	const Entity::EntityId entityId = ecs_entity_init(world, &desc);
 
@@ -185,6 +184,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 		std::size_t alignment{};
 		std::string name;
 		ComponentTraits::ComponentOps ops{};
+		ComponentTraits::EComponentOpsFlags opsFlags{ComponentTraits::EComponentOpsFlags::None};
 
 		void *userCtx{};
 		void (*userCtxFree)(void *){};
@@ -223,6 +223,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -241,6 +242,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -260,6 +262,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -278,6 +281,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -297,6 +301,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -315,6 +320,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -333,6 +339,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};
@@ -351,6 +358,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 				.alignment = info->alignment,
 				.name = info->name.c_str(),
 				.ops = info->ops,
+				.opsFlags = info->opsFlags,
 				.userCtx = info->userCtx,
 				.userCtxFree = info->userCtxFree,
 			};

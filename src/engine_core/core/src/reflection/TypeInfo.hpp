@@ -10,6 +10,7 @@
 #include "FieldInfo.hpp"
 
 #include <vector>
+#include <optional>
 
 namespace Hush::Reflection
 {
@@ -48,6 +49,19 @@ namespace Hush::Reflection
 		std::span<const FieldInfo> GetFields() const
 		{
 			return m_fields;
+		}
+
+		[[nodiscard]]
+		std::optional<std::reference_wrapper<const FieldInfo>> GetField(std::string_view name) const
+		{
+			for (auto &field : m_fields)
+			{
+				if (field.GetName() == name)
+				{
+					return std::ref(field);
+				}
+			}
+			return std::nullopt;
 		}
 
 		[[nodiscard]]

@@ -173,7 +173,7 @@ namespace Hush::Reflection
 
 			if (m_status == EVariantStatus::Small)
 			{
-				return reinterpret_cast<T *>(&m_data);
+				return static_cast<T *>(const_cast<void *>(static_cast<const void *>(m_data)));
 			}
 
 			return static_cast<T *>(m_ptr);

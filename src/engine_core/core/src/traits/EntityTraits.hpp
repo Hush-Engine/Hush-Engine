@@ -387,6 +387,8 @@ namespace Hush::ComponentTraits
 			.size = sizeof(T),
 			.alignment = alignof(T),
 			.name = typeid(T).name(),
+			.ops = {},
+			.opsFlags = EComponentOpsFlags::None,
 			.userCtx = nullptr,
 			.userCtxFree = nullptr,
 		};

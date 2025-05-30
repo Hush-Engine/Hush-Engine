@@ -32,7 +32,6 @@ Annotations are used to mark classes, member functions, and free functions that 
 Annotations use standard C++ attributes syntax to mark the members.
 
 The following annotations are available:
-- [[hush::function]]: Marks a free function as reflectable.
 - [[hush::property]]: Marks a member function as a property. It also receives the following optional arguments:
     - setter: The name of the setter function. If not provided and the member is public, a custom setter is generated.
     - getter: The name of the getter function. If not provided and the member is public, a custom getter is generated.
