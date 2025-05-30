@@ -38,7 +38,6 @@ namespace Hush::ComponentTraits
 	using ComponentCopyCtor = void (*)(void *dst, const void *src, std::int32_t count, const void *componentInfo);
 	using ComponentMoveCtor = void (*)(void *dst, void *src, std::int32_t count, const void *componentInfo);
 
-
 	enum class [[hush::export]] EComponentOpsFlags : std::uint32_t
 	{
 		None = 0,

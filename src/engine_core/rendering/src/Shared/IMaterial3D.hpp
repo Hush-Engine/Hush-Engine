@@ -1,6 +1,7 @@
 #pragma once
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
+#include <string_view>
 
 namespace Hush
 {
@@ -25,8 +26,13 @@ namespace Hush
 		virtual void SetMaterialPass(EMaterialPass pass) = 0;
 
 		virtual GraphicsApiMaterialInstance *GetInternalMaterial() = 0;
+
+		virtual void SetName(const std::string_view &name) = 0;
+
+		[[nodiscard]]
+		virtual const std::string &GetName() const noexcept = 0;
 	};
 
-	void Serialize(IMaterial3D *component);
+	void Serialize(IMaterial3D *component, const char *uniqueName);
 
 } // namespace Hush

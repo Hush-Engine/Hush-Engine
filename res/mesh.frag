@@ -3,6 +3,8 @@
 #extension GL_GOOGLE_include_directive : require
 #include "input_structures.glsl"
 #include "pbrUtils.glsl"
+#include "shaderMath.glsl"
+#include "lighting.glsl"
 
 layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec3 inColor;
@@ -13,30 +15,15 @@ layout(location = 5) in vec3 inWorldPos;
 
 layout(location = 0) out vec4 outFragColor;
 
-// Makes the normal look better for little performance cost
-vec3 calculateTangentGramSchmidt(in vec3 normal, in vec3 tangent) {
-    return (tangent - dot(tangent, normal) * normal);
-}
-
-vec3 viewMatExtractFwd(in mat4 viewMatrix) {
-    // 8 9 and 10 idx corresponds to -fwd
-    return vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-}
-
-vec3 viewMatExtractPos(in mat4 viewMatrix) {
-    // I... think this is correct, we need to negate this
-    return -vec3(viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]);
-}
-
-vec3 scalarPow(in vec3 v, in float n) {
-    return vec3(pow(v.x, n), pow(v.y, n), pow(v.z, n));
-}
 
 // Tangent, BiTangent and normal matrix
 // Converts texture space into model space
 mat3 TBN;
 
 const float specShininess = 32.0;
+
+const int USE_NORMALS_FLAG = 0x1;
+const int DEBUG_NORMALS_FLAG = 0x2;
 
 void main()
 {
@@ -47,40 +34,44 @@ void main()
     }
 
     // PBR stuff
-    // vec3 albedo = texColor.rgb * inColor;
-    vec3 albedo = scalarPow(texColor.rgb * inColor, 2.2);
+    m_params.Albedo = texColor.rgb * scalarPow(inColor, 2.2);
     vec4 metalRough = texture(metalRoughTex, inUV);
-    float metallic = metalRough.b * materialData.metal_rough_factors.x;
-    float roughness = metalRough.g * materialData.metal_rough_factors.y;
+    m_params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
+    m_params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
+    m_params.Roughness = max(m_params.Roughness, 0.05);
+    
     // Calculate normal related stuff
-    vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
-    vec3 biTangent = cross(inNormal, tangent) * inHandedness;
-    TBN = mat3(tangent, biTangent, inNormal);
+    if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG)) {
+        vec3 tangent = calculateTangentGramSchmidt(inNormal, inTangent);
+        vec3 biTangent = cross(inNormal, tangent) * inHandedness;
+        TBN = mat3(tangent, biTangent, inNormal);
+        vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
+        m_params.Normal = normalize(TBN * localNormal);
+    }
+    else {
+        // Default normal when no texture is provided
+        m_params.Normal = normalize(inNormal);
+    }
 
-    vec3 localNormal = 2.0 * texture(normalTex, inUV).rgb - 1.0;
-    vec3 finalNormal = normalize(TBN * localNormal);
+    if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG)) {
+        outFragColor = vec4(m_params.Normal, alpha);
+        return;
+    }
 
     // Calculate the light once we're done with normal calculations
-    vec3 viewDirection = viewMatExtractFwd(sceneData.view);
+    vec3 viewDirection = viewMatExtractFwd(u_sceneData.view);
 
     // TODO: replace with IBL for point lights
-    vec3 fragToCamDir = normalize(viewMatExtractPos(sceneData.view) - inWorldPos);
-    vec3 radiance = sceneData.sunlightColor.rgb * sceneData.sunlightDirection.w * PI;
+    vec3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - inWorldPos);
+    m_params.View = fragToCamDir;
+
+	m_params.NdotV = max(dot(m_params.Normal, m_params.View), 0.0);
 
     vec4 texEmission = texture(emissiveTex, inUV);
-    vec3 emission = (scalarPow(texEmission.xyz * materialData.emissionFactors.xyz, 2.2)) * materialData.emissionFactors.w;
+    vec3 emission = (scalarPow(texEmission.xyz, 2.2) * materialData.emissionFactors.xyz) * materialData.emissionFactors.w;
+    
+    vec3 directLight = CalculateDirLights();
 
-    vec3 directLight = PBR(
-        albedo,
-        emission,
-        metallic,
-        roughness,
-        finalNormal, //N
-        fragToCamDir,
-        normalize(sceneData.sunlightDirection.xyz), //L
-        radiance
-    );
-
-    vec3 ambient = sceneData.ambientColor.rgb * texColor.rgb * 0.1;
-    outFragColor = vec4(ambient + directLight, texColor.a);
+    vec3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
+    outFragColor = vec4(ambient + directLight + emission, texColor.a);
 }

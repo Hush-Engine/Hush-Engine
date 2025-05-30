@@ -47,16 +47,14 @@ Hush::EMaterialPass Hush::GltfLoadFunctions::GetMaterialPassFromFastGltfPass(fas
 	}
 }
 
-Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(void *outMaterialResources,
-																			 const fastgltf::Asset &asset,
-																			 const fastgltf::Material &material,
-																			 const void *loadedTextures)
+Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
+	Hush::GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset, const fastgltf::Material &material,
+	const void *loadedTextures)
 {
 #ifdef HUSH_VULKAN_IMPL
 
 	// Vulkan implementation will cast the out material resources and the loaded textures
 	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
-	auto *outMaterialResourcesImpl = reinterpret_cast<GLTFMetallicRoughness::MaterialResources *>(outMaterialResources);
 
 	// TODO: Refactor all this in a function
 	const fastgltf::PBRData &pbrData = material.pbrData;
@@ -67,7 +65,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		if (fastgltfTexture.imageIndex.has_value())
 		{
 			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResourcesImpl->colorImage = allocImage;
+			outMaterialResources->GetMaterialResources().colorImage = allocImage;
 		}
 	}
 
@@ -79,7 +77,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		if (fastgltfTexture.imageIndex.has_value())
 		{
 			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResourcesImpl->metalRoughImage = allocImage;
+			outMaterialResources->GetMaterialResources().metalRoughImage = allocImage;
 		}
 	}
 	if (material.normalTexture.has_value())
@@ -89,8 +87,11 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 
 		if (fastgltfTexture.imageIndex.has_value())
 		{
+			EPbrOptions options = outMaterialResources->GetPbrOptions();
+			options |= EPbrOptions::UseNormalTexture;
+			outMaterialResources->SetPbrOptions(options);
 			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResourcesImpl->normalImage = allocImage;
+			outMaterialResources->GetMaterialResources().normalImage = allocImage;
 		}
 	}
 
@@ -102,7 +103,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 		if (fastgltfTexture.imageIndex.has_value())
 		{
 			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResourcesImpl->emissiveImage = allocImage;
+			outMaterialResources->GetMaterialResources().emissiveImage = allocImage;
 		}
 	}
 

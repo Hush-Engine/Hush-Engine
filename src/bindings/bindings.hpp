@@ -12,7 +12,6 @@
 #pragma clang diagnostic ignored "-Wpedantic"
 #endif
 
-
 #include "HushEngine.hpp"
 #include "Scene.hpp"
 #include "Components/Transform.hpp"

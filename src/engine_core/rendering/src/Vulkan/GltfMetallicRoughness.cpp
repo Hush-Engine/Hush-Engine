@@ -1,13 +1,17 @@
 
 // NOTE: Keep volk at the top to avoid function redefinitions with Vulkan
+#include <cstddef>
 #include <cstdint>
 #include <glm/ext/vector_float3.hpp>
 #include <string_view>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "GltfMetallicRoughness.hpp"
+#include "Assertions.hpp"
+#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
+#include "Shared/ShaderMaterial.hpp"
 #include "VulkanRenderer.hpp"
 #include "VulkanPipelineBuilder.hpp"
 #include "VkUtilsFactory.hpp"
@@ -19,6 +23,20 @@ constexpr std::string_view VERTEX_SHADER_PATH = R"(C:\Users\nefes\Personal\Hush-
 void Hush::GLTFMetallicRoughness::Init(IRenderer *renderer)
 {
 	this->m_renderer = renderer;
+
+	auto *rendererImpl = dynamic_cast<VulkanRenderer *>(renderer);
+	//
+	// Scene Material buffer writing
+	this->m_materialResources.gpuDataBuffer =
+		GpuAllocatedBuffer(static_cast<uint32_t>(sizeof(GLTFMetallicRoughness::MaterialConstants)),
+						   GpuAllocatedBuffer::EBufferUsage::UniformBuffer, GpuAllocatedBuffer::EMemoryUsage::CpuToGpu,
+						   rendererImpl->GetVmaAllocator());
+
+	this->m_materialResources.dataBufferOffset = 0;
+	this->m_materialConstants =
+		reinterpret_cast<MaterialConstants *>(this->m_materialResources.gpuDataBuffer.GetMappedData());
+	// We have to manually set the options here lol
+	this->m_materialConstants->options = 0;
 	this->BuildPipelines();
 }
 
@@ -95,16 +113,17 @@ void Hush::GLTFMetallicRoughness::BuildPipelines()
 	// Create the opaque variant
 	this->m_opaquePipeline.pipeline = pipelineBuilder.Build(device);
 
+	pipelineBuilder.SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
 	// Create the transparent variant
-	pipelineBuilder.EnableBlendingAdditive();
+	// pipelineBuilder.EnableBlendingAdditive();
 
 	pipelineBuilder.EnableDepthTest(false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
 	this->m_transparentPipeline.pipeline = pipelineBuilder.Build(device);
 
-	// clean structures
-	vkDestroyShaderModule(device, meshFragmentShader, nullptr);
-	vkDestroyShaderModule(device, meshVertexShader, nullptr);
+	// NOTE: I don't think we need to delete this shader module, as the PBR shader is the ONE shader that will be there
+	// all the time for all objects (by default) vkDestroyShaderModule(device, meshFragmentShader, nullptr);
+	// vkDestroyShaderModule(device, meshVertexShader, nullptr);
 }
 
 void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGrowable *descriptorAllocator)
@@ -133,9 +152,14 @@ void Hush::GLTFMetallicRoughness::GenerateMaterialInstance(DescriptorAllocatorGr
 	// Not initialized material layout here from VkLoader
 	this->m_internalMaterial->materialSet = descriptorAllocator->Allocate(device, this->m_materialLayout);
 
+	// Ptr offsetting
+	// auto* offsetPtr = reinterpret_cast<std::byte*>()) + this->m_materialResources.dataBufferOffset;
+	auto *rawDataBuffer = reinterpret_cast<VkBuffer>(this->m_materialResources.gpuDataBuffer.GetBuffer());
+
+	// Write the resources to the buffer
 	writer.Clear();
-	writer.WriteBuffer(0, this->m_materialResources.dataBuffer, sizeof(MaterialConstants),
-					   this->m_materialResources.dataBufferOffset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	writer.WriteBuffer(0, rawDataBuffer, sizeof(MaterialConstants), this->m_materialResources.dataBufferOffset,
+					   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	writer.WriteImage(1, this->m_materialResources.colorImage.imageView, this->m_materialResources.colorSampler,
 					  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	writer.WriteImage(2, this->m_materialResources.metalRoughImage.imageView,
@@ -158,7 +182,7 @@ void Hush::GLTFMetallicRoughness::ClearResources(VkDevice device)
 
 Hush::EAlphaBlendMode Hush::GLTFMetallicRoughness::GetAlphaBlendMode() const noexcept
 {
-	return EAlphaBlendMode::None;
+	return this->m_alphaBlendMode;
 }
 
 Hush::ECullMode Hush::GLTFMetallicRoughness::GetCullMode() const noexcept
@@ -183,77 +207,84 @@ void Hush::GLTFMetallicRoughness::SetCullMode(ECullMode cullMode)
 
 void Hush::GLTFMetallicRoughness::SetAlphaBlendMode(EAlphaBlendMode blendMode) noexcept
 {
-	(void)blendMode;
+	this->m_alphaBlendMode = blendMode;
 }
 
 const glm::vec4 &Hush::GLTFMetallicRoughness::GetAlbedo() const noexcept
 {
-	return this->m_materialConstants.colorFactors;
+	return this->m_materialConstants->colorFactors;
 }
 
 glm::vec4 &Hush::GLTFMetallicRoughness::GetAlbedo() noexcept
 {
-	return this->m_materialConstants.colorFactors;
+	return this->m_materialConstants->colorFactors;
 }
 
 void Hush::GLTFMetallicRoughness::SetAlbedo(const glm::vec4 &color) noexcept
 {
-	this->m_materialConstants.colorFactors = color;
+	this->m_materialConstants->colorFactors = color;
 }
 
 const glm::vec3 &Hush::GLTFMetallicRoughness::GetEmissionColor() const noexcept
 {
 	// Reinterpret the vec4 into a vec3, we'll be leaving out the w component in the memory span, this is worth it since
 	// we're returning a reference
-	return *reinterpret_cast<const glm::vec3 *>(&this->m_materialConstants.emissionFactors);
+	return *reinterpret_cast<const glm::vec3 *>(&this->m_materialConstants->emissionFactors);
+}
+
+glm::vec3 &Hush::GLTFMetallicRoughness::GetEmissionColor() noexcept
+{
+	// Reinterpret the vec4 into a vec3, we'll be leaving out the w component in the memory span, this is worth it since
+	// we're returning a reference
+	return *reinterpret_cast<glm::vec3 *>(&this->m_materialConstants->emissionFactors);
 }
 
 void Hush::GLTFMetallicRoughness::SetEmissionColor(const glm::vec3 &color) noexcept
 {
 	// TODO: Optimize this
-	this->m_materialConstants.emissionFactors.x = color.x;
-	this->m_materialConstants.emissionFactors.y = color.y;
-	this->m_materialConstants.emissionFactors.z = color.z;
+	this->m_materialConstants->emissionFactors.x = color.x;
+	this->m_materialConstants->emissionFactors.y = color.y;
+	this->m_materialConstants->emissionFactors.z = color.z;
 }
 
 const float &Hush::GLTFMetallicRoughness::EmissionFactor() const noexcept
 {
-	return this->m_materialConstants.emissionFactors.w;
+	return this->m_materialConstants->emissionFactors.w;
 }
 
 void Hush::GLTFMetallicRoughness::SetEmissionFactor(float emissionFactor) noexcept
 {
-	this->m_materialConstants.emissionFactors.w = emissionFactor;
+	this->m_materialConstants->emissionFactors.w = emissionFactor;
 }
 
 const float &Hush::GLTFMetallicRoughness::GetMetallicFactor() const noexcept
 {
-	return this->m_materialConstants.metalRoughFactors.x;
+	return this->m_materialConstants->metalRoughFactors.x;
 }
 
 void Hush::GLTFMetallicRoughness::SetMetallicFactor(float factor) noexcept
 {
-	this->m_materialConstants.metalRoughFactors.x = factor;
+	this->m_materialConstants->metalRoughFactors.x = factor;
 }
 
 const float &Hush::GLTFMetallicRoughness::GetRoughnessFactor() const noexcept
 {
-	return this->m_materialConstants.metalRoughFactors.y;
+	return this->m_materialConstants->metalRoughFactors.y;
 }
 
 void Hush::GLTFMetallicRoughness::SetRoughnessFactor(float factor) noexcept
 {
-	this->m_materialConstants.metalRoughFactors.y = factor;
+	this->m_materialConstants->metalRoughFactors.y = factor;
 }
 
 const float &Hush::GLTFMetallicRoughness::GetAlphaThreshold() const noexcept
 {
-	return this->m_materialConstants.alphaThreshold;
+	return this->m_materialConstants->alphaThreshold;
 }
 
 void Hush::GLTFMetallicRoughness::SetAlphaThreshold(float alphaThreshold) noexcept
 {
-	this->m_materialConstants.alphaThreshold = alphaThreshold;
+	this->m_materialConstants->alphaThreshold = alphaThreshold;
 }
 
 Hush::GraphicsApiMaterialInstance *Hush::GLTFMetallicRoughness::GetInternalMaterial()
@@ -263,7 +294,16 @@ Hush::GraphicsApiMaterialInstance *Hush::GLTFMetallicRoughness::GetInternalMater
 
 Hush::GLTFMetallicRoughness::MaterialConstants &Hush::GLTFMetallicRoughness::GetMaterialConstants() noexcept
 {
-	return this->m_materialConstants;
+	HUSH_ASSERT(this->m_materialConstants != nullptr,
+				"No data in material, did you forget to call GenerateMaterialInstance?");
+	return *this->m_materialConstants; // Uuuuh, yeah, that works I guess
+}
+
+void Hush::GLTFMetallicRoughness::SetMaterialConstants(const MaterialConstants &values)
+{
+	HUSH_ASSERT(this->m_materialConstants != nullptr,
+				"No data in material, did you forget to call GenerateMaterialInstance?");
+	*this->m_materialConstants = values;
 }
 
 Hush::GLTFMetallicRoughness::MaterialResources &Hush::GLTFMetallicRoughness::GetMaterialResources()

@@ -104,8 +104,7 @@ namespace Hush
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
-		[[nodiscard]]
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
 		template <typename... Components>

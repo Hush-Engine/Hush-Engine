@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Shared/GpuAllocatedImage.hpp"
+#include "BitwiseUtils.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 
 namespace Hush
 {
@@ -61,23 +60,4 @@ namespace Hush
 } // namespace Hush
 
 // NOLINTNEXTLINE
-inline Hush::GpuAllocatedBuffer::EBufferUsage operator|(Hush::GpuAllocatedBuffer::EBufferUsage a,
-														Hush::GpuAllocatedBuffer::EBufferUsage b)
-{
-	return static_cast<Hush::GpuAllocatedBuffer::EBufferUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
-
-// NOLINTNEXTLINE
-inline Hush::GpuAllocatedBuffer::EBufferUsage operator&(Hush::GpuAllocatedBuffer::EBufferUsage a,
-														Hush::GpuAllocatedBuffer::EBufferUsage b)
-{
-	return static_cast<Hush::GpuAllocatedBuffer::EBufferUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-}
-
-// NOLINTNEXTLINE
-inline Hush::GpuAllocatedBuffer::EBufferUsage &operator|=(Hush::GpuAllocatedBuffer::EBufferUsage &a,
-														  Hush::GpuAllocatedBuffer::EBufferUsage b)
-{
-	a = a | b;
-	return a;
-}
+HUSH_GENERATE_FLAGS(Hush::GpuAllocatedBuffer::EBufferUsage, uint32_t);

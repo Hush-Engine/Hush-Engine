@@ -6,6 +6,7 @@
 #include "MaterialPass.hpp"
 #include "ImageTexture.hpp"
 #include "Logger.hpp"
+#include "Vulkan/GltfMetallicRoughness.hpp"
 #include <magic_enum/magic_enum.hpp>
 
 namespace Hush::GltfLoadFunctions
@@ -26,7 +27,7 @@ namespace Hush::GltfLoadFunctions
 	std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
 															 const fastgltf::Image &image);
 
-	EError SetMaterialTextures(void *outMaterialResources, const fastgltf::Asset &asset,
+	EError SetMaterialTextures(GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset,
 							   const fastgltf::Material &material, const void *loadedTextures);
 
 	Hush::Result<const std::byte *, EError> GetDataFromBufferSource(const fastgltf::Buffer &buffer);
