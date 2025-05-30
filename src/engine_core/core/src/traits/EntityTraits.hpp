@@ -397,53 +397,8 @@ namespace Hush::ComponentTraits
 		return componentInfo;
 	}
 
-	// Create a C++20 template that returns the name of a type as a string_view. Based on PRETTY_FUNCTION and some
-	// string manipulation.
-
 	namespace detail
 	{
-#if HUSH_COMPILER_CLANG || HUSH_COMPILER_GCC
-		consteval std::string_view ExtractTypeFromPrettyFunction(std::string_view function)
-		{
-			// Example of function: consteval std::string_view GetTypeName() [with T = int; std::string_view =
-			// std::basic_string_view<char>]. We must extract T
-			std::size_t start = function.find("T = ");
-			if (start == std::string_view::npos)
-			{
-				return "Unknown";
-			}
-			start += 4;
-			std::size_t end = function.find(";", start);
-			if (end == std::string_view::npos)
-			{
-				return "Unknown";
-			}
-			return function.substr(start, end - start);
-		}
-#elif HUSH_COMPILER_MSVC
-		consteval std::string_view ExtractTypeFromFuncSig(std::string_view function)
-		{
-			// Example of function: consteval std::string_view GetTypeName<int>(void)
-			// We must extract int
-			std::size_t start = function.find("GetTypeName<");
-			if (start == std::string_view::npos)
-			{
-				return "Unknown";
-			}
-			start += 12;
-			// Find the last > character of the string
-			std::size_t end = function.find_last_of(">");
-			if (end == std::string_view::npos)
-			{
-				return "Unknown";
-			}
-
-			// Remove any struct/class/enum/union prefix
-
-			return function.substr(start, end - start);
-		}
-#endif
-
 		enum class EEntityRegisterStatus
 		{
 			Registered,
@@ -481,16 +436,4 @@ namespace Hush::ComponentTraits
 			return GetEntityIdImpl<std::remove_cvref_t<T>>(worldPtr);
 		}
 	} // namespace detail
-
-	template <typename T>
-	consteval std::string_view GetTypeName()
-	{
-		// Get the function name
-#if HUSH_COMPILER_CLANG || HUSH_COMPILER_GCC
-		std::string_view name = __PRETTY_FUNCTION__;
-#elif HUSH_COMPILER_MSVC
-		std::string_view name = __FUNCSIG__;
-#endif
-		return "Unknown";
-	}
 } // namespace Hush::ComponentTraits
