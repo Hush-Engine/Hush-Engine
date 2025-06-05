@@ -23,6 +23,11 @@ public:
 		return "MyTest";
 	}
 
+	void MyFunc()
+	{
+		// Just a dummy function to test reflection
+	}
+
 	static void RegisterReflection(Hush::Reflection::ReflectionDB &db)
 	{
 		Hush::Reflection::FieldInfo::Getter aGetter = [](std::span<const Hush::Reflection::VariantView> params)
@@ -68,14 +73,51 @@ public:
 		};
 
 		db.RegisterClass<MyTest>()
-			.AddProperty(Hush::Reflection::FieldInfo(Hush::Reflection::GetTypeId<int>(), "a", aSetter, aGetter))
+			.AddConstructor(Hush::Reflection::FunctionInfo::Create(
+				[](std::span<const Hush::Reflection::VariantView> params)
+					-> Hush::Result<Hush::Reflection::Variant, Hush::Reflection::FunctionInfo::EFunctionInfoError> {
+					if (!params.empty())
+					{
+						return Hush::Reflection::FunctionInfo::EFunctionInfoError::InvalidArgsCount;
+					}
+
+					return Hush::Reflection::Variant(MyTest{});
+				},
+				"MyTest"))
+			.AddInPlaceConstructor(Hush::Reflection::TypeInfo::InPlaceCtor::Create(
+				[](void *mem, std::span<const Hush::Reflection::VariantView> args) {
+					if (args.size() != 0)
+					{
+						return Hush::Reflection::TypeInfo::EInPlaceConstructorError::NonMatchingArgs;
+					}
+
+					std::construct_at(static_cast<MyTest *>(mem));
+					return Hush::Reflection::TypeInfo::EInPlaceConstructorError::None;
+				}))
+			.AddFunction(Hush::Reflection::FunctionInfo::Create<MyTest>(
+				[](std::span<const Hush::Reflection::VariantView> params)
+					-> Hush::Result<Hush::Reflection::Variant, Hush::Reflection::FunctionInfo::EFunctionInfoError> {
+					if (params.size() != 1)
+					{
+						return Hush::Reflection::FunctionInfo::EFunctionInfoError::InvalidArgsCount;
+					}
+
+					MyTest *instance = params[0].Get<MyTest>().value();
+
+					instance->MyFunc();
+
+					return Hush::Reflection::Variant();
+				},
+				"MyFunc"))
+			.AddProperty(Hush::Reflection::FieldInfo(Hush::Reflection::GetTypeId<int>(), "a", aSetter, aGetter,
+													 offsetof(MyTest, a)))
 			.Register();
 	}
 };
 
 TEST_CASE("Reflection", "[reflection]")
 {
-	SECTION("Call reflection")
+	SECTION("Get/Set field reflection")
 	{
 		Hush::Reflection::ReflectionDB reflectionDB;
 		MyTest::RegisterReflection(reflectionDB);
@@ -97,6 +139,51 @@ TEST_CASE("Reflection", "[reflection]")
 		(void)fieldInfo.Set({Hush::Reflection::VariantView(&test), Hush::Reflection::VariantView(&value)});
 
 		REQUIRE(test.a == 0);
+	}
+
+	SECTION("Call function")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		MyTest::RegisterReflection(reflectionDB);
+
+		const Hush::Reflection::TypeInfo *typeInfo = reflectionDB.GetTypeInfo("MyTest");
+
+		REQUIRE(typeInfo != nullptr);
+
+		REQUIRE(typeInfo->GetFunctions().size() == 1);
+		REQUIRE(typeInfo->GetFunctions()[0].GetName() == "MyFunc");
+
+		MyTest test;
+		Hush::Result<Hush::Reflection::Variant, Hush::Reflection::FunctionInfo::EFunctionInfoError> result =
+			typeInfo->CallFunction("MyFunc", {Hush::Reflection::VariantView(&test)});
+
+		REQUIRE(!result.has_error());
+		REQUIRE(result.value().IsType<void>());
+	}
+
+	SECTION("Construct class")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		MyTest::RegisterReflection(reflectionDB);
+
+		auto typeInfo = reflectionDB.GetTypeInfo("MyTest");
+
+		REQUIRE(typeInfo != nullptr);
+
+		auto result = typeInfo->CreateInstance({});
+		REQUIRE(result.has_value());
+
+		Hush::Reflection::Variant variant = std::move(result.value());
+		REQUIRE(variant.IsType<MyTest>());
+
+		int value = 42;
+		(void)typeInfo->GetFields()[0].Set({variant, Hush::Reflection::VariantView(&value)});
+
+		auto instanceResult = variant.Get<MyTest>();
+		REQUIRE(instanceResult.has_value());
+		MyTest *instance = instanceResult.value();
+		REQUIRE(instance != nullptr);
+		REQUIRE(instance->a == 42);
 	}
 
 	SECTION("Autogen Reflection")
@@ -137,5 +224,74 @@ TEST_CASE("Reflection", "[reflection]")
 		REQUIRE(floatValue.has_value());
 		REQUIRE(floatValue.value() != nullptr);
 		REQUIRE(*floatValue.value() == test.myFloatField);
+	}
+
+	SECTION("Autogen reflection with function")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+
+		AutogenTest::RegisterReflection(reflectionDB);
+
+		auto typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+		REQUIRE(typeInfo != nullptr);
+		REQUIRE(typeInfo->GetFunctions().size() == 3);
+
+		AutogenTest test;
+		auto result = typeInfo->CallFunction("SetTo10", {Hush::Reflection::VariantView(&test)});
+		REQUIRE(!result.has_error());
+		REQUIRE(test.myCustomField == 10);
+
+		int newValue = 20;
+		auto getResult = typeInfo->CallFunction(
+			"SetTo", {Hush::Reflection::VariantView(&test), Hush::Reflection::VariantView(&newValue)});
+		REQUIRE(!getResult.has_error());
+		REQUIRE(test.myCustomField == newValue);
+
+		int outValue = 0;
+		auto outResult = typeInfo->CallFunction(
+			"GetFromRef", {Hush::Reflection::VariantView(&test), Hush::Reflection::VariantView(&outValue)});
+		REQUIRE(!outResult.has_error());
+		REQUIRE(outValue == test.myCustomField);
+	}
+
+	SECTION("Autogen reflection construct")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		AutogenTest::RegisterReflection(reflectionDB);
+
+		auto typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+
+		int value = 42;
+		Hush::Result<Hush::Reflection::Variant, Hush::Reflection::FunctionInfo::EFunctionInfoError> newInstanceResult =
+			typeInfo->CreateInstance({Hush::Reflection::VariantView(&value)});
+
+		REQUIRE(newInstanceResult.has_value());
+		Hush::Reflection::Variant newInstance = std::move(newInstanceResult.value());
+		REQUIRE(newInstance.IsType<AutogenTest>());
+		AutogenTest *instance = newInstance.Get<AutogenTest>().value();
+
+		REQUIRE(instance->myCustomField == value);
+	}
+
+	SECTION("Autogen in place ctor")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		AutogenTest::RegisterReflection(reflectionDB);
+
+		const Hush::Reflection::TypeInfo *typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+
+		REQUIRE(typeInfo != nullptr);
+
+		char buffer[sizeof(AutogenTest)];
+
+		int value = 50;
+		std::optional<Hush::Reflection::TypeInfo::EInPlaceConstructorError> result =
+			typeInfo->CreateInPlaceInstance(buffer, sizeof(buffer), {Hush::Reflection::VariantView(&value)});
+
+		REQUIRE(!result.has_value());
+
+		// Okay, buffer now contains an instance of AutogenTest
+		AutogenTest *instance = reinterpret_cast<AutogenTest *>(buffer);
+		REQUIRE(instance->myCustomField == value);
 	}
 }

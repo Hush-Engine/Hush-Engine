@@ -12,6 +12,7 @@ hush_add_library(
              src/serialization/Formats/JsonSerializer.cpp
              src/traits/EntityTraits.cpp
              src/reflection/Type.cpp
+             src/reflection/Variant.cpp
         PUBLIC_HEADER_DIRS src
         PRIVATE_HEADER_DIRS private
         ENABLE_REFLECTION ON

@@ -46,6 +46,13 @@ namespace Hush::Reflection
 				return *this;
 			}
 
+			RegisterClassBuilder &AddInPlaceConstructor(TypeInfo::InPlaceCtor ctor)
+			{
+				m_inPlaceCtors.emplace_back(ctor);
+
+				return *this;
+			}
+
 			RegisterClassBuilder &AddFunction(FunctionInfo function)
 			{
 				m_functions.push_back(std::move(function));
@@ -83,12 +90,14 @@ namespace Hush::Reflection
 				typeInfo.SetConstructors(std::move(m_constructor));
 				typeInfo.SetFunctions(std::move(m_functions));
 				typeInfo.SetFields(std::move(m_fields));
+				typeInfo.SetInPlaceCtors(std::move(m_inPlaceCtors));
 
 				m_reflectionDB->RegisterClass(std::move(typeInfo));
 			}
 
 		private:
 			std::vector<FunctionInfo> m_constructor;
+			std::vector<TypeInfo::InPlaceCtor> m_inPlaceCtors;
 			std::vector<FunctionInfo> m_functions;
 			std::vector<FieldInfo> m_fields;
 			ReflectionDB *m_reflectionDB;
@@ -124,7 +133,7 @@ namespace Hush::Reflection
 		const TypeInfo *GetTypeInfo(std::string_view name) const
 		{
 			std::shared_lock lock(m_mutex);
-			const TypeId id = {Hush::Hashing::Fnv1a64(name)};
+			const TypeId id = TypeId{Hush::Hashing::Fnv1a64(name)};
 
 			const auto it = m_types.find(id);
 			if (it != m_types.end())

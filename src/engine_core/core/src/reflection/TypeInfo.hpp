@@ -17,6 +17,68 @@ namespace Hush::Reflection
 
 	class TypeInfo
 	{
+
+	public:
+		enum class EInPlaceConstructorError
+		{
+			None = 0,
+			InsufficientMemory = 1,
+			NoInPlaceConstructors = 2,
+			NonMatchingArgs = 3,
+			InvalidType = 4,
+		};
+
+		using InPlaceCtorFunc = EInPlaceConstructorError (*)(void *mem, std::span<const VariantView>);
+
+		struct InPlaceCtor
+		{
+			InPlaceCtor(InPlaceCtorFunc callFunc, std::span<const TypeId> args)
+				: m_func(callFunc),
+				  m_argsCount(static_cast<uint8_t>(args.size()))
+			{
+				if (m_argsCount > FunctionInfo::MAX_ARGS)
+				{
+					// TODO: Handle error, maybe a log message?
+					return;
+				}
+
+				std::copy(args.begin(), args.end(), m_argsType.begin());
+			}
+
+			template <typename... Args>
+				requires(sizeof...(Args) <= FunctionInfo::MAX_ARGS)
+			static InPlaceCtor Create(InPlaceCtorFunc callFunc)
+			{
+				InPlaceCtor ctor(callFunc, std::span<const TypeId>({GetTypeId<std::remove_reference_t<Args>>()...}));
+				return ctor;
+			}
+
+			[[nodiscard]]
+
+			EInPlaceConstructorError ConstructUnchecked(void *mem, std::span<const VariantView> args) const
+			{
+				return m_func(mem, args);
+			}
+
+			[[nodiscard]]
+
+			bool IsCallableWith(std::span<const VariantView> args) const
+			{
+				if (m_argsCount != args.size())
+				{
+					return false;
+				}
+
+				return std::equal(
+					m_argsType.begin(), m_argsType.begin() + m_argsCount, args.begin(),
+					[](const TypeId &typeId, const VariantView &arg) { return typeId == arg.GetTypeId(); });
+			}
+
+			std::array<TypeId, FunctionInfo::MAX_ARGS> m_argsType;
+			InPlaceCtorFunc m_func;
+			uint8_t m_argsCount{};
+		};
+
 	public:
 		TypeInfo(TypeId id = {})
 			: m_id(id)
@@ -80,6 +142,7 @@ namespace Hush::Reflection
 		{
 			return m_size;
 		}
+
 		void SetSize(std::size_t size)
 		{
 			this->m_size = size;
@@ -96,8 +159,19 @@ namespace Hush::Reflection
 			this->m_alignment = alignment;
 		}
 
+		/// Creates an instance of this type with the given arguments and returns it as a Variant.
+		/// If you wish to create an instance in a specific memory location, or avoid heap allocation, use
+		/// \ref CreateInPlaceInstance(void *mem, size_t memSize, std::span<const VariantView> args) const instead.
+		///
+		/// \note This function might allocate memory for the instance, depending on the size of the type. See \ref
+		/// Hush::Reflection::Variant::MAX_SIZE for the maximum size of a type that can be created without allocating in
+		/// the heap.
+		///
+		///
+		/// @param args Arguments to pass to the constructor.
+		/// @return Result with the created instance or an error.
 		[[nodiscard]]
-		Result<Variant, FunctionInfo::EFunctionInfoError> CreateInstance(std::span<VariantView> args) const
+		Result<Variant, FunctionInfo::EFunctionInfoError> CreateInstance(std::span<const VariantView> args) const
 		{
 			for (const auto &constructor : m_constructors)
 			{
@@ -110,12 +184,114 @@ namespace Hush::Reflection
 			return FunctionInfo::EFunctionInfoError::NonMatchingArgs;
 		}
 
-		template <typename... Args>
+		/// Creates an instance of this type with the given arguments. See \ref CreateInstance(std::span<const
+		/// VariantView> args) const for more information.
+		/// @param args Arguments to pass to the constructor.
+		/// @return Result with the created instance or an error.
 		[[nodiscard]]
-		Result<Variant, FunctionInfo::EFunctionInfoError> CreateInstance(Args &&...args) const
+		Result<Variant, FunctionInfo::EFunctionInfoError> CreateInstance(
+			std::initializer_list<const VariantView> args) const
 		{
-			std::array<VariantView, sizeof...(Args)> argsArray{std::forward<Args>(args)...};
-			return CreateInstance(argsArray);
+			return CreateInstance(std::span(args));
+		}
+
+		/// Creates an instance of this type in-place using the provided memory and arguments.
+		/// This function checks if the provided memory is sufficient and if there are any in-place constructors
+		/// available.
+		///
+		/// When using this function, ensure that the memory provided is properly aligned for the type being
+		/// constructed. Also, the memory must be large enough to hold the type's data.
+		///
+		/// \warning Keep in mind that this function does not keep track of the lifetime of the created instance.
+		/// **You're responsible for managing the memory and ensuring that the instance is destroyed properly.**
+		///
+		/// \note This function is designed for advanced use cases where you need to create an instance of a type in a
+		/// specific memory location, This function never allocates memory for the instance.
+		///
+		/// @param mem Pointer to the memory where the instance should be created.
+		/// @param memSize Size of the memory in bytes. Must be at least as large as the size of the type.
+		/// @param args Arguments to pass to the in-place constructor.
+		/// @return An optional error if the in-place construction fails, or an empty optional if it succeeds.
+		[[nodiscard]]
+		std::optional<EInPlaceConstructorError> CreateInPlaceInstance(void *mem, size_t memSize,
+																	  std::span<const VariantView> args) const
+		{
+			if (memSize < m_size)
+			{
+				return EInPlaceConstructorError::InsufficientMemory;
+			}
+
+			if (m_inPlaceCtors.empty())
+			{
+				return EInPlaceConstructorError::NoInPlaceConstructors;
+			}
+
+			for (const InPlaceCtor &ctor : m_inPlaceCtors)
+			{
+				if (ctor.IsCallableWith(args))
+				{
+					if (auto error = ctor.ConstructUnchecked(mem, args); error != EInPlaceConstructorError::None)
+					{
+						return error;
+					}
+
+					return {};
+				}
+			}
+
+			return EInPlaceConstructorError::NonMatchingArgs;
+		}
+
+		/// Creates an instance of this type in-place using the provided memory and arguments.
+		/// See \ref CreateInPlaceInstance(void *mem, size_t memSize, std::span<const VariantView> args) const
+		/// for more information.
+		/// @param mem Pointer to the memory where the instance should be created.
+		/// @param memSize Size of the memory in bytes.
+		/// @param args Arguments to pass to the in-place constructor.
+		/// @return An optional error if the in-place construction fails, or an empty optional if it succeeds.
+		[[nodiscard]]
+		std::optional<EInPlaceConstructorError> CreateInPlaceInstance(
+			void *mem, size_t memSize, std::initializer_list<const VariantView> args) const
+		{
+			return CreateInPlaceInstance(mem, memSize, std::span(args));
+		}
+
+		/// Calls a function with the given name and arguments.
+		/// This helper function searches for a function in O(n) time, where n is the number of functions in this type.
+		/// This also supports overloaded functions, as it checks the argument types to find a matching function.
+		///
+		/// @param name Name of the function to call.
+		/// @param args Arguments to pass to the function.
+		/// @return Result with the return value or an error.
+		[[nodiscard]]
+		Result<Variant, FunctionInfo::EFunctionInfoError> CallFunction(std::string_view name,
+																	   std::span<const VariantView> args) const
+		{
+			for (const FunctionInfo &function : m_functions)
+			{
+				if (function.GetName() == name && function.IsCallableWith(args))
+				{
+					return function.Call(args);
+				}
+			}
+
+			return FunctionInfo::EFunctionInfoError::NonMatchingArgs;
+		}
+
+		/// Calls a function with the given name and arguments.
+		/// This is a convenience overload that allows passing arguments as an initializer list. For more information,
+		/// see the
+		/// \ref CallFunction(std::string_view name, std::span<const VariantView> args) const
+		/// function.
+		///
+		/// @param name Name of the function to call.
+		/// @param args Arguments to pass to the function.
+		/// @return Result with the return value or an error.
+		[[nodiscard]]
+		Result<Variant, FunctionInfo::EFunctionInfoError> CallFunction(
+			std::string_view name, std::initializer_list<const VariantView> args) const
+		{
+			return CallFunction(name, std::span(args));
 		}
 
 		void SetConstructors(std::vector<FunctionInfo> &&constructors)
@@ -133,9 +309,17 @@ namespace Hush::Reflection
 			m_fields = std::move(fields);
 		}
 
+		/// Sets the in-place constructors for this type.
+		/// @param inPlaceCtor A vector of in-place constructors to set.
+		void SetInPlaceCtors(std::vector<InPlaceCtor> &&inPlaceCtor)
+		{
+			m_inPlaceCtors = std::move(inPlaceCtor);
+		}
+
 	private:
 		TypeId m_id;
 		std::vector<FunctionInfo> m_constructors;
+		std::vector<InPlaceCtor> m_inPlaceCtors;
 		std::vector<FunctionInfo> m_functions;
 		std::vector<FieldInfo> m_fields;
 		std::string m_name;
