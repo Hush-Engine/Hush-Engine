@@ -11,7 +11,7 @@ Hush::Reflection::VariantView::VariantView(const Variant &variant)
 {
 	if (variant.m_status == Variant::EVariantStatus::Small)
 	{
-		m_value = reinterpret_cast<void *>(const_cast<char *>(variant.m_data));
+		m_value = const_cast<void *>(static_cast<const void *>(variant.m_data));
 	}
 	else if (variant.m_status == Variant::EVariantStatus::Large)
 	{

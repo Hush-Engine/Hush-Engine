@@ -84,7 +84,7 @@ namespace Hush
 		template <>
 		constexpr TypeId GetTypeId<int64_t>()
 		{
-			return TypeId{Hush::Hashing::Fnv1a64("int32")};
+			return TypeId{Hush::Hashing::Fnv1a64("int64")};
 		}
 
 		template <>

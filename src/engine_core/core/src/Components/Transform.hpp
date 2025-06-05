@@ -7,6 +7,8 @@
 #include <glm/ext/vector_float3.hpp>
 
 #include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
 #include <Hushgen.hpp>
 
 #if __has_include("Transform.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
