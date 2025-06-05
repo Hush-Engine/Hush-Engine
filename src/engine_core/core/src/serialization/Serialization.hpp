@@ -29,7 +29,7 @@ namespace Hush::Serialization
 	};
 
 	template <typename A, typename T>
-	concept IsSerializer = requires(A a, T t) {
+	concept Serializer = requires(A a, T t) {
 		{ t.Serialize(a) } -> std::same_as<ESerializationError>;
 	};
 

@@ -102,7 +102,7 @@ namespace Hush
 			/// @param size Size of the component.
 			/// @return Pointer to the component.
 			[[nodiscard, hush::export]]
-			void *const GetComponentAt(std::int8_t index, std::size_t size) const;
+			void *GetComponentAt(std::int8_t index, std::size_t size) const;
 
 			/// Get the entity id at the given index.
 			/// @param index Index of the entity. This must be in range [0, Size()).
