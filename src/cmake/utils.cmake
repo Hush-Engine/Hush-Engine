@@ -6,7 +6,7 @@
 if (MSVC)
     # Check if the file exists
     if (NOT EXISTS "${CMAKE_BINARY_DIR}/hush-reflection.exe")
-        set(EXPECTED_SHA256 "bfc0460bf5119a3cc29db7c40740fc64b353065209d09a8c63bcc472f15093e0")
+        set(EXPECTED_SHA256 "ba891ae7ef960d06d0637489a0dc5b32d8cf6295df6b94fc228858ac82efcb50")
         file(
                 DOWNLOAD "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.1.0/hush-reflection.exe"
                 "${CMAKE_BINARY_DIR}/hush-reflection.exe"
