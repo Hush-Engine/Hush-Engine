@@ -314,7 +314,7 @@ void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *dra
 
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
-	g_editorCamera.OnUpdate(delta);
+	this->m_editorCamera.OnUpdate(delta);
 	this->m_mainDrawContext.opaqueSurfaces.clear();
 	this->m_mainDrawContext.transparentSurfaces.clear();
 	// Test stuff just to show that it works... to be refactored into a more dynamic approach
@@ -325,9 +325,9 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 	}
 
 	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0F), Vector3Math::ONE);
-	glm::mat4 viewMatrix = g_editorCamera.GetViewMatrix() * scaleMat;
+	glm::mat4 viewMatrix = this->m_editorCamera.GetViewMatrix() * scaleMat;
 	this->m_sceneData.view = viewMatrix;
-	this->m_sceneData.proj = g_editorCamera.GetProjectionMatrix();
+	this->m_sceneData.proj = this->m_editorCamera.GetProjectionMatrix();
 
 	// invert the Y direction on projection matrix so that we are more similar
 	// to opengl and gltf axis
@@ -347,8 +347,8 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 void Hush::VulkanRenderer::InitRendering()
 {
 	constexpr float initialFOV = 70.0F;
-	g_editorCamera =
-		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
+	this->m_editorCamera =
+		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1F, 4000.0F);
 
 	this->CreateSyncObjects();
 
@@ -1154,14 +1154,14 @@ void Hush::VulkanRenderer::DrawBackground(VkCommandBuffer cmd) noexcept
 void Hush::VulkanRenderer::DrawGrid(VkCommandBuffer cmd, VkDescriptorSet globalDescriptor)
 {
 	ShaderMaterial *shaderMat = this->m_gridEffect.GetMaterial();
-	glm::vec3 cameraPos = g_editorCamera.GetPosition();
-	glm::mat4 view = g_editorCamera.GetViewMatrix();
-	glm::mat4 proj = g_editorCamera.GetProjectionMatrix();
+	glm::vec3 cameraPos = this->m_editorCamera.GetPosition();
+	glm::mat4 view = this->m_editorCamera.GetViewMatrix();
+	glm::mat4 proj = this->m_editorCamera.GetProjectionMatrix();
 
 	proj[1][1] *= -1;
 
 	ShaderMaterial::EError resultCode = ShaderMaterial::EError::None;
-	resultCode = shaderMat->SetProperty("farPlane", g_editorCamera.GetFarPlane());
+	resultCode = shaderMat->SetProperty("farPlane", this->m_editorCamera.GetFarPlane());
 	HUSH_ASSERT(resultCode == ShaderMaterial::EError::None, "{}", magic_enum::enum_name(resultCode));
 
 	resultCode = shaderMat->SetProperty("pos", cameraPos);
