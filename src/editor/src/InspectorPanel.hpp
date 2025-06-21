@@ -2,6 +2,7 @@
 
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
+#include "imguizmo/ImGuizmo.h"
 #include <optional>
 
 namespace Hush
@@ -27,5 +28,7 @@ namespace Hush
 		std::optional<Entity> m_inspectTarget = std::nullopt;
 
 		Scene *m_activeScene;
+
+		ImGuizmo::OPERATION m_currentGizmoOp = ImGuizmo::OPERATION::TRANSLATE;
 	};
 } // namespace Hush

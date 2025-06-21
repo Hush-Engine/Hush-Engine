@@ -25,4 +25,5 @@ namespace Hush
 		float m_yaw, m_pitch;
 		float m_blendValue = 0.0f;
 	};
+	inline EditorCamera g_editorCamera;
 } // namespace Hush

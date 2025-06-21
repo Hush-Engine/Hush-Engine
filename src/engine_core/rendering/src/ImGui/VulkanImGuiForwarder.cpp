@@ -9,6 +9,7 @@
 #include <Vulkan/VkUtilsFactory.hpp>
 #include <WindowManager.hpp>
 #include <volk.h>
+#include <imguizmo/ImGuizmo.h>
 
 void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
 {
@@ -38,6 +39,7 @@ void Hush::VulkanImGuiForwarder::NewFrame()
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
 }
 
 void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept

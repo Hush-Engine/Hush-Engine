@@ -1,9 +1,11 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "imgui/imgui.h"
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
@@ -18,6 +20,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 #include "Shared/Mesh.hpp"
+#include "imguizmo/ImGuizmo.h"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
@@ -146,6 +149,20 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
 {
 	this->m_inspectTarget = this->m_activeScene->EntityFromId(entity);
+	// Start with translation Gizmo
+	ImGuiIO& io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	glm::mat4 viewMat = g_editorCamera.GetViewMatrix();
+	glm::mat4 projMat = g_editorCamera.GetProjectionMatrix();
+	auto* viewMatPtr = reinterpret_cast<float*>(&viewMat);
+	auto* projMatPtr = reinterpret_cast<float*>(&projMat);
+	WorldTransform* xform = this->m_inspectTarget->GetComponent<WorldTransform>();
+	glm::mat xformMat = xform->GetTransformationMatrix();
+	auto* xformMatrix = reinterpret_cast<float*>(&xformMat);
+	if (ImGuizmo::Manipulate(viewMatPtr, projMatPtr, this->m_currentGizmoOp, ImGuizmo::MODE::WORLD, xformMatrix))
+	{
+		
+	}
 }
 
 const std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() const

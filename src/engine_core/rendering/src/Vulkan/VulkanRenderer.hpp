@@ -271,7 +271,6 @@ namespace Hush
 		VkSampler m_defaultSamplerLinear;
 		VkSampler m_defaultSamplerNearest;
 
-		EditorCamera m_editorCamera;
 		Scene *m_activeScene = nullptr;
 		DirectionalLight *m_directionalLight = nullptr;
 		WorldTransform *m_sunTransform = nullptr;
