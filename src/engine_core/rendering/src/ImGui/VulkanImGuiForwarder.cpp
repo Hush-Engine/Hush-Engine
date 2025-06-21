@@ -39,7 +39,7 @@ void Hush::VulkanImGuiForwarder::NewFrame()
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
-	ImGuizmo::BeginFrame();
+	// ImGuizmo::BeginFrame();
 }
 
 void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept

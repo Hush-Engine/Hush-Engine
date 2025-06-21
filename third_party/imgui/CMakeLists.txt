@@ -18,7 +18,8 @@ set(IMGUI_SOURCES
 )
 
 set(IMGUIZMO_SOURCES
-	${IMGUIZMO_BASE_SRC}
+	"${GUIZMO_BASE_INCLUDE_PATH}/ImGuizmo.h"
+	"${GUIZMO_BASE_INCLUDE_PATH}/ImGuizmo.cpp"
 )
 
 message("ImGui base sources")
