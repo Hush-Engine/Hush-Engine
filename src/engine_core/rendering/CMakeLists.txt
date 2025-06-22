@@ -38,6 +38,7 @@ target_link_libraries(HushRendering PUBLIC
         unofficial::spirv-reflect
         fastgltf::fastgltf
         HushLog
+        Hush::Core
         HushUtils
         HushInput
 )
