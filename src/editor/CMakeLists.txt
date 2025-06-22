@@ -15,4 +15,4 @@ add_executable(HushEditor
         src/EditorApp.cpp
 )
 
-target_link_libraries(HushEditor PRIVATE Hush::Engine imgui)
+target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)

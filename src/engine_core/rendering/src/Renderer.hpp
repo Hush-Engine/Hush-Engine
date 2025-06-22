@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Shared/DefaultImages.hpp"
+#include "Shared/EditorCamera.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/Mesh.hpp"
 #include "Shared/Types/Color.hpp"
@@ -82,5 +83,9 @@ namespace Hush
 
 		[[nodiscard]]
 		virtual void *GetWindowContext() const noexcept = 0;
+
+		// TODO: Figure out a better system to get the editor camera
+		[[nodiscard]]
+		virtual const EditorCamera &GetEditorCamera() const noexcept = 0;
 	};
 } // namespace Hush

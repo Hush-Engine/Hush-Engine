@@ -619,6 +619,10 @@ void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
 	});
 }
 
+const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept {
+	return this->m_editorCamera;
+}
+
 Hush::VulkanSwapchain &Hush::VulkanRenderer::GetSwapchain()
 {
 	return this->m_swapchain;
@@ -691,7 +695,7 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 void Hush::VulkanRenderer::InitRenderables()
 {
-	std::string structurePath = R"(C:\Users\nefes\Personal\Scripts\model_with_normals.glb)";
+	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Lantern.glb)";
 	// Create an example entity with a Mesh component here
 	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Duck.glb)";
 	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");

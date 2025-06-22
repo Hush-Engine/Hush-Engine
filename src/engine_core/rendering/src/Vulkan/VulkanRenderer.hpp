@@ -146,6 +146,9 @@ namespace Hush
 
 		void SetDirectionalLight(DirectionalLight *light) noexcept override;
 
+		[[nodiscard]]
+		const EditorCamera &GetEditorCamera() const noexcept override;
+
 		VulkanSwapchain &GetSwapchain();
 
 		GPUMeshBuffers UploadMesh(const std::vector<uint32_t> &indices, const std::vector<Mesh::Vertex> &vertices);
