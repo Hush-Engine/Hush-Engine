@@ -2,6 +2,7 @@
 
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
+#include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
 #include <cstdint>
 #include <string>
@@ -62,6 +63,8 @@ namespace Hush
 
 		Scene *m_activeScene;
 
+		EditorInfo* m_editorInfo;
+		
 		bool m_keyboardFocusSet = false;
 
 		std::vector<std::string_view> m_currentlyAvailableCommands;
