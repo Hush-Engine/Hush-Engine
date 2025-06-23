@@ -75,6 +75,8 @@ Hush::Scene *Hush::HushEngine::GetScene()
 
 void Hush::HushEngine::Init()
 {
+	// NOTE: For now this has to be called before any system's Init()
+	s_engineManager = this->m_app->MakeManagerEntity();
 	this->m_app->Init();
 	// Add a default directional light
 	Scene *scene = this->m_app->GetScene();
@@ -83,4 +85,5 @@ void Hush::HushEngine::Init()
 	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
 	entity.AddComponent<LocalTransform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
+
 }

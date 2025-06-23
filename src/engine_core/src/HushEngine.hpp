@@ -9,6 +9,7 @@
 #include "ISystem.hpp"
 #include "HushBindings.hpp"
 
+#include <optional>
 #include <string_view>
 
 namespace Hush
@@ -18,6 +19,7 @@ namespace Hush
 	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 	public:
+		static inline std::optional<Entity> s_engineManager{};
 		/// <summary>
 		/// Initializes the HushEngine with all its properties
 		/// </summary>

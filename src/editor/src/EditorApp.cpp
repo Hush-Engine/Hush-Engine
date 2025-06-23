@@ -7,6 +7,7 @@
 #include "ISystem.hpp"
 #include "Scene.hpp"
 #include "UI.hpp"
+#include "components/EditorInfo.hpp"
 #include "systems/EditorCameraSystem.hpp"
 
 #include <memory>
@@ -68,6 +69,12 @@ public:
 	Hush::Scene *GetScene() noexcept override
 	{
 		return this->m_scene.get();
+	}
+
+	Hush::Entity MakeManagerEntity() override {
+		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+		entt.AddComponent<EditorInfo>();
+		return entt;
 	}
 
 private:

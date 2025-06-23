@@ -1,6 +1,7 @@
 #pragma once
 #include "ISystem.hpp"
 #include "Shared/EditorCamera.hpp"
+#include "../components/EditorInfo.hpp"
 
 namespace Hush {
 	class EditorCameraSystem final : public ISystem {
@@ -45,6 +46,8 @@ namespace Hush {
 		float ApplyAccelerationCurve(float blend);
 		
 		EditorCamera* m_editorCamera{};
+
+		EditorInfo* m_editorInfo = nullptr;
 		
 		float m_blendValue = 0.0F;
 	};

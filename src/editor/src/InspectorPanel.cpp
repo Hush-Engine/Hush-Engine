@@ -1,12 +1,14 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "Components/WorldTransform.hpp"
+#include "HushEngine.hpp"
 #include "InputManager.hpp"
 #include "Renderer.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "WindowManager.hpp"
+#include "components/EditorInfo.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
 #include <glm/ext/quaternion_float.hpp>
@@ -152,6 +154,7 @@ void Hush::InspectorPanel::OnRender()
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
+	this->m_editorInfo = HushEngine::s_engineManager->GetComponent<EditorInfo>();
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -192,16 +195,18 @@ void Hush::InspectorPanel::RenderProperties()
 
 
 void Hush::InspectorPanel::RenderGizmo() {
-	if (InputManager::IsKeyDownThisFrame(EKeyCode::R)) {
-		this->m_currentGizmoOp = ImGuizmo::ROTATE;
-	}
+	if (this->m_editorInfo->currentState == EEditorState::None) {
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::R)) {
+			this->m_currentGizmoOp = ImGuizmo::ROTATE;
+		}
 	
-	if (InputManager::IsKeyDownThisFrame(EKeyCode::T)) {
-		this->m_currentGizmoOp = ImGuizmo::TRANSLATE;
-	}
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::T)) {
+			this->m_currentGizmoOp = ImGuizmo::TRANSLATE;
+		}
 	
-	if (InputManager::IsKeyDownThisFrame(EKeyCode::S)) {
-		this->m_currentGizmoOp = ImGuizmo::SCALE;
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::S)) {
+			this->m_currentGizmoOp = ImGuizmo::SCALE;
+		}
 	}
 	
 	const IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();

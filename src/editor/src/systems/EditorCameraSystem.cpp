@@ -7,6 +7,7 @@
 void Hush::EditorCameraSystem::Init() {
 	IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 	this->m_editorCamera = renderer->GetEditorCamera();
+	this->m_editorInfo = HushEngine::s_engineManager->GetComponent<EditorInfo>();
 }
 
 void Hush::EditorCameraSystem::OnShutdown() {
@@ -25,8 +26,14 @@ void Hush::EditorCameraSystem::OnUpdate(float delta) {
 
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
+		// Only reset the state if we controlled the current one
+		if (this->m_editorInfo->currentState == EEditorState::FreeLook) {
+			this->m_editorInfo->currentState = EEditorState::None;
+		}
 		return;
 	}
+	this->m_editorInfo->currentState = EEditorState::FreeLook;
+
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
 

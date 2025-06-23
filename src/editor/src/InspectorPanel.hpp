@@ -3,6 +3,7 @@
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
 #include <optional>
+#include "components/EditorInfo.hpp"
 #include "imguizmo/ImGuizmo.h"
 
 namespace Hush
@@ -28,6 +29,8 @@ namespace Hush
 		void RenderGizmo();
 		
 		std::optional<Entity> m_inspectTarget = std::nullopt;
+
+		EditorInfo* m_editorInfo = nullptr;
 
 		ImGuizmo::OPERATION m_currentGizmoOp = ImGuizmo::OPERATION::TRANSLATE;
 

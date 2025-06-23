@@ -73,6 +73,10 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnPreRender();
+	}
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
