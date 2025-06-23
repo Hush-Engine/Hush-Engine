@@ -63,6 +63,7 @@ namespace Hush::Export
 	constexpr void name(const char (&name)[N])
 	{
 		// Do nothing
+		(void)name;
 	}
 }
 

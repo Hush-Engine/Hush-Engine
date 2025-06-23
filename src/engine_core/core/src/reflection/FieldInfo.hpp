@@ -23,11 +23,12 @@ namespace Hush::Reflection
 		using Setter = std::function<EVariantError(std::span<const VariantView>)>;
 		using Getter = std::function<Result<Variant, EVariantError>(std::span<const VariantView>)>;
 
-		FieldInfo(TypeId typeId, std::string name, Setter setter, Getter getter)
+		FieldInfo(TypeId typeId, std::string name, Setter setter, Getter getter, uint64_t offset = 0)
 			: m_typeId(typeId),
 			  m_name(std::move(name)),
 			  m_setter(setter),
-			  m_getter(getter)
+			  m_getter(getter),
+			  m_offset(offset)
 		{
 		}
 
@@ -38,7 +39,7 @@ namespace Hush::Reflection
 		}
 
 		[[nodiscard]]
-		const std::string &GetName() const
+		std::string_view GetName() const
 		{
 			return m_name;
 		}
@@ -51,17 +52,6 @@ namespace Hush::Reflection
 				return m_getter(args);
 			}
 			return EVariantError::NonSameType;
-		}
-
-		template <typename... Args>
-			requires(std::is_same_v<Args, VariantView> && ...)
-		[[nodiscard]]
-		Result<Variant, Variant::EVariantError> Get(std::initializer_list<VariantView> args) const
-		{
-			std::array<VariantView, sizeof...(args)> argArray;
-			std::copy(args.begin(), args.end(), argArray.begin());
-
-			return Get(argArray);
 		}
 
 		Result<Variant, Variant::EVariantError> Get(std::initializer_list<const VariantView> args) const
@@ -85,11 +75,17 @@ namespace Hush::Reflection
 			return Set(std::span(args));
 		}
 
+		[[nodiscard]]
+		uint64_t GetOffset() const
+		{
+			return m_offset;
+		}
 
 	private:
 		TypeId m_typeId;
 		std::string m_name;
 		Setter m_setter;
 		Getter m_getter;
+		uint64_t m_offset{0};
 	};
 } // namespace Hush::Reflection

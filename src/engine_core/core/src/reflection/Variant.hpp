@@ -12,6 +12,7 @@
 
 namespace Hush::Reflection
 {
+	class Variant;
 
 	/// A VariantView that holds a reference to any type.
 	struct VariantView
@@ -43,6 +44,8 @@ namespace Hush::Reflection
 		{
 			static_assert(!std::is_same_v<T, void>, "VariantView cannot hold void type");
 		}
+
+		VariantView(const Variant &variant);
 
 		explicit VariantView(void *value, std::uint64_t typeId)
 			: m_value(value),
@@ -105,7 +108,7 @@ namespace Hush::Reflection
 
 		template <typename T>
 		explicit Variant(T &&value)
-			: m_typeId(GetTypeId<T>())
+			: m_typeId(GetTypeId<std::remove_cvref_t<T>>())
 		{
 			if constexpr (sizeof(std::remove_reference_t<T>) <= MAX_SMALL_SIZE)
 			{
@@ -128,16 +131,41 @@ namespace Hush::Reflection
 			}
 		}
 
+		template <typename T, typename... Args>
+		static Variant CreateInPlace(Args &&...args)
+		{
+			static_assert(std::is_constructible_v<T, Args...>, "Type T is not constructible with the provided arguments");
+
+			Variant variant;
+			variant.m_typeId = GetTypeId<T>();
+
+			if constexpr (sizeof(T) <= MAX_SMALL_SIZE)
+			{
+				new (variant.m_data) T(std::forward<Args>(args)...);
+				variant.m_status = EVariantStatus::Small;
+				if constexpr (std::is_trivially_destructible_v<T>)
+				{
+					variant.m_dtor = nullptr;
+				}
+				else
+				{
+					variant.m_dtor = [](void *ptr) { static_cast<T *>(ptr)->~T(); };
+				}
+			}
+			else
+			{
+				variant.m_ptr = new T(std::forward<Args>(args)...);
+				variant.m_dtor = [](void *ptr) { delete static_cast<T *>(ptr); };
+				variant.m_status = EVariantStatus::Large;
+			}
+
+			return variant;
+		}
+
 		Variant(const Variant &) = delete;
 		Variant &operator=(const Variant &) = delete;
 
-		Variant(Variant &&rhs) noexcept
-			: m_dtor(std::exchange(rhs.m_dtor, nullptr)),
-			  m_status(std::exchange(rhs.m_status, EVariantStatus::None)),
-			  m_typeId(std::exchange(rhs.m_typeId, TypeId{}))
-		{
-			std::memcpy(m_data, rhs.m_data, sizeof(m_data));
-		}
+		Variant(Variant &&rhs) noexcept;
 
 		~Variant();
 
@@ -173,7 +201,7 @@ namespace Hush::Reflection
 
 			if (m_status == EVariantStatus::Small)
 			{
-				return reinterpret_cast<T *>(&m_data);
+				return static_cast<T *>(const_cast<void *>(static_cast<const void *>(m_data)));
 			}
 
 			return static_cast<T *>(m_ptr);
@@ -204,7 +232,7 @@ namespace Hush::Reflection
 		{
 			if (m_dtor != nullptr && m_status != EVariantStatus::None)
 			{
-				void *ptrToFree = m_status == EVariantStatus::Small ? reinterpret_cast<void *>(m_data) : m_ptr;
+				void *ptrToFree = m_status == EVariantStatus::Small ? reinterpret_cast<void *>(&m_data[0]) : m_ptr;
 				m_dtor(ptrToFree);
 			}
 
@@ -213,7 +241,26 @@ namespace Hush::Reflection
 			m_typeId = TypeId{};
 		}
 
+		template <typename T>
+		[[nodiscard]]
+		bool IsType() const
+		{
+			return m_typeId == GetTypeId<T>();
+		}
+
+		[[nodiscard]]
+		bool IsType(TypeId id) const
+		{
+			return m_typeId == id;
+		}
+
+		TypeId StoredTypeId() const
+		{
+			return m_typeId;
+		}
+
 	private:
+		friend struct VariantView;
 		static constexpr std::size_t MAX_SMALL_SIZE = 16;
 
 		union {
@@ -224,10 +271,5 @@ namespace Hush::Reflection
 		EVariantStatus m_status = EVariantStatus::None;
 		TypeId m_typeId;
 	};
-
-	inline Variant::~Variant()
-	{
-		Clear();
-	}
 
 } // namespace Hush::Reflection

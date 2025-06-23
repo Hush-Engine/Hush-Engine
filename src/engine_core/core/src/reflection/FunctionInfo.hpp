@@ -14,8 +14,9 @@ namespace Hush::Reflection
 {
 	class FunctionInfo
 	{
-		static constexpr std::uint8_t MAX_ARGS = 16;
 	public:
+		static constexpr std::uint8_t MAX_ARGS = 16;
+
 		enum class EFunctionInfoError : uint8_t
 		{
 			None = 0,
@@ -24,16 +25,28 @@ namespace Hush::Reflection
 			InvalidArgsType = 3,
 			NonMatchingArgs = 4,
 		};
-		using CallFunc = Result<Variant, EFunctionInfoError> (*)(std::span<VariantView>);
+		using CallFunc = Result<Variant, EFunctionInfoError> (*)(std::span<const VariantView>);
 
-		template <typename... Args> requires (sizeof...(Args) <= MAX_ARGS)
-		FunctionInfo(CallFunc callFunc, std::string name)
-			: m_argsType({GetTypeId<std::remove_reference_t<Args>>()...}),
-			  m_name(std::move(name)),
+		FunctionInfo(CallFunc callFunc, std::string name, std::span<const TypeId> argsType)
+			: m_name(std::move(name)),
 			  m_callFunc(callFunc),
-			  m_argsCount(static_cast<uint8_t>(sizeof...(Args)))
-
+			  m_argsCount(static_cast<uint8_t>(argsType.size()))
 		{
+			if (m_argsCount > MAX_ARGS)
+			{
+				// TODO: Handle error, maybe a log message?
+			}
+			std::copy(argsType.begin(), argsType.end(), m_argsType.begin());
+		}
+
+		template <typename... Args>
+			requires(sizeof...(Args) <= MAX_ARGS)
+		static FunctionInfo Create(CallFunc callFunc, std::string name)
+		{
+			FunctionInfo funcInfo(callFunc, std::move(name),
+								  std::span<const TypeId>({GetTypeId<std::remove_reference_t<Args>>()...}));
+
+			return funcInfo;
 		}
 
 		///
@@ -44,7 +57,7 @@ namespace Hush::Reflection
 		///
 		/// @return Result with the return value or an error.
 		[[nodiscard]]
-		Result<Variant, EFunctionInfoError> Call(std::span<VariantView> args) const
+		Result<Variant, EFunctionInfoError> Call(std::span<const VariantView> args) const
 		{
 			if (m_argsCount != args.size())
 			{
@@ -78,26 +91,31 @@ namespace Hush::Reflection
 			return Call(argsArray);
 		}
 
+		[[nodiscard]]
 		std::uint64_t GetArgsCount() const
 		{
 			return m_argsCount;
 		}
 
-		bool IsCallableWith(std::span<VariantView> args) const
+		[[nodiscard]]
+		bool IsCallableWith(std::span<const VariantView> args) const
 		{
-			return m_argsCount == args.size() && std::equal(m_argsType.begin(), m_argsType.begin() + m_argsCount,
-														   args.begin(),
-														   [](const TypeId &typeId, const VariantView &arg) {
-															   return typeId == arg.GetTypeId();
-														   });
+			return m_argsCount == args.size() &&
+				   std::equal(m_argsType.begin(), m_argsType.begin() + m_argsCount, args.begin(),
+							  [](const TypeId &typeId, const VariantView &arg) { return typeId == arg.GetTypeId(); });
+		}
+
+		[[nodiscard]]
+		std::string_view GetName() const
+		{
+			return m_name;
 		}
 
 	private:
-
 		std::array<TypeId, MAX_ARGS> m_argsType;
 		std::string m_name;
 		CallFunc m_callFunc = nullptr;
 		std::uint8_t m_argsCount = 0;
 	};
 
-}
+} // namespace Hush::Reflection

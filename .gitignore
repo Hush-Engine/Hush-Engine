@@ -163,3 +163,6 @@ xcuserdata/
 *.xcodeproj
 #Some other editors
 *.vscode
+
+*.hushgen.hpp
+*.hushgen.cpp

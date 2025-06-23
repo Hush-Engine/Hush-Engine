@@ -5,16 +5,20 @@
 */
 #include <serialization/Formats/JsonSerializer.hpp>
 #include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <array>
+#include "serialization/GeneratedSerialization.hpp"
+#include "serialization/GeneratedSerialization2.hpp"
 
 struct Vector3
 {
 	float x{}, y{}, z{};
 
-	Hush::Serialization::ESerializationError Serialize(Hush::Serialization::JsonSerializer &serializer) const
+	template <typename T>
+	Hush::Serialization::ESerializationError Serialize(T &serializer) const
 	{
-		auto error = serializer.Serialize<std::string_view>("__type", "Vector3");
+		auto error = serializer.template Serialize<std::string_view>("__type", "Vector3");
 		if (error != Hush::Serialization::ESerializationError::None)
 		{
 			return error;
@@ -39,7 +43,7 @@ struct Vector3
 	{
 		struct Visitor : public Hush::Serialization::IVisitor
 		{
-			Hush::Serialization::BuiltinVisitors::Visitor<float> xVisitor;
+			Hush::Serialization::Visitor<float> xVisitor;
 			Hush::Serialization::BuiltinVisitors::Visitor<float> yVisitor;
 			Hush::Serialization::BuiltinVisitors::Visitor<float> zVisitor;
 
@@ -54,11 +58,11 @@ struct Vector3
 			EVisitorStatus status = EVisitorStatus::None;
 			bool insideObject{false};
 
-			explicit Visitor(IVisitor *parent, Vector3 &vec, Hush::Serialization::EFormatDescribingType format)
+			explicit Visitor(IVisitor *parent, Vector3 *vec, Hush::Serialization::EFormatDescribingType format)
 				: IVisitor(parent, format),
-				  xVisitor(this, &vec.x, format),
-				  yVisitor(this, &vec.y, format),
-				  zVisitor(this, &vec.z, format)
+				  xVisitor(this, &vec->x, format),
+				  yVisitor(this, &vec->y, format),
+				  zVisitor(this, &vec->z, format)
 			{
 				if (format == Hush::Serialization::EFormatDescribingType::NonSelfDescribing)
 				{
@@ -92,7 +96,7 @@ struct Vector3
 					return Hush::Serialization::EDeserializationError::InvalidData;
 				}
 
-				return nullptr;
+				return GetParentVisitor();
 			}
 
 			Result VisitKey(std::string_view value) override
@@ -122,7 +126,7 @@ struct Vector3
 			}
 		};
 
-		return Visitor{parent, *this, format};
+		return Visitor{parent, this, format};
 	}
 };
 
@@ -163,12 +167,81 @@ struct SerializableStruct
 	}
 };
 
+struct SerializableDemo
+{
+	Vector3 c;
+
+	auto Deserialize(Hush::Serialization::IVisitor *parent, Hush::Serialization::EFormatDescribingType format)
+	{
+		struct Visitor : public Hush::Serialization::IVisitor
+		{
+			Hush::Serialization::Visitor<Vector3> cVisitor;
+			bool insideObject{false};
+
+			explicit Visitor(IVisitor *parent, SerializableDemo &demo,
+							 Hush::Serialization::EFormatDescribingType format)
+				: IVisitor(parent, format),
+				  cVisitor(this, &demo.c, format)
+			{
+				if (format == Hush::Serialization::EFormatDescribingType::NonSelfDescribing)
+				{
+					SetStartingVisitor(&cVisitor);
+					cVisitor.SetParentVisitor(GetParentVisitor());
+				}
+				else
+				{
+					SetStartingVisitor(this);
+				}
+			}
+
+			Result VisitObjectStart() override
+			{
+				if (insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				insideObject = true;
+
+				return this;
+			}
+
+			Result VisitObjectEnd() override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				insideObject = false;
+
+				return GetParentVisitor();
+			}
+
+			Result VisitKey(std::string_view value) override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				if (value == "c")
+				{
+					return &cVisitor;
+				}
+
+				return Hush::Serialization::EDeserializationError::InvalidKey;
+			}
+		};
+
+		return Visitor{parent, *this, format};
+	}
+};
+
 TEST_CASE("Serialization", "[serialization]")
 {
 	SECTION("Serialize reflection")
 	{
-		Hush::Serialization::JsonSerializer jsonSerializer;
-
 		constexpr std::string_view EXPECTED_JSON =
 			R"({"__type":"SerializableStruct","a":10,"b":20.0,"c":{"__type":"Vector3","x":0.0,"y":0.0,"z":0.0},"d":["","",""]})";
 
@@ -181,6 +254,23 @@ TEST_CASE("Serialization", "[serialization]")
 		REQUIRE(result.has_value());
 
 		std::string json = result.value();
+		REQUIRE(json == EXPECTED_JSON);
+	}
+
+	SECTION("Autogen serialization")
+	{
+		constexpr std::string_view EXPECTED_JSON =
+			R"({"__type":"SerializationAutogenStruct2","field":{"__type":"SerializationAutogenStruct","m_value1":5,"m_value2":15}})";
+		SerializationAutogenStruct2 serializationStruct;
+
+		serializationStruct.field.SetValue1(5);
+		serializationStruct.field.SetValue2(15);
+
+		auto result = Hush::Serialization::SerializeJson(serializationStruct);
+		REQUIRE(result.has_value());
+
+		std::string json = result.value();
+
 		REQUIRE(json == EXPECTED_JSON);
 	}
 }
@@ -198,6 +288,9 @@ TEST_CASE("Deserialization", "[serialization]")
 		Hush::Result<Vector3, Hush::Serialization::EDeserializationError> result =
 			Hush::Serialization::DeserializeJson<Vector3>(json);
 
+		static_assert(std::is_same_v<std::true_type, Hush::Serialization::BuiltinVisitors::Visitor<float>::Exists>,
+					  "Visitor for float should exist");
+
 		REQUIRE(result.has_value());
 
 		Vector3 vec = result.value();
@@ -205,5 +298,43 @@ TEST_CASE("Deserialization", "[serialization]")
 		REQUIRE(vec.x == 10);
 		REQUIRE(vec.y == 20.0f);
 		REQUIRE(vec.z == 30.0f);
+	}
+
+	SECTION("Nested object")
+	{
+		constexpr std::string_view json = R"( {
+			"c": {
+				"x": 10.0,
+				"y": 20.0,
+				"z": 30.0
+			}
+		})";
+
+		Hush::Result<SerializableDemo, Hush::Serialization::EDeserializationError> result =
+			Hush::Serialization::DeserializeJson<SerializableDemo>(json);
+
+		REQUIRE(result.has_value());
+
+		SerializableDemo demo = result.value();
+
+		REQUIRE(demo.c.x == 10);
+		REQUIRE(demo.c.y == 20.0f);
+		REQUIRE(demo.c.z == 30.0f);
+	}
+
+	SECTION("Autogen deserialization")
+	{
+		constexpr std::string_view json = R"( {
+			"m_value1": 1,
+			"m_value2": 2
+		})";
+
+		Hush::Result<SerializationAutogenStruct, Hush::Serialization::EDeserializationError> result =
+			Hush::Serialization::DeserializeJson<SerializationAutogenStruct>(json);
+
+		REQUIRE(result.has_value());
+		SerializationAutogenStruct serializationStruct = result.value();
+		REQUIRE(serializationStruct.GetValue1() == 1);
+		REQUIRE(serializationStruct.GetValue2() == 2);
 	}
 }

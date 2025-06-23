@@ -2,6 +2,7 @@
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
 #include <string_view>
+#include <string>
 
 namespace Hush
 {
