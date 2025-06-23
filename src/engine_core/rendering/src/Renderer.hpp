@@ -1,3 +1,4 @@
+
 /*! \file Renderer.hpp
 	\author Alan Ramirez Herrera
 	\date 2024-03-03
@@ -87,5 +88,6 @@ namespace Hush
 		// TODO: Figure out a better system to get the editor camera
 		[[nodiscard]]
 		virtual const EditorCamera &GetEditorCamera() const noexcept = 0;
+		virtual EditorCamera* GetEditorCamera() noexcept = 0;
 	};
 } // namespace Hush

@@ -313,7 +313,7 @@ void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *dra
 
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
-	this->m_editorCamera.OnUpdate(delta);
+	(void)delta;
 	this->m_mainDrawContext.opaqueSurfaces.clear();
 	this->m_mainDrawContext.transparentSurfaces.clear();
 	// Test stuff just to show that it works... to be refactored into a more dynamic approach
@@ -621,6 +621,10 @@ void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
 
 const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept {
 	return this->m_editorCamera;
+}
+
+Hush::EditorCamera* Hush::VulkanRenderer::GetEditorCamera() noexcept {
+	return &this->m_editorCamera;
 }
 
 Hush::VulkanSwapchain &Hush::VulkanRenderer::GetSwapchain()

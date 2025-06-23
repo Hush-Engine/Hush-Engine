@@ -169,6 +169,8 @@ namespace Hush
 		[[nodiscard]]
 		ShaderModuleLoader &GetShaderModuleLoader() noexcept;
 
+		EditorCamera* GetEditorCamera() noexcept override;
+		
 	private:
 		void Configure(vkb::Instance vkbInstance);
 
