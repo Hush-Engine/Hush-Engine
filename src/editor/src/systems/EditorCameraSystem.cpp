@@ -7,7 +7,10 @@
 void Hush::EditorCameraSystem::Init() {
 	IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 	this->m_editorCamera = renderer->GetEditorCamera();
-	this->m_editorInfo = HushEngine::s_engineManager->GetComponent<EditorInfo>();
+	// There should only ever be ONE EditorInfo component in the active scene
+	this->GetScene().CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef){
+		this->m_editorInfo = &infoRef;
+    });
 }
 
 void Hush::EditorCameraSystem::OnShutdown() {

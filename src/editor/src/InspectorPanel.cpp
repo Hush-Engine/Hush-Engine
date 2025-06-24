@@ -154,7 +154,10 @@ void Hush::InspectorPanel::OnRender()
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
-	this->m_editorInfo = HushEngine::s_engineManager->GetComponent<EditorInfo>();
+
+	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef) {
+		this->m_editorInfo = &infoRef;
+    });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)

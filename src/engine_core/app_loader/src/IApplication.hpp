@@ -38,9 +38,6 @@ namespace Hush
 
 		virtual Hush::Scene *GetScene() = 0;
 
-		/// A manager entity is where all engine side components will go, this method will instance one and add any relevant components for your application
-		virtual Entity MakeManagerEntity() = 0;
-		
 		[[nodiscard]]
 		virtual std::string_view GetAppName() const noexcept = 0;
 	};

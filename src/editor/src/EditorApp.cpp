@@ -31,6 +31,9 @@ public:
 	{
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
+		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+		entt.AddComponent<EditorInfo>();
+
 		this->m_scene->Init();
 		this->m_userInterface.Init(this->m_scene.get());
 	}
@@ -69,12 +72,6 @@ public:
 	Hush::Scene *GetScene() noexcept override
 	{
 		return this->m_scene.get();
-	}
-
-	Hush::Entity MakeManagerEntity() override {
-		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
-		entt.AddComponent<EditorInfo>();
-		return entt;
 	}
 
 private:

@@ -46,7 +46,10 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
-	this->m_editorInfo = HushEngine::s_engineManager->GetComponent<EditorInfo>();
+	
+	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef){
+		this->m_editorInfo = &infoRef;
+    });
 }
 
 void Hush::CommandPanel::OnRender()
