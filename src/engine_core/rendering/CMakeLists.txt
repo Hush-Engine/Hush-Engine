@@ -31,6 +31,7 @@ add_library(Hush::Rendering ALIAS HushRendering)
 target_link_libraries(HushRendering PUBLIC
         SDL2::SDL2
         imgui
+        imguizmo
         stb
         Vulkan::Vulkan
         vk-bootstrap::vk-bootstrap

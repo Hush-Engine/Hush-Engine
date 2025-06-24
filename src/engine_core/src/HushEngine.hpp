@@ -9,6 +9,7 @@
 #include "ISystem.hpp"
 #include "HushBindings.hpp"
 
+#include <optional>
 #include <string_view>
 
 namespace Hush

@@ -1,8 +1,15 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "Components/WorldTransform.hpp"
+#include "HushEngine.hpp"
+#include "InputManager.hpp"
+#include "Renderer.hpp"
+#include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
+#include "WindowManager.hpp"
+#include "components/EditorInfo.hpp"
+#include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
@@ -14,10 +21,12 @@
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
 
+
 #include <memory>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 #include "Shared/Mesh.hpp"
+#include "imguizmo/ImGuizmo.h"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
@@ -134,13 +143,21 @@ void Hush::Serialize(Transform *component)
 void Hush::InspectorPanel::OnRender()
 {
 	ImGui::Begin("Inspector");
-	this->RenderProperties();
+	if (this->m_inspectTarget.has_value())
+	{
+		this->RenderProperties();
+		this->RenderGizmo();
+	}
 	ImGui::End();
 }
 
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
+
+	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef) {
+		this->m_editorInfo = &infoRef;
+    });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -160,10 +177,6 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 
 void Hush::InspectorPanel::RenderProperties()
 {
-	if (!this->m_inspectTarget.has_value())
-	{
-		return;
-	}
 	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
@@ -180,5 +193,39 @@ void Hush::InspectorPanel::RenderProperties()
 	if (meshComponent != nullptr)
 	{
 		Serialize(meshComponent, this->m_inspectTarget.value().GetName().value().data());
+	}
+}
+
+
+void Hush::InspectorPanel::RenderGizmo() {
+	if (this->m_editorInfo->currentState == EEditorState::None) {
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::R)) {
+			this->m_currentGizmoOp = ImGuizmo::ROTATE;
+		}
+	
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::T)) {
+			this->m_currentGizmoOp = ImGuizmo::TRANSLATE;
+		}
+	
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::S)) {
+			this->m_currentGizmoOp = ImGuizmo::SCALE;
+		}
+	}
+	
+	const IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+	const EditorCamera& cam = renderer->GetEditorCamera();
+	// Start with translation Gizmo
+	ImGuiIO& io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	glm::mat4 viewMat = cam.GetViewMatrix();
+	glm::mat4 projMat = cam.GetProjectionMatrix();
+	auto* viewMatPtr = reinterpret_cast<float*>(&viewMat);
+	auto* projMatPtr = reinterpret_cast<float*>(&projMat);
+	WorldTransform* xform = this->m_inspectTarget->GetComponent<WorldTransform>();
+	glm::mat xformMat = xform->GetTransformationMatrix();
+	auto* xformMatrix = reinterpret_cast<float*>(&xformMat);
+	if (ImGuizmo::Manipulate(viewMatPtr, projMatPtr, this->m_currentGizmoOp, ImGuizmo::MODE::WORLD, xformMatrix))
+	{
+		xform->SetTransformationMatrix(xformMat);
 	}
 }

@@ -5,6 +5,7 @@
 */
 
 #include "Scene.hpp"
+#include "ISystem.hpp"
 
 #define FLECS_NO_CPP
 #include <flecs.h>
@@ -27,6 +28,10 @@ Hush::Scene::~Scene()
 void Hush::Scene::Init()
 {
 	// Init all systems
+	for (ISystem* system : this->m_engineSystems) {
+		system->Init();
+	}
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -38,6 +43,10 @@ void Hush::Scene::Init()
 
 void Hush::Scene::Update(float delta)
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnUpdate(delta);
+	}
+	
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -49,6 +58,10 @@ void Hush::Scene::Update(float delta)
 
 void Hush::Scene::FixedUpdate(float delta)
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnFixedUpdate(delta);
+	}
+	
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -60,6 +73,10 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnPreRender();
+	}
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -70,6 +87,10 @@ void Hush::Scene::PreRender()
 }
 void Hush::Scene::Render()
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnRender();
+	}
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -81,6 +102,10 @@ void Hush::Scene::Render()
 
 void Hush::Scene::PostRender()
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnPostRender();
+	}
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)
@@ -92,6 +117,9 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
+	for (ISystem* system : this->m_engineSystems) {
+		system->OnShutdown();
+	}
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		for (ISystem *system : systemBucket)

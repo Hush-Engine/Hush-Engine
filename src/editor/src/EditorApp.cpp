@@ -1,10 +1,14 @@
+
 //
 // Created by Alan5 on 22/09/2024.
 //
 
 #include "IApplication.hpp"
+#include "ISystem.hpp"
 #include "Scene.hpp"
 #include "UI.hpp"
+#include "components/EditorInfo.hpp"
+#include "systems/EditorCameraSystem.hpp"
 
 #include <memory>
 
@@ -25,6 +29,11 @@ public:
 
 	void Init() override
 	{
+		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
+		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
+		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+		entt.AddComponent<EditorInfo>();
+
 		this->m_scene->Init();
 		this->m_userInterface.Init(this->m_scene.get());
 	}
@@ -55,7 +64,7 @@ public:
 		this->m_scene->PreRender();
 	}
 
-	std::string_view GetAppName() const noexcept override
+	[[nodiscard]] std::string_view GetAppName() const noexcept override
 	{
 		return "Hush-Editor";
 	}
@@ -68,6 +77,7 @@ public:
 private:
 	Hush::UI m_userInterface;
 	std::unique_ptr<Hush::Scene> m_scene;
+	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
 };
 
 extern "C" bool BundledAppExists_Internal_() // NOLINT(*-identifier-naming)

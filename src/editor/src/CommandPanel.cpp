@@ -2,9 +2,11 @@
 #include "BitwiseUtils.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Entity.hpp"
+#include "HushEngine.hpp"
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
+#include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
@@ -44,6 +46,10 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
+	
+	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef){
+		this->m_editorInfo = &infoRef;
+    });
 }
 
 void Hush::CommandPanel::OnRender()
@@ -95,6 +101,7 @@ void Hush::CommandPanel::TypeCommand()
 		return;
 	}
 
+	this->m_editorInfo->currentState = EEditorState::CommandMode;
 	char currentInput = 0;
 	// When typing the command we should do a pass of available commands to update with fuzzy search
 	if (InputManager::FetchCharThisFrame(&currentInput))
@@ -120,6 +127,9 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 	this->m_selectedCommandIdx = -1;
 	this->m_keyboardFocusSet = false;
+	if (this->m_editorInfo->currentState == EEditorState::CommandMode) {
+		this->m_editorInfo->currentState = EEditorState::None;
+	} 
 }
 
 void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view &textCmd)

@@ -1,3 +1,4 @@
+
 # Editor
 
 add_executable(HushEditor
@@ -10,9 +11,10 @@ add_executable(HushEditor
         src/CommandPanel.cpp
         src/TitleBarMenuPanel.cpp
         src/systems/CommandSystem.cpp
+        src/systems/EditorCameraSystem.cpp
         src/UI.cpp
         src/DebugTooltip.cpp
         src/EditorApp.cpp
 )
 
-target_link_libraries(HushEditor PRIVATE Hush::Engine imgui)
+target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)

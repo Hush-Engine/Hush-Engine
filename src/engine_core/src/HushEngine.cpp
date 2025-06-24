@@ -83,4 +83,5 @@ void Hush::HushEngine::Init()
 	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
 	entity.AddComponent<LocalTransform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
+
 }

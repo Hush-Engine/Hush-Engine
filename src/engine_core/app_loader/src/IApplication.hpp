@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include "Entity.hpp"
 #include "Scene.hpp"
-#include <string>
 #include <string_view>
 
 namespace Hush
