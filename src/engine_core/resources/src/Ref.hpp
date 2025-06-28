@@ -39,7 +39,7 @@ namespace Hush
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted* count = this->m_resourceManager->IncreaseRefCount(this->m_element);
 			count->deleter = [](void* ptr) {
-				delete reinterpret_cast<T*>(ptr);
+				delete static_cast<T*>(ptr);
 			};
 		}
 

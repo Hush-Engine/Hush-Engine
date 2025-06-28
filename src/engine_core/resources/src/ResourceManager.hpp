@@ -1,7 +1,35 @@
 /*! \file ResourceManager.hpp
-	\author Alan Ramirez
-	\date 2024-12-24
-	\brief Resource manager
+	\author Kyn21kx
+	\date 2025-06-27
+	\brief A resource manager for the editor, not a part of the engine core because we need to know the type of each resource and that introduces dependencies
 */
 
 #pragma once
+
+#include "IResourceManager.hpp"
+#include <unordered_map>
+#include <vector>
+
+namespace Hush
+{
+	class ResourceManager final : public IResourceManager {
+	public:
+		ResourceManager() = default;
+		ResourceManager(const ResourceManager &) = default;
+		ResourceManager(ResourceManager &&) = delete;
+		ResourceManager &operator=(const ResourceManager &) = default;
+		ResourceManager &operator=(ResourceManager &&) = delete;
+
+		RefCounted* IncreaseRefCount(const HandleId& handle) override;
+		
+		void DecreaseRefCount(const HandleId& handle) override;
+		
+		const RefCounted& GetRefCount(const HandleId& handle) override;
+		
+		ImageTexture LoadTexture();
+		
+	private:
+		std::unordered_map<HandleId, RefCounted> m_references;
+		std::vector<HandleId> m_deletionQueue;
+	};
+}
