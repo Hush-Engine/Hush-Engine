@@ -25,7 +25,8 @@
 #endif
 
 // TODO: Add debug condition
-// NOLINTNEXTLINE
+#if defined (DEBUG) && !defined(NO_ASSERT)
+// NOLINTBEGIN
 #define HUSH_ASSERT(condition, fmtFormat, ...)                                                                         \
 	[[unlikely]]                                                                                                       \
 	if (!(condition))                                                                                                  \
@@ -34,7 +35,10 @@
 						##__VA_ARGS__);                                                                                \
 		HUSH_DEBUG_BREAK;                                                                                              \
 	}
-
+#else
+// noop
+#define HUSH_ASSERT(condition, fmtFormat, ...)
+#endif
 #define HUSH_RESULT_ASSERT(result, message, ...)                                                                       \
 	HUSH_ASSERT(result.has_value(), "{} error: {}", message, magic_enum::enum_name(result.error()))
 
@@ -45,3 +49,4 @@
 	}
 
 #define HUSH_STATIC_ASSERT(condition, ...) static_assert(condition, #__VA_ARGS__)
+// NOLINTEND
