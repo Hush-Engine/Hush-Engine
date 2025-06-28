@@ -18,19 +18,20 @@ namespace Hush
 	
 	struct RefCounted {
 		void* element = nullptr;
-		Deleter deleter{};
+		Deleter deleter = nullptr;
 		std::atomic<size_t> count = 0; // We initialize at 0 but IncreaseRefCount will always create it at 1
 	};
 	
 	class IResourceManager {
 	public:
+		IResourceManager() = default;
 		IResourceManager(const IResourceManager &) = default;
 		IResourceManager(IResourceManager &&) = delete;
 		IResourceManager &operator=(const IResourceManager &) = default;
 		IResourceManager &operator=(IResourceManager &&) = delete;
 		virtual ~IResourceManager() = default;
 		
-		virtual void IncreaseRefCount(const HandleId& handle) = 0;
+		virtual RefCounted* IncreaseRefCount(const HandleId& handle) = 0;
 		
 		virtual void DecreaseRefCount(const HandleId& handle) = 0;
 		

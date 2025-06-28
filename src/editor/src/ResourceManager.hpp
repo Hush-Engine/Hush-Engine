@@ -8,17 +8,19 @@
 
 #include "IResourceManager.hpp"
 #include <unordered_map>
+#include <vector>
 
 namespace Hush
 {
 	class ResourceManager final : public IResourceManager {
 	public:
+		ResourceManager() = default;
 		ResourceManager(const ResourceManager &) = default;
 		ResourceManager(ResourceManager &&) = delete;
 		ResourceManager &operator=(const ResourceManager &) = default;
 		ResourceManager &operator=(ResourceManager &&) = delete;
 
-		void IncreaseRefCount(const HandleId& handle) override;
+		RefCounted* IncreaseRefCount(const HandleId& handle) override;
 		
 		void DecreaseRefCount(const HandleId& handle) override;
 		
@@ -26,5 +28,6 @@ namespace Hush
 		
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
+		std::vector<HandleId> m_deletionQueue;
 	};
 }
