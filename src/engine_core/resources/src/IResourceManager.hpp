@@ -19,7 +19,7 @@ namespace Hush
 	struct RefCounted {
 		void* element = nullptr;
 		Deleter deleter{};
-		std::atomic<size_t> count = 1;
+		std::atomic<size_t> count = 0; // We initialize at 0 but IncreaseRefCount will always create it at 1
 	};
 	
 	class IResourceManager {

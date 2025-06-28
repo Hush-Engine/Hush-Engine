@@ -6,14 +6,25 @@
 
 #pragma once
 
-#include <cstdint>
+#include "IResourceManager.hpp"
+#include <unordered_map>
 
 namespace Hush
 {
-	class ResourceManager {
+	class ResourceManager final : public IResourceManager {
 	public:
+		ResourceManager(const ResourceManager &) = default;
+		ResourceManager(ResourceManager &&) = delete;
+		ResourceManager &operator=(const ResourceManager &) = default;
+		ResourceManager &operator=(ResourceManager &&) = delete;
+
+		void IncreaseRefCount(const HandleId& handle) override;
+		
+		void DecreaseRefCount(const HandleId& handle) override;
+		
+		const RefCounted& GetRefCount(const HandleId& handle) override;
 		
 	private:
-		std::unordered_map<uint64_t, ImageTexture>
+		std::unordered_map<HandleId, RefCounted> m_references;
 	};
 }
