@@ -6,6 +6,7 @@
 
 #pragma once
 #include "Platform.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "Logger.hpp"
 
 #if HUSH_PLATFORM_WIN

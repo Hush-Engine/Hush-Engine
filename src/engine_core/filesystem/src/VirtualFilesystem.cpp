@@ -5,9 +5,13 @@
 */
 
 #include "VirtualFilesystem.hpp"
+#include "FileSystem.hpp"
 
 #include <Logger.hpp>
+#include <memory>
+#include <optional>
 #include <ranges>
+#include <string_view>
 
 Hush::VirtualFilesystem::VirtualFilesystem() = default;
 
@@ -69,17 +73,27 @@ void Hush::VirtualFilesystem::MountFileSystemInternal(std::string_view path,
 	m_mountedFileSystems.emplace_back(std::string(path), std::move(resourceLoader));
 }
 
+
+Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFilesystem::ResolveVirtualPath(const std::string_view& path) {
+	std::optional<ResolvedPath> resolvedPath = this->ResolveFileSystem(path);
+	if (!resolvedPath) {
+		LogFormat(ELogLevel::Debug, "Mount point for {} not found", path);
+		return EError::FileDoesntExist;
+	}
+	return resolvedPath->path;
+}
+
 std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::ResolveFileSystem(std::string_view path)
 {
 	// We need to iterate on all filesystems in backward order.
 	for (auto start = this->m_mountedFileSystems.begin(); start != this->m_mountedFileSystems.end(); ++start)
 	{
-		auto &mountPoint = start->path;
-		auto &filesystem = start->filesystem;
+		std::string &mountPoint = start->path;
+		std::unique_ptr<IFileSystem> &filesystem = start->filesystem;
 
 		if (path.starts_with(mountPoint))
 		{
-			auto relativePath = path.substr(mountPoint.size());
+			std::string_view relativePath = path.substr(mountPoint.size());
 
 			return ResolvedPath{
 				.filesystem = filesystem.get(),

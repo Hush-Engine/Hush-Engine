@@ -7,6 +7,11 @@
 #pragma once
 
 #include "IResourceManager.hpp"
+#include "Shared/ImageTexture.hpp"
+#include "Ref.hpp"
+#include "VirtualFilesystem.hpp"
+#include <cstdint>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -14,10 +19,10 @@ namespace Hush
 {
 	class ResourceManager final : public IResourceManager {
 	public:
-		ResourceManager() = default;
-		ResourceManager(const ResourceManager &) = default;
+		ResourceManager();
+		ResourceManager(const ResourceManager &) = delete;
 		ResourceManager(ResourceManager &&) = delete;
-		ResourceManager &operator=(const ResourceManager &) = default;
+		ResourceManager &operator=(const ResourceManager &) = delete;
 		ResourceManager &operator=(ResourceManager &&) = delete;
 
 		RefCounted* IncreaseRefCount(const HandleId& handle) override;
@@ -26,10 +31,12 @@ namespace Hush
 		
 		const RefCounted& GetRefCount(const HandleId& handle) override;
 		
-		ImageTexture LoadTexture();
-		
+		Ref<ImageTexture> LoadTexture(const std::string_view& path);
+
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;
+		std::unordered_map<uint64_t, HandleId> m_loadedResources;
+		VirtualFilesystem m_filesystem;
 	};
 }

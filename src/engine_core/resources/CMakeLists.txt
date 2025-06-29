@@ -9,4 +9,4 @@ hush_add_library(
 )
 add_library(Hush::Resources ALIAS HushResources)
 
-target_link_libraries(HushResources PUBLIC Hush::Utils Hush::Log Hush::Filesystem)
+target_link_libraries(HushResources PUBLIC Hush::Utils Hush::Log Hush::Filesystem Hush::Rendering)

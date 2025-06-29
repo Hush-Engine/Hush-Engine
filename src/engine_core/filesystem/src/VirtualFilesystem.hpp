@@ -70,6 +70,9 @@ namespace Hush
 		{
 			MountFileSystemInternal(path, std::make_unique<T>(std::forward<Args>(args)...));
 		}
+		
+		// Public facing API, will call ResolveFileSystem
+		Result<std::string_view, EError> ResolveVirtualPath(const std::string_view& path);
 
 	private:
 		void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);

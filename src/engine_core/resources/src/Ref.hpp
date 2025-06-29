@@ -31,16 +31,18 @@ namespace Hush
 			// TODO: Invalidate when the count reaches 0 even when in the middle of the frame
 			const RefCounted& counter = this->m_resourceManager->GetRefCount(this->m_element);
 			return this->m_element == INVALID_HANDLE || counter.element == nullptr || counter.count == 0;
-		}
-
+		}		
+		
 		Ref(IResourceManager* resourceManager, T* resource) {
 			this->m_element = reinterpret_cast<HandleId>(resource);
 			this->m_resourceManager = resourceManager;
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted* count = this->m_resourceManager->IncreaseRefCount(this->m_element);
-			count->deleter = [](void* ptr) {
-				delete static_cast<T*>(ptr);
-			};
+			if (count->deleter == nullptr) {
+				count->deleter = [](void* ptr) {
+					delete static_cast<T*>(ptr);
+				};
+			}
 		}
 
 	private:
