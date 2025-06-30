@@ -32,6 +32,9 @@ namespace Hush
 			const RefCounted& counter = this->m_resourceManager->GetRefCount(this->m_element);
 			return this->m_element == INVALID_HANDLE || counter.element == nullptr || counter.count == 0;
 		}		
+
+		Ref() = default;
+
 		
 		Ref(IResourceManager* resourceManager, T* resource) {
 			this->m_element = reinterpret_cast<HandleId>(resource);

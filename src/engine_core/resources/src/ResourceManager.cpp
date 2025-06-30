@@ -1,6 +1,7 @@
 #include "ResourceManager.hpp"
 #include "Assertions.hpp"
 #include "IResourceManager.hpp"
+#include "Logger.hpp"
 #include "Ref.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
@@ -11,8 +12,9 @@
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
 
-Hush::ResourceManager::ResourceManager() {
-	this->m_filesystem.MountFileSystem<CFileSystem>("res://", "./");
+
+void Hush::ResourceManager::Init(VirtualFilesystem* filesystem) {
+	this->m_filesystem = filesystem;
 }
 
 Hush::RefCounted* Hush::ResourceManager::IncreaseRefCount(const HandleId& handle) {
@@ -30,7 +32,6 @@ void Hush::ResourceManager::DecreaseRefCount(const HandleId& handle) {
 	}
 }
 
-
 const Hush::RefCounted& Hush::ResourceManager::GetRefCount(const Hush::HandleId& handle) {
 	return this->m_references[handle];
 }
@@ -39,10 +40,10 @@ const Hush::RefCounted& Hush::ResourceManager::GetRefCount(const Hush::HandleId&
 Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& path) {
 	// Allocate the image texture and load it using the file system
 	// Resolve the virtual path as an absolute path
-	Result<std::string_view, VirtualFilesystem::EError> resolvedPath = this->m_filesystem.ResolveVirtualPath(path);
+	Result<std::string_view, VirtualFilesystem::EError> resolvedPath = this->m_filesystem->ResolveVirtualPath(path);
 	HUSH_RESULT_ASSERT(resolvedPath, "Failed to load texture at {}", path);
 	
-	const uint64_t pathHash = Hashing::Fnv1a64(path);
+	const uint64_t pathHash = Hashing::Fnv1a64(resolvedPath.value());
 	const auto& iterator = this->m_loadedResources.find(pathHash);
 	
 	if (iterator != this->m_loadedResources.end()) {
@@ -50,7 +51,12 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 		auto* texture = reinterpret_cast<ImageTexture*>(handle);
 		return {this, texture};
 	}
-	auto* texture = new ImageTexture(path);
+	auto* texture = new ImageTexture(resolvedPath.value());
 	return {this, texture};
+}
+
+Hush::Ref<Hush::Mesh> Hush::ResourceManager::LoadMesh(const std::string_view& path) {
+	(void)path;
+	return {this, nullptr};
 }
 

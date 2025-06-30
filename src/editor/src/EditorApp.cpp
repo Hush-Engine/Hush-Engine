@@ -7,7 +7,10 @@
 #include "ISystem.hpp"
 #include "Scene.hpp"
 #include "UI.hpp"
+#include "VirtualFilesystem.hpp"
 #include "components/EditorInfo.hpp"
+#include "ResourceManager.hpp"
+#include "filesystem/CFileSystem/CFileSystem.hpp"
 #include "systems/EditorCameraSystem.hpp"
 
 #include <memory>
@@ -32,8 +35,11 @@ public:
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
-		entt.AddComponent<EditorInfo>();
-
+		entt.AddComponent<Hush::EditorInfo>();
+		entt.AddComponent<Hush::ResourceManager>();
+		Hush::VirtualFilesystem& vfs = entt.AddComponent<Hush::VirtualFilesystem>();
+		vfs.MountFileSystem<Hush::CFileSystem>("res://", "./");
+		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
 		this->m_scene->Init();
 		this->m_userInterface.Init(this->m_scene.get());
 	}

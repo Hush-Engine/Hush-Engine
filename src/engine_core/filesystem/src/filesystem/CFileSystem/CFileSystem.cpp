@@ -9,6 +9,9 @@
 
 #include <Logger.hpp>
 #include <array>
+#include <filesystem>
+#include <string_view>
+#include "Assertions.hpp"
 
 Hush::CFileSystem::CFileSystem(std::string_view root)
 	: mRoot(root)
@@ -70,4 +73,15 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 	};
 
 	return std::make_unique<CFile>(file, std::move(metadata));
+}
+
+
+Hush::Result<std::vector<std::string>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
+	// I know this is technically C++ and not C, but cross platform C path listing is a pain in the ass
+	HUSH_COND_FAIL_V(std::filesystem::exists(path) && std::filesystem::is_directory(path), IFile::EError::PathDoesntExist);
+	std::vector<std::string> result;
+	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(path)) {
+		result.emplace_back(entry.path().filename().string());
+	}
+	return result;
 }

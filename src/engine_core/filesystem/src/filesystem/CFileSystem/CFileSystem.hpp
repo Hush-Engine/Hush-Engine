@@ -41,6 +41,8 @@ namespace Hush
 		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::filesystem::path vfsPath,
 															   std::filesystem::path path, EFileOpenMode mode) override;
 
+
+		Result<std::vector<std::string>, IFile::EError> ListPath(const std::string_view& path) override;
 	private:
 		std::filesystem::path mRoot;
 		std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> mLoadedFiles;

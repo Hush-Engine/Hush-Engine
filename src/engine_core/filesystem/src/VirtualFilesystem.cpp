@@ -12,6 +12,7 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
+#include "Assertions.hpp"
 
 Hush::VirtualFilesystem::VirtualFilesystem() = default;
 
@@ -40,11 +41,30 @@ void Hush::VirtualFilesystem::Unmount(std::string_view virtualPath)
 		m_mountedFileSystems.end());
 }
 
-std::vector<std::string_view> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
+std::vector<std::string> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
 {
-	(void)virtualPath;
+	std::optional<ResolvedPath> resolved = this->ResolveFileSystem(virtualPath);
+	
+	if (!resolved)
+	{
+		LogFormat(ELogLevel::Debug, "Mount point for {} not found", virtualPath);
+		return {};
+	}
+	
 	(void)options;
-	return {};
+	if (resolved->path == "") {
+		
+		auto result = resolved->filesystem->ListPath("./");
+		if (result.has_error()) {
+			return {};
+		}
+		return result.value();
+	}
+	auto result = resolved->filesystem->ListPath(resolved->path);
+	if (result.has_error()) {
+		return {};
+	}
+	return result.value();
 }
 
 Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::VirtualFilesystem::OpenFile(

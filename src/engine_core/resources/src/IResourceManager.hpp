@@ -20,13 +20,15 @@ namespace Hush
 		void* element = nullptr;
 		Deleter deleter = nullptr;
 		std::atomic<size_t> count = 0; // We initialize at 0 but IncreaseRefCount will always create it at 1
+		
+		RefCounted() = default;
 	};
 	
 	class IResourceManager {
 	public:
 		IResourceManager() = default;
 		IResourceManager(const IResourceManager &) = default;
-		IResourceManager(IResourceManager &&) = delete;
+		IResourceManager(IResourceManager &&) = default;
 		IResourceManager &operator=(const IResourceManager &) = default;
 		IResourceManager &operator=(IResourceManager &&) = delete;
 		virtual ~IResourceManager() = default;

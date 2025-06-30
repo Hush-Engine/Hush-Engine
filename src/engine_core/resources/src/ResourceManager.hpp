@@ -9,6 +9,7 @@
 #include "IResourceManager.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Ref.hpp"
+#include "Shared/Mesh.hpp"
 #include "VirtualFilesystem.hpp"
 #include <cstdint>
 #include <string_view>
@@ -19,11 +20,20 @@ namespace Hush
 {
 	class ResourceManager final : public IResourceManager {
 	public:
-		ResourceManager();
+		ResourceManager() = default;
 		ResourceManager(const ResourceManager &) = delete;
-		ResourceManager(ResourceManager &&) = delete;
+		
+	    ResourceManager(ResourceManager&& other) noexcept
+	      : m_references(std::move(other.m_references))
+	      , m_deletionQueue(std::move(other.m_deletionQueue))
+	      , m_loadedResources(std::move(other.m_loadedResources))
+	      , m_filesystem(other.m_filesystem)
+	    {
+	    }
 		ResourceManager &operator=(const ResourceManager &) = delete;
 		ResourceManager &operator=(ResourceManager &&) = delete;
+
+		void Init(VirtualFilesystem* filesystem);
 
 		RefCounted* IncreaseRefCount(const HandleId& handle) override;
 		
@@ -33,10 +43,14 @@ namespace Hush
 		
 		Ref<ImageTexture> LoadTexture(const std::string_view& path);
 
+		Ref<Mesh> LoadMesh(const std::string_view& path);
+
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;
 		std::unordered_map<uint64_t, HandleId> m_loadedResources;
-		VirtualFilesystem m_filesystem;
+
+		VirtualFilesystem* m_filesystem = nullptr;
+
 	};
 }

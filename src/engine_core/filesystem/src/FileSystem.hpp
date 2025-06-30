@@ -12,6 +12,7 @@
 #include <functional>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace Hush
 {
@@ -51,5 +52,8 @@ namespace Hush
 		virtual Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::filesystem::path vfsPath,
 																	   std::filesystem::path path,
 																	   EFileOpenMode mode = EFileOpenMode::Read) = 0;
+
+		/// Lists all the contents of a specific path
+		virtual Result<std::vector<std::string>, IFile::EError> ListPath(const std::string_view& path) = 0;
 	};
 } // namespace Hush
