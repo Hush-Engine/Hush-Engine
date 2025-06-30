@@ -78,9 +78,10 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 
 Hush::Result<std::vector<std::string>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
 	// I know this is technically C++ and not C, but cross platform C path listing is a pain in the ass
-	HUSH_COND_FAIL_V(std::filesystem::exists(path) && std::filesystem::is_directory(path), IFile::EError::PathDoesntExist);
+	const std::filesystem::path realPath = mRoot / path;
+	HUSH_COND_FAIL_V(std::filesystem::exists(realPath) && std::filesystem::is_directory(realPath), IFile::EError::PathDoesntExist);
 	std::vector<std::string> result;
-	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(path)) {
+	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(realPath)) {
 		result.emplace_back(entry.path().filename().string());
 	}
 	return result;

@@ -7,8 +7,6 @@
 #pragma once
 #include "FileSystem.hpp"
 #include "Result.hpp"
-#include <cstddef>
-#include <span>
 #include <string_view>
 #include <vector>
 #include <optional>

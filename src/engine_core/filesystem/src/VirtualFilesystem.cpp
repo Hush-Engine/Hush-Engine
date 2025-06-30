@@ -52,14 +52,6 @@ std::vector<std::string> Hush::VirtualFilesystem::ListPath(std::string_view virt
 	}
 	
 	(void)options;
-	if (resolved->path == "") {
-		
-		auto result = resolved->filesystem->ListPath("./");
-		if (result.has_error()) {
-			return {};
-		}
-		return result.value();
-	}
 	auto result = resolved->filesystem->ListPath(resolved->path);
 	if (result.has_error()) {
 		return {};
