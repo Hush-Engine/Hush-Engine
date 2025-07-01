@@ -6,6 +6,7 @@
 
 #pragma once
 #include "FileSystem.hpp"
+#include "IFile.hpp"
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -42,7 +43,7 @@ namespace Hush
 															   std::filesystem::path path, EFileOpenMode mode) override;
 
 
-		Result<std::vector<std::string>, IFile::EError> ListPath(const std::string_view& path) override;
+		Result<std::vector<FileMetadata>, IFile::EError> ListPath(const std::string_view& path) override;
 	private:
 		std::filesystem::path mRoot;
 		std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> mLoadedFiles;

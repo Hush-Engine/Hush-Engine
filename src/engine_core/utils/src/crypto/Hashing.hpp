@@ -47,4 +47,9 @@ namespace Hush::Hashing
 	{
 		return Fnv1a64(data.data(), static_cast<uint32_t>(data.size()));
 	}
+
+	
 } // namespace Hush::Hashing
+
+// NOLINTNEXTLINE
+#define HUSH_HASHED_ENUM_ENTRY(x) x = Hashing::Fnv1a(#x)

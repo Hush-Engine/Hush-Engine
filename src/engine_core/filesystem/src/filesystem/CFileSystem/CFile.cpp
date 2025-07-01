@@ -7,6 +7,7 @@
 #include "CFile.hpp"
 
 #include <Logger.hpp>
+#include <cstdio>
 Hush::CFile::~CFile()
 {
 	Close();
@@ -14,6 +15,9 @@ Hush::CFile::~CFile()
 
 Hush::IFile::Result<unsigned long long> Hush::CFile::Read(std::span<std::byte> data)
 {
+	// if (this->m_file == nullptr) {
+	// 	this->m_file = fopen(const char *FileName, const char *Mode)
+	// }
 	if (const auto read = fread(data.data(), sizeof(std::byte), data.size(), m_file); read != data.size())
 	{
 		return EError::CannotRead;

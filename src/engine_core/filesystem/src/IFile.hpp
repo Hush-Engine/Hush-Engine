@@ -9,16 +9,37 @@
 #include <span>
 #include <string>
 #include <filesystem>
-
+#include "crypto/Hashing.hpp"
 #include "Result.hpp"
 
 namespace Hush
 {
 	enum class EFileOpenMode
 	{
+		/// @brief The file has not been opened yet
+		None = 0,
 		Read,
 		Write,
 		ReadWrite
+	};
+
+	enum class EFileFlags : uint16_t {
+		Directory,
+		File,
+		Metadata
+	};
+
+	enum class EFileExtension : uint32_t { // All as uppercase to normalize hashing
+		UNKWOWN,
+		HUSH_HASHED_ENUM_ENTRY(PNG),
+		HUSH_HASHED_ENUM_ENTRY(JPEG),
+		HUSH_HASHED_ENUM_ENTRY(TXT),
+		HUSH_HASHED_ENUM_ENTRY(PDF),
+		HUSH_HASHED_ENUM_ENTRY(CSHARP),
+		HUSH_HASHED_ENUM_ENTRY(CPP),
+		HUSH_HASHED_ENUM_ENTRY(GLB),
+		HUSH_HASHED_ENUM_ENTRY(GLTF),
+		HUSH_HASHED_ENUM_ENTRY(FBX)
 	};
 
 	/// Metadata for a file.
@@ -27,7 +48,9 @@ namespace Hush
 		std::filesystem::path path;
 		std::size_t size;
 		std::uint64_t lastModified;
-		EFileOpenMode mode;
+		EFileOpenMode mode = EFileOpenMode::None;
+		EFileFlags flags;
+		EFileExtension extension;
 	};
 
 	/// File interface for the VFS.

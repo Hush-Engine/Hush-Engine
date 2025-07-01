@@ -13,6 +13,7 @@
 #include <ranges>
 #include <string_view>
 #include "Assertions.hpp"
+#include "IFile.hpp"
 
 Hush::VirtualFilesystem::VirtualFilesystem() = default;
 
@@ -41,7 +42,7 @@ void Hush::VirtualFilesystem::Unmount(std::string_view virtualPath)
 		m_mountedFileSystems.end());
 }
 
-std::vector<std::string> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
+std::vector<Hush::FileMetadata> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
 {
 	std::optional<ResolvedPath> resolved = this->ResolveFileSystem(virtualPath);
 	

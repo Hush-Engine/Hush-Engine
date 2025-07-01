@@ -6,6 +6,7 @@
 
 #pragma once
 #include "FileSystem.hpp"
+#include "IFile.hpp"
 #include "Result.hpp"
 #include <string_view>
 #include <vector>
@@ -58,7 +59,7 @@ namespace Hush
 
 		void Unmount(std::string_view virtualPath);
 
-		std::vector<std::string> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
+		std::vector<FileMetadata> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
 
 		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath,
 															   EFileOpenMode mode = EFileOpenMode::Read);

@@ -7,6 +7,7 @@
 #pragma once
 #include "IFile.hpp"
 #include "Result.hpp"
+#include "crypto/Hashing.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -54,6 +55,11 @@ namespace Hush
 																	   EFileOpenMode mode = EFileOpenMode::Read) = 0;
 
 		/// Lists all the contents of a specific path
-		virtual Result<std::vector<std::string>, IFile::EError> ListPath(const std::string_view& path) = 0;
+		virtual Result<std::vector<FileMetadata>, IFile::EError> ListPath(const std::string_view& path) = 0;
+
+		EFileExtension ToKnownExtension(const std::string_view& extensionRaw) {
+			// TODO: Handle unknown cases
+			return static_cast<EFileExtension>(Hashing::Fnv1a(extensionRaw));
+		}
 	};
 } // namespace Hush

@@ -6,6 +6,7 @@
 
 #pragma once
 #include "IEditorPanel.hpp"
+#include "IFile.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "Shared/ImageTexture.hpp"
@@ -22,13 +23,15 @@ namespace Hush
 	private:
 		void RefreshDirectory();
 		
+		[[nodiscard]] bool CanBeDroppedToScene(const FileMetadata& fileData) const;
+		
 		ResourceManager* m_resourceManager;
 		VirtualFilesystem* m_filesystem;
 		// TEMP: <a href="https://www.flaticon.com/free-icons/folder" title="folder icons">Folder icons created by Gajah Mada - Flaticon</a>
 		Ref<ImageTexture> m_folderImage;
 		Ref<ImageTexture> m_fileImage;
 
-		std::vector<std::string> m_currentItems;
+		std::vector<FileMetadata> m_currentItems;
 		std::string m_currentWorkingDirectory = "res://";
 		bool m_dirty = true;
 	};

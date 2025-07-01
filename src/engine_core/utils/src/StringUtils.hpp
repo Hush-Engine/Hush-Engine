@@ -6,9 +6,11 @@
 //
 
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 /// @brief Provides utility functions for handling strings (C and std strings)
 namespace Hush::StringUtils
 {
@@ -20,6 +22,14 @@ namespace Hush::StringUtils
 
 	std::string FromWString(const std::wstring &str);
 
+	inline std::string ToUpper(const std::string_view& str) 
+	{
+		std::string strCpy(str);
+	    std::transform(strCpy.begin(), strCpy.end(), strCpy.begin(),
+	                   [](unsigned char c){ return std::toupper(c); } // correct
+	                  );
+	    return strCpy;
+	}	
 	constexpr inline std::string_view SubstrView(const std::string &str, int32_t offset, int32_t endIdx)
 	{
 		return {str.begin() + offset, str.begin() + endIdx};

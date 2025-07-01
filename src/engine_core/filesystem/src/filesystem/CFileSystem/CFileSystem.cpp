@@ -12,6 +12,8 @@
 #include <filesystem>
 #include <string_view>
 #include "Assertions.hpp"
+#include "IFile.hpp"
+#include "StringUtils.hpp"
 
 Hush::CFileSystem::CFileSystem(std::string_view root)
 	: mRoot(root)
@@ -76,13 +78,22 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 }
 
 
-Hush::Result<std::vector<std::string>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
+Hush::Result<std::vector<Hush::FileMetadata>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
 	// I know this is technically C++ and not C, but cross platform C path listing is a pain in the ass
 	const std::filesystem::path realPath = mRoot / path;
 	HUSH_COND_FAIL_V(std::filesystem::exists(realPath) && std::filesystem::is_directory(realPath), IFile::EError::PathDoesntExist);
-	std::vector<std::string> result;
+	std::vector<FileMetadata> result;
 	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(realPath)) {
-		result.emplace_back(entry.path().filename().string());
+		FileMetadata metadata = {
+			.path = entry.path().generic_string(),
+			.mode = EFileOpenMode::None,
+			.flags = entry.is_directory() ? EFileFlags::Directory : EFileFlags::File 
+		};
+		if (entry.path().has_extension()){
+			std::string rawExtension = StringUtils::ToUpper(entry.path().extension().string());
+			metadata.extension = this->ToKnownExtension(rawExtension);
+		}
+		result.emplace_back(metadata);
 	}
 	return result;
 }
