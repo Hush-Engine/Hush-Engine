@@ -7,10 +7,12 @@
 
 #pragma once
 
+#include "Components/WorldTransform.hpp"
 #include "Shared/DefaultImages.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/Mesh.hpp"
+#include "../../resources/src/Ref.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include <SDL2/SDL.h>
@@ -19,6 +21,7 @@
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <string_view>
 
 namespace Hush
 {
@@ -48,7 +51,9 @@ namespace Hush
 
 		virtual void InitImGui() = 0;
 
-		virtual void PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh) = 0;
+		// virtual void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) = 0;
+
+		virtual void PushMesh(const std::string_view& path) = 0;
 
 		virtual void DestroyMesh(const std::string_view &name) = 0;
 

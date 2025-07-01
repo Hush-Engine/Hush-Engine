@@ -29,7 +29,8 @@ namespace Hush::StringUtils
 	                   [](unsigned char c){ return std::toupper(c); } // correct
 	                  );
 	    return strCpy;
-	}	
+	}
+
 	constexpr inline std::string_view SubstrView(const std::string &str, int32_t offset, int32_t endIdx)
 	{
 		return {str.begin() + offset, str.begin() + endIdx};

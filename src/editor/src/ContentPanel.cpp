@@ -4,6 +4,7 @@
 #include "Query.hpp"
 #include "ResourceManager.hpp"
 #include "VirtualFilesystem.hpp"
+#include "WindowManager.hpp"
 #include "imgui/imgui_internal.h"
 #include <cstddef>
 #include <cstdint>
@@ -79,6 +80,8 @@ void Hush::ContentPanel::OnRender() {
 			const auto* data = reinterpret_cast<const FileMetadata*>(payload->Data);
 			if (CanBeDroppedToScene(*data)) {
 				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
+				IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+				renderer->PushMesh(data->path.generic_string());
 			}
 		}
 	}

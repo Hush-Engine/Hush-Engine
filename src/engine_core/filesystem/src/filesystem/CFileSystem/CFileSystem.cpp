@@ -9,6 +9,7 @@
 
 #include <Logger.hpp>
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <string_view>
 #include "Assertions.hpp"
@@ -90,7 +91,8 @@ Hush::Result<std::vector<Hush::FileMetadata>, Hush::IFile::EError> Hush::CFileSy
 			.flags = entry.is_directory() ? EFileFlags::Directory : EFileFlags::File 
 		};
 		if (entry.path().has_extension()){
-			std::string rawExtension = StringUtils::ToUpper(entry.path().extension().string());
+			std::string extensionWithDot = entry.path().extension().string();
+			std::string rawExtension = StringUtils::ToUpper(StringUtils::SubstrView(extensionWithDot, 1, static_cast<int32_t>(extensionWithDot.size())));
 			metadata.extension = this->ToKnownExtension(rawExtension);
 		}
 		result.emplace_back(metadata);

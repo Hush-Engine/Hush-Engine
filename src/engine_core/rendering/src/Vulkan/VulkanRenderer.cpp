@@ -192,12 +192,20 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-void Hush::VulkanRenderer::PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh)
+void Hush::VulkanRenderer::PushMesh(const std::string_view& path)
 {
 	// TODO: Make this take an entity or something like that so we have access to its transform
 	// this->m_loadedNodes.emplace(std::make_shared<VulkanMeshNode>(mesh), mesh->GetName());
-	(void)globalTransform;
-	(void)mesh;
+	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, path, this->m_activeScene).value();
+	for (Entity &node : nodeVector)
+	{
+		WorldTransform *xform = node.GetComponent<WorldTransform>();
+		Mesh *mesh = node.GetComponent<Mesh>();
+		std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
+		this->m_loadedMeshes.emplace_back(entry);
+	}
+	// (void)xform;
+	// (void)mesh;
 }
 
 void Hush::VulkanRenderer::DestroyMesh(const std::string_view &name)
@@ -703,14 +711,14 @@ void Hush::VulkanRenderer::InitRenderables()
 	// Create an example entity with a Mesh component here
 	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Duck.glb)";
 	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
-	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
-	for (Entity &node : nodeVector)
-	{
-		WorldTransform *xform = node.GetComponent<WorldTransform>();
-		Mesh *mesh = node.GetComponent<Mesh>();
-		std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
-		this->m_loadedMeshes.emplace_back(entry);
-	}
+	// std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
+	// for (Entity &node : nodeVector)
+	// {
+	// 	WorldTransform *xform = node.GetComponent<WorldTransform>();
+	// 	Mesh *mesh = node.GetComponent<Mesh>();
+	// 	std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
+	// 	this->m_loadedMeshes.emplace_back(entry);
+	// }
 }
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,

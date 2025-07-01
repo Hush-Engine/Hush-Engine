@@ -73,7 +73,9 @@ namespace Hush
 
 		void InitImGui() override;
 
-		void PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh) override;
+		void PushMesh(const std::string_view& path) override;
+		
+		// void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) override;
 
 		void DestroyMesh(const std::string_view &name) override;
 
