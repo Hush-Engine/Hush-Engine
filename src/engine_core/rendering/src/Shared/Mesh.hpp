@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"

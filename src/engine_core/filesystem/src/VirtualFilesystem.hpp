@@ -59,7 +59,7 @@ namespace Hush
 
 		void Unmount(std::string_view virtualPath);
 
-		std::vector<FileMetadata> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
+		std::vector<FileInfo> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
 
 		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath,
 															   EFileOpenMode mode = EFileOpenMode::Read);

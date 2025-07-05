@@ -28,7 +28,7 @@ static Hush::CFile OpenFile(const std::string &path, const Hush::EFileOpenMode m
 	const std::size_t fileSize = ftell(file);
 	fseek(file, 0, SEEK_SET);
 
-	Hush::FileMetadata metadata;
+	Hush::FileInfo metadata;
 
 	metadata.mode = mode;
 	metadata.path = path;
@@ -72,7 +72,7 @@ TEST_CASE("CFile tests")
 
 		// Act
 		auto file = OpenFile(tempFilePath, Hush::EFileOpenMode::Read);
-		const auto &metadata = file.GetMetadata();
+		const auto &metadata = file.GetFileInfo();
 
 		// Assert
 		REQUIRE(metadata.path == tempFilePath);
@@ -94,7 +94,7 @@ TEST_CASE("CFile tests")
 		auto file = OpenFile(tempFilePath, Hush::EFileOpenMode::Read);
 
 		// Read the file
-		std::vector<std::byte> data(file.GetMetadata().size);
+		std::vector<std::byte> data(file.GetFileInfo().size);
 		const auto readResult = file.Read(data);
 
 		// Assert

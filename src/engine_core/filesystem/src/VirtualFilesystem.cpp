@@ -8,6 +8,7 @@
 #include "FileSystem.hpp"
 
 #include <Logger.hpp>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -42,7 +43,7 @@ void Hush::VirtualFilesystem::Unmount(std::string_view virtualPath)
 		m_mountedFileSystems.end());
 }
 
-std::vector<Hush::FileMetadata> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
+std::vector<Hush::FileInfo> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
 {
 	std::optional<ResolvedPath> resolved = this->ResolveFileSystem(virtualPath);
 	
@@ -98,6 +99,13 @@ Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFil
 
 std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::ResolveFileSystem(std::string_view path)
 {
+	if (std::filesystem::path(path).is_absolute()) {
+		return ResolvedPath {
+			.filesystem = this->m_mountedFileSystems[0].filesystem.get(),
+			.path = path
+		};
+	}
+
 	// We need to iterate on all filesystems in backward order.
 	for (auto start = this->m_mountedFileSystems.begin(); start != this->m_mountedFileSystems.end(); ++start)
 	{

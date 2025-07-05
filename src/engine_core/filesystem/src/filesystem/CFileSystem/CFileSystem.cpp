@@ -68,7 +68,7 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 		return IFile::EError::OperationNotSupported;
 	}
 
-	FileMetadata metadata{
+	FileInfo metadata{
 		.path = std::move(vfsPath),
 		.size = size,
 		.lastModified = static_cast<std::uint64_t>(result.st_mtime),
@@ -79,13 +79,13 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 }
 
 
-Hush::Result<std::vector<Hush::FileMetadata>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
+Hush::Result<std::vector<Hush::FileInfo>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
 	// I know this is technically C++ and not C, but cross platform C path listing is a pain in the ass
 	const std::filesystem::path realPath = mRoot / path;
 	HUSH_COND_FAIL_V(std::filesystem::exists(realPath) && std::filesystem::is_directory(realPath), IFile::EError::PathDoesntExist);
-	std::vector<FileMetadata> result;
+	std::vector<FileInfo> result;
 	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(realPath)) {
-		FileMetadata metadata = {
+		FileInfo metadata = {
 			.path = entry.path().generic_string(),
 			.mode = EFileOpenMode::None,
 			.flags = entry.is_directory() ? EFileFlags::Directory : EFileFlags::File 

@@ -1,0 +1,14 @@
+
+flowchart TD
+        A(["Asset Pipeline"])
+        A --> B["File is detected in res://"]
+        B --> C{"Is it a recognized file format? (glb, fbx, cs, mp3, png)"}
+		C -- Yes --> D["Start metafile generation"]
+		D --> MetaA["Generate ResourceID"]
+		MetaA --> MetaB["Send to inner format parser"]
+		C -- No --> F(["Finish"])
+		MetaB --> G{"Has inner resources left to parse? (texture data, materials, submeshes)"}
+		G -- Yes --> MetaC["Create new file to cache the resource"]
+		MetaC --> D
+		G -- No --> H["Mark file as ready to use"]
+        H --> F

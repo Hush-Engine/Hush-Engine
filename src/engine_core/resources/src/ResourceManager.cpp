@@ -1,13 +1,12 @@
 #include "ResourceManager.hpp"
 #include "Assertions.hpp"
 #include "IResourceManager.hpp"
-#include "Logger.hpp"
 #include "Ref.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "VirtualFilesystem.hpp"
 #include "crypto/Hashing.hpp"
-#include "filesystem/CFileSystem/CFileSystem.hpp"
+#include "definitions/KeyCode.hpp"
 #include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
@@ -36,6 +35,18 @@ const Hush::RefCounted& Hush::ResourceManager::GetRefCount(const Hush::HandleId&
 	return this->m_references[handle];
 }
 
+
+Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& name, const std::byte* data, const size_t& size) {
+	const uint64_t nameHash = Hashing::Fnv1a64(name);
+	const auto& iterator = this->m_loadedResources.find(nameHash);
+	if (iterator != this->m_loadedResources.end()) {
+		HandleId handle = this->m_loadedResources[nameHash];
+		auto* texture = reinterpret_cast<ImageTexture*>(handle);
+		return {this, texture};
+	}
+	auto* texture = new ImageTexture(data, size);
+	return {this, texture};
+}
 
 Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& path) {
 	// Allocate the image texture and load it using the file system

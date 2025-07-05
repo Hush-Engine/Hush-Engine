@@ -20,7 +20,7 @@ namespace Hush
 		None = 0,
 		Read,
 		Write,
-		ReadWrite
+		ReadWrite,
 	};
 
 	enum class EFileFlags : uint16_t {
@@ -39,11 +39,11 @@ namespace Hush
 		HUSH_HASHED_ENUM_ENTRY(CPP),
 		HUSH_HASHED_ENUM_ENTRY(GLB),
 		HUSH_HASHED_ENUM_ENTRY(GLTF),
-		HUSH_HASHED_ENUM_ENTRY(FBX)
+		HUSH_HASHED_ENUM_ENTRY(FBX),
 	};
 
 	/// Metadata for a file.
-	struct FileMetadata
+	struct FileInfo
 	{
 		std::filesystem::path path;
 		std::size_t size;
@@ -51,6 +51,14 @@ namespace Hush
 		EFileOpenMode mode = EFileOpenMode::None;
 		EFileFlags flags;
 		EFileExtension extension;
+		
+		[[nodiscard]] inline bool IsCodeFile() const {
+			return this->extension == EFileExtension::CPP || this->extension == EFileExtension::CSHARP;
+		}
+
+		[[nodiscard]] inline bool ShouldGenerateMetaFile() const {
+			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKWOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
+		}
 	};
 
 	/// File interface for the VFS.
@@ -81,7 +89,7 @@ namespace Hush
 		virtual ~IFile() = default;
 
 		[[nodiscard]]
-		virtual const FileMetadata &GetMetadata() const = 0;
+		virtual const FileInfo &GetFileInfo() const = 0;
 
 		/// Writes the file.
 		/// @param data Data to write to the file.

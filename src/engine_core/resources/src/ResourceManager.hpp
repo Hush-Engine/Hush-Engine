@@ -11,6 +11,7 @@
 #include "Ref.hpp"
 #include "Shared/Mesh.hpp"
 #include "VirtualFilesystem.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 #include <unordered_map>
@@ -42,6 +43,8 @@ namespace Hush
 		const RefCounted& GetRefCount(const HandleId& handle) override;
 		
 		Ref<ImageTexture> LoadTexture(const std::string_view& path);
+		
+		Ref<ImageTexture> LoadTexture(const std::string_view& name, const std::byte* data, const size_t& size);
 
 		Ref<Mesh> LoadMesh(const std::string_view& path);
 

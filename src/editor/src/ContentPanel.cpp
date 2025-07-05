@@ -1,14 +1,22 @@
 #include "ContentPanel.hpp"
+#include "FileMetadata.hpp"
 #include "IFile.hpp"
 #include "Logger.hpp"
 #include "Query.hpp"
 #include "ResourceManager.hpp"
+#include "Result.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
+#include "crypto/Hashing.hpp"
 #include "imgui/imgui_internal.h"
+#include "Assertions.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 #include <cstddef>
-#include <cstdint>
+#include <filesystem>
 #include <imgui/imgui.h>
+#include <memory>
+#include <span>
 #include <string_view>
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
@@ -39,10 +47,11 @@ void Hush::ContentPanel::OnRender() {
         
 		if (this->m_dirty) {
 			this->RefreshDirectory();
+			this->GenerateMetaFiles();
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
 		bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-		for (const FileMetadata & item : this->m_currentItems) {
+		for (const FileInfo & item : this->m_currentItems) {
 			// TODO: Fix all the copies that this makes
 			const std::string& fileName = item.path.filename().string();
 			ImVec2 textSize = ImGui::CalcTextSize(fileName.c_str());
@@ -60,7 +69,7 @@ void Hush::ContentPanel::OnRender() {
                 // Handle click if needed
             }
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileMetadata));
+                ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
                 if (isMouseInScene && CanBeDroppedToScene(item)) {
                 	ImGui::Text("Import to scene...");
                 }
@@ -77,7 +86,7 @@ void Hush::ContentPanel::OnRender() {
 		}
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
 		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			const auto* data = reinterpret_cast<const FileMetadata*>(payload->Data);
+			const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
 			if (CanBeDroppedToScene(*data)) {
 				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
 				IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
@@ -89,7 +98,7 @@ void Hush::ContentPanel::OnRender() {
 }
 
 
-bool Hush::ContentPanel::CanBeDroppedToScene(const FileMetadata& fileData) const {
+bool Hush::ContentPanel::CanBeDroppedToScene(const FileInfo& fileData) const {
 	return fileData.flags == EFileFlags::File;
 }
 
@@ -98,3 +107,48 @@ void Hush::ContentPanel::RefreshDirectory() {
 	this->m_currentItems = this->m_filesystem->ListPath(this->m_currentWorkingDirectory);
 	this->m_dirty = false;
 }
+
+
+void Hush::ContentPanel::GenerateMetaFiles() {
+	// Scan directories recursively and query the database indexing (NYI)
+	for(const FileInfo& data : this->m_currentItems) {
+		if (!data.ShouldGenerateMetaFile()) {
+			continue;
+		}
+
+		FileMetadata metadata = {
+			.metadataVersion = FileMetadata::VERSION,
+			.id = Hashing::Fnv1a(data.path.string())
+		};
+
+		// Create inner resource files
+		
+
+		this->MakeMetaFile(data, metadata);
+	}
+}
+
+void Hush::ContentPanel::MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata) {
+	std::string metaPath = fileData.path.string().append(".meta");
+	if (std::filesystem::exists(metaPath)) {
+		return;
+	}
+	Result<std::unique_ptr<IFile>, IFile::EError> openRes = this->m_filesystem->OpenFile(metaPath, EFileOpenMode::Write);
+	HUSH_RESULT_ASSERT(openRes, "Failed to create metadata file!");
+
+	std::unique_ptr<IFile>& file = openRes.value();
+	Result<std::string, Serialization::ESerializationError> serializationResult = Serialization::SerializeJson(metadata);
+	HUSH_RESULT_ASSERT(serializationResult, "Could not serialize metadata for file {}", fileData.path.string());
+
+	std::string& json = serializationResult.value();
+	std::span<const std::byte> writeBuffer(reinterpret_cast<const std::byte*>(json.data()), json.size());
+	Result<void, IFile::EError> writeRes = file->Write(writeBuffer);
+	HUSH_RESULT_ASSERT(writeRes, "Failed to write metadata file");
+
+	file->Close();
+}
+
+void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata) {
+	
+}
+

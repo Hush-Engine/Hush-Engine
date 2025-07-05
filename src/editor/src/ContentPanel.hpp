@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include "FileMetadata.hpp"
 #include "IEditorPanel.hpp"
 #include "IFile.hpp"
 #include "Ref.hpp"
@@ -21,9 +22,16 @@ namespace Hush
 		void OnRender() override;
 
 	private:
-		void RefreshDirectory();
+
+		void GenerateMetaFiles();
 		
-		[[nodiscard]] bool CanBeDroppedToScene(const FileMetadata& fileData) const;
+		void RefreshDirectory();
+
+		void CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata);
+		
+		void MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata);
+		
+		[[nodiscard]] bool CanBeDroppedToScene(const FileInfo& fileData) const;
 		
 		ResourceManager* m_resourceManager;
 		VirtualFilesystem* m_filesystem;
@@ -31,7 +39,7 @@ namespace Hush
 		Ref<ImageTexture> m_folderImage;
 		Ref<ImageTexture> m_fileImage;
 
-		std::vector<FileMetadata> m_currentItems;
+		std::vector<FileInfo> m_currentItems;
 		std::string m_currentWorkingDirectory = "res://";
 		bool m_dirty = true;
 	};

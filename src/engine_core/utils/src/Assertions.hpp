@@ -11,6 +11,9 @@
 
 #if HUSH_PLATFORM_WIN
 #include <windows.h>
+//windows.h is cancer, let's hope for a slimer implementation in the future
+#undef min
+#undef max
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 #define HUSH_DEBUG_BREAK __debugbreak()
 #elif defined(__ARMCC_VERSION)

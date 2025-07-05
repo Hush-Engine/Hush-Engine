@@ -1403,8 +1403,8 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t> &indices,
 													  const std::vector<Mesh::Vertex> &vertices)
 {
-	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Mesh::Vertex));
-	const uint32_t indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
+	const auto vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Mesh::Vertex));
+	const auto indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
 
 	GPUMeshBuffers newSurface;
 
