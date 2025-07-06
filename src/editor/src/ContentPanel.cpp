@@ -12,11 +12,15 @@
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
+#include "Shared/GltfLoadFunctions.hpp"
 #include <cstddef>
+#include <fastgltf/core.hpp>
+#include <fastgltf/types.hpp>
 #include <filesystem>
 #include <imgui/imgui.h>
 #include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
@@ -112,7 +116,7 @@ void Hush::ContentPanel::RefreshDirectory() {
 void Hush::ContentPanel::GenerateMetaFiles() {
 	// Scan directories recursively and query the database indexing (NYI)
 	for(const FileInfo& data : this->m_currentItems) {
-		if (!data.ShouldGenerateMetaFile()) {
+		if (!data.ShouldGenerateMetaFile() || data.extension == EFileExtension::META) {
 			continue;
 		}
 
@@ -122,6 +126,7 @@ void Hush::ContentPanel::GenerateMetaFiles() {
 		};
 
 		// Create inner resource files
+		this->CreateInnerResources(data, metadata);
 		
 
 		this->MakeMetaFile(data, metadata);
@@ -149,6 +154,46 @@ void Hush::ContentPanel::MakeMetaFile(const FileInfo& fileData, const FileMetada
 }
 
 void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata) {
-	
+	switch (fileData.extension) {
+
+	case EFileExtension::UNKWOWN:
+	case EFileExtension::PNG:
+	case EFileExtension::JPEG:
+	case EFileExtension::TXT:
+	case EFileExtension::PDF:
+	case EFileExtension::CSHARP:
+	case EFileExtension::CPP:
+	case EFileExtension::FBX:
+	case EFileExtension::GLTF:
+		break;
+	case EFileExtension::GLB:
+		fastgltf::Expected<fastgltf::Asset> asset = GltfLoadFunctions::GetAssetFromFile(fileData.path);
+		HUSH_ASSERT(asset, "GLTF asset at {} not properly loaded, error: {}!", fileData.path.string(), fastgltf::getErrorMessage(asset.error()));
+		size_t cntr = 0;
+		for (const fastgltf::Image& image : asset->images) {
+			// Write the binary data to the png
+			const std::span<const std::byte> imageBuffer = GltfLoadFunctions::ExtractImageBuffer(image, asset.get());
+			if (imageBuffer.empty()) {
+				continue;
+			}
+			std::filesystem::path parentDir = fileData.path.parent_path();
+			std::string textName;
+			if (image.name.empty()) {
+				textName = fileData.path.stem().string().append("_").append(std::to_string(cntr));
+			}
+			else {
+				textName = image.name;
+			}
+			std::filesystem::path generatedFileName = parentDir / textName;
+			Result<std::unique_ptr<IFile>, IFile::EError> createFileRes = this->m_filesystem->OpenFile(generatedFileName.string(), EFileOpenMode::Write);
+			HUSH_RESULT_ASSERT(createFileRes, "Failed to create inner resource for asset {}, on resource {}", fileData.path, image.name);
+			std::unique_ptr<IFile>& createdFile = createFileRes.value();
+			Result<void, IFile::EError> writeResult = createdFile->Write(imageBuffer);
+			HUSH_RESULT_ASSERT(writeResult, "Failed to write image buffer");
+			createdFile->Close();
+			cntr++;
+		}
+		break;
+	}
 }
 

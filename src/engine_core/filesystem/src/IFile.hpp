@@ -32,6 +32,7 @@ namespace Hush
 	enum class EFileExtension : uint32_t { // All as uppercase to normalize hashing
 		UNKWOWN,
 		HUSH_HASHED_ENUM_ENTRY(PNG),
+		HUSH_HASHED_ENUM_ENTRY(META),
 		HUSH_HASHED_ENUM_ENTRY(JPEG),
 		HUSH_HASHED_ENUM_ENTRY(TXT),
 		HUSH_HASHED_ENUM_ENTRY(PDF),

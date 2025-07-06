@@ -1,4 +1,5 @@
 #include "Assertions.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include <cstdint>
 #include <memory>
@@ -22,33 +23,12 @@
 #include "Shared/ImageTexture.hpp"
 #include "Shared/GltfLoadFunctions.hpp"
 #include "../../core/src/Scene.hpp"
-#include "../../core/src/Components/WorldTransform.hpp"
-#include "../../core/src/Components/LocalTransform.hpp"
 
 Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::VulkanLoader::LoadGltfMeshes(
 	VulkanRenderer *engine, std::filesystem::path filePath, Scene *activeScene)
 {
-	if (!std::filesystem::exists(filePath))
-	{
-		return EError::FileNotFound;
-	}
-
-	fastgltf::Expected<fastgltf::GltfDataBuffer> loadedData = fastgltf::GltfDataBuffer::FromPath(filePath);
-
-	if (!loadedData)
-	{
-		return EError::InvalidMeshFile;
-	}
-
-	fastgltf::GltfDataBuffer &data = loadedData.get();
-
-	constexpr fastgltf::Options loadingOptions = fastgltf::Options::LoadExternalBuffers;
-
-	fastgltf::Parser parser{};
-
-	fastgltf::Expected<fastgltf::Asset> loadedAsset =
-		parser.loadGltfBinary(data, filePath.parent_path(), loadingOptions);
-
+	fastgltf::Expected<fastgltf::Asset> loadedAsset = GltfLoadFunctions::GetAssetFromFile(filePath);
+	
 	HUSH_ASSERT(loadedAsset, "GLTF asset at {} not properly loaded, error: {}!", filePath.string(),
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
