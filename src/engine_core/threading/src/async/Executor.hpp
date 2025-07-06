@@ -13,7 +13,7 @@ namespace Hush::Threading
 	{
 		template <typename T>
 		concept Executor = requires(T executor) {
-			{ executor.Schedule() } -> Awaitable;
+			{ executor.Schedule() };
 		};
 
 		template <typename T, typename = void>

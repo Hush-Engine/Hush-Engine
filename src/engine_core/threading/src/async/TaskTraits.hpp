@@ -58,6 +58,8 @@ namespace Hush::Threading::Concepts
 	template <Awaitable A, typename = void>
 	struct AwaitableTraits
 	{
+		using AwaiterType = decltype(GetAwaiter(std::declval<A>()));
+		using ResultType = decltype(std::declval<AwaiterType>().await_resume());
 	};
 
 	template <Awaitable A>

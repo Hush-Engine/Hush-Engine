@@ -102,7 +102,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 Hush::WindowRenderer::~WindowRenderer()
 {
 	SDL_DestroyWindow(this->m_windowPtr);
-	SDL_DestroyRenderer(this->m_rendererPtr);
+	// SDL_DestroyRenderer(this->m_rendererPtr);
 	SDL_Quit();
 }
 

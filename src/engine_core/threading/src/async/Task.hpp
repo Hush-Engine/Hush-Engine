@@ -185,7 +185,6 @@ namespace Hush::Threading
 			T *m_value = nullptr;
 			std::exception_ptr m_exception = nullptr;
 		};
-
 	} // namespace impl
 
 	template <typename T>
@@ -197,7 +196,6 @@ namespace Hush::Threading
 	private:
 		struct InitialAwaiterBase
 		{
-
 			std::coroutine_handle<promise_type> coroutine;
 
 			explicit InitialAwaiterBase(std::coroutine_handle<promise_type> coroutine) noexcept
@@ -229,19 +227,29 @@ namespace Hush::Threading
 		}
 
 		Task(Task &&other) noexcept
-			: m_coroutine(other.m_coroutine)
+			: m_coroutine(std::exchange(other.m_coroutine, nullptr))
 		{
-			other.m_coroutine = nullptr;
 		}
 
 		Task(const Task &) = delete;
+
+		~Task()
+		{
+			if (m_coroutine != nullptr)
+			{
+				m_coroutine.destroy();
+			}
+		}
 
 		Task &operator=(Task &&other) noexcept
 		{
 			if (this != std::addressof(other))
 			{
-				m_coroutine = other.m_coroutine;
-				other.m_coroutine = nullptr;
+				if (m_coroutine != nullptr)
+				{
+					m_coroutine.destroy();
+				}
+				m_coroutine = std::exchange(other.m_coroutine, nullptr);
 			}
 
 			return *this;
@@ -249,17 +257,17 @@ namespace Hush::Threading
 
 		Task &operator=(const Task &) = delete;
 
-		~Task()
-		{
-			if (m_coroutine)
-			{
-				m_coroutine.destroy();
-			}
-		}
-
 		bool Ready() const noexcept
 		{
 			return !m_coroutine || m_coroutine.done();
+		}
+
+		bool Resume()
+		{
+			if (!m_coroutine.done())
+			{
+
+			}
 		}
 
 		auto operator co_await() const & noexcept

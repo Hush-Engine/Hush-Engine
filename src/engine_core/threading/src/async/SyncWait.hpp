@@ -289,9 +289,11 @@ namespace Hush::Threading
 		/// Move constructor
 		/// @param other Other SyncWaitTask to move from
 		SyncWaitTask(SyncWaitTask &&other) noexcept
-			: m_coroutine(other.m_coroutine)
 		{
-			other.m_coroutine = nullptr;
+			if (std::addressof(other) != this)
+			{
+				m_coroutine = std::exchange(other.m_coroutine, {});
+			}
 		}
 
 		/// Move assignment operator
@@ -385,44 +387,14 @@ namespace Hush::Threading
 		}
 	} // namespace impl
 
-	template <Concepts::Awaitable A, typename T = typename Concepts::AwaitableTraits<A>::ValueType>
+	template <Concepts::Awaitable A, typename T = typename Concepts::AwaitableTraits<A>::ResultType>
 		requires(!std::is_same_v<A, SyncWaitTask<T>>)
 	decltype(auto) Wait(A &&awaitable)
 	{
 		std::atomic_flag done;
 		done.clear();
 
-		auto task = impl::MakeSyncWaitTask<A, T>(std::forward<A>(awaitable));
-		task.promise().Start(done);
-
-		done.wait(true, std::memory_order_relaxed);
-
-		if constexpr (std::is_void_v<T>)
-		{
-			task.promise().Result();
-			return;
-		}
-		else if constexpr (std::is_reference_v<T>)
-		{
-			return task.promise().Result();
-		}
-		else if constexpr (std::is_move_constructible_v<T>)
-		{
-			return std::move(task).promise().Result();
-		}
-		else
-		{
-			// Copy the result
-			return task.promise().Result();
-		}
-	}
-
-	template <typename T>
-	decltype(auto) Wait(SyncWaitTask<T> &task)
-	{
-		std::atomic_flag done;
-		done.clear();
-
+		SyncWaitTask<void> task = impl::MakeSyncWaitTask<A, T>(std::forward<A>(awaitable));
 		task.promise().Start(done);
 
 		done.wait(false, std::memory_order_relaxed);
@@ -446,5 +418,4 @@ namespace Hush::Threading
 			return task.promise().Result();
 		}
 	}
-
 } // namespace Hush::Threading
