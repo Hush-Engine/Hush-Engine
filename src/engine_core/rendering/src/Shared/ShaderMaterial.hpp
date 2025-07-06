@@ -1,8 +1,11 @@
 #pragma once
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <span>
+#include <string>
 #include <unordered_map>
+#include "crypto/Hashing.hpp"
 #include "ShaderBindings.hpp"
 #include "Result.hpp"
 #include "Assertions.hpp"
@@ -85,7 +88,7 @@ namespace Hush
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
 			const ShaderBindings &binding = this->FindBinding(name);
-			if (this->m_bindingsByName.find(name.data()) == this->m_bindingsByName.end())
+			if (this->m_bindingsByName.find(Hashing::Fnv1a(name)) == this->m_bindingsByName.end())
 			{
 				return EError::PropertyNotFound;
 			}
@@ -101,7 +104,7 @@ namespace Hush
 		template <class T>
 		inline Result<T, EError> GetProperty(const std::string_view &name)
 		{
-			HUSH_COND_FAIL_V(this->m_bindingsByName.find(name.data()) != this->m_bindingsByName.end(),
+			HUSH_COND_FAIL_V(this->m_bindingsByName.find(Hashing::Fnv1a(name)) != this->m_bindingsByName.end(),
 							 EError::PropertyNotFound);
 			// Search for a binding with the name passed onto the func
 			const ShaderBindings &binding = this->FindBinding(name);
@@ -136,7 +139,7 @@ namespace Hush
 		IRenderer *m_renderer;
 		OpaqueMaterialData *m_materialData;
 
-		std::unordered_map<std::string, ShaderBindings> m_bindingsByName;
+		std::unordered_map<uint32_t, ShaderBindings> m_bindingsByName;
 
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 

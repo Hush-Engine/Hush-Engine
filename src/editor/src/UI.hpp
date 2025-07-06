@@ -54,6 +54,7 @@ namespace Hush
 
 		static UI &Get();
 
+		static inline bool S_INITIALIZED = false;
 	private:
 		static void DrawPlayButton();
 

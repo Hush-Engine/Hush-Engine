@@ -5,6 +5,7 @@
 #include "Query.hpp"
 #include "ResourceManager.hpp"
 #include "Result.hpp"
+#include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include "crypto/Hashing.hpp"
@@ -33,8 +34,8 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 		this->m_resourceManager = &resourceManager;
 		this->m_filesystem = &vfs;
 	});
-	this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
-	this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
+	// this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
+	// this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
 }
 
 void Hush::ContentPanel::OnRender() {
@@ -45,59 +46,58 @@ void Hush::ContentPanel::OnRender() {
         float regionWidth = regionDimensions.x;
 
         ImGuiStyle& style = ImGui::GetStyle();
-        const ImGuiContext* context = ImGui::GetCurrentContext();
-        const ImGuiWindow* windowUnderMouse = context->CurrentWindow;
         float spacing = style.ItemSpacing.x;
         float cursorX = 0.0F;
         
 		if (this->m_dirty) {
 			this->RefreshDirectory();
-			this->GenerateMetaFiles();
+			// this->GenerateMetaFiles();
+			UI::S_INITIALIZED = true;
 		}
-		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
-		bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-		for (const FileInfo & item : this->m_currentItems) {
-			// TODO: Fix all the copies that this makes
-			const std::string& fileName = item.path.filename().string();
-			ImVec2 textSize = ImGui::CalcTextSize(fileName.c_str());
-            float buttonWidth = textSize.x + style.FramePadding.x * 2.0F;
+	// 	ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
+	// 	bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+	// 	for (const FileInfo & item : this->m_currentItems) {
+	// 		// TODO: Fix all the copies that this makes
+	// 		const std::string& fileName = item.path.filename().string();
+	// 		ImVec2 textSize = ImGui::CalcTextSize(fileName.c_str());
+ //            float buttonWidth = textSize.x + style.FramePadding.x * 2.0F;
 
-            // If this button would exceed the region width, wrap to next line
-            if (cursorX + buttonWidth > regionWidth) {
-                ImGui::NewLine();
-                cursorX = 0.0F;
-            }
+ //            // If this button would exceed the region width, wrap to next line
+ //            if (cursorX + buttonWidth > regionWidth) {
+ //                ImGui::NewLine();
+ //                cursorX = 0.0F;
+ //            }
 
-            // Draw the button as a draggable source
-            ImGui::PushID(fileName.c_str());
-            if (ImGui::Button(fileName.c_str(), ImVec2(buttonWidth, 50.0F))) {
-                // Handle click if needed
-            }
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
-                if (isMouseInScene && CanBeDroppedToScene(item)) {
-                	ImGui::Text("Import to scene...");
-                }
-                else {
-	                ImGui::Text("Dragging \"%s\"", fileName.c_str());
-                }
-	            ImGui::EndDragDropSource();
-            }
-            ImGui::PopID();
+ //            // Draw the button as a draggable source
+ //            ImGui::PushID(fileName.c_str());
+ //            if (ImGui::Button(fileName.c_str(), ImVec2(buttonWidth, 50.0F))) {
+ //                // Handle click if needed
+ //            }
+ //            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+ //                ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
+ //                if (isMouseInScene && CanBeDroppedToScene(item)) {
+ //                	ImGui::Text("Import to scene...");
+ //                }
+ //                else {
+	//                 ImGui::Text("Dragging \"%s\"", fileName.c_str());
+ //                }
+	//             ImGui::EndDragDropSource();
+ //            }
+ //            ImGui::PopID();
 
-            // Advance cursor and prepare for next same-line
-            cursorX += buttonWidth + spacing;
-            ImGui::SameLine(0.0F, spacing);
-		}
-		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
-		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
-			if (CanBeDroppedToScene(*data)) {
-				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-				IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-				renderer->PushMesh(data->path.generic_string());
-			}
-		}
+ //            // Advance cursor and prepare for next same-line
+ //            cursorX += buttonWidth + spacing;
+ //            ImGui::SameLine(0.0F, spacing);
+	// 	}
+	// 	const ImGuiPayload *payload = ImGui::GetDragDropPayload();
+	// 	if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+	// 		const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
+	// 		if (CanBeDroppedToScene(*data)) {
+	// 			LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
+	// 			IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+	// 			renderer->PushMesh(data->path.generic_string());
+	// 		}
+	// 	}
 	}
 	ImGui::End();
 }

@@ -289,6 +289,7 @@ namespace Hush
 		//(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
 		int m_frameNumber = 0;
 		std::unique_ptr<IImGuiForwarder> m_uiForwarder = nullptr;
+		DescriptorWriter m_frameDescriptor{};
 
 		VulkanDeletionQueue m_mainDeletionQueue{};
 		VmaAllocator m_allocator = nullptr; // vma lib allocator

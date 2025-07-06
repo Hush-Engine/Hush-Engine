@@ -1055,12 +1055,13 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 
 void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 {
+	this->m_frameDescriptor.Clear();
 	////allocate a new uniform buffer for the scene data
 	GpuAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
 										  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
-	auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
+	auto *sceneUniformData = reinterpret_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
 	*sceneUniformData = this->m_sceneData;
 
 	// create a descriptor set that binds that buffer and update it
@@ -1069,10 +1070,9 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 	// Local scope to use another writer later one
 	{
-		DescriptorWriter writer;
-		writer.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
+		this->m_frameDescriptor.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
 						   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-		writer.UpdateSet(this->m_device, globalDescriptor);
+		this->m_frameDescriptor.UpdateSet(this->m_device, globalDescriptor);
 	}
 
 	// begin a render pass  connected to our draw image
@@ -1141,7 +1141,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 	////add it to the deletion queue of this frame so it gets deleted once its been used
 	this->GetCurrentFrame().deletionQueue.PushFunction(
-		[=, this, &gpuSceneDataBuffer]() { gpuSceneDataBuffer.Dispose(m_allocator); });
+		[this, gpuSceneDataBuffer]() mutable { gpuSceneDataBuffer.Dispose(m_allocator); });
 
 	vkCmdEndRendering(cmd);
 }

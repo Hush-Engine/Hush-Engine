@@ -48,11 +48,11 @@ namespace Hush
 		void *GetMappedData();
 
 	private:
-		size_t m_offset;
-		void *m_mappedData;
-		void *m_userData;
-		void *m_buffer;
-		void *m_allocation; // Used for VmaAllocation_T* on Vulkan
+		size_t m_offset{};
+		void *m_mappedData{};
+		void *m_userData{};
+		void *m_buffer{};
+		void *m_allocation{}; // Used for VmaAllocation_T* on Vulkan
 		size_t m_size = 0;
 		size_t m_capacity = 0;
 	};
