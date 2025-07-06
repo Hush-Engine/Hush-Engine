@@ -30,7 +30,7 @@ namespace Hush::GltfLoadFunctions
 
 	EMaterialPass GetMaterialPassFromFastGltfPass(fastgltf::AlphaMode pass);
 
-	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset);
+	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType);
 	
 	std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
 															 const fastgltf::Image &image);

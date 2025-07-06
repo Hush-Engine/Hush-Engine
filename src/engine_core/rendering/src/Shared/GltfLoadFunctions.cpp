@@ -139,10 +139,11 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 }
 
 
-std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset) {
+std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType) {
 	const fastgltf::sources::Vector *vectorData = std::get_if<fastgltf::sources::Vector>(&image.data);
 	if (vectorData != nullptr)
 	{
+		*outMimeType = vectorData->mimeType;
 		return {reinterpret_cast<const std::byte*>(vectorData->bytes.data()), vectorData->bytes.size()};
 	}
 	const fastgltf::sources::BufferView *bufferViewData = std::get_if<fastgltf::sources::BufferView>(&image.data);
@@ -158,6 +159,7 @@ std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fas
 			HUSH_ASSERT(false, "Unrecognized data format!!");
 		}
 
+		*outMimeType = bufferViewData->mimeType;
 		return {bufferData.value() + bufferView.byteOffset, bufferView.byteLength};
 	}
 
@@ -167,7 +169,8 @@ std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fas
 std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
 																						const fastgltf::Image &image)
 {
-	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset);
+	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
 	if (!byteBuffer.empty()) {
 		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
 	}

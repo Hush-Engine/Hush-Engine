@@ -18,6 +18,7 @@
 #include <fastgltf/types.hpp>
 #include <filesystem>
 #include <imgui/imgui.h>
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
 #include <span>
 #include <string>
@@ -129,16 +130,16 @@ void Hush::ContentPanel::GenerateMetaFiles() {
 		this->CreateInnerResources(data, metadata);
 		
 
-		this->MakeMetaFile(data, metadata);
+		// this->MakeMetaFile(data, metadata);
 	}
 }
 
 void Hush::ContentPanel::MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata) {
-	std::string metaPath = fileData.path.string().append(".meta");
+	std::filesystem::path metaPath = fileData.path.parent_path() / fileData.path.stem().string().append(".meta");
 	if (std::filesystem::exists(metaPath)) {
 		return;
 	}
-	Result<std::unique_ptr<IFile>, IFile::EError> openRes = this->m_filesystem->OpenFile(metaPath, EFileOpenMode::Write);
+	Result<std::unique_ptr<IFile>, IFile::EError> openRes = this->m_filesystem->OpenFile(metaPath.string(), EFileOpenMode::Write);
 	HUSH_RESULT_ASSERT(openRes, "Failed to create metadata file!");
 
 	std::unique_ptr<IFile>& file = openRes.value();
@@ -170,16 +171,24 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const Fi
 		fastgltf::Expected<fastgltf::Asset> asset = GltfLoadFunctions::GetAssetFromFile(fileData.path);
 		HUSH_ASSERT(asset, "GLTF asset at {} not properly loaded, error: {}!", fileData.path.string(), fastgltf::getErrorMessage(asset.error()));
 		size_t cntr = 0;
+		// TODO: Swap for regular for loop
 		for (const fastgltf::Image& image : asset->images) {
 			// Write the binary data to the png
-			const std::span<const std::byte> imageBuffer = GltfLoadFunctions::ExtractImageBuffer(image, asset.get());
+			
+			fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+			const std::span<const std::byte> imageBuffer = GltfLoadFunctions::ExtractImageBuffer(image, asset.get(), &mimeType);
 			if (imageBuffer.empty()) {
 				continue;
 			}
 			std::filesystem::path parentDir = fileData.path.parent_path();
 			std::string textName;
 			if (image.name.empty()) {
-				textName = fileData.path.stem().string().append("_").append(std::to_string(cntr));
+				// I know, I know
+					textName = fileData.path.stem().string()
+					.append("_")
+					.append(std::to_string(cntr))
+					.append(".")
+					.append(magic_enum::enum_name(mimeType));
 			}
 			else {
 				textName = image.name;
@@ -191,6 +200,13 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const Fi
 			Result<void, IFile::EError> writeResult = createdFile->Write(imageBuffer);
 			HUSH_RESULT_ASSERT(writeResult, "Failed to write image buffer");
 			createdFile->Close();
+			
+			FileMetadata metadata = {
+				.metadataVersion = FileMetadata::VERSION,
+				.id = Hashing::Fnv1a(createdFile->GetFileInfo().path.string())
+			};
+			// this->MakeMetaFile(createdFile->GetFileInfo(), metadata);
+			// this->m_currentItems.emplace_back(createdFile->GetFileInfo());
 			cntr++;
 		}
 		break;
