@@ -45,12 +45,7 @@ namespace Hush::Threading
 				std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T> *, std::remove_const_t<T>>;
 
 			using VariantType = std::variant<std::monostate, ResultType, std::exception_ptr>;
-			using CoroutineType = std::coroutine_handle<SyncWaitPromise>;
-
-			SyncWait<T> get_return_object() noexcept
-			{
-				return CoroutineType::from_promise(*this);
-			}
+			using coroutine_type = std::coroutine_handle<SyncWaitPromise>;
 
 			SyncWaitPromise() noexcept = default;
 
@@ -60,6 +55,8 @@ namespace Hush::Threading
 			SyncWaitPromise(const SyncWaitPromise &) noexcept = delete;
 			SyncWaitPromise &operator=(const SyncWaitPromise &) noexcept = delete;
 
+			~SyncWaitPromise() = default;
+
 			std::suspend_always initial_suspend() noexcept
 			{
 				return {};
@@ -68,8 +65,13 @@ namespace Hush::Threading
 			void Start(std::atomic_flag &done) noexcept
 			{
 				m_done = &done;
-				auto coroutinePromise = CoroutineType::from_promise(*this);
+				auto coroutinePromise = coroutine_type::from_promise(*this);
 				coroutinePromise.resume();
+			}
+
+			auto get_return_object() noexcept
+			{
+				return coroutine_type::from_promise(*this);
 			}
 
 			void Wait() noexcept
@@ -78,13 +80,14 @@ namespace Hush::Threading
 			}
 
 			template <typename U>
-				requires(std::is_reference_v<T> && std::is_constructible_v<ResultType, U &&> ||
+				requires(std::is_reference_v<T> && std::is_constructible_v<T, U &&> ||
 						 (!std::is_reference_v<T> && std::is_constructible_v<ResultType, U>))
-			auto return_value(U &&value) noexcept
+			void return_value(U &&value) noexcept
 			{
 				if constexpr (std::is_reference_v<T>)
 				{
-					m_result.template emplace<ResultType>(std::addressof(value));
+					T ref = static_cast<T &&>(value);
+					m_result.template emplace<ResultType>(std::addressof(ref));
 				}
 				else
 				{
@@ -92,7 +95,8 @@ namespace Hush::Threading
 				}
 			}
 
-			auto return_value(ResultType value) noexcept
+			void return_value(ResultType value) noexcept
+				requires(!std::is_reference_v<T>)
 			{
 				if constexpr (std::is_move_constructible_v<ResultType>)
 				{
@@ -127,7 +131,7 @@ namespace Hush::Threading
 				return CompletionAwaiter{};
 			}
 
-			decltype(auto) Result() & noexcept
+			decltype(auto) Result() &
 			{
 				if (std::holds_alternative<ResultType>(m_result))
 				{
@@ -145,9 +149,10 @@ namespace Hush::Threading
 					std::rethrow_exception(std::get<std::exception_ptr>(m_result));
 				}
 				assert(false);
+				throw std::bad_exception();
 			}
 
-			decltype(auto) Result() const & noexcept
+			decltype(auto) Result() const &
 			{
 				if (std::holds_alternative<ResultType>(m_result))
 				{
@@ -165,6 +170,7 @@ namespace Hush::Threading
 					std::rethrow_exception(std::get<std::exception_ptr>(m_result));
 				}
 				assert(false);
+				throw std::bad_exception();
 			}
 
 			decltype(auto) Result() && noexcept
@@ -372,7 +378,7 @@ namespace Hush::Threading
 
 	namespace impl
 	{
-		template <Concepts::Awaitable A, typename T>
+		template <Concepts::Awaitable A, typename T = typename Concepts::AwaitableTraits<A>::ResultType>
 		static SyncWaitTask<T> MakeSyncWaitTask(A &&awaitable)
 		{
 			if constexpr (std::is_void_v<T>)
@@ -394,7 +400,7 @@ namespace Hush::Threading
 		std::atomic_flag done;
 		done.clear();
 
-		SyncWaitTask<void> task = impl::MakeSyncWaitTask<A, T>(std::forward<A>(awaitable));
+		auto task = impl::MakeSyncWaitTask(std::forward<A>(awaitable));
 		task.promise().Start(done);
 
 		done.wait(false, std::memory_order_relaxed);

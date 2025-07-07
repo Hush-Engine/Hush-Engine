@@ -8,6 +8,7 @@
 
 #include "async/SyncWait.hpp"
 #include "async/Task.hpp"
+#include "async/WhenAll.hpp"
 #include "executors/ThreadPool.hpp"
 
 namespace Hush::Threading
@@ -17,9 +18,8 @@ namespace Hush::Threading
 
 	template <typename It, typename Fn>
 		requires(std::is_invocable_v<Fn, std::add_lvalue_reference_t<typename std::iterator_traits<It>::value_type>>)
-	void ParallelFor(Executors::ThreadPool &threadPool, It begin, It end, Fn &&function)
+	Task<void> ParallelFor(Hush::Threading::Concepts::Executor auto *executor, It begin, It end, Fn &&function)
 	{
-		(void)threadPool;
 		// We need to calculate how many tasks we are going to create.
 		// For this, we need to split the range into chunks.
 		// For this, I would like to use a simple heuristic:
@@ -30,7 +30,7 @@ namespace Hush::Threading
 		std::size_t size = std::distance(begin, end);
 		if (size == 0)
 		{
-			return;
+			co_return;
 		}
 
 		const std::size_t numTasks = std::min<size_t>(MAX_PARALLEL_TASKS, std::max<size_t>(1, size / MIN_CHUNK_SIZE));
@@ -64,22 +64,26 @@ namespace Hush::Threading
 			}
 
 			// Now we can create a task that will process the current chunk.
-			auto forTask = [](auto function, It begin, It end) {
+			auto forTask = [](auto function, It begin, It end) -> Task<void> {
 				It current = begin;
 				while (current != end)
 				{
 					function(*current);
 					++current;
 				}
+				co_return;
 			};
-			tasks.push_back(Hush::Threading::Executors::RunOn(&threadPool, forTask(function, current, next)));
+
+			Task<void> task = Executors::RunOn(executor, forTask(std::forward<Fn>(function), current, next));
+			tasks.push_back(std::move(task));
 
 			current = next;
 		}
-
-		for (auto &t : tasks)
+		if (tasks.empty())
 		{
-			Hush::Threading::Wait(t);
+			co_return; // No tasks to run
 		}
+		// Now we can wait for all tasks to finish.
+		co_await Hush::Threading::WhenAll(std::move(tasks));
 	}
 } // namespace Hush::Threading

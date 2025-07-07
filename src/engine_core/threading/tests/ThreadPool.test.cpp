@@ -6,6 +6,7 @@
 
 #include "utils/ParallelUtils.hpp"
 #include "executors/ThreadPool.hpp"
+#include "async/WhenAll.hpp"
 
 #include <Logger.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -92,5 +93,68 @@ TEST_CASE("Threadpool parallel task execution", "[threadpool]")
 	{
 		Hush::LogFormat(Hush::ELogLevel::Info, "Thread ID: {}", threadId);
 	}
+}
 
+TEST_CASE("Threadpool WhenAll", "[threadpool]")
+{
+	using namespace Hush::Threading;
+	using namespace Hush::Threading::Executors;
+
+	static constexpr uint32_t NUM_THREADS = 4;
+	static constexpr size_t NUM_TASKS = 4;
+
+	ThreadPoolOptions options;
+	options.numThreads = NUM_THREADS;
+	auto threadPool = ThreadPool::Create(options);
+
+	std::vector<Task<void>> tasks;
+	tasks.reserve(NUM_TASKS);
+
+	auto taskFunc = []() -> Task<void> {
+		std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Simulate work
+		co_return;
+	};
+
+	for (size_t i = 0; i < NUM_TASKS; ++i)
+	{
+		tasks.push_back(Hush::Threading::Executors::RunOn(&threadPool, taskFunc()));
+	}
+
+	std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
+	Wait(WhenAll(std::move(tasks)));
+	std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+
+	// Since we have 4 threads, the total time should be around 10ms, but it may vary slightly due to scheduling.
+	// So, let's check that the total time is less than 30ms to account for some overhead.
+	REQUIRE(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() < 30);
+}
+
+TEST_CASE("Threadpool parallel for", "[threadpool]")
+{
+	using namespace Hush::Threading;
+	using namespace Hush::Threading::Executors;
+
+	static constexpr uint32_t NUM_THREADS = 4;
+	static constexpr size_t NUM_ELEMENTS = 10000;
+
+	ThreadPoolOptions options;
+	options.numThreads = NUM_THREADS;
+	ThreadPool threadPool = ThreadPool::Create(options);
+
+	std::vector<int> results;
+	results.reserve(NUM_ELEMENTS);
+	for (int i = 1; i <= NUM_ELEMENTS; ++i)
+	{
+		results.push_back(i);
+	}
+	auto taskFunc = [](int &value) {
+		value += 1;
+	};
+
+	Wait(ParallelFor(&threadPool, results.begin(), results.end(), taskFunc));
+
+	for (int i = 1; i <= NUM_ELEMENTS; ++i)
+	{
+		REQUIRE(results[i - 1] == i + 1);
+	}
 }
