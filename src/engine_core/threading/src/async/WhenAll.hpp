@@ -191,7 +191,7 @@ namespace Hush::Threading
 
 			bool TryAwait(std::coroutine_handle<> handle) noexcept
 			{
-				std::apply([this](auto &&...tasks) { ((tasks.start(m_latch)), ...); }, m_tasks);
+				std::apply([this](auto &&...tasks) { ((tasks.Start(m_latch)), ...); }, m_tasks);
 
 				return m_latch.TryAwait(handle);
 			}

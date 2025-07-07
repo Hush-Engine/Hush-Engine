@@ -10,7 +10,7 @@
 #include "ISystem.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
-#include "../../threading/src/executors/ThreadPool.hpp"
+#include "executors/ThreadPool.hpp"
 
 #include <array>
 #include <memory>

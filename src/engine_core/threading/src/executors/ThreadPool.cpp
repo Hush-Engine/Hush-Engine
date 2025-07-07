@@ -63,8 +63,6 @@ namespace Hush::Threading::Executors
 			std::mt19937 gen(rd());
 			std::uniform_int_distribution<std::uint32_t> dist(0, static_cast<std::uint32_t>(m_stealers.size() - 1));
 			m_previousStealIndex = dist(gen);
-
-			(void)1;
 		}
 
 		void Wake() noexcept

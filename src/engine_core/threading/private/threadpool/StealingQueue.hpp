@@ -142,7 +142,6 @@ namespace Hush::Threading
 		friend class Worker<T, Size>;
 		friend class Stealer<T, Size>;
 
-
 		/// Positions of the head as seen by the worker (most significant bits) and the stealer (least significant
 		/// bits).
 		alignas(std::hardware_destructive_interference_size) std::atomic<uint64_t> m_head;
@@ -223,7 +222,8 @@ namespace Hush::Threading
 
 		/// Attempt to pop an item from the head of the queue.
 		///
-		/// @return An empty optional if the queue is empty, or an optional containing the item if it was successfully popped.
+		/// @return An empty optional if the queue is empty, or an optional containing the item if it was successfully
+		/// popped.
 		std::optional<T> Pop() noexcept;
 
 	private:
@@ -243,10 +243,7 @@ namespace Hush::Threading
 			for (uint32_t i = 0; i < itemCount; ++i)
 			{
 				auto &item = ReadAt(workerHead + i);
-				if constexpr (std::is_destructible_v<T>)
-				{
-					item.~T();
-				}
+				item.~T();
 			}
 		}
 	}
