@@ -11,6 +11,6 @@ hush_add_library(
 
 add_library(Hush::AppLoader ALIAS HushAppLoader)
 
-target_link_libraries(HushAppLoader PUBLIC HushUtils HushLog Hush::Core)
+target_link_libraries(HushAppLoader PUBLIC HushUtils Hush::Log Hush::Core Hush::Threading)
 
 set_all_warnings(HushAppLoader)

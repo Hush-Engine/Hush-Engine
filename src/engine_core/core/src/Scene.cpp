@@ -6,15 +6,17 @@
 
 #include "Scene.hpp"
 #include "ISystem.hpp"
+#include "utils/ParallelUtils.hpp"
 
 #define FLECS_NO_CPP
 #include <flecs.h>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
-Hush::Scene::Scene(HushEngine *engine)
+Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
 	: m_engine(engine),
-	  m_world(ecs_init())
+	  m_world(ecs_init()),
+	  m_threadPool(threadPool)
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
@@ -27,105 +29,69 @@ Hush::Scene::~Scene()
 
 void Hush::Scene::Init()
 {
-	// Init all systems
-	for (ISystem* system : this->m_engineSystems) {
-		system->Init();
-	}
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->Init();
-		}
+		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+											   [](ISystem *system) { system->Init(); }));
 	}
 }
 
 void Hush::Scene::Update(float delta)
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnUpdate(delta);
-	}
-	
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnUpdate(delta);
-		}
+		Threading::Wait(
+			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
+				// Call the update method for each system
+				system->OnUpdate(delta);
+			}));
 	}
 }
 
 void Hush::Scene::FixedUpdate(float delta)
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnFixedUpdate(delta);
-	}
-	
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnFixedUpdate(delta);
-		}
+		Threading::Wait(
+			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
+				// Call the fixed update method for each system
+				system->OnFixedUpdate(delta);
+			}));
 	}
 }
 
 void Hush::Scene::PreRender()
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnPreRender();
-	}
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnPreRender();
-		}
+		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+											   [](ISystem *system) { system->OnPreRender(); }));
 	}
 }
 void Hush::Scene::Render()
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnRender();
-	}
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnRender();
-		}
+		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+											   [](ISystem *system) { system->OnRender(); }));
 	}
 }
 
 void Hush::Scene::PostRender()
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnPostRender();
-	}
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnPostRender();
-		}
+		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+											   [](ISystem *system) { system->OnPostRender(); }));
 	}
 }
 
 void Hush::Scene::Shutdown()
 {
-	for (ISystem* system : this->m_engineSystems) {
-		system->OnShutdown();
-	}
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
-		for (ISystem *system : systemBucket)
-		{
-			system->OnShutdown();
-		}
+		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+											   [](ISystem *system) { system->OnShutdown(); }));
 	}
 }
 
@@ -449,6 +415,7 @@ Hush::Entity::EntityId Hush::Scene::InternalRegisterCppComponent(
 void Hush::Scene::AddEngineSystem(ISystem *system)
 {
 	m_engineSystems.push_back(system);
+	SortSystems();
 }
 
 void Hush::Scene::SortSystems()

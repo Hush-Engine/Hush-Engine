@@ -8,6 +8,7 @@
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "HushBindings.hpp"
+#include "executors/ThreadPool.hpp"
 
 #include <optional>
 #include <string_view>
@@ -19,10 +20,8 @@ namespace Hush
 	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 	public:
-		/// <summary>
 		/// Initializes the HushEngine with all its properties
-		/// </summary>
-		HushEngine() = default;
+		HushEngine();
 
 		HushEngine(const HushEngine &) = delete;
 		HushEngine &operator=(const HushEngine &) = delete;
@@ -37,23 +36,31 @@ namespace Hush
 
 		~HushEngine();
 
-		/// <summary>
 		/// Starts running the engine with UI components
-		/// </summary>
 		void Run();
 
-		/// <summary>
 		/// Disposes of the HushEngine
-		/// </summary>
 		void Quit();
 
 		[[hush::export]]
 		Scene *GetScene();
 
+		/// Returns the engine's default thread pool.
+		/// The default threadpool contains a number of threads equal to the number of hardware threads available on the
+		/// system, and each thread is pinned to a core.
+		///
+		/// @return A pointer to the engine's thread pool.
+		[[nodiscard]]
+		Threading::Executors::ThreadPool *GetEngineThreadPool() noexcept
+		{
+			return &m_threadPool;
+		}
+
 	private:
 		void Init();
 
 		std::unique_ptr<IApplication> m_app;
+		Threading::Executors::ThreadPool m_threadPool;
 
 		DirectionalLight *m_defaultLight = nullptr;
 		bool m_isApplicationRunning = false;

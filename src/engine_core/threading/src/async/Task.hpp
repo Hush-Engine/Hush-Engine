@@ -266,7 +266,6 @@ namespace Hush::Threading
 		{
 			if (!m_coroutine.done())
 			{
-
 			}
 		}
 
@@ -291,9 +290,8 @@ namespace Hush::Threading
 		}
 
 		template <typename U = T>
-			requires !std::is_void_v<U>
-					 auto operator co_await() const &&
-			noexcept
+			requires(!std::is_void_v<U>)
+		auto operator co_await() const && noexcept
 		{
 			struct Awaiter : InitialAwaiterBase
 			{

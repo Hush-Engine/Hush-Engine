@@ -107,7 +107,7 @@ namespace Hush::Threading
 			explicit WhenAllReadyAwaitable(TaskTypes &&...tasks) noexcept(
 				std::conjunction_v<std::is_nothrow_move_constructible<TaskTypes>...>)
 				: m_latch(sizeof...(TaskTypes)),
-				  m_tasks(std::move(tasks))
+				  m_tasks(std::move(tasks)...)
 			{
 			}
 
