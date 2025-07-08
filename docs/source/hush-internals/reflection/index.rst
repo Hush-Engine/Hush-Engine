@@ -21,7 +21,7 @@ The reflection system **only** exposes the public members of a class, annotated 
 This means that you cannot use the reflection system to introspect **non** explicitly annotated members of a class.
 
 The tooling also provides a serialization system that allows you to serialize and deserialize C++ objects to and from JSON.
-The serialization system is built around the `rapidjson`_ library.
+The serialization system is built around the `rapidjson` library.
 
 Annotations
 ------------------
