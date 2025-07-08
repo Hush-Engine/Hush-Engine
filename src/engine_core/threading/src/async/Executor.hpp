@@ -11,9 +11,14 @@ namespace Hush::Threading
 {
 	namespace Concepts
 	{
+		///
+		/// Concept executor, if T is a pointer, it should be dereferenceable and have a Schedule method.
+		/// If T is not a pointer, it should have a Schedule method.
 		template <typename T>
 		concept Executor = requires(T executor) {
-			{ executor.Schedule() } -> Awaitable;
+			{ executor.Schedule() } ;
+		} || requires(T *executor) {
+			{ executor->Schedule() };
 		};
 
 		template <typename T, typename = void>

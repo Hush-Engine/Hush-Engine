@@ -28,3 +28,8 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM" OR CMAKE_SYSTEM_PROCESSOR MATCHES "
         set(HUSH_CPU_FLAGS -march=armv8.1-a+simd)
     endif()
 endif()
+
+if (MSVC)
+    # Disable error C4324
+    add_compile_options(/wd4324)
+endif ()

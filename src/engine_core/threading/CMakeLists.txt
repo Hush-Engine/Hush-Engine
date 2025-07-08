@@ -3,8 +3,12 @@
 hush_add_library(
         TARGET_NAME HushThreading
         LIB_TYPE OBJECT
-        SRCS src/ThreadPool.cpp src/async/SyncWait.cpp
+        SRCS src/async/SyncWait.cpp
+             src/utils/ParallelUtils.cpp
+             src/executors/ThreadPool.cpp
+             private/threadpool/StealingQueue.cpp
         PUBLIC_HEADER_DIRS src
+        PRIVATE_HEADER_DIRS private
 )
 add_library(Hush::Threading ALIAS HushThreading)
 

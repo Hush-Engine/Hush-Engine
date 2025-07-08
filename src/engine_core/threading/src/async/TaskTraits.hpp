@@ -55,11 +55,6 @@ namespace Hush::Threading::Concepts
 	template <typename T>
 	concept AwaitableVoid = LocalCoAwaitableVoid<T> || GlobalCoAwaitableVoid<T> || AwaiterVoid<T>;
 
-	template <Awaitable A, typename = void>
-	struct AwaitableTraits
-	{
-	};
-
 	template <Awaitable A>
 	static auto GetAwaiter(A &&awaitable)
 	{
@@ -77,8 +72,13 @@ namespace Hush::Threading::Concepts
 		}
 	}
 
+	template <Awaitable A, typename = void>
+	struct AwaitableTraits
+	{
+	};
+
 	template <Awaitable A>
-	struct AwaitableTraits<A, std::void_t<decltype(GetAwaiter(std::declval<A>()))>>
+	struct AwaitableTraits<A>
 	{
 		using AwaiterType = decltype(GetAwaiter(std::declval<A>()));
 		using ResultType = decltype(std::declval<AwaiterType>().await_resume());
