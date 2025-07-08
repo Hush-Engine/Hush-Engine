@@ -73,7 +73,7 @@ namespace Hush
 
 		void InitImGui() override;
 
-		void PushMesh(const std::string_view& path) override;
+		void PushMesh(WorldTransform* xform, Mesh* mesh) override;
 		
 		// void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) override;
 
@@ -146,8 +146,6 @@ namespace Hush
 		[[nodiscard]]
 		void *GetWindowContext() const noexcept override;
 
-		void SetDirectionalLight(DirectionalLight *light) noexcept override;
-
 		[[nodiscard]]
 		const EditorCamera &GetEditorCamera() const noexcept override;
 
@@ -188,8 +186,6 @@ namespace Hush
 										const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 		void InitVmaAllocator();
-
-		void InitRenderables();
 
 		void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 

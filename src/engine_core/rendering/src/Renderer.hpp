@@ -51,9 +51,7 @@ namespace Hush
 
 		virtual void InitImGui() = 0;
 
-		// virtual void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) = 0;
-
-		virtual void PushMesh(const std::string_view& path) = 0;
+		virtual void PushMesh(WorldTransform* xform, Mesh* mesh) = 0;
 
 		virtual void DestroyMesh(const std::string_view &name) = 0;
 
@@ -74,8 +72,6 @@ namespace Hush
 		virtual void EndUIFrame() const noexcept = 0;
 
 		virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
-
-		virtual void SetDirectionalLight(DirectionalLight *light) noexcept = 0;
 
 		virtual GpuAllocatedImage CreateImage(const void *data, const ImageExtent3D &size, Color::EFormat format,
 											  uint32_t usage, bool mipmapped = false) = 0;

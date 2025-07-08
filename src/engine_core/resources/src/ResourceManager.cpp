@@ -6,7 +6,6 @@
 #include "Shared/ImageTexture.hpp"
 #include "VirtualFilesystem.hpp"
 #include "crypto/Hashing.hpp"
-#include "definitions/KeyCode.hpp"
 #include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
@@ -22,13 +21,14 @@ Hush::RefCounted* Hush::ResourceManager::IncreaseRefCount(const HandleId& handle
 	return &count;
 }
 
-void Hush::ResourceManager::DecreaseRefCount(const HandleId& handle) {
+Hush::RefCounted* Hush::ResourceManager::DecreaseRefCount(const HandleId& handle) {
 	RefCounted& count = this->m_references[handle];
 	// TODO: Add condition to prevent overflow
 	count.count--;
 	if (count.count == 0) {
 		this->m_deletionQueue.emplace_back(handle);
 	}
+	return &count;
 }
 
 const Hush::RefCounted& Hush::ResourceManager::GetRefCount(const Hush::HandleId& handle) {

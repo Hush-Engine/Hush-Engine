@@ -6,6 +6,7 @@
 
 #include "Shared/GpuAllocatedBuffer.hpp"
 #include <memory>
+#include <utility>
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
@@ -29,12 +30,10 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Shared/GPUMeshBuffers.hpp"
-#include "VulkanLoader.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include "VulkanFullScreenPass.hpp"
 #include <Shared/ShaderMaterial.hpp>
-#include "Vector3Math.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <glm/gtx/string_cast.hpp>
 #include "Renderer.hpp"
@@ -144,6 +143,13 @@ Hush::VulkanRenderer::~VulkanRenderer()
 void Hush::VulkanRenderer::SetActiveScene(Scene *scene)
 {
 	this->m_activeScene = scene;
+	Query<DirectionalLight, WorldTransform> queryRes =
+		this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
+	queryRes.Each([this](DirectionalLight &lightComponent, WorldTransform &transformComponent) {
+		this->m_directionalLight = &lightComponent;
+		this->m_sunTransform = &transformComponent;
+	});
+	LogFormat(ELogLevel::Info, "Setting directional light to {}", reinterpret_cast<uint64_t>(this->m_activeScene));
 }
 
 // Called on resize and window init
@@ -192,20 +198,11 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-void Hush::VulkanRenderer::PushMesh(const std::string_view& path)
+void Hush::VulkanRenderer::PushMesh(WorldTransform* xform, Mesh* mesh)
 {
 	// TODO: Make this take an entity or something like that so we have access to its transform
-	// this->m_loadedNodes.emplace(std::make_shared<VulkanMeshNode>(mesh), mesh->GetName());
-	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, path, this->m_activeScene).value();
-	for (Entity &node : nodeVector)
-	{
-		WorldTransform *xform = node.GetComponent<WorldTransform>();
-		Mesh *mesh = node.GetComponent<Mesh>();
-		std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
-		this->m_loadedMeshes.emplace_back(entry);
-	}
-	// (void)xform;
-	// (void)mesh;
+	std::pair<WorldTransform*, Mesh*> entry = {xform, mesh};
+	this->m_loadedMeshes.emplace_back(entry);
 }
 
 void Hush::VulkanRenderer::DestroyMesh(const std::string_view &name)
@@ -303,7 +300,6 @@ void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *dra
 		def.indexCount = s.count;
 		def.firstIndex = s.startIndex;
 		def.indexBuffer = static_cast<VkBuffer>(mesh->GetMeshBuffers().indexBuffer.GetBuffer());
-		// Replace with graphics API call
 		def.material = s.material->GetInternalMaterial();
 
 		def.transform = transform->GetTransformationMatrix();
@@ -367,8 +363,6 @@ void Hush::VulkanRenderer::InitRendering()
 
 	// Last two methods must be called after the pipelines and descriptors are initialized
 	this->InitDefaultData();
-
-	this->InitRenderables();
 }
 
 void Hush::VulkanRenderer::Dispose()
@@ -616,16 +610,6 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 	return this->m_windowContext;
 }
 
-void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
-{
-	(void)light;
-	Query<DirectionalLight, WorldTransform> queryRes =
-		this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
-	queryRes.Each([this](DirectionalLight &lightComponent, WorldTransform &transformComponent) {
-		this->m_directionalLight = &lightComponent;
-		this->m_sunTransform = &transformComponent;
-	});
-}
 
 const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept {
 	return this->m_editorCamera;
@@ -705,21 +689,6 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 	this->AddToDeletionQueue([&]() { vmaDestroyAllocator(m_allocator); });
 }
 
-void Hush::VulkanRenderer::InitRenderables()
-{
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Lantern.glb)";
-	// Create an example entity with a Mesh component here
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Duck.glb)";
-	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
-	// std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
-	// for (Entity &node : nodeVector)
-	// {
-	// 	WorldTransform *xform = node.GetComponent<WorldTransform>();
-	// 	Mesh *mesh = node.GetComponent<Mesh>();
-	// 	std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
-	// 	this->m_loadedMeshes.emplace_back(entry);
-	// }
-}
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
 										   VkImageLayout newLayout)

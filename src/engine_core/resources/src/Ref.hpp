@@ -7,6 +7,7 @@
 #pragma once
 
 #include "IResourceManager.hpp"
+#include "Logger.hpp"
 
 namespace Hush
 {
@@ -20,7 +21,8 @@ namespace Hush
 		}
 
 		inline ~Ref() {
-			this->m_resourceManager->DecreaseRefCount(this->m_element);
+			RefCounted* count = this->m_resourceManager->DecreaseRefCount(this->m_element);
+			LogFormat(ELogLevel::Info, "Decreased ref count of {} to: {}", this->m_element, count->count.load());
 		}
 		
 		inline T* Get() {
@@ -34,15 +36,35 @@ namespace Hush
 		}		
 
 		Ref() = default;
+		
+		Ref(const Ref& other) : 
+            m_element(other.m_element),
+            m_resourceManager(other.m_resourceManager) 
+        {
+            if (!this->IsNull()) {
+                RefCounted* count = m_resourceManager->IncreaseRefCount(m_element);
+                LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", m_element, count->count.load());
+            }
+        }
 
+        Ref(Ref&& other) noexcept : 
+            m_element(other.m_element),
+            m_resourceManager(other.m_resourceManager) 
+        {
+            // Invalidate source to prevent decrement on destruction
+            other.m_element = INVALID_HANDLE;
+            other.m_resourceManager = nullptr;
+        }
 		
 		Ref(IResourceManager* resourceManager, T* resource) {
 			this->m_element = reinterpret_cast<HandleId>(resource);
 			this->m_resourceManager = resourceManager;
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted* count = this->m_resourceManager->IncreaseRefCount(this->m_element);
+			LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", this->m_element, count->count.load());
 			if (count->deleter == nullptr) {
 				count->deleter = [](void* ptr) {
+					LogFormat(ELogLevel::Info, "Deleted reference with ID: {}", reinterpret_cast<HandleId>(ptr));
 					delete static_cast<T*>(ptr);
 				};
 			}

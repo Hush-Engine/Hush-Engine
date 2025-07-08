@@ -24,7 +24,6 @@ void Hush::HushEngine::Run()
 	// Initialize any static resources we need
 	this->Init();
 
-	mainRenderer.GetInternalRenderer()->SetDirectionalLight(this->m_defaultLight);
 	std::chrono::steady_clock::duration elapsed;
 
 	while (this->m_isApplicationRunning)

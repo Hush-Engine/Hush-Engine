@@ -100,6 +100,4 @@ namespace Hush
 		std::vector<GeoSurface> m_surfaces;
 		GPUMeshBuffers m_meshBuffers;
 	};
-
-	void Serialize(Mesh *component, const char *entityName);
 } // namespace Hush

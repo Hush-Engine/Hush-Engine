@@ -35,7 +35,7 @@ namespace Hush
 		
 		virtual RefCounted* IncreaseRefCount(const HandleId& handle) = 0;
 		
-		virtual void DecreaseRefCount(const HandleId& handle) = 0;
+		virtual RefCounted* DecreaseRefCount(const HandleId& handle) = 0;
 		
 		virtual const RefCounted& GetRefCount(const HandleId& handle) = 0;
 		

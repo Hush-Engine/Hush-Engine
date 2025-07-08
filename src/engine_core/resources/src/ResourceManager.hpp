@@ -38,7 +38,7 @@ namespace Hush
 
 		RefCounted* IncreaseRefCount(const HandleId& handle) override;
 		
-		void DecreaseRefCount(const HandleId& handle) override;
+		RefCounted* DecreaseRefCount(const HandleId& handle) override;
 		
 		const RefCounted& GetRefCount(const HandleId& handle) override;
 		

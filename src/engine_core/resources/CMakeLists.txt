@@ -5,6 +5,7 @@ hush_add_library(
         TARGET_NAME HushResources
         LIB_TYPE OBJECT
         SRCS src/ResourceManager.cpp
+        src/Loaders/VulkanLoader.cpp
         PUBLIC_HEADER_DIRS src
 )
 add_library(Hush::Resources ALIAS HushResources)

@@ -57,10 +57,14 @@ namespace Hush
 			return this->extension == EFileExtension::CPP || this->extension == EFileExtension::CSHARP;
 		}
 
+		[[nodiscard]] inline bool IsModelFile() const {
+			return this->extension == EFileExtension::GLB || this->extension == EFileExtension::FBX || this->extension == EFileExtension::GLTF; 
+		}
+		
 		[[nodiscard]] inline bool ShouldGenerateMetaFile() const {
 			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKWOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
 		}
-	};
+	} ;
 
 	/// File interface for the VFS.
 	/// A file is a resource that maps to a specific path in the VFS.

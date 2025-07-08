@@ -8,6 +8,7 @@
 #include "FileMetadata.hpp"
 #include "IEditorPanel.hpp"
 #include "IFile.hpp"
+#include "Loaders/VulkanLoader.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "Shared/ImageTexture.hpp"
@@ -27,6 +28,8 @@ namespace Hush
 		
 		void RefreshDirectory();
 
+		void DrawFiles(bool isMouseInScene);
+		
 		void CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata);
 		
 		void MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata);
@@ -35,6 +38,8 @@ namespace Hush
 		
 		ResourceManager* m_resourceManager;
 		VirtualFilesystem* m_filesystem;
+		Scene* m_scene;
+		VulkanLoader m_modelLoader;
 		// TEMP: <a href="https://www.flaticon.com/free-icons/folder" title="folder icons">Folder icons created by Gajah Mada - Flaticon</a>
 		Ref<ImageTexture> m_folderImage;
 		Ref<ImageTexture> m_fileImage;

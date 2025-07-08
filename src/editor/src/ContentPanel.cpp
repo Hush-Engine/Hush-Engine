@@ -1,15 +1,18 @@
 #include "ContentPanel.hpp"
+#include "Components/MeshReference.hpp"
+#include "Components/WorldTransform.hpp"
 #include "FileMetadata.hpp"
 #include "IFile.hpp"
 #include "Logger.hpp"
 #include "Query.hpp"
+#include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "Result.hpp"
+#include "Shared/Mesh.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include "crypto/Hashing.hpp"
-#include "imgui/imgui_internal.h"
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
@@ -23,7 +26,6 @@
 #include <memory>
 #include <span>
 #include <string>
-#include <string_view>
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
 
@@ -34,77 +36,88 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 		this->m_resourceManager = &resourceManager;
 		this->m_filesystem = &vfs;
 	});
+	this->m_scene = activeScene;
 	// this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
 	// this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
+	this->m_modelLoader.SetResourceManager(this->m_resourceManager);
 }
 
 void Hush::ContentPanel::OnRender() {
 	if (ImGui::Begin("Project", nullptr, CONTENT_PANEL_FLAGS))
-	{
-		ImVec2 regionDimensions = ImGui::GetContentRegionAvail();
-		
-        float regionWidth = regionDimensions.x;
-
-        ImGuiStyle& style = ImGui::GetStyle();
-        float spacing = style.ItemSpacing.x;
-        float cursorX = 0.0F;
-        
+	{        
 		if (this->m_dirty) {
 			this->RefreshDirectory();
 			// this->GenerateMetaFiles();
 			UI::S_INITIALIZED = true;
 		}
-	// 	ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
-	// 	bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-	// 	for (const FileInfo & item : this->m_currentItems) {
-	// 		// TODO: Fix all the copies that this makes
-	// 		const std::string& fileName = item.path.filename().string();
-	// 		ImVec2 textSize = ImGui::CalcTextSize(fileName.c_str());
- //            float buttonWidth = textSize.x + style.FramePadding.x * 2.0F;
-
- //            // If this button would exceed the region width, wrap to next line
- //            if (cursorX + buttonWidth > regionWidth) {
- //                ImGui::NewLine();
- //                cursorX = 0.0F;
- //            }
-
- //            // Draw the button as a draggable source
- //            ImGui::PushID(fileName.c_str());
- //            if (ImGui::Button(fileName.c_str(), ImVec2(buttonWidth, 50.0F))) {
- //                // Handle click if needed
- //            }
- //            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
- //                ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
- //                if (isMouseInScene && CanBeDroppedToScene(item)) {
- //                	ImGui::Text("Import to scene...");
- //                }
- //                else {
-	//                 ImGui::Text("Dragging \"%s\"", fileName.c_str());
- //                }
-	//             ImGui::EndDragDropSource();
- //            }
- //            ImGui::PopID();
-
- //            // Advance cursor and prepare for next same-line
- //            cursorX += buttonWidth + spacing;
- //            ImGui::SameLine(0.0F, spacing);
-	// 	}
-	// 	const ImGuiPayload *payload = ImGui::GetDragDropPayload();
-	// 	if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-	// 		const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
-	// 		if (CanBeDroppedToScene(*data)) {
-	// 			LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-	// 			IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	// 			renderer->PushMesh(data->path.generic_string());
-	// 		}
-	// 	}
+		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
+		bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+		this->DrawFiles(isMouseInScene);
+		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
+		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
+			if (CanBeDroppedToScene(*data)) {
+				IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+				auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
+				HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
+				// Use the Model Loader interface to get entities and then forward that to the renderer
+				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
+				// Very very bad code, we should change it before a PR
+				for (Entity& entt : result.value()) {
+					renderer->PushMesh(entt.GetComponent<WorldTransform>(), entt.GetComponent<MeshReference>()->GetMesh().Get());
+				}
+			}
+		}
 	}
 	ImGui::End();
 }
 
 
+void Hush::ContentPanel::DrawFiles(bool isMouseInScene) {
+	ImVec2 regionDimensions = ImGui::GetContentRegionAvail();
+	
+    float regionWidth = regionDimensions.x;
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    float spacing = style.ItemSpacing.x;
+    float cursorX = 0.0F;
+	for (const FileInfo & item : this->m_currentItems) {
+		// TODO: Fix all the copies that this makes
+		const std::string& fileName = item.path.filename().string();
+		ImVec2 textSize = ImGui::CalcTextSize(fileName.c_str());
+        float buttonWidth = textSize.x + style.FramePadding.x * 2.0F;
+
+        // If this button would exceed the region width, wrap to next line
+        if (cursorX + buttonWidth > regionWidth) {
+            ImGui::NewLine();
+            cursorX = 0.0F;
+        }
+
+        // Draw the button as a draggable source
+        ImGui::PushID(fileName.c_str());
+        if (ImGui::Button(fileName.c_str(), ImVec2(buttonWidth, 50.0F))) {
+            // TODO: Handle the click stuff
+        }
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
+            if (isMouseInScene && CanBeDroppedToScene(item)) {
+            	ImGui::Text("Import to scene...");
+            }
+            else {
+                ImGui::Text("Dragging \"%s\"", fileName.c_str());
+            }
+            ImGui::EndDragDropSource();
+        }
+        ImGui::PopID();
+
+        // Advance cursor and prepare for next same-line
+        cursorX += buttonWidth + spacing;
+        ImGui::SameLine(0.0F, spacing);
+	}
+}
+
 bool Hush::ContentPanel::CanBeDroppedToScene(const FileInfo& fileData) const {
-	return fileData.flags == EFileFlags::File;
+	return fileData.flags == EFileFlags::File && fileData.IsModelFile();
 }
 
 void Hush::ContentPanel::RefreshDirectory() {
