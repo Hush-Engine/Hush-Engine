@@ -38,6 +38,9 @@ namespace Hush
 
 		virtual Hush::Scene *GetScene() = 0;
 
+		// Temp workaround until we figure out engine system ordering
+		virtual void DisposeFrame() = 0;
+		
 		[[nodiscard]]
 		virtual std::string_view GetAppName() const noexcept = 0;
 	};

@@ -36,7 +36,7 @@ public:
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
 		entt.AddComponent<Hush::EditorInfo>();
-		entt.AddComponent<Hush::ResourceManager>();
+		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 		Hush::VirtualFilesystem& vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", R"(C:\Users\nefes\Personal\TestHushProject)");
 		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
@@ -70,6 +70,11 @@ public:
 		this->m_scene->PreRender();
 	}
 
+
+	void DisposeFrame() override {
+		this->m_resourceManager->FreePending();
+	}
+	
 	[[nodiscard]] std::string_view GetAppName() const noexcept override
 	{
 		return "Hush-Editor";
@@ -82,6 +87,7 @@ public:
 
 private:
 	Hush::UI m_userInterface;
+	Hush::ResourceManager* m_resourceManager = nullptr;
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
 };

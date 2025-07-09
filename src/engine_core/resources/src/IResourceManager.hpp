@@ -38,6 +38,8 @@ namespace Hush
 		virtual RefCounted* DecreaseRefCount(const HandleId& handle) = 0;
 		
 		virtual const RefCounted& GetRefCount(const HandleId& handle) = 0;
+
+		virtual void FreePending() = 0;
 		
 	};
 }

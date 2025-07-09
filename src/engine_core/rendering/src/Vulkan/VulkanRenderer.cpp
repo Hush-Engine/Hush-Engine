@@ -149,7 +149,7 @@ void Hush::VulkanRenderer::SetActiveScene(Scene *scene)
 		this->m_directionalLight = &lightComponent;
 		this->m_sunTransform = &transformComponent;
 	});
-	LogFormat(ELogLevel::Info, "Setting directional light to {}", reinterpret_cast<uint64_t>(this->m_activeScene));
+	LogFormat(ELogLevel::Info, "Setting directional light to {}", reinterpret_cast<uint64_t>(this->m_directionalLight));
 }
 
 // Called on resize and window init

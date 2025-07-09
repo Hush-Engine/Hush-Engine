@@ -46,6 +46,8 @@ namespace Hush
 		
 		Ref<ImageTexture> LoadTexture(const std::string_view& name, const std::byte* data, const size_t& size);
 
+		void FreePending() override;
+		
 		Ref<Mesh> LoadMesh(const std::string_view& path);
 
 	private:

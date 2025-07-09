@@ -41,10 +41,8 @@ namespace Hush
             m_element(other.m_element),
             m_resourceManager(other.m_resourceManager) 
         {
-            if (!this->IsNull()) {
-                RefCounted* count = m_resourceManager->IncreaseRefCount(m_element);
-                LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", m_element, count->count.load());
-            }
+            RefCounted* count = m_resourceManager->IncreaseRefCount(m_element);
+            LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", m_element, count->count.load());
         }
 
         Ref(Ref&& other) noexcept : 

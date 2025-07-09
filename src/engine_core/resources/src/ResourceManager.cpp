@@ -36,6 +36,14 @@ const Hush::RefCounted& Hush::ResourceManager::GetRefCount(const Hush::HandleId&
 }
 
 
+void Hush::ResourceManager::FreePending() {
+	// TODO: Parallel for
+	for(const HandleId& handle : this->m_deletionQueue) {
+		// Get the ref and call its deleter
+		this->m_references[handle].deleter(reinterpret_cast<void*>(handle));
+	}
+}
+
 Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& name, const std::byte* data, const size_t& size) {
 	const uint64_t nameHash = Hashing::Fnv1a64(name);
 	const auto& iterator = this->m_loadedResources.find(nameHash);
