@@ -6,6 +6,7 @@
 
 #pragma once
 #include "TaskTraits.hpp"
+#include "SelfDeleteTask.hpp"
 
 namespace Hush::Threading
 {
@@ -35,14 +36,26 @@ namespace Hush::Threading
 
 	} // namespace Concepts
 
-	///
-	/// @tparam E Executor
-	/// @param executor Executor to schedule.
-	/// @return
-	template <Concepts::Executor E>
-	typename Concepts::ExecutorTraits<E>::ReturnType Schedule(E &executor)
+	template <typename T>
+	[[nodiscard]]
+	Task<void> RunOn(Hush::Threading::Concepts::Executor auto *executor, Task<T> task)
 	{
-		co_await executor.Schedule();
+		co_await executor->Schedule();
+		co_await task;
+	}
+
+	template <typename T>
+	[[nodiscard]]
+	void SpawnOn(Hush::Threading::Concepts::Executor auto *executor, Task<T> task)
+	{
+		auto wrapperTask = [](Hush::Threading::Concepts::Executor auto *executor, Task<T> t) -> Task<void> {
+			co_await executor->Schedule();
+			co_await t;
+		}(executor, std::move(task));
+		auto selfDeleteTask = MakeSelfDeleteTask(std::move(wrapperTask));
+
+		// Force first run.
+		selfDeleteTask.Resume();
 	}
 
 } // namespace Hush::Threading
