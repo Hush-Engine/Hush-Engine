@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+
+.logo__image {
+    height: 2.5rem !important;
+}
+
+p,
+h1 {
+    font-family: "Montserrat", sans-serif;
+    font-optical-sizing: auto;
+}
+
+a,
+a:visited {
+    color: #BA3193;
+}
+.toc-entry a.nav-link.active:hover {
+    color: #FF7180;
+}
+.toc-entry a.nav-link.active{
+    color: #BA3193;
+}
+
+.prev-next-title {
+    color: #BA3193 !important;
+}
+
+nav.bd-links .current>a {
+    color: #BA3193 !important;
+    box-shadow: inset max(3px, 0.1875rem, 0.12em) 0 0 #8803A0 !important;
+}
+
+nav.bd-links li>a:active,
+nav.bd-links li>a:hover {
+    color: #FF7180;
+}
+
+blockquote {
+    background-color: #ac3e903b !important;
+}
+
+html[data-theme="dark"] nav.contents {
+    background-color: #7e7e7e3b;
+}
+
+html[data-theme="light"] nav.contents {
+    background-color: #c4c0c33b;
+}
+
+h1 {
+    display: inline !important;
+    background: linear-gradient(to right, #8803A0 20%, #FF7180 80%) !important;
+    color: transparent !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+}
+
+html[data-theme="dark"] {
+    background-color: #070912 !important;
+}
+
+.search-button-field {
+    border-radius: 15px;
+    border: 1px solid #B851C9;
+    box-shadow: 0 0 5px 2px #b851c942;
+}
+
+html[data-theme="dark"] .search-button-field {
+    background-color: #0c0f18cc;
+    color: #fff;
+}
+
+html[data-theme="light"] .search-button-field {
+    background-color: #ffffff;
+    color: #222;
+}
+
+html[data-theme="dark"] .kbd-shortcut__modifier {
+    background-color: #0c0f18cc !important;
+}
+html[data-theme="light"] .kbd-shortcut__modifier {
+    background-color: #ffffff !important;
+}
+
+html[data-theme="dark"] .sig-name {
+    color: #c58de6;
+}
+html[data-theme="light"] .sig-name {
+    color: #73309a;
+}
+
+html[data-theme="dark"] code.literal {
+    background-color: #2a2335;
+}
+html[data-theme="light"] code.literal {
+    background-color: #efefef;
+}
+
+.toc-entry a.nav-link:active,
+.toc-entry a.nav-link:hover {
+    color: #BA3193;
+}
+
+.toc-entry a.nav-link.active {
+    box-shadow: inset max(3px, 0.1875rem, 0.12em) 0 0 #8803A0 !important;
+}
+
+a:visited:hover {
+    color: #FF7180;
+}
+
+dl[class]:not(.option-list, .field-list, .footnote, .glossary, .simple) dt.field-even,
+dl[class]:not(.option-list, .field-list, .footnote, .glossary, .simple) dt.field-odd {
+    background-color: #ac3e903b !important;
+}

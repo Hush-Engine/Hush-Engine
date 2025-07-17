@@ -21,6 +21,7 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = []
+html_logo = "_static/logo-hush.png"
 
 
 # html_sidebars = { '**': ['globaltoc.html'] }
@@ -28,7 +29,10 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
-# html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = [
+    'custom.css'
+]
 
 html_theme_options = {
 	# Toc options
