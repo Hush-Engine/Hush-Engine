@@ -45,7 +45,7 @@ TEST_CASE("Threadpool single task execution", "[threadpool]")
 		co_return;
 	};
 
-	Task<void> task = Hush::Threading::Executors::RunOn(&threadPool, taskFunc(taskExecuted));
+	Task<void> task = Hush::Threading::RunOn(&threadPool, taskFunc(taskExecuted));
 
 	Hush::Threading::Wait(task);
 
@@ -80,7 +80,7 @@ TEST_CASE("Threadpool parallel task execution", "[threadpool]")
 
 	for (size_t i = 0; i < NUM_TASKS; ++i)
 	{
-		tasks.push_back(Hush::Threading::Executors::RunOn(&threadPool, taskFunc(threadIds, mutex)));
+		tasks.push_back(Hush::Threading::RunOn(&threadPool, taskFunc(threadIds, mutex)));
 	}
 
 	for (auto &task : tasks)
@@ -117,7 +117,7 @@ TEST_CASE("Threadpool WhenAll", "[threadpool]")
 
 	for (size_t i = 0; i < NUM_TASKS; ++i)
 	{
-		tasks.push_back(Hush::Threading::Executors::RunOn(&threadPool, taskFunc()));
+		tasks.push_back(Hush::Threading::RunOn(&threadPool, taskFunc()));
 	}
 
 	std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
@@ -147,9 +147,7 @@ TEST_CASE("Threadpool parallel for", "[threadpool]")
 	{
 		results.push_back(i);
 	}
-	auto taskFunc = [](int &value) {
-		value += 1;
-	};
+	auto taskFunc = [](int &value) { value += 1; };
 
 	Wait(ParallelFor(&threadPool, results.begin(), results.end(), taskFunc));
 
@@ -157,4 +155,32 @@ TEST_CASE("Threadpool parallel for", "[threadpool]")
 	{
 		REQUIRE(results[i - 1] == i + 1);
 	}
+}
+
+TEST_CASE("Spawn tasks", "[threadpool]")
+{
+	using namespace Hush::Threading;
+	using namespace Hush::Threading::Executors;
+
+	static constexpr uint32_t NUM_THREADS = 4;
+	ThreadPoolOptions options;
+	options.numThreads = NUM_THREADS;
+	auto threadPool = ThreadPool::Create(options);
+
+	bool taskExecuted = false;
+
+	{
+		auto taskFunc = [](bool &executed) -> Task<void> {
+			Hush::LogInfo("Executed task");
+			executed = true;
+			co_return;
+		};
+
+		Hush::Threading::SpawnOn(&threadPool, taskFunc(taskExecuted));
+	}
+
+	// Wait a bit to ensure the task has time to execute
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+	REQUIRE(taskExecuted);
 }

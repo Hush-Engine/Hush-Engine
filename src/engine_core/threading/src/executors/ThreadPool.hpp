@@ -93,12 +93,4 @@ namespace Hush::Threading::Executors
 		std::vector<TaskOperation *> m_globalTasks; // Global task queue for stealing
 		std::barrier<> m_threadsBarrier;			// Used to synchronize thread start/stop
 	};
-
-	template <typename T>
-	[[nodiscard]]
-	Task<void> RunOn(Hush::Threading::Concepts::Executor auto *executor, Task<T> task)
-	{
-		co_await executor->Schedule();
-		co_await task;
-	}
 } // namespace Hush::Threading::Executors
