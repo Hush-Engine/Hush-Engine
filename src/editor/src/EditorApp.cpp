@@ -3,6 +3,7 @@
 // Created by Alan5 on 22/09/2024.
 //
 
+#include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "Scene.hpp"
@@ -19,7 +20,7 @@ class EditorApp final : public Hush::IApplication
 {
 public:
 	EditorApp(Hush::HushEngine *engine)
-		: m_scene(std::make_unique<Hush::Scene>(engine))
+		: m_scene(std::make_unique<Hush::Scene>(engine, engine->GetEngineThreadPool()))
 	{
 	}
 

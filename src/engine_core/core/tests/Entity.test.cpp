@@ -10,7 +10,10 @@
 
 TEST_CASE("Entity creation", "[entity]")
 {
-	Hush::Scene scene(nullptr);
+	using Hush::Threading::Executors::ThreadPool;
+
+	ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+	Hush::Scene scene(nullptr, &threadPool);
 
 	Hush::Entity entity = scene.CreateEntity();
 	Hush::Entity entity2 = scene.CreateEntityWithName("MyEntity");
@@ -58,7 +61,12 @@ TEST_CASE("Entity with components", "[entity]")
 
 	SECTION("EmplaceComponent")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
+
 		Hush::Entity entity = scene.CreateEntity();
 		entity.EmplaceComponent<Position>(1.0f, 2.0f);
 
@@ -73,7 +81,11 @@ TEST_CASE("Entity with components", "[entity]")
 
 	SECTION("AddComponent")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 		Hush::Entity entity = scene.CreateEntity();
 		entity.AddComponent<TestA>();
 
@@ -85,7 +97,10 @@ TEST_CASE("Entity with components", "[entity]")
 
 	SECTION("RemoveComponent")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 		Hush::Entity entity = scene.CreateEntity();
 		entity.EmplaceComponent<Position>(1.0f, 2.0f);
 
@@ -95,7 +110,11 @@ TEST_CASE("Entity with components", "[entity]")
 
 	SECTION("RemoveComponentNotAdded")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 		Hush::Entity entity = scene.CreateEntity();
 
 		REQUIRE_FALSE(entity.RemoveComponent<Position>());
@@ -103,7 +122,11 @@ TEST_CASE("Entity with components", "[entity]")
 
 	SECTION("RemoveComponentTwice")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 		Hush::Entity entity = scene.CreateEntity();
 		entity.EmplaceComponent<Position>(1.0f, 2.0f);
 
