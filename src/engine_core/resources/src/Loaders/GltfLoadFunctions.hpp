@@ -4,10 +4,13 @@
 #include <filesystem>
 #include <glm/mat4x4.hpp>
 #include <span>
+#include <string_view>
 #include <vector>
+#include "Ref.hpp"
+#include "ResourceManager.hpp"
 #include "Result.hpp"
-#include "MaterialPass.hpp"
-#include "ImageTexture.hpp"
+#include "Shared/MaterialPass.hpp"
+#include "Shared/ImageTexture.hpp"
 #include "Logger.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include <magic_enum/magic_enum.hpp>
@@ -32,8 +35,8 @@ namespace Hush::GltfLoadFunctions
 
 	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType);
 	
-	std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
-															 const fastgltf::Image &image);
+	Ref<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
+															 const fastgltf::Image &image, const std::string_view& localName, ResourceManager* resourceManager);
 
 	EError SetMaterialTextures(GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset,
 							   const fastgltf::Material &material, const void *loadedTextures);

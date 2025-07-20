@@ -6,6 +6,7 @@
 #include "Shared/IMaterial3D.hpp"
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
@@ -23,7 +24,7 @@
 #include <fastgltf/tools.hpp>
 #include <fastgltf/core.hpp>
 #include "Shared/ImageTexture.hpp"
-#include "Shared/GltfLoadFunctions.hpp"
+#include "Loaders/GltfLoadFunctions.hpp"
 #include "Components/MeshReference.hpp"
 #include "../../core/src/Scene.hpp"
 
@@ -112,11 +113,13 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 {
 	std::vector<GpuAllocatedImage> loadedTexturesResult;
 	loadedTexturesResult.reserve(asset.images.size());
+	int32_t counter = 0;
 	for (const fastgltf::Image &image : asset.images)
 	{
-		std::shared_ptr<ImageTexture> texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image);
-		GpuAllocatedImage loadedImage = LoadTexture(engine, *texture);
+		Ref<ImageTexture> texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image, std::to_string(counter), this->m_resourceManager);
+		GpuAllocatedImage loadedImage = LoadTexture(engine, *texture.Get());
 		loadedTexturesResult.emplace_back(loadedImage);
+		counter++;
 	}
 	return loadedTexturesResult;
 }
@@ -126,7 +129,7 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 {
 	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
 	// Load a mesh through the resource loader
-	Ref<Mesh> meshAsset = {this->m_resourceManager, new Mesh()};
+	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
 
 	meshAsset->SetName(mesh.name);
 

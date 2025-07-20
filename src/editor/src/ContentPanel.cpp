@@ -8,7 +8,7 @@
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "Result.hpp"
-#include "Shared/Mesh.hpp"
+#include "Loaders/GltfLoadFunctions.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
@@ -16,7 +16,6 @@
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
-#include "Shared/GltfLoadFunctions.hpp"
 #include <cstddef>
 #include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
@@ -197,7 +196,7 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const Fi
 			std::string textName;
 			if (image.name.empty()) {
 				// I know, I know
-					textName = fileData.path.stem().string()
+				textName = fileData.path.stem().string()
 					.append("_")
 					.append(std::to_string(cntr))
 					.append(".")

@@ -48,11 +48,12 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 	const uint64_t nameHash = Hashing::Fnv1a64(name);
 	const auto& iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end()) {
-		HandleId handle = this->m_loadedResources[nameHash];
+		HandleId handle = iterator->second;
 		auto* texture = reinterpret_cast<ImageTexture*>(handle);
 		return {this, texture};
 	}
 	auto* texture = new ImageTexture(data, size);
+	this->m_loadedResources[nameHash] = reinterpret_cast<HandleId>(texture);
 	return {this, texture};
 }
 
@@ -71,6 +72,7 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 		return {this, texture};
 	}
 	auto* texture = new ImageTexture(resolvedPath.value());
+	this->m_loadedResources[pathHash] = reinterpret_cast<HandleId>(texture);
 	return {this, texture};
 }
 

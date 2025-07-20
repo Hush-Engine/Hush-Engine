@@ -1,6 +1,6 @@
 #include "GltfLoadFunctions.hpp"
 #include "Assertions.hpp"
-#include "Logger.hpp"
+#include "ResourceManager.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
@@ -11,7 +11,6 @@
 #include <vector>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
-#include "MaterialPass.hpp"
 
 
 fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(const std::filesystem::path& file) {
@@ -166,22 +165,22 @@ std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fas
 	return {};
 }
 
-std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
-																						const fastgltf::Image &image)
+Hush::Ref<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
+																						const fastgltf::Image &image, const std::string_view& localName, ResourceManager* resourceManager)
 {
 	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
 	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
 	if (!byteBuffer.empty()) {
-		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
+		return resourceManager->AllocateRef<ImageTexture>(localName, byteBuffer.data(), byteBuffer.size());
 	}
 	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
 	
 	// TODO: support for file byte offset
 	if (uriData == nullptr || uriData->fileByteOffset > 0)
 	{
-		return nullptr;
+		return {};
 	}
-	return std::make_shared<ImageTexture>(uriData->uri.fspath());
+	return resourceManager->AllocateRef<ImageTexture>(localName, uriData->uri.fspath());
 }
 
 Hush::Result<const std::byte *, Hush::GltfLoadFunctions::EError> Hush::GltfLoadFunctions::GetDataFromBufferSource(
