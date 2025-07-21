@@ -43,6 +43,10 @@ namespace Hush
 		}
 		using EntityId = std::uint64_t;
 
+		constexpr static EntityId INVALID_ENTITY = 0;
+
+		constexpr static size_t MAX_ENTITY_NAME_LENGTH = 512; // Let's do like half a kB
+
 		/// Entity destructor. It does not destroy the entity. For that, use `Scene::DestroyEntity`.
 		~Entity() noexcept = default;
 

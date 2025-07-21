@@ -8,6 +8,7 @@
 #include "FileSystem.hpp"
 #include "IFile.hpp"
 #include "Result.hpp"
+#include <filesystem>
 #include <string_view>
 #include <vector>
 #include <optional>
@@ -73,6 +74,8 @@ namespace Hush
 		// Public facing API, will call ResolveFileSystem
 		Result<std::string_view, EError> ResolveVirtualPath(const std::string_view& path);
 
+		Result<FileInfo, IFile::EError> GetFirstMatchingSubstr(const std::filesystem::path& parent, const std::string_view& stemSubstr);
+		
 	private:
 		void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);
 

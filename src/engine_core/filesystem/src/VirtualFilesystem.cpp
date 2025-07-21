@@ -13,7 +13,7 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
-#include "Assertions.hpp"
+#include "StringUtils.hpp"
 #include "IFile.hpp"
 
 Hush::VirtualFilesystem::VirtualFilesystem() = default;
@@ -125,3 +125,31 @@ std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::Re
 
 	return {};
 }
+
+
+Hush::Result<Hush::FileInfo, Hush::IFile::EError> Hush::VirtualFilesystem::GetFirstMatchingSubstr(const std::filesystem::path& parent, const std::string_view& path) {
+	if (!std::filesystem::exists(parent)) {
+		return IFile::EError::PathDoesntExist;
+	}
+
+	// Get the parent path's iterator
+	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(parent)) {
+		std::string stem = entry.path().stem().string();
+		if (stem.find(path) == std::string::npos) {
+			continue;
+		}
+		std::string extension = entry.path().extension().string();
+		std::string rawExtension = StringUtils::ToUpper(StringUtils::SubstrView(extension, 1, static_cast<int32_t>(extension.size())));
+		
+		return FileInfo {
+			.path = entry.path(),
+			.size = entry.file_size(),
+			.flags = EFileFlags::File,
+			.extension = IFileSystem::ToKnownExtension(rawExtension)
+		};
+	}
+	
+	return IFile::EError::FileDoesntExist;
+}
+
+

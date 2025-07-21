@@ -93,7 +93,7 @@ Hush::Result<std::vector<Hush::FileInfo>, Hush::IFile::EError> Hush::CFileSystem
 		if (entry.path().has_extension()){
 			std::string extensionWithDot = entry.path().extension().string();
 			std::string rawExtension = StringUtils::ToUpper(StringUtils::SubstrView(extensionWithDot, 1, static_cast<int32_t>(extensionWithDot.size())));
-			metadata.extension = this->ToKnownExtension(rawExtension);
+			metadata.extension = ToKnownExtension(rawExtension);
 		}
 		result.emplace_back(metadata);
 	}

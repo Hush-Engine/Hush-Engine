@@ -57,7 +57,7 @@ namespace Hush
 		/// Lists all the contents of a specific path
 		virtual Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view& path) = 0;
 
-		EFileExtension ToKnownExtension(const std::string_view& extensionRaw) {
+		static inline EFileExtension ToKnownExtension(const std::string_view& extensionRaw) {
 			// TODO: Handle unknown cases
 			return static_cast<EFileExtension>(Hashing::Fnv1a(extensionRaw));
 		}

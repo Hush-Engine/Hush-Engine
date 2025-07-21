@@ -38,7 +38,7 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 	this->m_scene = activeScene;
 	// this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
 	// this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
-	this->m_modelLoader.SetResourceManager(this->m_resourceManager);
+	this->m_modelLoader.SetResourceManager(this->m_resourceManager, this->m_filesystem);
 }
 
 void Hush::ContentPanel::OnRender() {

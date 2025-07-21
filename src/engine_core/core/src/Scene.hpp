@@ -16,6 +16,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -104,6 +105,8 @@ namespace Hush
 		void RegisterComponentId(std::string_view name, Entity::EntityId id);
 
 		std::optional<Entity> EntityFromId(EntityId id);
+
+		Entity FindEntityByName(const std::string_view& name);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;

@@ -2,11 +2,13 @@
 
 #include "Entity.hpp"
 #include "Renderer.hpp"
-#include "ResourceManager.hpp"
+#include "Shared/ImageTexture.hpp"
 #include <vector>
 
 namespace Hush {
 	class IRenderer;
+	class ResourceManager;
+	class VirtualFilesystem;
 	class IModelLoader {
 	public:
 
@@ -26,7 +28,7 @@ namespace Hush {
 
 		IModelLoader() = default;
 
-		virtual void SetResourceManager(ResourceManager* resourceManager) = 0;
+		virtual void SetResourceManager(ResourceManager* resourceManager, VirtualFilesystem* filesystem) = 0;
 
 		[[nodiscard]] virtual ResourceManager* GetResourceManager() const = 0;
 

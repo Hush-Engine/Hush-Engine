@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
-#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -63,12 +62,13 @@ namespace Hush
 			if (iterator != this->m_loadedResources.end())
 			{
 				HandleId handle = iterator->second;
-				auto *texture = reinterpret_cast<T *>(handle);
-				return {this, texture};
+				auto *instance = reinterpret_cast<T *>(handle);
+				return {this, instance};
 			}
-			Ref<T> result = {this, new T(std::forward<Args>(args)...)};
-			this->m_loadedResources[hash] = reinterpret_cast<HandleId>(result.Get());
-			return result;
+			// NOLINTNEXTLINE
+			T* instance = new T(std::forward<Args>(args)...);
+			this->m_loadedResources[hash] = reinterpret_cast<HandleId>(instance);
+			return {this, instance};
 		}
 
 	private:

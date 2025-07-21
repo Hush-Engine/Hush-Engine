@@ -7,6 +7,7 @@
 #include "Scene.hpp"
 #include "ISystem.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <flecs/addons/flecs_c.h>
 
 #define FLECS_NO_CPP
 #include <flecs.h>
@@ -158,6 +159,10 @@ void Hush::Scene::RegisterComponentId(std::string_view name, Entity::EntityId id
 {
 	std::unique_lock lock(m_registeredEntitiesMutex);
 	m_registeredEntities.insert_or_assign(name.data(), id);
+}
+
+Hush::Entity Hush::Scene::FindEntityByName(const std::string_view& name) {
+	return Entity { this, ecs_lookup(static_cast<ecs_world_t*>(this->m_world), name.data()) };
 }
 
 std::optional<Hush::Entity> Hush::Scene::EntityFromId(EntityId id)

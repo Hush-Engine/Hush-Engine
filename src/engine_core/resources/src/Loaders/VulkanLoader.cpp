@@ -1,12 +1,17 @@
 #include "Assertions.hpp"
 #include "Components/LocalTransform.hpp"
+#include "IFile.hpp"
 #include "Loaders/IModelLoader.hpp"
 #include "Ref.hpp"
 #include "Renderer.hpp"
+#include "Result.hpp"
 #include "Shared/IMaterial3D.hpp"
+#include "VirtualFilesystem.hpp"
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
@@ -29,8 +34,9 @@
 #include "../../core/src/Scene.hpp"
 
 
-void Hush::VulkanLoader::SetResourceManager(ResourceManager* resourceManager) {
+void Hush::VulkanLoader::SetResourceManager(ResourceManager* resourceManager, VirtualFilesystem* filesystem) {
 	this->m_resourceManager = resourceManager;
+	this->m_filesystem = filesystem;
 }
 
 Hush::ResourceManager *Hush::VulkanLoader::GetResourceManager() const {
@@ -50,15 +56,30 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
 	// HUSH_ASSERT(loadedAsset->meshes.size() != loadedAsset->nodes.size(), "Meshes vector size does not match nodes
 	// size");
+	
+	std::array<char, Entity::MAX_ENTITY_NAME_LENGTH> nameBuffer{};
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
-		Entity entity = activeScene->CreateEntityWithName(mesh.name.empty() ? "LoadedMesh" : mesh.name);
+		if (mesh.name.empty()) {
+			constexpr std::string_view defaultName = "LoadedMesh";
+			strcpy_s(nameBuffer.data(), nameBuffer.size(), defaultName.data());
+		}
+		else {
+			strcpy_s(nameBuffer.data(), nameBuffer.size(), mesh.name.c_str());
+		}
+		Entity entity = activeScene->FindEntityByName(nameBuffer.data());
+		if (entity.GetId() != Entity::INVALID_ENTITY) {
+			// We need to append something to its name
+			constexpr std::string_view suffix = "_cpy";
+			strcpy_s(nameBuffer.data() + entity.GetName()->size(), nameBuffer.size() - entity.GetName()->size(), suffix.data());
+		}
+		entity = activeScene->CreateEntityWithName(nameBuffer.data());
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// This also adds the component to the entity
 		// TODO: We should probably change this so that it returns void and we add the component a line before calling
 		// the function
-		this->CreateMeshFromGltfMesh(mesh, loadedAsset.get(), entity, engine);
+		this->CreateMeshFromGltfMesh(mesh, loadedAsset.get(), entity, engine, filePath);
 		entities.emplace_back(std::move(entity));
 	}
 
@@ -109,23 +130,39 @@ Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(Hush::IRenderer *engine,
 }
 
 std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset,
-																		 IRenderer *engine)
+																		 IRenderer *engine, const std::filesystem::path& filePath)
 {
 	std::vector<GpuAllocatedImage> loadedTexturesResult;
 	loadedTexturesResult.reserve(asset.images.size());
-	int32_t counter = 0;
-	for (const fastgltf::Image &image : asset.images)
+	std::string textQuery;
+	for (size_t i = 0; i < asset.images.size(); i++)
 	{
-		Ref<ImageTexture> texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image, std::to_string(counter), this->m_resourceManager);
+		const fastgltf::Image& image = asset.images[i];
+		textQuery = filePath.stem().string()
+			.append("_")
+			.append(std::to_string(i));
+		
+		// Check if anything matches the textQuery
+		Result<FileInfo, IFile::EError> textureFileRes = this->m_filesystem->GetFirstMatchingSubstr(filePath.parent_path(), textQuery);
+		
+		Ref<ImageTexture> texture{};
+		if (textureFileRes.has_error()) {
+			// The mesh doesn't have a pre-generated texture, so we can safely fallback to the gltf data source
+			texture = GltfLoadFunctions::TextureFromImageDataSource(asset, image, textQuery, this->m_resourceManager);
+		}
+		else {
+			// We use the pre-generated file, mostly bc it will already have calculated mipmaps and all that fancy stuff
+			texture = this->m_resourceManager->LoadTexture(textureFileRes.value().path.string());
+		}
+		
 		GpuAllocatedImage loadedImage = LoadTexture(engine, *texture.Get());
 		loadedTexturesResult.emplace_back(loadedImage);
-		counter++;
 	}
 	return loadedTexturesResult;
 }
 
 Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
-													   Entity &entityRef, IRenderer *engine)
+													   Entity &entityRef, IRenderer *engine, const std::filesystem::path& filePath)
 {
 	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
 	// Load a mesh through the resource loader
@@ -148,7 +185,7 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	DescriptorAllocatorGrowable descriptorPool;
 	descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
-	std::vector<GpuAllocatedImage> loadedTextures = this->LoadAllTextures(asset, rendererImpl);
+	std::vector<GpuAllocatedImage> loadedTextures = this->LoadAllTextures(asset, rendererImpl, filePath);
 	std::unordered_map<std::uintptr_t, std::shared_ptr<IMaterial3D>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)

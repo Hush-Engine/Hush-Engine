@@ -53,6 +53,35 @@ namespace Hush
             other.m_element = INVALID_HANDLE;
             other.m_resourceManager = nullptr;
         }
+
+        
+		Ref& operator=(const Ref& other) {
+		    if (this == &other) {
+		        return *this;
+		    }
+
+		    HandleId previousElement = this->m_element;
+		    IResourceManager* previousMananger = this->m_resourceManager;
+
+		    // Only increase ref count if source is valid (not scheduled for deletion)
+		    if (!other.IsNull()) { // We actually sort of need to test this tbh
+		        other.m_resourceManager->IncreaseRefCount(other.m_element);
+        
+		        this->m_element = other.m_element;
+		        this->m_resourceManager = other.m_resourceManager;
+		    }
+		    else {
+		        this->m_element = INVALID_HANDLE;
+		        this->m_resourceManager = nullptr;
+		    }
+
+		    // Release previous resource
+		    if (previousElement != INVALID_HANDLE && previousMananger != nullptr) {
+		        previousMananger->DecreaseRefCount(previousElement);
+		    }
+
+		    return *this;
+		}		
 		
 		Ref(IResourceManager* resourceManager, T* resource) {
 			this->m_element = reinterpret_cast<HandleId>(resource);
