@@ -6,12 +6,16 @@
 
 #pragma once
 
+#include "Assertions.hpp"
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <optional>
+#include "Assertions.hpp"
 #include <string_view>
 
 namespace Hush
@@ -20,7 +24,7 @@ namespace Hush
 
 	template <typename... Components>
 	class Query;
-
+	
 	///
 	/// Describes an entity in the scene.
 	/// An entity is something that exists in the scene. It can have components attached to it.
@@ -36,16 +40,29 @@ namespace Hush
 	class [[hush::export]] Entity
 	{
 	public:
+		constexpr static size_t MAX_ENTITY_NAME_LENGTH = 32;
+		using EntityId = std::uint64_t;
+		constexpr static EntityId INVALID_ENTITY = 0;
+
+		/// @brief Component that holds the name of an entity
+		struct Name {
+			std::array<char, MAX_ENTITY_NAME_LENGTH> name{};
+			std::string_view nameView;
+
+			Name(const std::string_view& name) {
+				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
+				strcpy_s(this->name.data(), this->name.size(), name.data());
+				this->nameView = name.data();
+			}
+		};
+
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)
 			: m_entityId(entityId),
 			  m_ownerScene(ownerScene)
 		{
 		}
-		using EntityId = std::uint64_t;
 
-		constexpr static EntityId INVALID_ENTITY = 0;
 
-		constexpr static size_t MAX_ENTITY_NAME_LENGTH = 512; // Let's do like half a kB
 
 		/// Entity destructor. It does not destroy the entity. For that, use `Scene::DestroyEntity`.
 		~Entity() noexcept = default;
@@ -220,8 +237,8 @@ namespace Hush
 
 		/// Get the name of the entity.
 		/// @return Name of the entity.
-		[[nodiscard]]
-		std::optional<std::string_view> GetName() const;
+		// [[nodiscard]]
+		// std::optional<std::string_view> GetName() const;
 
 	private:
 		friend class Scene;

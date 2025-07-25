@@ -25,8 +25,8 @@ TEST_CASE("Entity creation", "[entity]")
 
 	SECTION("CreateEntityWithName")
 	{
-		REQUIRE(entity2.GetName().has_value());
-		REQUIRE(entity2.GetName().value() == "MyEntity");
+		REQUIRE(entity2.GetComponent<Hush::Entity::Name>() != nullptr);
+		REQUIRE(entity2.GetComponent<Hush::Entity::Name>()->nameView == "MyEntity");
 	}
 
 	SECTION("DifferentEntities")

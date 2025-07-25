@@ -16,6 +16,7 @@
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
+#include "StringUtils.hpp"
 #include <cstddef>
 #include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
@@ -25,6 +26,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
 
@@ -46,7 +48,7 @@ void Hush::ContentPanel::OnRender() {
 	{        
 		if (this->m_dirty) {
 			this->RefreshDirectory();
-			// this->GenerateMetaFiles();
+			this->GenerateMetaFiles();
 			UI::S_INITIALIZED = true;
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
@@ -171,7 +173,7 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const Fi
 
 	case EFileExtension::UNKWOWN:
 	case EFileExtension::PNG:
-	case EFileExtension::JPEG:
+	case EFileExtension::JPG:
 	case EFileExtension::TXT:
 	case EFileExtension::PDF:
 	case EFileExtension::CSHARP:
@@ -195,12 +197,13 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const Fi
 			std::filesystem::path parentDir = fileData.path.parent_path();
 			std::string textName;
 			if (image.name.empty()) {
+				std::string_view mimeUpper = magic_enum::enum_name(mimeType);
 				// I know, I know
 				textName = fileData.path.stem().string()
 					.append("_")
 					.append(std::to_string(cntr))
 					.append(".")
-					.append(magic_enum::enum_name(mimeType));
+					.append(StringUtils::ToLower(mimeUpper));
 			}
 			else {
 				textName = image.name;

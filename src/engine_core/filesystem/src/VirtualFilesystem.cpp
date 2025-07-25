@@ -127,7 +127,7 @@ std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::Re
 }
 
 
-Hush::Result<Hush::FileInfo, Hush::IFile::EError> Hush::VirtualFilesystem::GetFirstMatchingSubstr(const std::filesystem::path& parent, const std::string_view& path) {
+Hush::Result<Hush::FileInfo, Hush::IFile::EError> Hush::VirtualFilesystem::GetFirstMatchingSubstr(const std::filesystem::path& parent, const std::string_view& stemSubstr) {
 	if (!std::filesystem::exists(parent)) {
 		return IFile::EError::PathDoesntExist;
 	}
@@ -135,7 +135,7 @@ Hush::Result<Hush::FileInfo, Hush::IFile::EError> Hush::VirtualFilesystem::GetFi
 	// Get the parent path's iterator
 	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(parent)) {
 		std::string stem = entry.path().stem().string();
-		if (stem.find(path) == std::string::npos) {
+		if (stem.find(stemSubstr) == std::string::npos) {
 			continue;
 		}
 		std::string extension = entry.path().extension().string();

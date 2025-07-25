@@ -77,19 +77,19 @@ Hush::Entity::EntityId Hush::Entity::GetId() const
 	return m_entityId;
 }
 
-std::optional<std::string_view> Hush::Entity::GetName() const
-{
-	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+// std::optional<std::string_view> Hush::Entity::GetName() const
+// {
+// 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
-	const char *name = ecs_get_name(world, m_entityId);
+// 	const char *name = ecs_get_name(world, m_entityId);
 
-	if (name == nullptr)
-	{
-		return std::nullopt;
-	}
+// 	if (name == nullptr)
+// 	{
+// 		return std::nullopt;
+// 	}
 
-	return std::string_view(name);
-}
+// 	return std::string_view(name);
+// }
 
 void *Hush::Entity::GetSceneWorld() const
 {

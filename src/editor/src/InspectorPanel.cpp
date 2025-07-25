@@ -2,6 +2,7 @@
 #include "Assertions.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
 #include "InputManager.hpp"
 #include "Renderer.hpp"
@@ -56,7 +57,6 @@ void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
 	{
 		return;
 	}
-	const float range = 10.0F;
 
 	// Albedo color
 	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
@@ -175,7 +175,11 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 
 void Hush::InspectorPanel::RenderProperties()
 {
-	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
+	if (this->m_targetName.empty()) {
+		const Entity::Name* enttNameComp = this->m_inspectTarget->GetComponent<Entity::Name>();
+		this->m_targetName = enttNameComp->name.data();
+	}
+	ImGui::SeparatorText(this->m_targetName.data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
@@ -190,7 +194,7 @@ void Hush::InspectorPanel::RenderProperties()
 	MeshReference *meshComponent = this->m_inspectTarget->GetComponent<MeshReference>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent, this->m_inspectTarget.value().GetName().value().data());
+		Serialize(meshComponent, this->m_targetName.data());
 	}
 }
 

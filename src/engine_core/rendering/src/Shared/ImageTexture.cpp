@@ -13,7 +13,8 @@ Hush::ImageTexture::ImageTexture(const std::filesystem::path &filePath)
 {
 	HUSH_ASSERT(std::filesystem::exists(filePath), "Image texture path is not valid!");
 	int32_t componentCount = 0;
-	void *rawData = stbi_load(filePath.string().c_str(), &this->m_width, &this->m_height, &componentCount, 0);
+	std::string filePathNormalized = filePath.generic_string();
+	void *rawData = stbi_load(filePathNormalized.c_str(), &this->m_width, &this->m_height, &componentCount, 0);
 	this->m_data = std::unique_ptr<std::byte>(static_cast<std::byte *>(rawData));
 	(void)componentCount;
 }

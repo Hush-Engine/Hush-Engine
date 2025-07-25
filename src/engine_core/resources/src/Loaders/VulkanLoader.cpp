@@ -1,5 +1,7 @@
 #include "Assertions.hpp"
 #include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "IFile.hpp"
 #include "Loaders/IModelLoader.hpp"
 #include "Ref.hpp"
@@ -10,9 +12,11 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
 #include "VulkanLoader.hpp"
@@ -67,13 +71,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 		else {
 			strcpy_s(nameBuffer.data(), nameBuffer.size(), mesh.name.c_str());
 		}
-		Entity entity = activeScene->FindEntityByName(nameBuffer.data());
-		if (entity.GetId() != Entity::INVALID_ENTITY) {
-			// We need to append something to its name
-			constexpr std::string_view suffix = "_cpy";
-			strcpy_s(nameBuffer.data() + entity.GetName()->size(), nameBuffer.size() - entity.GetName()->size(), suffix.data());
-		}
-		entity = activeScene->CreateEntityWithName(nameBuffer.data());
+		Entity entity = activeScene->CreateEntityWithName(nameBuffer.data());
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// This also adds the component to the entity
@@ -152,6 +150,12 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 		}
 		else {
 			// We use the pre-generated file, mostly bc it will already have calculated mipmaps and all that fancy stuff
+			Result<std::unique_ptr<IFile>, IFile::EError> openFileRes = this->m_filesystem->OpenFile(textureFileRes.value().path.string(), EFileOpenMode::Read);
+			HUSH_RESULT_ASSERT(openFileRes, "Could not open pre generated texture file, the file could be corrupted or not in a supported format");
+			std::vector<std::byte> buffer;
+			buffer.reserve(textureFileRes.value().size);
+			std::span<std::byte> bufferSpan{buffer};
+			openFileRes.value()->Read(buffer);
 			texture = this->m_resourceManager->LoadTexture(textureFileRes.value().path.string());
 		}
 		
