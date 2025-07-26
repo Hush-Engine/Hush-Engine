@@ -1,5 +1,6 @@
 #include "ResourceManager.hpp"
 #include "Assertions.hpp"
+#include "IFile.hpp"
 #include "IResourceManager.hpp"
 #include "Ref.hpp"
 #include "Result.hpp"
@@ -52,6 +53,7 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 		auto* texture = reinterpret_cast<ImageTexture*>(handle);
 		return {this, texture};
 	}
+	// NOLINTNEXTLINE
 	auto* texture = new ImageTexture(data, size);
 	this->m_loadedResources[nameHash] = reinterpret_cast<HandleId>(texture);
 	return {this, texture};
@@ -60,10 +62,16 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& path) {
 	// Allocate the image texture and load it using the file system
 	// Resolve the virtual path as an absolute path
-	Result<std::string_view, VirtualFilesystem::EError> resolvedPath = this->m_filesystem->ResolveVirtualPath(path);
-	HUSH_RESULT_ASSERT(resolvedPath, "Failed to load texture at {}", path);
+	Result<std::unique_ptr<IFile>, IFile::EError> openFileRes = this->m_filesystem->OpenFile(path, EFileOpenMode::Read);
+	HUSH_RESULT_ASSERT(openFileRes, "Failed to load texture at {}", path);
+	std::vector<std::byte> buffer;
+	const FileInfo& fileInfo = openFileRes.value()->GetFileInfo();
+	buffer.resize(fileInfo.size);
+	std::span<std::byte> bufferSpan{buffer};
+	const auto readResult = openFileRes.value()->Read(bufferSpan);
+	HUSH_RESULT_ASSERT(readResult, "Failed to read texture at {}", path);
 	
-	const uint64_t pathHash = Hashing::Fnv1a64(resolvedPath.value());
+	const uint64_t pathHash = Hashing::Fnv1a64(fileInfo.path.string());
 	const auto& iterator = this->m_loadedResources.find(pathHash);
 	
 	if (iterator != this->m_loadedResources.end()) {
@@ -71,7 +79,9 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 		auto* texture = reinterpret_cast<ImageTexture*>(handle);
 		return {this, texture};
 	}
-	auto* texture = new ImageTexture(resolvedPath.value());
+	// NOLINTNEXTLINE
+	auto* texture = new ImageTexture(bufferSpan.data(), bufferSpan.size());
+	openFileRes.value()->Close();
 	this->m_loadedResources[pathHash] = reinterpret_cast<HandleId>(texture);
 	return {this, texture};
 }

@@ -88,6 +88,7 @@ namespace Hush
 			this->m_resourceManager = resourceManager;
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted* count = this->m_resourceManager->IncreaseRefCount(this->m_element);
+			count->element = static_cast<void*>(resource);
 			LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", this->m_element, count->count.load());
 			if (count->deleter == nullptr) {
 				count->deleter = [](void* ptr) {

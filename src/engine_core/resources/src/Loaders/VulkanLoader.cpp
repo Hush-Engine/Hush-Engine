@@ -150,12 +150,6 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 		}
 		else {
 			// We use the pre-generated file, mostly bc it will already have calculated mipmaps and all that fancy stuff
-			Result<std::unique_ptr<IFile>, IFile::EError> openFileRes = this->m_filesystem->OpenFile(textureFileRes.value().path.string(), EFileOpenMode::Read);
-			HUSH_RESULT_ASSERT(openFileRes, "Could not open pre generated texture file, the file could be corrupted or not in a supported format");
-			std::vector<std::byte> buffer;
-			buffer.reserve(textureFileRes.value().size);
-			std::span<std::byte> bufferSpan{buffer};
-			openFileRes.value()->Read(buffer);
 			texture = this->m_resourceManager->LoadTexture(textureFileRes.value().path.string());
 		}
 		
