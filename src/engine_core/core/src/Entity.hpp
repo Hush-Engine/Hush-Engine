@@ -47,12 +47,10 @@ namespace Hush
 		/// @brief Component that holds the name of an entity
 		struct Name {
 			std::array<char, MAX_ENTITY_NAME_LENGTH> name{};
-			std::string_view nameView;
 
 			Name(const std::string_view& name) {
 				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
 				strcpy_s(this->name.data(), this->name.size(), name.data());
-				this->nameView = name.data();
 			}
 		};
 

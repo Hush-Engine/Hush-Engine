@@ -24,9 +24,7 @@ target_link_libraries(HushCore PUBLIC flecs::flecs_static
         Hush::Utils
         Hush::Log
         zadeh
-        rapidjson
-        absl::base
-        absl::flat_hash_map)
+        rapidjson)
 
 add_test_target(
         TARGET_NAME HushCoreTest

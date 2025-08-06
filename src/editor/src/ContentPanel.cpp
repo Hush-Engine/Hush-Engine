@@ -3,6 +3,7 @@
 #include "Components/WorldTransform.hpp"
 #include "FileMetadata.hpp"
 #include "IFile.hpp"
+#include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Query.hpp"
 #include "Ref.hpp"
@@ -58,21 +59,28 @@ void Hush::ContentPanel::OnRender() {
 		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
 			const auto* data = reinterpret_cast<const FileInfo*>(payload->Data);
 			if (CanBeDroppedToScene(*data)) {
-				IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-				auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
-				HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
-				// Use the Model Loader interface to get entities and then forward that to the renderer
-				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-				// Very very bad code, we should change it before a PR
-				for (Entity& entt : result.value()) {
-					renderer->PushMesh(entt.GetComponent<WorldTransform>(), entt.GetComponent<MeshReference>()->GetMesh().Get());
-				}
+				DropResourceToScene(data);
 			}
 		}
 	}
 	ImGui::End();
 }
 
+
+
+void Hush::ContentPanel::DropResourceToScene(const FileInfo* data) {	
+	IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+	auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
+	HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
+	// Use the Model Loader interface to get entities and then forward that to the renderer
+	LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
+	// Set the inspect target to the first entity, which should be the root parent
+	UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(result.value()[0].GetId());
+	// Very very bad code, we should change it before a PR
+	for (Entity& entt : result.value()) {
+		renderer->PushMesh(entt.GetComponent<WorldTransform>(), entt.GetComponent<MeshReference>()->GetMesh().Get());
+	}
+}
 
 void Hush::ContentPanel::DrawFiles(bool isMouseInScene) {
 	ImVec2 regionDimensions = ImGui::GetContentRegionAvail();

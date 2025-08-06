@@ -21,6 +21,7 @@ namespace Hush
 		}
 
 		inline ~Ref() {
+			if (this->IsNull()) return;
 			RefCounted* count = this->m_resourceManager->DecreaseRefCount(this->m_element);
 			LogFormat(ELogLevel::Info, "Decreased ref count of {} to: {}", this->m_element, count->count.load());
 		}
@@ -31,8 +32,7 @@ namespace Hush
 
 		inline bool IsNull() const {
 			// TODO: Invalidate when the count reaches 0 even when in the middle of the frame
-			const RefCounted& counter = this->m_resourceManager->GetRefCount(this->m_element);
-			return this->m_element == INVALID_HANDLE || counter.element == nullptr || counter.count == 0;
+			return this->m_element == INVALID_HANDLE || this->m_resourceManager->GetRefCount(this->m_element).IsNull();
 		}		
 
 		Ref() = default;

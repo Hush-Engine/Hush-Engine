@@ -30,7 +30,7 @@ namespace Hush
 		
 		std::optional<Entity> m_inspectTarget = std::nullopt;
 
-		std::string_view m_targetName;
+		Entity::Name* m_targetName;
 
 		EditorInfo* m_editorInfo = nullptr;
 

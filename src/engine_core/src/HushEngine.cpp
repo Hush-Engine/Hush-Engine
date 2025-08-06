@@ -55,7 +55,7 @@ void Hush::HushEngine::Run()
 
 		this->m_app->OnPostRender();
 
-		this->m_app->DisposeFrame();
+		// this->m_app->DisposeFrame();
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		elapsed = end - start;
 	}

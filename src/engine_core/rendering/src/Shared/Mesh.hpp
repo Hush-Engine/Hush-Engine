@@ -3,11 +3,14 @@
 #include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"
+#include <cstdint>
+#include <functional>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <memory>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 namespace Hush
@@ -17,6 +20,16 @@ namespace Hush
 		uint32_t startIndex;
 		uint32_t count;
 		std::shared_ptr<IMaterial3D> material;
+
+		bool operator ==(const GeoSurface& other) const {
+			return &other == this || (other.count == this->count && other.startIndex == this->startIndex /*&& other.material.get() == this->material.get()*/);
+		}
+
+		struct GeoSurfaceHash {
+			size_t operator()(const GeoSurface& surface) const {
+				return std::hash<uint32_t>()(surface.startIndex) ^ std::hash<uint32_t>()(surface.count) /*^ std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(surface.material.get()))*/;
+			}
+		};
 	};
 
 	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the
@@ -54,14 +67,14 @@ namespace Hush
 		void CalculateTangentBasis();
 
 		[[nodiscard]]
-		const std::vector<GeoSurface> &GetSurfaces() const
+		const std::unordered_set<GeoSurface, GeoSurface::GeoSurfaceHash> &GetSurfaces() const
 		{
 			return this->m_surfaces;
 		}
 
 		void AddSurface(GeoSurface &&surface)
 		{
-			this->m_surfaces.emplace_back(surface);
+			this->m_surfaces.insert(surface);
 		}
 
 		void SetName(const std::string_view &name)
@@ -97,7 +110,7 @@ namespace Hush
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 		std::string m_name;
-		std::vector<GeoSurface> m_surfaces;
+		std::unordered_set<GeoSurface,GeoSurface::GeoSurfaceHash> m_surfaces;
 		GPUMeshBuffers m_meshBuffers;
 	};
 } // namespace Hush

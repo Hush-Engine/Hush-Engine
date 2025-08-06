@@ -57,9 +57,6 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
 	std::vector<Entity> entities;
-	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
-	// HUSH_ASSERT(loadedAsset->meshes.size() != loadedAsset->nodes.size(), "Meshes vector size does not match nodes
-	// size");
 	
 	std::array<char, Entity::MAX_ENTITY_NAME_LENGTH> nameBuffer{};
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
@@ -273,7 +270,7 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	}
 
 	meshAsset->CalculateTangentBasis();
-	meshAsset->SetMeshBuffers(rendererImpl->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
+	meshAsset->SetMeshBuffers(rendererImpl->UploadMesh(indexRef, vertexRef));
 	// Add the component to the entity
 	auto* result = &entityRef.EmplaceComponent<MeshReference>(meshAsset);
 	return result;

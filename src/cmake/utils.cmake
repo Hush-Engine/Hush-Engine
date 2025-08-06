@@ -3,7 +3,7 @@
 # 2024-09-22
 # CMake utils
 
-if (MSVC)
+if (WIN32)
     # Check if the file exists
     if (NOT EXISTS "${CMAKE_BINARY_DIR}/hush-reflection.exe")
         set(EXPECTED_SHA256 "ba891ae7ef960d06d0637489a0dc5b32d8cf6295df6b94fc228858ac82efcb50")
@@ -26,10 +26,10 @@ endif ()
 
 # Set all warnings for the target
 macro(set_all_warnings target)
-    if (UNIX)
-        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
-    elseif (WIN32)
+    if (WIN32)
         target_compile_options(${target} PRIVATE /W4 /WX)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
     endif ()
 endmacro()
 

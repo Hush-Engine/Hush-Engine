@@ -28,6 +28,8 @@ namespace Hush
 		
 		void RefreshDirectory();
 
+		void DropResourceToScene(const FileInfo* data);
+		
 		void DrawFiles(bool isMouseInScene);
 		
 		void CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata);

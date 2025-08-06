@@ -5,6 +5,13 @@ project(Hush)
 
 include(cmake/program-options.cmake)
 
+
+if(MSVC)
+  add_compile_options(/EHsc)
+  # add_compile_options(/MT /EHsc)
+  # add_compile_options(/fsanitize=address)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 
 include(CTest)

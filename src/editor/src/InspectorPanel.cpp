@@ -8,6 +8,7 @@
 #include "Renderer.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
+#include "Shared/Mesh.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "WindowManager.hpp"
 #include "components/EditorInfo.hpp"
@@ -96,16 +97,17 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 	ImGui::Text("Name: %s", component->GetMesh()->GetName().c_str());
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
-	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
+	const std::unordered_set<GeoSurface, GeoSurface::GeoSurfaceHash> &surfaces = component->GetMesh()->GetSurfaces();
 	// Iterate over the surfaces and  serialize their materials as submeshes
-	for (size_t i = 0; i < surfaces.size(); i++)
+	size_t surfaceIndex = 0;
+	for (const GeoSurface& surface : surfaces)
 	{
-		const GeoSurface &surface = surfaces[i];
-		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
+		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(surfaceIndex)).c_str(),
 									ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			Serialize(surface.material.get(), std::to_string(i).c_str());
+			Serialize(surface.material.get(), std::to_string(surfaceIndex).c_str());
 		}
+		surfaceIndex++;
 	}
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
@@ -151,6 +153,7 @@ void Hush::InspectorPanel::OnRender()
 
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
+	// ImGuizmo::SetGizmoSizeClipSpace(2.0f);
 	this->m_activeScene = activeScene;
 
 	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef) {
@@ -161,6 +164,7 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
 {
 	this->m_inspectTarget = this->m_activeScene->EntityFromId(entity);
+	this->m_targetName = this->m_inspectTarget.value().GetComponent<Entity::Name>();
 }
 
 const std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() const
@@ -175,11 +179,7 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 
 void Hush::InspectorPanel::RenderProperties()
 {
-	if (this->m_targetName.empty()) {
-		const Entity::Name* enttNameComp = this->m_inspectTarget->GetComponent<Entity::Name>();
-		this->m_targetName = enttNameComp->name.data();
-	}
-	ImGui::SeparatorText(this->m_targetName.data());
+	ImGui::SeparatorText(this->m_targetName->name.data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
@@ -194,7 +194,7 @@ void Hush::InspectorPanel::RenderProperties()
 	MeshReference *meshComponent = this->m_inspectTarget->GetComponent<MeshReference>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent, this->m_targetName.data());
+		Serialize(meshComponent, this->m_targetName->name.data());
 	}
 }
 
