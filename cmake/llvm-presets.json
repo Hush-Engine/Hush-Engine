@@ -1,0 +1,30 @@
+
+{
+  "version": 6,
+  "include": [
+    "windows-presets.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "windows-x64-llvm-debug",
+      "inherits": [
+        "windows-x64-default"
+      ],
+      "displayName": "Windows x64 LLVM/Clang Debug",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_BUILD_TYPE": "Release",
+        "HUSH_ENABLE_ASAN": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-x64-llvm-debug",
+      "displayName": "Windows x64 LLVM/Clang Debug",
+      "configurePreset": "windows-x64-llvm-debug"
+    }
+  ]
+}
