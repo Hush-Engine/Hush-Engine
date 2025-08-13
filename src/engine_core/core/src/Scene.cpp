@@ -7,9 +7,6 @@
 #include "Scene.hpp"
 #include "ISystem.hpp"
 
-#define FLECS_NO_CPP
-#include <flecs.h>
-
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
 Hush::Scene::Scene(HushEngine *engine)

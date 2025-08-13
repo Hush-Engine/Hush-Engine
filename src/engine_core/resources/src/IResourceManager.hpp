@@ -22,6 +22,10 @@ namespace Hush
 		std::atomic<size_t> count = 0; // We initialize at 0 but IncreaseRefCount will always create it at 1
 		
 		RefCounted() = default;
+
+		inline bool IsNull() const {
+			return this->element == nullptr || this->count == 0;
+		}
 	};
 	
 	class IResourceManager {

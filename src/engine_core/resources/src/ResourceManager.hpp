@@ -50,6 +50,24 @@ namespace Hush
 		
 		Ref<Mesh> LoadMesh(const std::string_view& path);
 
+		
+		template <class T, class ...Args>
+		inline Ref<T> AllocateRef(const std::string_view &identifier, Args&&... args)
+		{
+			uint64_t hash = Hashing::Fnv1a64(identifier);
+			const auto &iterator = this->m_loadedResources.find(hash);
+			if (iterator != this->m_loadedResources.end())
+			{
+				HandleId handle = iterator->second;
+				auto *instance = reinterpret_cast<T *>(handle);
+				return {this, instance};
+			}
+			// NOLINTNEXTLINE
+			T* instance = new T(std::forward<Args>(args)...);
+			this->m_loadedResources[hash] = reinterpret_cast<HandleId>(instance);
+			return {this, instance};
+		}
+		
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;

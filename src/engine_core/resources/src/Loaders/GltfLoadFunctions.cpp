@@ -1,6 +1,5 @@
 #include "GltfLoadFunctions.hpp"
 #include "Assertions.hpp"
-#include "Logger.hpp"
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
@@ -11,7 +10,6 @@
 #include <vector>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
-#include "MaterialPass.hpp"
 
 
 fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(const std::filesystem::path& file) {

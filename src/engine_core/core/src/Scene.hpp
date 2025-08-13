@@ -8,18 +8,33 @@
 
 #include "Entity.hpp"
 #include "ISystem.hpp"
+#include "Logger.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
 
 #include <array>
+#include <cstdint>
+#include <flecs/addons/cpp/world.hpp>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+// We need to add these in for the templated functions, sorry :P
+#include <flecs/addons/flecs_c.h>
+
+// #define FLECS_NO_CPP
+#include <flecs.h>
+
 namespace Hush
 {
+	enum class EComponentObserverType : int32_t
+	{
+		Add,
+		Remove,
+		Set
+	};
 	class HushEngine;
 
 	// TODO: this class is expected to change a lot, it's just a placeholder for now.
@@ -86,6 +101,33 @@ namespace Hush
 		/// @return Entity
 		[[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
+
+		/// Registers a callback that gets called whenever a component receives the specified event
+		// @param observerType Component event type
+		template <class T, class Func>
+		void AddComponentObserver(EComponentObserverType observerType, Func &&callback) {
+			flecs::entity_t event = 0;
+			switch (observerType) {
+			case EComponentObserverType::Add:
+				event = flecs::OnAdd;
+				break;
+			case EComponentObserverType::Remove:
+				event = flecs::OnRemove;
+				break;
+			case EComponentObserverType::Set:
+				event = flecs::OnSet;
+				break;
+			default:
+				// TODO: Error here
+				LogFormat(ELogLevel::Error, "Component observer {} not recognized!", static_cast<int32_t>(observerType));
+				return;
+			}
+
+			auto* world = static_cast<flecs::world*>(this->m_world);
+			flecs::observer observer = world->observer<T>().event(event).each([callback, this](flecs::entity entity, T &component) {
+				callback(Entity{this, entity.view().id()}, &component);
+			});
+		}
 
 		/// Destroy an entity.
 		/// @param entity Entity to destroy

@@ -6,8 +6,8 @@
 #include <span>
 #include <vector>
 #include "Result.hpp"
-#include "MaterialPass.hpp"
-#include "ImageTexture.hpp"
+#include "Shared/ImageTexture.hpp"
+#include "Shared/MaterialPass.hpp"
 #include "Logger.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include <magic_enum/magic_enum.hpp>
