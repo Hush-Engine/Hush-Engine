@@ -154,13 +154,11 @@ Hush::Entity Hush::Scene::CreateEntity()
 Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 {
 	auto *world = static_cast<ecs_world_t *>(m_world);
-
-	ecs_entity_desc_t desc = {};
-	desc.name = name.data();
-
-	const Entity::EntityId entityId = ecs_entity_init(world, &desc);
-
-	return Entity{this, entityId};
+	const Entity::EntityId entityId = ecs_new(world);
+	
+	Entity result {this, entityId};
+	result.EmplaceComponent<Entity::Name>(name);
+	return result;
 }
 
 void Hush::Scene::DestroyEntity(Entity &&entity)

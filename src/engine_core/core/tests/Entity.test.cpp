@@ -22,10 +22,11 @@ TEST_CASE("Entity creation", "[entity]")
 
 	SECTION("CreateEntityWithName")
 	{
-		REQUIRE(entity2.GetName().has_value());
-		REQUIRE(entity2.GetName().value() == "MyEntity");
+		const std::string_view baseName = "MyEntity"; 
+		REQUIRE(entity2.GetComponent<Hush::Entity::Name>() != nullptr);
+		REQUIRE(strncmp(entity2.GetComponent<Hush::Entity::Name>()->name.data(), baseName.data(), baseName.size()));
 	}
-
+	
 	SECTION("DifferentEntities")
 	{
 		REQUIRE(entity.GetId() != entity2.GetId());

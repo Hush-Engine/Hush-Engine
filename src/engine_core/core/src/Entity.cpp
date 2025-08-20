@@ -43,18 +43,18 @@ bool Hush::Entity::HasComponentRaw(EntityId componentId)
 	return ecs_has_id(world, m_entityId, componentId);
 }
 
-void *Hush::Entity::EmplaceComponentRaw(EntityId componentId, bool &is_new)
+void *Hush::Entity::EmplaceComponentRaw(EntityId componentId, bool &isNew)
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
-	void *component = ecs_emplace_id(world, m_entityId, componentId, &is_new);
+	void *component = ecs_emplace_id(world, m_entityId, componentId, &isNew);
 
 	return component;
 }
 
 bool Hush::Entity::RemoveComponentRaw(EntityId componentId)
 {
-	auto world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
 	if (ecs_has_id(world, m_entityId, componentId))
 	{
@@ -75,20 +75,6 @@ void Hush::Entity::Destroy(Entity &&entity)
 Hush::Entity::EntityId Hush::Entity::GetId() const
 {
 	return m_entityId;
-}
-
-std::optional<std::string_view> Hush::Entity::GetName() const
-{
-	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
-
-	const char *name = ecs_get_name(world, m_entityId);
-
-	if (name == nullptr)
-	{
-		return std::nullopt;
-	}
-
-	return std::string_view(name);
 }
 
 void *Hush::Entity::GetSceneWorld() const

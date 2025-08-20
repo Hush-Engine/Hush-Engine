@@ -304,12 +304,12 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	}
 	UI::InputTextWithHint("##Search", "i.e. Player", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
 	// Then find all entities in the scene here
-	Query<WorldTransform> query = this->m_activeScene->CreateQuery<WorldTransform>();
+	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
 	std::vector<std::string> entityNames;
 	std::string_view searchEntityName(this->m_searchInputText);
 	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, WorldTransform &transform) {
-		std::string_view currEntityName = entity.GetName().value_or("");
+	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name& name, WorldTransform &transform) {
+	    std::string_view currEntityName = name.name.data();
 		if (searchEntityName.empty())
 		{
 			RenderEntitySelectable(currEntityName, entity.GetId());

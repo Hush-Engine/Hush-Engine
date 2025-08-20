@@ -11,7 +11,7 @@
 
 #if HUSH_PLATFORM_WIN
 #include <windows.h>
-//windows.h is cancer, let's hope for a slimer implementation in the future
+// windows.h is cancer, let's hope for a slimer implementation in the future
 #undef min
 #undef max
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
@@ -29,7 +29,7 @@
 #endif
 
 // TODO: Add debug condition
-#if defined (DEBUG) && !defined(NO_ASSERT)
+#if defined(DEBUG) && !defined(NO_ASSERT)
 // NOLINTBEGIN
 #define HUSH_ASSERT(condition, fmtFormat, ...)                                                                         \
 	[[unlikely]]                                                                                                       \
@@ -50,6 +50,14 @@
 	if (!(condition))                                                                                                  \
 	{                                                                                                                  \
 		return retval;                                                                                                 \
+	}
+
+#define HUSH_COND_FAIL_MSG(condition, fmtFormat, ...)                                                                  \
+	if (!(condition))                                                                                                  \
+	{                                                                                                                  \
+		Hush::LogFormat(Hush::ELogLevel::Error, "Condition failed at {} line {}! " fmtFormat, __FILE__, __LINE__,      \
+						##__VA_ARGS__);                                                                                \
+		return;                                                                                                        \
 	}
 
 #define HUSH_STATIC_ASSERT(condition, ...) static_assert(condition, #__VA_ARGS__)

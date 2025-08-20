@@ -175,7 +175,8 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 
 void Hush::InspectorPanel::RenderProperties()
 {
-	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
+	Entity::Name* entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
+	ImGui::SeparatorText(entityName->name.data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
@@ -190,7 +191,7 @@ void Hush::InspectorPanel::RenderProperties()
 	MeshReference *meshComponent = this->m_inspectTarget->GetComponent<MeshReference>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent, this->m_inspectTarget.value().GetName().value().data());
+		Serialize(meshComponent, entityName->name.data());
 	}
 }
 
