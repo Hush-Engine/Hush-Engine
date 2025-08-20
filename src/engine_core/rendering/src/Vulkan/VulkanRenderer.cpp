@@ -198,11 +198,34 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-void Hush::VulkanRenderer::PushMesh(WorldTransform* xform, Mesh* mesh)
+void Hush::VulkanRenderer::PushMesh(const WorldTransform* xform, const Mesh* mesh)
 {
-	// TODO: Make this take an entity or something like that so we have access to its transform
-	std::pair<WorldTransform*, Mesh*> entry = {xform, mesh};
-	this->m_loadedMeshes.emplace_back(entry);
+	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
+	{
+		Hush::VkRenderObject def{};
+		def.indexCount = s.count;
+		def.firstIndex = s.startIndex;
+		GpuAllocatedBuffer indexAllocatedBuffer = mesh->GetMeshBuffers().indexBuffer;
+		def.indexBuffer = static_cast<VkBuffer>(indexAllocatedBuffer.GetBuffer());
+		def.material = s.material->GetInternalMaterial();
+
+		def.transform = xform->GetTransformationMatrix();
+		def.vertexBufferAddress = mesh->GetMeshBuffers().vertexBufferAddress;
+		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
+		{
+			this->m_mainDrawContext.transparentSurfaces.push_back(def);
+		}
+		else
+		{
+			this->m_mainDrawContext.opaqueSurfaces.push_back(def);
+		}
+	}
+	
+}
+
+void Hush::VulkanRenderer::ClearDrawContext() {
+	this->m_mainDrawContext.transparentSurfaces.clear();
+	this->m_mainDrawContext.opaqueSurfaces.clear();
 }
 
 void Hush::VulkanRenderer::DestroyMesh(const std::string_view &name)
@@ -287,45 +310,9 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 	this->m_uiForwarder->HandleEvent(event);
 }
 
-void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *drawContext)
-{
-
-	// Interpret drawContext as: std::vector<VkRenderObject>* OpaqueSurfaces;
-	HUSH_ASSERT(drawContext != nullptr, "Draw context should not be null for any render node");
-	auto *drawCtxImpl = static_cast<Hush::DrawContext *>(drawContext);
-
-	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
-	{
-		Hush::VkRenderObject def{};
-		def.indexCount = s.count;
-		def.firstIndex = s.startIndex;
-		def.indexBuffer = static_cast<VkBuffer>(mesh->GetMeshBuffers().indexBuffer.GetBuffer());
-		def.material = s.material->GetInternalMaterial();
-
-		def.transform = transform->GetTransformationMatrix();
-		def.vertexBufferAddress = mesh->GetMeshBuffers().vertexBufferAddress;
-		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
-		{
-			drawCtxImpl->transparentSurfaces.push_back(def);
-		}
-		else
-		{
-			drawCtxImpl->opaqueSurfaces.push_back(def);
-		}
-	}
-}
-
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
 	(void)delta;
-	this->m_mainDrawContext.opaqueSurfaces.clear();
-	this->m_mainDrawContext.transparentSurfaces.clear();
-	// Test stuff just to show that it works... to be refactored into a more dynamic approach
-	glm::mat4 topMatrix{1.0F};
-	for (auto &nodeEntry : this->m_loadedMeshes)
-	{
-		DrawMesh(nodeEntry.second, nodeEntry.first, &this->m_mainDrawContext);
-	}
 
 	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0F), Vector3Math::ONE);
 	glm::mat4 viewMatrix = this->m_editorCamera.GetViewMatrix() * scaleMat;
@@ -350,8 +337,10 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 void Hush::VulkanRenderer::InitRendering()
 {
 	constexpr float initialFOV = 70.0F;
+	constexpr float nearPlane = 0.1f;
+	constexpr float farPlane = 4000.0f;
 	this->m_editorCamera =
-		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
+		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), nearPlane, farPlane);
 
 	this->CreateSyncObjects();
 

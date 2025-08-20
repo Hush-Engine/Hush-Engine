@@ -9,6 +9,7 @@
 #include "ResourceManager.hpp"
 #include "Result.hpp"
 #include "Shared/Mesh.hpp"
+#include "Loaders/GltfLoadFunctions.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
@@ -16,7 +17,6 @@
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
-#include "Shared/GltfLoadFunctions.hpp"
 #include <cstddef>
 #include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>

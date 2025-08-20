@@ -12,6 +12,7 @@
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include "systems/EditorCameraSystem.hpp"
+#include "systems/RenderingSystem.hpp"
 
 #include <memory>
 
@@ -33,6 +34,7 @@ public:
 	void Init() override
 	{
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
+		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
 		entt.AddComponent<Hush::EditorInfo>();

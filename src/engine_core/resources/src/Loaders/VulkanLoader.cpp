@@ -23,7 +23,7 @@
 #include <fastgltf/tools.hpp>
 #include <fastgltf/core.hpp>
 #include "Shared/ImageTexture.hpp"
-#include "Shared/GltfLoadFunctions.hpp"
+#include "GltfLoadFunctions.hpp"
 #include "Components/MeshReference.hpp"
 #include "../../core/src/Scene.hpp"
 
@@ -126,7 +126,7 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 {
 	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
 	// Load a mesh through the resource loader
-	Ref<Mesh> meshAsset = {this->m_resourceManager, new Mesh()};
+	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
 
 	meshAsset->SetName(mesh.name);
 

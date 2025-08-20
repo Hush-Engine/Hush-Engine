@@ -30,6 +30,10 @@ namespace Hush
 		inline T* Get() {
 			return reinterpret_cast<T*>(this->m_element);
 		}
+		
+		inline const T* Get() const {
+			return reinterpret_cast<const T*>(this->m_element);
+		}
 
 		inline bool IsNull() const {
 			// TODO: Invalidate when the count reaches 0 even when in the middle of the frame

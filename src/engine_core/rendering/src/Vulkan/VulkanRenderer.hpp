@@ -72,8 +72,10 @@ namespace Hush
 		void InitializeCommands() noexcept;
 
 		void InitImGui() override;
-
-		void PushMesh(WorldTransform* xform, Mesh* mesh) override;
+		
+		void ClearDrawContext() override;
+		
+		void PushMesh(const WorldTransform* xform, const Mesh* mesh) override;
 		
 		// void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) override;
 

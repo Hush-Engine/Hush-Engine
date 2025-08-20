@@ -14,17 +14,18 @@
 
 #include <array>
 #include <cstdint>
-#include <flecs/addons/cpp/world.hpp>
+#include <functional>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // We need to add these in for the templated functions, sorry :P
 #include <flecs/addons/flecs_c.h>
 
-// #define FLECS_NO_CPP
+#define FLECS_NO_CPP
 #include <flecs.h>
 
 namespace Hush
@@ -106,16 +107,16 @@ namespace Hush
 		// @param observerType Component event type
 		template <class T, class Func>
 		void AddComponentObserver(EComponentObserverType observerType, Func &&callback) {
-			flecs::entity_t event = 0;
+			Entity::EntityId event = 0;
 			switch (observerType) {
 			case EComponentObserverType::Add:
-				event = flecs::OnAdd;
+				event = EcsOnAdd;
 				break;
 			case EComponentObserverType::Remove:
-				event = flecs::OnRemove;
+				event = EcsOnRemove;
 				break;
 			case EComponentObserverType::Set:
-				event = flecs::OnSet;
+				event = EcsOnSet;
 				break;
 			default:
 				// TODO: Error here
@@ -123,10 +124,42 @@ namespace Hush
 				return;
 			}
 
-			auto* world = static_cast<flecs::world*>(this->m_world);
-			flecs::observer observer = world->observer<T>().event(event).each([callback, this](flecs::entity entity, T &component) {
-				callback(Entity{this, entity.view().id()}, &component);
-			});
+			const Entity::EntityId componentId = RegisterIfNeededSlow<T>();
+
+			auto* world = static_cast<ecs_world_t*>(this->m_world);
+			ecs_term_t queryTerm = {
+				.id = componentId,
+				.inout = EcsIn
+			};
+			ecs_query_desc_t query = {
+				.terms = { queryTerm }
+			};
+
+			using CallbackFunc_t = std::function<void(Entity::EntityId, T*)>;
+			// Horrible hack, but we wanted to use the C API
+			// NOLINTNEXTLINE
+			auto* function = new CallbackFunc_t(std::forward<Func>(callback));
+			
+			ecs_observer_desc_t observerDesc = {
+				.query = query,
+				.events = { event },
+				.callback = [](ecs_iter_t* it) {
+					if (it->count <= 0) {
+						return;
+					}
+					Entity::EntityId eventEntity = it->entities[0];
+					T* component = ecs_field(it, T, 0);
+					auto* callbackFunc = reinterpret_cast<CallbackFunc_t*>(it->callback_ctx);
+					(*callbackFunc)(eventEntity, component);
+				},
+				.callback_ctx = function,
+				.callback_ctx_free = [](void* ctx) {
+					// NOLINTNEXTLINE
+					delete reinterpret_cast<CallbackFunc_t*>(ctx);
+				}
+			};
+			// TODO: Add this to a member vector so that we can delete it afterwards
+			Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 		}
 
 		/// Destroy an entity.

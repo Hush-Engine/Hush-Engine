@@ -51,7 +51,10 @@ namespace Hush
 
 		virtual void InitImGui() = 0;
 
-		virtual void PushMesh(WorldTransform* xform, Mesh* mesh) = 0;
+		/// @brief Must be called before every new frame to clear out all the stale mesh and transform data (this is the responsibility of the RenderingSystem)
+		virtual void ClearDrawContext() = 0;
+		
+		virtual void PushMesh(const WorldTransform* xform, const Mesh* mesh) = 0;
 
 		virtual void DestroyMesh(const std::string_view &name) = 0;
 

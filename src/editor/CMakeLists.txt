@@ -12,6 +12,7 @@ add_executable(HushEditor
         src/TitleBarMenuPanel.cpp
         src/systems/CommandSystem.cpp
         src/systems/EditorCameraSystem.cpp
+        src/systems/RenderingSystem.cpp
         src/UI.cpp
         src/DebugTooltip.cpp
         src/EditorApp.cpp
