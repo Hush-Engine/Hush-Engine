@@ -11,6 +11,7 @@
 #include "Logger.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
+#include "executors/ThreadPool.hpp"
 
 #include <array>
 #include <cstdint>
@@ -54,7 +55,7 @@ namespace Hush
 	public:
 		/// Constructor.
 		/// @param engine Game engine
-		Scene(HushEngine *engine);
+		Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool);
 
 		~Scene();
 
@@ -251,6 +252,9 @@ namespace Hush
 		std::vector<std::unique_ptr<ISystem>> m_userSystems;
 
 		HushEngine *m_engine;
+
+		/// Thread pool used by the scene for parallel operations
+		Threading::Executors::ThreadPool *m_threadPool;
 
 		void *m_world;
 	};

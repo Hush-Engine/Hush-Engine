@@ -156,7 +156,7 @@ macro(add_test_target)
         cmake_parse_arguments(TEST "" "TARGET_NAME;ENGINE_TARGET" "SRCS;HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
         add_executable(${TEST_TARGET_NAME} ${TEST_SRCS})
         target_include_directories(${TEST_TARGET_NAME} PRIVATE ${TEST_HEADER_DIRS})
-        target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} HushLog Catch2::Catch2WithMain)
+        target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
 
         catch_discover_tests(${TEST_TARGET_NAME})

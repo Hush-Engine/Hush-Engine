@@ -61,6 +61,12 @@ void Hush::HushEngine::Run()
 	}
 }
 
+Hush::HushEngine::HushEngine()
+	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
+		  {.numThreads = std::thread::hardware_concurrency(), .pinToCore = true}))
+{
+}
+
 void Hush::HushEngine::AddSystem(ISystem *system)
 {
 	this->m_app->GetScene()->AddEngineSystem(system);
@@ -86,5 +92,4 @@ void Hush::HushEngine::Init()
 	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
 	entity.AddComponent<LocalTransform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
-
 }

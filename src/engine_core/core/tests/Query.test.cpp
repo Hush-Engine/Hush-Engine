@@ -23,7 +23,10 @@ TEST_CASE("Query creation", "[query]")
 {
 	SECTION("CreateQuery")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+		Hush::Scene scene(nullptr, &threadPool);
 
 		Hush::Query<Position, Velocity> query = scene.CreateQuery<Position, Velocity>();
 
@@ -32,7 +35,11 @@ TEST_CASE("Query creation", "[query]")
 
 	SECTION("Create query with entities")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 
 		Hush::Entity entity = scene.CreateEntity();
 		entity.EmplaceComponent<Position>(1.0f, 2.0f);
@@ -60,7 +67,11 @@ TEST_CASE("Query creation", "[query]")
 
 	SECTION("Iterate using Each")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 		constexpr std::size_t NUM_ENTITIES = 1000;
 
 		for (std::size_t i = 0; i < NUM_ENTITIES; ++i)
@@ -84,7 +95,11 @@ TEST_CASE("Query creation", "[query]")
 
 	SECTION("Different components")
 	{
-		Hush::Scene scene(nullptr);
+		using Hush::Threading::Executors::ThreadPool;
+
+		ThreadPool threadPool = ThreadPool::Create({.numThreads = 1, .pinToCore = false});
+
+		Hush::Scene scene(nullptr, &threadPool);
 
 		constexpr std::size_t NUM_ENTITIES_WITH_POSITION = 1000;
 		constexpr std::size_t NUM_ENTITIES_WITH_VELOCITY = 500;
