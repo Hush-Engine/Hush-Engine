@@ -23,7 +23,7 @@ As said, a metafile will be different depending on the underlying file type it r
   "metadataVersion": 1,
   "id": 15963102,
   "mipMapFlags": 16711695,
-  "sRGB": true,
+  "sRGB": true
 }
 ```
 

@@ -26,7 +26,7 @@ void main()
     {
         float blend = float(texelCoord.y)/(size.y); 
     
-        imageStore(image, texelCoord, vec4(235 / 255.f, 165 / 255.f, 96 / 255.f, 1));
+        imageStore(image, texelCoord, vec4(235.0f / 255.0f, 165.0f / 255.0f, 96.0f / 255.f, 1.0f));
     }
 }
 

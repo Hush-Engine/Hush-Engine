@@ -125,6 +125,7 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 													   Entity &entityRef, IRenderer *engine)
 {
 	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
 	// Load a mesh through the resource loader
 	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
 
@@ -246,6 +247,7 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
 	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 

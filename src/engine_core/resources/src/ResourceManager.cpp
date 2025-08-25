@@ -71,6 +71,8 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 		return {this, texture};
 	}
 	auto* texture = new ImageTexture(resolvedPath.value());
+	const auto handle = reinterpret_cast<HandleId>(texture);
+	this->m_loadedResources[pathHash] = handle;
 	return {this, texture};
 }
 

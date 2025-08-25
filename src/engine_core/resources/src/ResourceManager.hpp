@@ -64,7 +64,8 @@ namespace Hush
 			}
 			// NOLINTNEXTLINE
 			T* instance = new T(std::forward<Args>(args)...);
-			this->m_loadedResources[hash] = reinterpret_cast<HandleId>(instance);
+			const auto handle = reinterpret_cast<HandleId>(instance);
+			this->m_loadedResources[hash] = handle;
 			return {this, instance};
 		}
 		
