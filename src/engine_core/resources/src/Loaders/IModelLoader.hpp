@@ -1,12 +1,14 @@
 #pragma once
 
 #include "Entity.hpp"
-#include "Renderer.hpp"
-#include "ResourceManager.hpp"
+#include "Shared/GpuAllocatedImage.hpp"
+#include "Shared/ImageTexture.hpp"
 #include <vector>
 
 namespace Hush {
 	class IRenderer;
+	class ResourceManager;
+	
 	class IModelLoader {
 	public:
 

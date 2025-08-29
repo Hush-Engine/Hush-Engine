@@ -87,11 +87,12 @@ namespace Hush
 		{
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
-			const ShaderBindings &binding = this->FindBinding(name);
-			if (this->m_bindingsByName.find(Hashing::Fnv1a(name)) == this->m_bindingsByName.end())
+			// TODO: Refactor into using the resulting iterator
+			if (this->m_bindingsByName.find(name.data()) == this->m_bindingsByName.end())
 			{
 				return EError::PropertyNotFound;
 			}
+			const ShaderBindings &binding = this->FindBinding(name);
 			HUSH_ASSERT(this->m_uniformBufferMappedData != nullptr,
 						"Material buffer is not initialized! Forgot to call LoadShaders?");
 			// Offset the pointer by the binding's offset
@@ -104,7 +105,7 @@ namespace Hush
 		template <class T>
 		inline Result<T, EError> GetProperty(const std::string_view &name)
 		{
-			HUSH_COND_FAIL_V(this->m_bindingsByName.find(Hashing::Fnv1a(name)) != this->m_bindingsByName.end(),
+			HUSH_COND_FAIL_V(this->m_bindingsByName.find(name.data()) != this->m_bindingsByName.end(),
 							 EError::PropertyNotFound);
 			// Search for a binding with the name passed onto the func
 			const ShaderBindings &binding = this->FindBinding(name);
@@ -139,7 +140,7 @@ namespace Hush
 		IRenderer *m_renderer;
 		OpaqueMaterialData *m_materialData;
 
-		std::unordered_map<uint32_t, ShaderBindings> m_bindingsByName;
+		std::unordered_map<std::string, ShaderBindings> m_bindingsByName;
 
 		std::unique_ptr<GraphicsApiMaterialInstance> m_internalMaterial;
 

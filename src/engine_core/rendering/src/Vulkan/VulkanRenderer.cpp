@@ -1019,7 +1019,9 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 										  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
-	auto *sceneUniformData = reinterpret_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
+	void* mappedData = gpuSceneDataBuffer.GetMappedData();
+	HUSH_ASSERT(mappedData != nullptr, "Mapped data for GPU buffer is null!");
+	auto *sceneUniformData = reinterpret_cast<GPUSceneData *>(mappedData);
 	*sceneUniformData = this->m_sceneData;
 
 	// create a descriptor set that binds that buffer and update it

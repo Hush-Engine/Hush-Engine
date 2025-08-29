@@ -17,19 +17,21 @@ namespace Hush
 	public:
 		ImageTexture() = default;
 
+		~ImageTexture();
+
 		ImageTexture(const std::filesystem::path &filePath);
 
 		ImageTexture(const std::byte *data, size_t size);
 
-		[[nodiscard]] const int32_t &GetWidth() const noexcept;
+		[[nodiscard]] int32_t GetWidth() const noexcept;
 
-		[[nodiscard]] const int32_t &GetHeight() const noexcept;
+		[[nodiscard]] int32_t GetHeight() const noexcept;
 
-		[[nodiscard]] const std::byte *GetImageData() const;
+		[[nodiscard]] const std::byte *GetImageData() const noexcept;
 
 	private:
 		int32_t m_width{};
 		int32_t m_height{};
-		std::unique_ptr<std::byte> m_data;
+		std::byte* m_data = nullptr;
 	};
 } // namespace Hush

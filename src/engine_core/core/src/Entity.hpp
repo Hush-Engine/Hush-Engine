@@ -45,13 +45,16 @@ namespace Hush
 
 		/// @brief Component that holds the name of an entity
 		struct Name {
-			std::array<char, MAX_ENTITY_NAME_LENGTH> name{};
+			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> name{}; // Handle null terminator!!!
 			
 			Name() = default;
 			
 			Name(const std::string_view& name) {
-				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
-				std::copy_n(name.data(), std::min(name.size(), MAX_ENTITY_NAME_LENGTH), this->name.data());
+				HUSH_COND_FAIL_MSG(name.size() < MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
+				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
+				std::copy_n(name.data(), copyLength, this->name.data());
+				// NOLINTNEXTLINE
+				this->name[copyLength] = '\0';
 			}
 		};
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)

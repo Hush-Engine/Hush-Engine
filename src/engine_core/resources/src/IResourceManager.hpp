@@ -24,7 +24,7 @@ namespace Hush
 		RefCounted() = default;
 
 		inline bool IsNull() const {
-			return this->element == nullptr || this->count == 0;
+			return this->element == nullptr || this->count.load(std::memory_order_acquire) == 0;
 		}
 	};
 	

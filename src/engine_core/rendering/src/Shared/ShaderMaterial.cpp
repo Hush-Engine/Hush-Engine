@@ -446,5 +446,5 @@ size_t Hush::ShaderMaterial::CalculateTypeSize(const SpvReflectTypeDescription *
 
 const Hush::ShaderBindings &Hush::ShaderMaterial::FindBinding(const std::string_view &name)
 {
-	return this->m_bindingsByName[Hashing::Fnv1a(name)];
+	return this->m_bindingsByName.at(name.data());
 }
