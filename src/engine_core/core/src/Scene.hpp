@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
+#define FLECS_NO_CPP
 // We need to add these in for the templated functions, sorry :P
 #include <flecs/addons/flecs_c.h>
 
-#define FLECS_NO_CPP
 #include <flecs.h>
 
 namespace Hush

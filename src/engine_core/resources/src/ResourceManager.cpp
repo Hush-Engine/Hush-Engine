@@ -56,7 +56,7 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 	return {this, texture};
 }
 
-Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& path) {
+	Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& path) {
 	// Allocate the image texture and load it using the file system
 	// Resolve the virtual path as an absolute path
 	Result<std::string_view, VirtualFilesystem::EError> resolvedPath = this->m_filesystem->ResolveVirtualPath(path);
@@ -78,6 +78,6 @@ Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::stri
 
 Hush::Ref<Hush::Mesh> Hush::ResourceManager::LoadMesh(const std::string_view& path) {
 	(void)path;
-	return {this, nullptr};
+	return {};
 }
 

@@ -169,16 +169,7 @@ void Hush::ContentPanel::MakeMetaFile(const FileInfo& fileData, const FileMetada
 
 void Hush::ContentPanel::CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata) {
 	switch (fileData.extension) {
-
-	case EFileExtension::UNKWOWN:
-	case EFileExtension::PNG:
-	case EFileExtension::JPEG:
-	case EFileExtension::TXT:
-	case EFileExtension::PDF:
-	case EFileExtension::CSHARP:
-	case EFileExtension::CPP:
-	case EFileExtension::FBX:
-	case EFileExtension::GLTF:
+	default:
 		break;
 	case EFileExtension::GLB:
 		fastgltf::Expected<fastgltf::Asset> asset = GltfLoadFunctions::GetAssetFromFile(fileData.path);

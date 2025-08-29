@@ -76,9 +76,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 	Hush::GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset, const fastgltf::Material &material,
 	const void *loadedTextures)
 {
-#ifdef HUSH_VULKAN_IMPL
-
-	// Vulkan implementation will cast the out material resources and the loaded textures
+	// Each rendering implementation will cast the out material resources and the loaded textures
 	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
 
 	// TODO: Refactor all this in a function
@@ -133,7 +131,6 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 	}
 
 	return EError::None;
-#endif
 }
 
 

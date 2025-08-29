@@ -82,6 +82,9 @@ ipch/
 # Guidance Automation Toolkit
 *.gpState
 
+# RAD Debugger project files
+rad.proj
+
 # ReSharper is a .NET coding add-in
 _ReSharper*/
 *.[Rr]e[Ss]harper

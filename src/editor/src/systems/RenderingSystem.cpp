@@ -1,16 +1,12 @@
 #include "RenderingSystem.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
-#include "Logger.hpp"
 #include "Query.hpp"
 #include "WindowManager.hpp"
 
 
 void Hush::RenderingSystem::Init() {
-	this->GetScene().AddComponentObserver<MeshReference>(EComponentObserverType::Add, [](Entity::EntityId _, MeshReference* mesh) {
-	   // Add its values to the renderer
-	   LogFormat(ELogLevel::Info, "Hey, we added a mesh");
-	});
+	this->m_renderableTargetsQuery = this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::All);
 }
 
 void Hush::RenderingSystem::OnShutdown() {

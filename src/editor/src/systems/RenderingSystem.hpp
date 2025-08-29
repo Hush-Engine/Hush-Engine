@@ -31,7 +31,6 @@ namespace Hush
 		std::string_view GetName() const override;
 
 	private:
-		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery =
-			this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::All);
+		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 	};
 } // namespace Hush

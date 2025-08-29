@@ -10,6 +10,7 @@
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -46,17 +47,18 @@ namespace Hush
 		struct Name {
 			std::array<char, MAX_ENTITY_NAME_LENGTH> name{};
 			
+			Name() = default;
+			
 			Name(const std::string_view& name) {
 				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
-				strcpy_s(this->name.data(), this->name.size(), name.data());
-			}			
+				std::copy_n(name.data(), std::min(name.size(), MAX_ENTITY_NAME_LENGTH), this->name.data());
+			}
 		};
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)
 			: m_entityId(entityId),
 			  m_ownerScene(ownerScene)
 		{
 		}
-		using EntityId = std::uint64_t;
 
 		/// Entity destructor. It does not destroy the entity. For that, use `Scene::DestroyEntity`.
 		~Entity() noexcept = default;

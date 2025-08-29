@@ -57,9 +57,33 @@ namespace Hush
 		/// Lists all the contents of a specific path
 		virtual Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view& path) = 0;
 
-		EFileExtension ToKnownExtension(const std::string_view& extensionRaw) {
-			// TODO: Handle unknown cases
-			return static_cast<EFileExtension>(Hashing::Fnv1a(extensionRaw));
+		EFileExtension ToKnownExtension(const std::string_view& extensionUppercase) {
+			switch (Hashing::Fnv1a(extensionUppercase)) {
+			case Hashing::Fnv1a("PNG"):
+				return EFileExtension::PNG;
+			case Hashing::Fnv1a("META"):
+				return EFileExtension::META;
+			case Hashing::Fnv1a("JPEG"):
+			case Hashing::Fnv1a("JPG"):
+				return EFileExtension::JPEG;
+			case Hashing::Fnv1a("TXT"):
+				return EFileExtension::TXT;
+			case Hashing::Fnv1a("PDF"):
+				return EFileExtension::PDF;
+			case Hashing::Fnv1a("CS"):
+				return EFileExtension::CSHARP;
+			case Hashing::Fnv1a("CPP"):
+			case Hashing::Fnv1a("HPP"):
+				return EFileExtension::CPP;
+			case Hashing::Fnv1a("GLB"):
+				return EFileExtension::GLB;
+			case Hashing::Fnv1a("GLTF"):
+				return EFileExtension::GLTF;
+			case Hashing::Fnv1a("FBX"):
+				return EFileExtension::FBX;
+			default:
+				return EFileExtension::UNKNOWN;
+			}
 		}
 	};
 } // namespace Hush

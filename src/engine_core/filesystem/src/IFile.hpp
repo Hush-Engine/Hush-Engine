@@ -7,7 +7,6 @@
 #pragma once
 #include <cstdint>
 #include <span>
-#include <string>
 #include <filesystem>
 #include "crypto/Hashing.hpp"
 #include "Result.hpp"
@@ -30,17 +29,17 @@ namespace Hush
 	};
 
 	enum class EFileExtension : uint32_t { // All as uppercase to normalize hashing
-		UNKWOWN,
-		HUSH_HASHED_ENUM_ENTRY(PNG),
-		HUSH_HASHED_ENUM_ENTRY(META),
-		HUSH_HASHED_ENUM_ENTRY(JPEG),
-		HUSH_HASHED_ENUM_ENTRY(TXT),
-		HUSH_HASHED_ENUM_ENTRY(PDF),
-		HUSH_HASHED_ENUM_ENTRY(CSHARP),
-		HUSH_HASHED_ENUM_ENTRY(CPP),
-		HUSH_HASHED_ENUM_ENTRY(GLB),
-		HUSH_HASHED_ENUM_ENTRY(GLTF),
-		HUSH_HASHED_ENUM_ENTRY(FBX),
+		UNKNOWN,
+		PNG,
+		META,
+		JPEG,
+		TXT,
+		PDF,
+		CSHARP,
+		CPP,
+		GLB,
+		GLTF,
+		FBX,
 	};
 
 	/// Metadata for a file.
@@ -50,8 +49,8 @@ namespace Hush
 		std::size_t size;
 		std::uint64_t lastModified;
 		EFileOpenMode mode = EFileOpenMode::None;
-		EFileFlags flags;
-		EFileExtension extension;
+		EFileFlags flags = EFileFlags::File;
+		EFileExtension extension = EFileExtension::UNKNOWN;
 		
 		[[nodiscard]] inline bool IsCodeFile() const {
 			return this->extension == EFileExtension::CPP || this->extension == EFileExtension::CSHARP;
@@ -62,7 +61,7 @@ namespace Hush
 		}
 		
 		[[nodiscard]] inline bool ShouldGenerateMetaFile() const {
-			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKWOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
+			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKNOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
 		}
 	} ;
 

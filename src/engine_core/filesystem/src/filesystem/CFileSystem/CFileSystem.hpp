@@ -7,9 +7,8 @@
 #pragma once
 #include "FileSystem.hpp"
 #include "IFile.hpp"
-#include <cstdio>
+#include <vector>
 #include <filesystem>
-#include <string>
 #include <unordered_map>
 
 namespace Hush
@@ -25,7 +24,7 @@ namespace Hush
 		CFileSystem(const CFileSystem &) = delete;
 
 		CFileSystem(CFileSystem &&rhs) noexcept
-			: mLoadedFiles(std::move(rhs.mLoadedFiles))
+			: m_loadedFiles(std::move(rhs.m_loadedFiles))
 		{
 		}
 
@@ -33,7 +32,7 @@ namespace Hush
 
 		CFileSystem &operator=(CFileSystem &&rhs) noexcept
 		{
-			mLoadedFiles = std::move(rhs.mLoadedFiles);
+			m_loadedFiles = std::move(rhs.m_loadedFiles);
 			return *this;
 		}
 
@@ -45,7 +44,7 @@ namespace Hush
 
 		Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view& path) override;
 	private:
-		std::filesystem::path mRoot;
-		std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> mLoadedFiles;
+		std::filesystem::path m_root;
+		std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> m_loadedFiles;
 	};
 } // namespace Hush

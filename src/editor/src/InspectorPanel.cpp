@@ -176,6 +176,7 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 void Hush::InspectorPanel::RenderProperties()
 {
 	Entity::Name* entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
+	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
 	ImGui::SeparatorText(entityName->name.data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");

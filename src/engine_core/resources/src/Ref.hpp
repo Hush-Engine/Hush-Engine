@@ -24,7 +24,6 @@ namespace Hush
 		inline ~Ref() {
 			if (this->IsNull()) return;
 			RefCounted* count = this->m_resourceManager->DecreaseRefCount(this->m_element);
-			LogFormat(ELogLevel::Info, "Decreased ref count of {} to: {}", this->m_element, count->count.load());
 		}
 		
 		inline T* Get() {
@@ -47,7 +46,6 @@ namespace Hush
             m_resourceManager(other.m_resourceManager) 
         {
             RefCounted* count = m_resourceManager->IncreaseRefCount(m_element);
-            LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", m_element, count->count.load());
         }
 
         Ref(Ref&& other) noexcept : 
@@ -94,10 +92,8 @@ namespace Hush
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted* count = this->m_resourceManager->IncreaseRefCount(this->m_element);
 			count->element = static_cast<void*>(resource);
-			LogFormat(ELogLevel::Info, "Increased ref count of {} to: {}", this->m_element, count->count.load());
 			if (count->deleter == nullptr) {
 				count->deleter = [](void* ptr) {
-					LogFormat(ELogLevel::Info, "Deleted reference with ID: {}", reinterpret_cast<HandleId>(ptr));
 					delete static_cast<T*>(ptr);
 				};
 			}
