@@ -5,7 +5,14 @@
 */
 
 #pragma once
+#include "FileMetadata.hpp"
 #include "IEditorPanel.hpp"
+#include "IFile.hpp"
+#include "Loaders/VulkanLoader.hpp"
+#include "Ref.hpp"
+#include "ResourceManager.hpp"
+#include "Shared/ImageTexture.hpp"
+#include "VirtualFilesystem.hpp"
 
 namespace Hush
 {
@@ -13,6 +20,32 @@ namespace Hush
 	{
 		void Init(Scene *activeScene) noexcept override;
 
-		void OnRender() noexcept override;
+		void OnRender() override;
+
+	private:
+
+		void GenerateMetaFiles();
+		
+		void RefreshDirectory();
+
+		void DrawFiles(bool isMouseInScene);
+		
+		void CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata);
+		
+		void MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata);
+		
+		[[nodiscard]] bool CanBeDroppedToScene(const FileInfo& fileData) const;
+		
+		ResourceManager* m_resourceManager = nullptr;
+		VirtualFilesystem* m_filesystem = nullptr;
+		Scene* m_scene = nullptr;
+		VulkanLoader m_modelLoader;
+		// TEMP: <a href="https://www.flaticon.com/free-icons/folder" title="folder icons">Folder icons created by Gajah Mada - Flaticon</a>
+		Ref<ImageTexture> m_folderImage;
+		Ref<ImageTexture> m_fileImage;
+
+		std::vector<FileInfo> m_currentItems;
+		std::string m_currentWorkingDirectory = "res://";
+		bool m_dirty = true;
 	};
 } // namespace Hush

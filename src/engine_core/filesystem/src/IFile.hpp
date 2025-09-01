@@ -7,28 +7,63 @@
 #pragma once
 #include <cstdint>
 #include <span>
-#include <string>
 #include <filesystem>
-
+#include "crypto/Hashing.hpp"
 #include "Result.hpp"
 
 namespace Hush
 {
 	enum class EFileOpenMode
 	{
+		/// @brief The file has not been opened yet
+		None = 0,
 		Read,
 		Write,
-		ReadWrite
+		ReadWrite,
+	};
+
+	enum class EFileFlags : uint16_t {
+		Directory,
+		File,
+		Metadata
+	};
+
+	enum class EFileExtension : uint32_t { // All as uppercase to normalize hashing
+		UNKNOWN,
+		PNG,
+		META,
+		JPEG,
+		TXT,
+		PDF,
+		CSHARP,
+		CPP,
+		GLB,
+		GLTF,
+		FBX,
 	};
 
 	/// Metadata for a file.
-	struct FileMetadata
+	struct FileInfo
 	{
 		std::filesystem::path path;
 		std::size_t size;
 		std::uint64_t lastModified;
-		EFileOpenMode mode;
-	};
+		EFileOpenMode mode = EFileOpenMode::None;
+		EFileFlags flags = EFileFlags::File;
+		EFileExtension extension = EFileExtension::UNKNOWN;
+		
+		[[nodiscard]] inline bool IsCodeFile() const {
+			return this->extension == EFileExtension::CPP || this->extension == EFileExtension::CSHARP;
+		}
+
+		[[nodiscard]] inline bool IsModelFile() const {
+			return this->extension == EFileExtension::GLB || this->extension == EFileExtension::FBX || this->extension == EFileExtension::GLTF; 
+		}
+		
+		[[nodiscard]] inline bool ShouldGenerateMetaFile() const {
+			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKNOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
+		}
+	} ;
 
 	/// File interface for the VFS.
 	/// A file is a resource that maps to a specific path in the VFS.
@@ -58,7 +93,7 @@ namespace Hush
 		virtual ~IFile() = default;
 
 		[[nodiscard]]
-		virtual const FileMetadata &GetMetadata() const = 0;
+		virtual const FileInfo &GetFileInfo() const = 0;
 
 		/// Writes the file.
 		/// @param data Data to write to the file.

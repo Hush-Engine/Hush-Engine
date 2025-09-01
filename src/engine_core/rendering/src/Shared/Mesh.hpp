@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Shared/GpuAllocatedBuffer.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"
@@ -101,6 +100,4 @@ namespace Hush
 		std::vector<GeoSurface> m_surfaces;
 		GPUMeshBuffers m_meshBuffers;
 	};
-
-	void Serialize(Mesh *component, const char *entityName);
 } // namespace Hush

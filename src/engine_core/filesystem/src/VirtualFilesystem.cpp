@@ -5,9 +5,16 @@
 */
 
 #include "VirtualFilesystem.hpp"
+#include "FileSystem.hpp"
 
 #include <Logger.hpp>
+#include <filesystem>
+#include <memory>
+#include <optional>
 #include <ranges>
+#include <string_view>
+#include "Assertions.hpp"
+#include "IFile.hpp"
 
 Hush::VirtualFilesystem::VirtualFilesystem() = default;
 
@@ -36,11 +43,22 @@ void Hush::VirtualFilesystem::Unmount(std::string_view virtualPath)
 		m_mountedFileSystems.end());
 }
 
-std::vector<std::string_view> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
+std::vector<Hush::FileInfo> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
 {
-	(void)virtualPath;
+	std::optional<ResolvedPath> resolved = this->ResolveFileSystem(virtualPath);
+	
+	if (!resolved)
+	{
+		LogFormat(ELogLevel::Debug, "Mount point for {} not found", virtualPath);
+		return {};
+	}
+	
 	(void)options;
-	return {};
+	auto result = resolved->filesystem->ListPath(resolved->path);
+	if (result.has_error()) {
+		return {};
+	}
+	return result.value();
 }
 
 Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::VirtualFilesystem::OpenFile(
@@ -69,17 +87,34 @@ void Hush::VirtualFilesystem::MountFileSystemInternal(std::string_view path,
 	m_mountedFileSystems.emplace_back(std::string(path), std::move(resourceLoader));
 }
 
+
+Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFilesystem::ResolveVirtualPath(const std::string_view& path) {
+	std::optional<ResolvedPath> resolvedPath = this->ResolveFileSystem(path);
+	if (!resolvedPath) {
+		LogFormat(ELogLevel::Debug, "Mount point for {} not found", path);
+		return EError::FileDoesntExist;
+	}
+	return resolvedPath->path;
+}
+
 std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::ResolveFileSystem(std::string_view path)
 {
+	if (std::filesystem::path(path).is_absolute()) {
+		return ResolvedPath {
+			.filesystem = this->m_mountedFileSystems[0].filesystem.get(),
+			.path = path
+		};
+	}
+
 	// We need to iterate on all filesystems in backward order.
 	for (auto start = this->m_mountedFileSystems.begin(); start != this->m_mountedFileSystems.end(); ++start)
 	{
-		auto &mountPoint = start->path;
-		auto &filesystem = start->filesystem;
+		std::string &mountPoint = start->path;
+		std::unique_ptr<IFileSystem> &filesystem = start->filesystem;
 
 		if (path.starts_with(mountPoint))
 		{
-			auto relativePath = path.substr(mountPoint.size());
+			std::string_view relativePath = path.substr(mountPoint.size());
 
 			return ResolvedPath{
 				.filesystem = filesystem.get(),

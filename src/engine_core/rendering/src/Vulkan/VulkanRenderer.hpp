@@ -72,8 +72,12 @@ namespace Hush
 		void InitializeCommands() noexcept;
 
 		void InitImGui() override;
-
-		void PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh) override;
+		
+		void ClearDrawContext() override;
+		
+		void PushMesh(const WorldTransform* xform, const Mesh* mesh) override;
+		
+		// void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) override;
 
 		void DestroyMesh(const std::string_view &name) override;
 
@@ -144,8 +148,6 @@ namespace Hush
 		[[nodiscard]]
 		void *GetWindowContext() const noexcept override;
 
-		void SetDirectionalLight(DirectionalLight *light) noexcept override;
-
 		[[nodiscard]]
 		const EditorCamera &GetEditorCamera() const noexcept override;
 
@@ -186,8 +188,6 @@ namespace Hush
 										const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 		void InitVmaAllocator();
-
-		void InitRenderables();
 
 		void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 
@@ -287,6 +287,7 @@ namespace Hush
 		//(This should run fine for like, 414 days at 60 fps, and 69 days at like 360 fps)
 		int m_frameNumber = 0;
 		std::unique_ptr<IImGuiForwarder> m_uiForwarder = nullptr;
+		DescriptorWriter m_frameDescriptor{};
 
 		VulkanDeletionQueue m_mainDeletionQueue{};
 		VmaAllocator m_allocator = nullptr; // vma lib allocator

@@ -6,6 +6,7 @@
 
 #include "Shared/GpuAllocatedBuffer.hpp"
 #include <memory>
+#include <utility>
 #define VMA_IMPLEMENTATION
 #define VK_NO_PROTOTYPES
 #include "VulkanRenderer.hpp"
@@ -29,12 +30,10 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Shared/GPUMeshBuffers.hpp"
-#include "VulkanLoader.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include "VulkanFullScreenPass.hpp"
 #include <Shared/ShaderMaterial.hpp>
-#include "Vector3Math.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <glm/gtx/string_cast.hpp>
 #include "Renderer.hpp"
@@ -144,6 +143,13 @@ Hush::VulkanRenderer::~VulkanRenderer()
 void Hush::VulkanRenderer::SetActiveScene(Scene *scene)
 {
 	this->m_activeScene = scene;
+	Query<DirectionalLight, WorldTransform> queryRes =
+		this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
+	queryRes.Each([this](DirectionalLight &lightComponent, WorldTransform &transformComponent) {
+		this->m_directionalLight = &lightComponent;
+		this->m_sunTransform = &transformComponent;
+	});
+	LogFormat(ELogLevel::Info, "Setting directional light to {}", reinterpret_cast<uint64_t>(this->m_directionalLight));
 }
 
 // Called on resize and window init
@@ -192,12 +198,36 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-void Hush::VulkanRenderer::PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh)
+void Hush::VulkanRenderer::PushMesh(const WorldTransform* xform, const Mesh* mesh)
 {
-	// TODO: Make this take an entity or something like that so we have access to its transform
-	// this->m_loadedNodes.emplace(std::make_shared<VulkanMeshNode>(mesh), mesh->GetName());
-	(void)globalTransform;
-	(void)mesh;
+	HUSH_ASSERT(xform != nullptr && mesh != nullptr, "Null component data received on the renderer!");
+	const GPUMeshBuffers& meshBuffers = mesh->GetMeshBuffers();
+	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
+	{
+		Hush::VkRenderObject def{};
+		def.indexCount = s.count;
+		def.firstIndex = s.startIndex;
+		GpuAllocatedBuffer indexAllocatedBuffer = meshBuffers.indexBuffer;
+		def.indexBuffer = static_cast<VkBuffer>(indexAllocatedBuffer.GetBuffer());
+		def.material = s.material->GetInternalMaterial();
+
+		def.transform = xform->GetTransformationMatrix();
+		def.vertexBufferAddress = meshBuffers.vertexBufferAddress;
+		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
+		{
+			this->m_mainDrawContext.transparentSurfaces.push_back(def);
+		}
+		else
+		{
+			this->m_mainDrawContext.opaqueSurfaces.push_back(def);
+		}
+	}
+	
+}
+
+void Hush::VulkanRenderer::ClearDrawContext() {
+	this->m_mainDrawContext.transparentSurfaces.clear();
+	this->m_mainDrawContext.opaqueSurfaces.clear();
 }
 
 void Hush::VulkanRenderer::DestroyMesh(const std::string_view &name)
@@ -282,46 +312,9 @@ void Hush::VulkanRenderer::HandleEvent(const SDL_Event *event) noexcept
 	this->m_uiForwarder->HandleEvent(event);
 }
 
-void DrawMesh(Hush::Mesh *mesh, const Hush::WorldTransform *transform, void *drawContext)
-{
-
-	// Interpret drawContext as: std::vector<VkRenderObject>* OpaqueSurfaces;
-	HUSH_ASSERT(drawContext != nullptr, "Draw context should not be null for any render node");
-	auto *drawCtxImpl = static_cast<Hush::DrawContext *>(drawContext);
-
-	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
-	{
-		Hush::VkRenderObject def{};
-		def.indexCount = s.count;
-		def.firstIndex = s.startIndex;
-		def.indexBuffer = static_cast<VkBuffer>(mesh->GetMeshBuffers().indexBuffer.GetBuffer());
-		// Replace with graphics API call
-		def.material = s.material->GetInternalMaterial();
-
-		def.transform = transform->GetTransformationMatrix();
-		def.vertexBufferAddress = mesh->GetMeshBuffers().vertexBufferAddress;
-		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
-		{
-			drawCtxImpl->transparentSurfaces.push_back(def);
-		}
-		else
-		{
-			drawCtxImpl->opaqueSurfaces.push_back(def);
-		}
-	}
-}
-
 void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 {
 	(void)delta;
-	this->m_mainDrawContext.opaqueSurfaces.clear();
-	this->m_mainDrawContext.transparentSurfaces.clear();
-	// Test stuff just to show that it works... to be refactored into a more dynamic approach
-	glm::mat4 topMatrix{1.0F};
-	for (auto &nodeEntry : this->m_loadedMeshes)
-	{
-		DrawMesh(nodeEntry.second, nodeEntry.first, &this->m_mainDrawContext);
-	}
 
 	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0F), Vector3Math::ONE);
 	glm::mat4 viewMatrix = this->m_editorCamera.GetViewMatrix() * scaleMat;
@@ -346,8 +339,10 @@ void Hush::VulkanRenderer::UpdateSceneObjects(float delta)
 void Hush::VulkanRenderer::InitRendering()
 {
 	constexpr float initialFOV = 70.0F;
+	constexpr float nearPlane = 0.1f;
+	constexpr float farPlane = 4000.0f;
 	this->m_editorCamera =
-		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), 0.1f, 4000.0f);
+		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), nearPlane, farPlane);
 
 	this->CreateSyncObjects();
 
@@ -359,8 +354,6 @@ void Hush::VulkanRenderer::InitRendering()
 
 	// Last two methods must be called after the pipelines and descriptors are initialized
 	this->InitDefaultData();
-
-	this->InitRenderables();
 }
 
 void Hush::VulkanRenderer::Dispose()
@@ -608,16 +601,6 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 	return this->m_windowContext;
 }
 
-void Hush::VulkanRenderer::SetDirectionalLight(DirectionalLight *light) noexcept
-{
-	(void)light;
-	Query<DirectionalLight, WorldTransform> queryRes =
-		this->m_activeScene->CreateQuery<DirectionalLight, WorldTransform>();
-	queryRes.Each([this](DirectionalLight &lightComponent, WorldTransform &transformComponent) {
-		this->m_directionalLight = &lightComponent;
-		this->m_sunTransform = &transformComponent;
-	});
-}
 
 const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept {
 	return this->m_editorCamera;
@@ -697,21 +680,6 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 	this->AddToDeletionQueue([&]() { vmaDestroyAllocator(m_allocator); });
 }
 
-void Hush::VulkanRenderer::InitRenderables()
-{
-	std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Lantern.glb)";
-	// Create an example entity with a Mesh component here
-	// std::string structurePath = R"(C:\Users\nefes\Personal\Hush-Engine\res\Duck.glb)";
-	HUSH_ASSERT(this->m_activeScene != nullptr, "No scene has been set, please call SetActiveScene before rendering");
-	std::vector<Entity> nodeVector = VulkanLoader::LoadGltfMeshes(this, structurePath, this->m_activeScene).value();
-	for (Entity &node : nodeVector)
-	{
-		WorldTransform *xform = node.GetComponent<WorldTransform>();
-		Mesh *mesh = node.GetComponent<Mesh>();
-		std::pair<WorldTransform *, Mesh *> entry(xform, mesh);
-		this->m_loadedMeshes.emplace_back(entry);
-	}
-}
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
 										   VkImageLayout newLayout)
@@ -1047,12 +1015,15 @@ void Hush::VulkanRenderer::InitDefaultData() noexcept
 
 void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 {
+	this->m_frameDescriptor.Clear();
 	////allocate a new uniform buffer for the scene data
 	GpuAllocatedBuffer gpuSceneDataBuffer(sizeof(GPUSceneData), GpuAllocatedBuffer::EBufferUsage::UniformBuffer,
 										  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
-	auto *sceneUniformData = static_cast<GPUSceneData *>(gpuSceneDataBuffer.GetMappedData());
+	void* mappedData = gpuSceneDataBuffer.GetMappedData();
+	HUSH_ASSERT(mappedData != nullptr, "Mapped data for GPU buffer is null!");
+	auto *sceneUniformData = reinterpret_cast<GPUSceneData *>(mappedData);
 	*sceneUniformData = this->m_sceneData;
 
 	// create a descriptor set that binds that buffer and update it
@@ -1061,10 +1032,9 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 	// Local scope to use another writer later one
 	{
-		DescriptorWriter writer;
-		writer.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
+		this->m_frameDescriptor.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
 						   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-		writer.UpdateSet(this->m_device, globalDescriptor);
+		this->m_frameDescriptor.UpdateSet(this->m_device, globalDescriptor);
 	}
 
 	// begin a render pass  connected to our draw image
@@ -1133,7 +1103,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 	////add it to the deletion queue of this frame so it gets deleted once its been used
 	this->GetCurrentFrame().deletionQueue.PushFunction(
-		[=, this, &gpuSceneDataBuffer]() { gpuSceneDataBuffer.Dispose(m_allocator); });
+		[this, gpuSceneDataBuffer]() mutable { gpuSceneDataBuffer.Dispose(m_allocator); });
 
 	vkCmdEndRendering(cmd);
 }
@@ -1395,8 +1365,8 @@ Hush::GpuAllocatedImage Hush::VulkanRenderer::CreateImage(const void *data, cons
 Hush::GPUMeshBuffers Hush::VulkanRenderer::UploadMesh(const std::vector<uint32_t> &indices,
 													  const std::vector<Mesh::Vertex> &vertices)
 {
-	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Mesh::Vertex));
-	const uint32_t indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
+	const auto vertexBufferSize = static_cast<uint32_t>(vertices.size() * sizeof(Mesh::Vertex));
+	const auto indexBufferSize = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
 
 	GPUMeshBuffers newSurface;
 

@@ -8,9 +8,6 @@
 #include "ISystem.hpp"
 #include "utils/ParallelUtils.hpp"
 
-#define FLECS_NO_CPP
-#include <flecs.h>
-
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
 Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
@@ -123,13 +120,11 @@ Hush::Entity Hush::Scene::CreateEntity()
 Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 {
 	auto *world = static_cast<ecs_world_t *>(m_world);
-
-	ecs_entity_desc_t desc = {};
-	desc.name = name.data();
-
-	const Entity::EntityId entityId = ecs_entity_init(world, &desc);
-
-	return Entity{this, entityId};
+	const Entity::EntityId entityId = ecs_new(world);
+	
+	Entity result {this, entityId};
+	result.EmplaceComponent<Entity::Name>(name);
+	return result;
 }
 
 void Hush::Scene::DestroyEntity(Entity &&entity)

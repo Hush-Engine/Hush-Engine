@@ -1,10 +1,13 @@
 #pragma once
+#include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
+#include <filesystem>
 #include <glm/mat4x4.hpp>
+#include <span>
 #include <vector>
 #include "Result.hpp"
-#include "MaterialPass.hpp"
-#include "ImageTexture.hpp"
+#include "Shared/ImageTexture.hpp"
+#include "Shared/MaterialPass.hpp"
 #include "Logger.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
 #include <magic_enum/magic_enum.hpp>
@@ -15,15 +18,20 @@ namespace Hush::GltfLoadFunctions
 	enum class EError
 	{
 		None = 0,
+		FileNotFound,
 		InvalidMeshFile,
 		FormatNotSupported,
 		TextureNotFound
 	};
 
+	fastgltf::Expected<fastgltf::Asset> GetAssetFromFile(const std::filesystem::path& file);
+
 	glm::mat4 GetNodeTransform(const fastgltf::Node &node);
 
 	EMaterialPass GetMaterialPassFromFastGltfPass(fastgltf::AlphaMode pass);
 
+	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType);
+	
 	std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
 															 const fastgltf::Image &image);
 

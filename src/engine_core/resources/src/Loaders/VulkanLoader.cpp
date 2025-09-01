@@ -1,13 +1,17 @@
 #include "Assertions.hpp"
+#include "Components/LocalTransform.hpp"
+#include "Loaders/IModelLoader.hpp"
+#include "Ref.hpp"
+#include "Renderer.hpp"
+#include "ResourceManager.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include <cstdint>
 #include <memory>
-#include <string_view>
 #include <unordered_map>
 #define VK_NO_PROTOTYPES
 #include <glm/ext/matrix_float4x4.hpp>
 #include "VulkanLoader.hpp"
-#include "VulkanRenderer.hpp"
+#include "Vulkan/VulkanRenderer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
@@ -20,35 +24,25 @@
 #include <fastgltf/tools.hpp>
 #include <fastgltf/core.hpp>
 #include "Shared/ImageTexture.hpp"
-#include "Shared/GltfLoadFunctions.hpp"
+#include "GltfLoadFunctions.hpp"
+#include "Components/MeshReference.hpp"
 #include "../../core/src/Scene.hpp"
-#include "../../core/src/Components/WorldTransform.hpp"
-#include "../../core/src/Components/LocalTransform.hpp"
 
-Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::VulkanLoader::LoadGltfMeshes(
-	VulkanRenderer *engine, std::filesystem::path filePath, Scene *activeScene)
+
+void Hush::VulkanLoader::SetResourceManager(ResourceManager* resourceManager) {
+	this->m_resourceManager = resourceManager;
+}
+
+Hush::ResourceManager *Hush::VulkanLoader::GetResourceManager() const {
+	return this->m_resourceManager;
+}
+
+
+Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::VulkanLoader::LoadMeshes(IRenderer *engine, const std::filesystem::path& filePath, Scene *activeScene)
 {
-	if (!std::filesystem::exists(filePath))
-	{
-		return EError::FileNotFound;
-	}
-
-	fastgltf::Expected<fastgltf::GltfDataBuffer> loadedData = fastgltf::GltfDataBuffer::FromPath(filePath);
-
-	if (!loadedData)
-	{
-		return EError::InvalidMeshFile;
-	}
-
-	fastgltf::GltfDataBuffer &data = loadedData.get();
-
-	constexpr fastgltf::Options loadingOptions = fastgltf::Options::LoadExternalBuffers;
-
-	fastgltf::Parser parser{};
-
-	fastgltf::Expected<fastgltf::Asset> loadedAsset =
-		parser.loadGltfBinary(data, filePath.parent_path(), loadingOptions);
-
+	HUSH_ASSERT(this->m_resourceManager != nullptr, "Failed to load meshes resource manager is null!");
+	fastgltf::Expected<fastgltf::Asset> loadedAsset = GltfLoadFunctions::GetAssetFromFile(filePath);
+	
 	HUSH_ASSERT(loadedAsset, "GLTF asset at {} not properly loaded, error: {}!", filePath.string(),
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
@@ -64,7 +58,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 		// This also adds the component to the entity
 		// TODO: We should probably change this so that it returns void and we add the component a line before calling
 		// the function
-		CreateMeshFromGltfMesh(mesh, loadedAsset.get(), entity, engine);
+		this->CreateMeshFromGltfMesh(mesh, loadedAsset.get(), entity, engine);
 		entities.emplace_back(std::move(entity));
 	}
 
@@ -105,7 +99,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::VulkanLoader::EError> Hush::Vulkan
 }
 
 // TODO: This is now completely renderer agnostic
-Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(VulkanRenderer *engine, const ImageTexture &texture)
+Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(Hush::IRenderer *engine, const ImageTexture &texture)
 {
 	ImageExtent3D extent{static_cast<uint32_t>(texture.GetWidth()), static_cast<uint32_t>(texture.GetHeight()), 1};
 
@@ -115,7 +109,7 @@ Hush::GpuAllocatedImage Hush::VulkanLoader::LoadTexture(VulkanRenderer *engine, 
 }
 
 std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const fastgltf::Asset &asset,
-																		 VulkanRenderer *engine)
+																		 IRenderer *engine)
 {
 	std::vector<GpuAllocatedImage> loadedTexturesResult;
 	loadedTexturesResult.reserve(asset.images.size());
@@ -128,16 +122,19 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 	return loadedTexturesResult;
 }
 
-Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
-													   Entity &entityRef, VulkanRenderer *engine)
+Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
+													   Entity &entityRef, IRenderer *engine)
 {
-	Mesh &meshAsset = entityRef.AddComponent<Mesh>();
+	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
+	// Load a mesh through the resource loader
+	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
 
-	meshAsset.SetName(mesh.name);
+	meshAsset->SetName(mesh.name);
 
 	// Clear out the vector buffers
-	std::vector<uint32_t> &indexRef = meshAsset.GetIndexBuffer();
-	std::vector<Mesh::Vertex> &vertexRef = meshAsset.GetVertexBuffer();
+	std::vector<uint32_t> &indexRef = meshAsset->GetIndexBuffer();
+	std::vector<Mesh::Vertex> &vertexRef = meshAsset->GetVertexBuffer();
 	indexRef.clear();
 	vertexRef.clear();
 
@@ -150,7 +147,7 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 	DescriptorAllocatorGrowable descriptorPool;
 	descriptorPool.Init(volkGetLoadedDevice(), static_cast<uint32_t>(asset.materials.size()), sizes);
 
-	std::vector<GpuAllocatedImage> loadedTextures = LoadAllTextures(asset, engine);
+	std::vector<GpuAllocatedImage> loadedTextures = this->LoadAllTextures(asset, rendererImpl);
 	std::unordered_map<std::uintptr_t, std::shared_ptr<IMaterial3D>> loadedMaterials;
 
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
@@ -206,17 +203,17 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 		{
 			size_t materialIdx = primitive.materialIndex.value();
 			std::shared_ptr<IMaterial3D> materialInstance =
-				GenerateMaterial(materialIdx, asset, engine, descriptorPool, loadedTextures);
+				GenerateMaterial(materialIdx, asset, rendererImpl, descriptorPool, loadedTextures);
 			surfaceToAdd.material = materialInstance;
 		}
 
 		// Correct normals if empty
 		if (normalBuffer.empty())
 		{
-			meshAsset.CalculateNormals();
+			meshAsset->CalculateNormals();
 		}
 
-		meshAsset.AddSurface(std::move(surfaceToAdd));
+		meshAsset->AddSurface(std::move(surfaceToAdd));
 	}
 
 	std::vector<VkSampler> samplers;
@@ -234,25 +231,29 @@ Hush::Mesh *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mes
 		// Layouts seem to be deleted materialInstance->GetMaterialConstants()e
 
 		VkSampler newSampler = nullptr;
-		vkCreateSampler(engine->GetVulkanDevice(), &sampl, nullptr, &newSampler);
+		vkCreateSampler(rendererImpl->GetVulkanDevice(), &sampl, nullptr, &newSampler);
 
 		samplers.push_back(newSampler);
 	}
 
-	meshAsset.CalculateTangentBasis();
-	meshAsset.SetMeshBuffers(engine->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
-	return &meshAsset;
+	meshAsset->CalculateTangentBasis();
+	meshAsset->SetMeshBuffers(rendererImpl->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
+	// Add the component to the entity
+	auto* result = &entityRef.EmplaceComponent<MeshReference>(meshAsset);
+	return result;
 }
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
-	size_t materialIdx, const fastgltf::Asset &asset, VulkanRenderer *engine,
+	size_t materialIdx, const fastgltf::Asset &asset, IRenderer *engine,
 	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
 {
+	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
 	auto materialInstance = std::make_shared<GLTFMetallicRoughness>();
-	materialInstance->Init(engine);
+	materialInstance->Init(rendererImpl);
 	materialInstance->SetAlbedo(*reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetEmissionColor(
 		glm::vec3(material.emissiveFactor.x(), material.emissiveFactor.y(), material.emissiveFactor.z()));
@@ -279,15 +280,15 @@ std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMateria
 
 	GLTFMetallicRoughness::MaterialResources &materialResources = materialInstance->GetMaterialResources();
 	// default the material textures
-	materialResources.colorImage = engine->GetDefaultImageProvider()->GetWhiteImage();
-	materialResources.colorSampler = engine->GetDefaultSamplerLinear();
-	materialResources.metalRoughImage = engine->GetDefaultImageProvider()->GetWhiteImage();
-	materialResources.emissiveImage = engine->GetDefaultImageProvider()->GetTransparentImage();
-	materialResources.normalImage = engine->GetDefaultImageProvider()->GetNormalImage();
+	materialResources.colorImage = rendererImpl->GetDefaultImageProvider()->GetWhiteImage();
+	materialResources.colorSampler = rendererImpl->GetDefaultSamplerLinear();
+	materialResources.metalRoughImage = rendererImpl->GetDefaultImageProvider()->GetWhiteImage();
+	materialResources.emissiveImage = rendererImpl->GetDefaultImageProvider()->GetTransparentImage();
+	materialResources.normalImage = rendererImpl->GetDefaultImageProvider()->GetNormalImage();
 
-	materialResources.metalRoughSampler = engine->GetDefaultSamplerLinear();
-	materialResources.emissiveSampler = engine->GetDefaultSamplerLinear();
-	materialResources.normalSampler = engine->GetDefaultSamplerLinear();
+	materialResources.metalRoughSampler = rendererImpl->GetDefaultSamplerLinear();
+	materialResources.emissiveSampler = rendererImpl->GetDefaultSamplerLinear();
+	materialResources.normalSampler = rendererImpl->GetDefaultSamplerLinear();
 
 	// Then actually set them to the material's
 	GltfLoadFunctions::SetMaterialTextures(materialInstance.get(), asset, material, &loadedTextures);

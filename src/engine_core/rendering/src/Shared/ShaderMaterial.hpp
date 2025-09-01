@@ -1,8 +1,11 @@
 #pragma once
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <span>
+#include <string>
 #include <unordered_map>
+#include "crypto/Hashing.hpp"
 #include "ShaderBindings.hpp"
 #include "Result.hpp"
 #include "Assertions.hpp"
@@ -84,11 +87,12 @@ namespace Hush
 		{
 			// Search for a binding with the name passed onto the func
 			constexpr size_t valueSize = sizeof(T);
-			const ShaderBindings &binding = this->FindBinding(name);
+			// TODO: Refactor into using the resulting iterator
 			if (this->m_bindingsByName.find(name.data()) == this->m_bindingsByName.end())
 			{
 				return EError::PropertyNotFound;
 			}
+			const ShaderBindings &binding = this->FindBinding(name);
 			HUSH_ASSERT(this->m_uniformBufferMappedData != nullptr,
 						"Material buffer is not initialized! Forgot to call LoadShaders?");
 			// Offset the pointer by the binding's offset

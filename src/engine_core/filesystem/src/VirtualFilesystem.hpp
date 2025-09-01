@@ -6,9 +6,8 @@
 
 #pragma once
 #include "FileSystem.hpp"
+#include "IFile.hpp"
 #include "Result.hpp"
-#include <cstddef>
-#include <span>
 #include <string_view>
 #include <vector>
 #include <optional>
@@ -60,7 +59,7 @@ namespace Hush
 
 		void Unmount(std::string_view virtualPath);
 
-		std::vector<std::string_view> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
+		std::vector<FileInfo> ListPath(std::string_view virtualPath, EListOptions options = EListOptions::None);
 
 		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::string_view virtualPath,
 															   EFileOpenMode mode = EFileOpenMode::Read);
@@ -70,6 +69,9 @@ namespace Hush
 		{
 			MountFileSystemInternal(path, std::make_unique<T>(std::forward<Args>(args)...));
 		}
+		
+		// Public facing API, will call ResolveFileSystem
+		Result<std::string_view, EError> ResolveVirtualPath(const std::string_view& path);
 
 	private:
 		void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);

@@ -8,19 +8,35 @@
 
 #include "Entity.hpp"
 #include "ISystem.hpp"
+#include "Logger.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
 #include "executors/ThreadPool.hpp"
 
 #include <array>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
+#define FLECS_NO_CPP
+// We need to add these in for the templated functions, sorry :P
+#include <flecs/addons/flecs_c.h>
+
+#include <flecs.h>
 
 namespace Hush
 {
+	enum class EComponentObserverType : int32_t
+	{
+		Add,
+		Remove,
+		Set
+	};
 	class HushEngine;
 
 	// TODO: this class is expected to change a lot, it's just a placeholder for now.
@@ -87,6 +103,65 @@ namespace Hush
 		/// @return Entity
 		[[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
+
+		/// Registers a callback that gets called whenever a component receives the specified event
+		// @param observerType Component event type
+		template <class T, class Func>
+		void AddComponentObserver(EComponentObserverType observerType, Func &&callback) {
+			Entity::EntityId event = 0;
+			switch (observerType) {
+			case EComponentObserverType::Add:
+				event = EcsOnAdd;
+				break;
+			case EComponentObserverType::Remove:
+				event = EcsOnRemove;
+				break;
+			case EComponentObserverType::Set:
+				event = EcsOnSet;
+				break;
+			default:
+				// TODO: Error here
+				LogFormat(ELogLevel::Error, "Component observer {} not recognized!", static_cast<int32_t>(observerType));
+				return;
+			}
+
+			const Entity::EntityId componentId = RegisterIfNeededSlow<T>();
+
+			auto* world = static_cast<ecs_world_t*>(this->m_world);
+			ecs_term_t queryTerm = {
+				.id = componentId,
+				.inout = EcsIn
+			};
+			ecs_query_desc_t query = {
+				.terms = { queryTerm }
+			};
+
+			using CallbackFunc_t = std::function<void(Entity::EntityId, T*)>;
+			// Horrible hack, but we wanted to use the C API
+			// NOLINTNEXTLINE
+			auto* function = new CallbackFunc_t(std::forward<Func>(callback));
+			
+			ecs_observer_desc_t observerDesc = {
+				.query = query,
+				.events = { event },
+				.callback = [](ecs_iter_t* it) {
+					if (it->count <= 0) {
+						return;
+					}
+					Entity::EntityId eventEntity = it->entities[0];
+					T* component = ecs_field(it, T, 0);
+					auto* callbackFunc = reinterpret_cast<CallbackFunc_t*>(it->callback_ctx);
+					(*callbackFunc)(eventEntity, component);
+				},
+				.callback_ctx = function,
+				.callback_ctx_free = [](void* ctx) {
+					// NOLINTNEXTLINE
+					delete reinterpret_cast<CallbackFunc_t*>(ctx);
+				}
+			};
+			// TODO: Add this to a member vector so that we can delete it afterwards
+			Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
+		}
 
 		/// Destroy an entity.
 		/// @param entity Entity to destroy

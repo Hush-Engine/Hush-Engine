@@ -1,5 +1,6 @@
 #include "StringUtils.hpp"
 #include "Logger.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 

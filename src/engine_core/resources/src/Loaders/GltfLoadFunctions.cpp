@@ -3,11 +3,36 @@
 #include "Result.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Vulkan/GltfMetallicRoughness.hpp"
+#include <cstddef>
+#include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
+#include <span>
 #include <vector>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
-#include "MaterialPass.hpp"
+
+
+fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(const std::filesystem::path& file) {
+	if (!std::filesystem::exists(file))
+	{
+		return fastgltf::Error::InvalidPath;
+	}
+
+	fastgltf::Expected<fastgltf::GltfDataBuffer> loadedData = fastgltf::GltfDataBuffer::FromPath(file);
+
+	if (!loadedData)
+	{
+		return loadedData.error();
+	}
+
+	fastgltf::GltfDataBuffer &data = loadedData.get();
+
+	constexpr fastgltf::Options loadingOptions = fastgltf::Options::LoadExternalBuffers;
+
+	fastgltf::Parser parser{};
+
+	return parser.loadGltfBinary(data, file.parent_path(), loadingOptions);
+}
 
 glm::mat4 Hush::GltfLoadFunctions::GetNodeTransform(const fastgltf::Node &node)
 {
@@ -51,9 +76,7 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 	Hush::GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset, const fastgltf::Material &material,
 	const void *loadedTextures)
 {
-#ifdef HUSH_VULKAN_IMPL
-
-	// Vulkan implementation will cast the out material resources and the loaded textures
+	// Each rendering implementation will cast the out material resources and the loaded textures
 	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
 
 	// TODO: Refactor all this in a function
@@ -108,19 +131,16 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 	}
 
 	return EError::None;
-#endif
 }
 
-std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
-																						const fastgltf::Image &image)
-{
+
+std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType) {
 	const fastgltf::sources::Vector *vectorData = std::get_if<fastgltf::sources::Vector>(&image.data);
 	if (vectorData != nullptr)
 	{
-		return std::make_shared<ImageTexture>(reinterpret_cast<const std::byte *>(vectorData->bytes.data()),
-											  vectorData->bytes.size());
+		*outMimeType = vectorData->mimeType;
+		return {reinterpret_cast<const std::byte*>(vectorData->bytes.data()), vectorData->bytes.size()};
 	}
-	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
 	const fastgltf::sources::BufferView *bufferViewData = std::get_if<fastgltf::sources::BufferView>(&image.data);
 
 	// Buffer view index
@@ -134,9 +154,23 @@ std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDat
 			HUSH_ASSERT(false, "Unrecognized data format!!");
 		}
 
-		return std::make_shared<ImageTexture>(bufferData.value() + bufferView.byteOffset, bufferView.byteLength);
+		*outMimeType = bufferViewData->mimeType;
+		return {bufferData.value() + bufferView.byteOffset, bufferView.byteLength};
 	}
 
+	return {};
+}
+
+std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
+																						const fastgltf::Image &image)
+{
+	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
+	if (!byteBuffer.empty()) {
+		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
+	}
+	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
+	
 	// TODO: support for file byte offset
 	if (uriData == nullptr || uriData->fileByteOffset > 0)
 	{

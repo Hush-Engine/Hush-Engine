@@ -13,7 +13,6 @@ hush_add_library(
              src/Vulkan/VulkanFullScreenPass.cpp
              src/Shared/ShaderMaterial.cpp
              src/Shared/Mesh.cpp
-             src/Vulkan/VulkanLoader.cpp
              src/Vulkan/VkDescriptors.cpp
              src/Vulkan/VulkanSwapchain.cpp
              src/Vulkan/ShaderModuleLoader.cpp
@@ -21,7 +20,6 @@ hush_add_library(
              src/Shared/ImageTexture.cpp
              src/Shared/EditorCamera.cpp
              src/Shared/DefaultImages.cpp
-             src/Shared/GltfLoadFunctions.cpp
              src/ImGui/VulkanImGuiForwarder.cpp
         PUBLIC_HEADER_DIRS src
 )

@@ -7,6 +7,7 @@
 #include <Scene.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <string_view>
 
 TEST_CASE("Entity creation", "[entity]")
 {
@@ -25,10 +26,13 @@ TEST_CASE("Entity creation", "[entity]")
 
 	SECTION("CreateEntityWithName")
 	{
-		REQUIRE(entity2.GetName().has_value());
-		REQUIRE(entity2.GetName().value() == "MyEntity");
+		const std::string_view baseName = "MyEntity"; 
+		REQUIRE(entity2.GetComponent<Hush::Entity::Name>() != nullptr);
+		const auto* nameComp = entity2.GetComponent<Hush::Entity::Name>();
+		const std::string_view actualName{nameComp->name.data()};
+		REQUIRE(actualName == baseName);		
 	}
-
+	
 	SECTION("DifferentEntities")
 	{
 		REQUIRE(entity.GetId() != entity2.GetId());

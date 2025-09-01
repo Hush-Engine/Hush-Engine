@@ -110,7 +110,7 @@ namespace Hush
 			[[nodiscard, hush::export]]
 			std::uint64_t GetEntityAt(std::size_t index) const;
 
-			Scene *GetScene() const
+			[[nodiscard]] Scene *GetScene() const
 			{
 				return m_scene;
 			}
@@ -130,7 +130,7 @@ namespace Hush
 
 		static constexpr std::uint32_t MAX_COMPONENTS = 32;
 
-		RawQuery() = delete;
+		RawQuery() = default;
 		RawQuery(const RawQuery &) = delete;
 		RawQuery &operator=(const RawQuery &) = delete;
 
@@ -158,8 +158,8 @@ namespace Hush
 	private:
 		friend class Scene;
 
-		void *m_query;
-		Scene *m_scene;
+		void *m_query = nullptr;
+		Scene *m_scene = nullptr;
 	};
 
 	namespace impl
@@ -169,6 +169,9 @@ namespace Hush
 			using EntityId = std::uint64_t;
 
 		public:
+			// Default constructor for simple member reference
+			QueryImpl() = default;
+			
 			QueryImpl(RawQuery query) noexcept
 				: m_rawQuery(std::move(query))
 			{
@@ -200,7 +203,7 @@ namespace Hush
 				return m_rawQuery;
 			}
 
-			const RawQuery &GetRawQuery() const
+			[[nodiscard]] const RawQuery &GetRawQuery() const
 			{
 				return m_rawQuery;
 			}
@@ -273,6 +276,9 @@ namespace Hush
 		using ComponentTuple = std::tuple<std::span<std::remove_reference_t<Components>>...>;
 		using ConstComponentTuple = std::tuple<std::span<std::add_const_t<std::remove_reference_t<Components>>>...>;
 
+		// Default constructor to keep query references as class members
+		Query() = default;
+		
 		/// Constructor.
 		/// @param query Raw query.
 		Query(RawQuery query) noexcept
@@ -353,7 +359,7 @@ namespace Hush
 			///
 			/// @return True if the iterator is finished, false otherwise.
 			[[nodiscard]]
-			bool operator==(const SentinelQueryIterator &) const
+			bool operator==(const SentinelQueryIterator & /*unused*/) const
 			{
 				return m_iter.Finished();
 			}
@@ -361,7 +367,7 @@ namespace Hush
 			/// Returns true if the iterator is not finished.
 			/// @return True if the iterator is not finished, false otherwise.
 			[[nodiscard]]
-			bool operator!=(const SentinelQueryIterator &) const
+			bool operator!=(const SentinelQueryIterator & /*unused*/) const
 			{
 				return !m_iter.Finished();
 			}
@@ -412,7 +418,7 @@ namespace Hush
 			/// @return Tuple of spans of the components.
 			template <std::size_t... I>
 			[[nodiscard]]
-			ComponentTuple GetComponents(std::index_sequence<I...>)
+			ComponentTuple GetComponents(std::index_sequence<I...> /*unused*/)
 			{
 				return std::make_tuple(std::span<std::remove_reference_t<Components>>(
 					static_cast<std::remove_reference_t<Components> *>(
@@ -426,7 +432,7 @@ namespace Hush
 			/// @return Tuple of spans of the components.
 			template <std::size_t... I>
 			[[nodiscard]]
-			ConstComponentTuple GetComponents(std::index_sequence<I...>) const
+			ConstComponentTuple GetComponents(std::index_sequence<I...> /*unused*/) const
 			{
 				return std::make_tuple(std::span<std::add_const_t<std::remove_reference_t<Components>>>(
 					static_cast<std::add_const_t<std::remove_reference_t<Components>> *>(

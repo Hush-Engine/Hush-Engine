@@ -7,6 +7,8 @@ Checks:
     bugprone-*,
     cppcoreguidelines-*,
     readability-identifier-naming,
+    -readability-identifier-length,
+    -readability-uppercase-literal-suffix,
     -modernize-use-trailing-return-type,
     -cppcoreguidelines-pro-bounds-pointer-arithmetic,
     -misc-const-correctness,
@@ -19,16 +21,14 @@ Checks:
     -cppcoreguidelines-pro-type-union-access,
     -misc-confusable-identifiers,
     -modernize-type-traits,
+    -cppcoreguidelines-pro-type-reinterpret-cast,
     -bugprone-stringview-nullptr
     -readability-static-accessed-through-instance
     -cppcoreguidelines-avoid-c-arrays
     -modernize-avoid-c-arrays
-    -readability-uppercase-literal-suffix
-    -readability-identifier-length
     -clang-analyzer-core.CallAndMessage
     -readability-magic-numbers
     -cppcoreguidelines-avoid-magic-numbers
-    -cppcoreguidelines-pro-type-reinterpret-cast
     -cppcoreguidelines-pro-type-vararg
     -bugprone-reserved-identifier
     -bugprone-easily-swappable-parameters
@@ -99,5 +99,6 @@ WarningsAsErrors: >
     modernize-*,
     cppcoreguidelines-*,
     readability-*,
-
+    -readability-identifier-length,
+    -cppcoreguidelines-pro-type-reinterpret-cast,
     -cppcoreguidelines-avoid-non-const-global-variables,

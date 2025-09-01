@@ -7,10 +7,12 @@
 
 #pragma once
 
+#include "Components/WorldTransform.hpp"
 #include "Shared/DefaultImages.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/Mesh.hpp"
+#include "../../resources/src/Ref.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include <SDL2/SDL.h>
@@ -19,6 +21,7 @@
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <string_view>
 
 namespace Hush
 {
@@ -48,7 +51,10 @@ namespace Hush
 
 		virtual void InitImGui() = 0;
 
-		virtual void PushMesh(const glm::mat4 &globalTransform, std::shared_ptr<Mesh> mesh) = 0;
+		/// @brief Must be called before every new frame to clear out all the stale mesh and transform data (this is the responsibility of the RenderingSystem)
+		virtual void ClearDrawContext() = 0;
+		
+		virtual void PushMesh(const WorldTransform* xform, const Mesh* mesh) = 0;
 
 		virtual void DestroyMesh(const std::string_view &name) = 0;
 
@@ -69,8 +75,6 @@ namespace Hush
 		virtual void EndUIFrame() const noexcept = 0;
 
 		virtual void HandleEvent(const SDL_Event *event) noexcept = 0;
-
-		virtual void SetDirectionalLight(DirectionalLight *light) noexcept = 0;
 
 		virtual GpuAllocatedImage CreateImage(const void *data, const ImageExtent3D &size, Color::EFormat format,
 											  uint32_t usage, bool mipmapped = false) = 0;

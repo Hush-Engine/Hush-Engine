@@ -1,5 +1,6 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
+#include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
 #include "InputManager.hpp"
@@ -20,12 +21,9 @@
 #include <vector>
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
-
-
 #include <memory>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-#include "Shared/Mesh.hpp"
 #include "imguizmo/ImGuizmo.h"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
@@ -88,17 +86,17 @@ void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
 }
 
-void Hush::Serialize(Mesh *component, const char *entityName)
+void Hush::Serialize(MeshReference *component, const char *entityName)
 {
 	if (!ImGui::CollapsingHeader((std::string("Mesh Component##") + entityName).c_str(),
 								 ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		return;
 	}
-	ImGui::Text("Name: %s", component->GetName().c_str());
+	ImGui::Text("Name: %s", component->GetMesh()->GetName().c_str());
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
-	const std::vector<GeoSurface> &surfaces = component->GetSurfaces();
+	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
 	// Iterate over the surfaces and  serialize their materials as submeshes
 	for (size_t i = 0; i < surfaces.size(); i++)
 	{
@@ -177,7 +175,9 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 
 void Hush::InspectorPanel::RenderProperties()
 {
-	ImGui::SeparatorText(this->m_inspectTarget->GetName().value_or("").data());
+	Entity::Name* entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
+	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
+	ImGui::SeparatorText(entityName->name.data());
 	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
@@ -189,10 +189,10 @@ void Hush::InspectorPanel::RenderProperties()
 		Serialize(dirLightComponent);
 	}
 
-	Mesh *meshComponent = this->m_inspectTarget->GetComponent<Mesh>();
+	MeshReference *meshComponent = this->m_inspectTarget->GetComponent<MeshReference>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent, this->m_inspectTarget.value().GetName().value().data());
+		Serialize(meshComponent, entityName->name.data());
 	}
 }
 

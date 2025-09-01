@@ -4,6 +4,7 @@
 #include "Components/WorldTransform.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <WindowManager.hpp>
+#include <cstdint>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
 #include <imgui/imgui.h>
@@ -23,8 +24,8 @@ void Hush::HushEngine::Run()
 
 	// Initialize any static resources we need
 	this->Init();
+	rendererImpl->SetActiveScene(this->m_app->GetScene());
 
-	mainRenderer.GetInternalRenderer()->SetDirectionalLight(this->m_defaultLight);
 	std::chrono::steady_clock::duration elapsed;
 
 	while (this->m_isApplicationRunning)
@@ -34,8 +35,9 @@ void Hush::HushEngine::Run()
 		// TODO: Change this to the window renderer
 		if (!mainRenderer.IsActive())
 		{
-			// Arbitrary sleep to avoid taking all CPU usage
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			// Avoid taking all CPU usage
+			constexpr int32_t arbitrarySleepMs = 100;
+			std::this_thread::sleep_for(std::chrono::milliseconds(arbitrarySleepMs));
 			continue;
 		}
 
@@ -53,6 +55,7 @@ void Hush::HushEngine::Run()
 
 		this->m_app->OnPostRender();
 
+		this->m_app->DisposeFrame();
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		elapsed = end - start;
 	}
