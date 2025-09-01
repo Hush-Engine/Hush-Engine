@@ -203,7 +203,7 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 		binding.stageFlags = reflectionModule.shader_stage;
 		binding.type = ShaderBindings::EBindingType::PushConstant;
 		bindings.emplace_back(binding);
-		this->m_bindingsByName[Hashing::Fnv1a(pushConstant->name)] = binding;
+		this->m_bindingsByName[pushConstant->name] = binding;
 	}
 
 	std::vector<SpvReflectInterfaceVariable *> inputVars(inputVarsCount);
@@ -219,7 +219,7 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 		binding.offset = inputVar->word_offset.location;
 		binding.stageFlags = reflectionModule.shader_stage;
 		bindings.emplace_back(binding);
-		this->m_bindingsByName[Hashing::Fnv1a(inputVar->name)] = binding;
+		this->m_bindingsByName[inputVar->name] = binding;
 	}
 	std::vector<SpvReflectDescriptorBinding *> descriptorBindings(descriptorCount);
 	spvReflectEnumerateDescriptorBindings(&reflectionModule, &descriptorCount, descriptorBindings.data());
@@ -255,7 +255,7 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 		}
 
 		bindings.emplace_back(binding);
-		this->m_bindingsByName[Hashing::Fnv1a(descriptor->name)] = binding;
+		this->m_bindingsByName[descriptor->name] = binding;
 		if (descriptor->descriptor_type != SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
 		{
 			continue;
@@ -276,7 +276,7 @@ Hush::Result<std::vector<Hush::ShaderBindings>, Hush::ShaderMaterial::EError> Hu
 			memberBinding.stageFlags = descriptor->spirv_id;
 
 			bindings.emplace_back(memberBinding);
-			this->m_bindingsByName[Hashing::Fnv1a(member.name)] = memberBinding;
+			this->m_bindingsByName[member.name] = memberBinding;
 		}
 	}
 	spvReflectDestroyShaderModule(&reflectionModule);

@@ -41,7 +41,7 @@ public:
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 		Hush::VirtualFilesystem& vfs = entt.AddComponent<Hush::VirtualFilesystem>();
-		vfs.MountFileSystem<Hush::CFileSystem>("res://", R"(C:\Users\nefes\Personal\TestHushProject)");
+		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
 		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
 		this->m_scene->Init();
 		this->m_userInterface.Init(this->m_scene.get());

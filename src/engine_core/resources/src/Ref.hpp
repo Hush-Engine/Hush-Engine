@@ -8,7 +8,6 @@
 #pragma once
 
 #include "IResourceManager.hpp"
-#include "Logger.hpp"
 
 namespace Hush
 {
@@ -23,7 +22,7 @@ namespace Hush
 
 		inline ~Ref() {
 			if (this->IsNull()) return;
-			RefCounted* count = this->m_resourceManager->DecreaseRefCount(this->m_element);
+			this->m_resourceManager->DecreaseRefCount(this->m_element);
 		}
 		
 		inline T* Get() {
@@ -45,7 +44,7 @@ namespace Hush
             m_element(other.m_element),
             m_resourceManager(other.m_resourceManager) 
         {
-            RefCounted* count = m_resourceManager->IncreaseRefCount(m_element);
+            m_resourceManager->IncreaseRefCount(m_element);
         }
 
         Ref(Ref&& other) noexcept : 

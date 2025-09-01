@@ -33,4 +33,11 @@ if(HUSH_DEFAULT_PROJECT_ROOT STREQUAL "")
     endif()
 endif()
 
+string(REPLACE ")" "\\)" ESCAPED_PROJECT_ROOT "${HUSH_DEFAULT_PROJECT_ROOT}")
+
+# Add compile definition for the editor target
+target_compile_definitions(HushEditor PRIVATE
+    "HUSH_DEFAULT_PROJECT_DIR=R\"(${ESCAPED_PROJECT_ROOT})\""
+)
+
 target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)

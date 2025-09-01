@@ -8,7 +8,6 @@
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "Result.hpp"
-#include "Shared/Mesh.hpp"
 #include "Loaders/GltfLoadFunctions.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"

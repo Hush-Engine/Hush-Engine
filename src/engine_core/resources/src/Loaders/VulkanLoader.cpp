@@ -3,6 +3,7 @@
 #include "Loaders/IModelLoader.hpp"
 #include "Ref.hpp"
 #include "Renderer.hpp"
+#include "ResourceManager.hpp"
 #include "Shared/IMaterial3D.hpp"
 #include <cstdint>
 #include <memory>
