@@ -6,7 +6,6 @@
 #include "../UIUtils.hpp"
 #include <glm/ext/vector_float3.hpp>
 
-
 constexpr float CAM_PITCH_MIN = -90.f * Hush::MathUtils::DEG_TO_RAD;
 constexpr float CAM_PITCH_MAX = 90.f * Hush::MathUtils::DEG_TO_RAD;
 
