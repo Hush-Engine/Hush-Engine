@@ -11,8 +11,8 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include "ContentPanel.hpp"
-#include "Components/Transform.hpp"
 
+// NOLINTNEXTLINE
 #define ADD_PANEL(activeScene, panelsMap, panelType) panelsMap[typeid(panelType)] = CreatePanel<panelType>(activeScene)
 
 Hush::UI::UI()

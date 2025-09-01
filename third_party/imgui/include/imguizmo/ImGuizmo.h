@@ -48,12 +48,14 @@ void EditTransform(const Camera& camera, matrix_t& matrix)
 {
    static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::ROTATE);
    static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
-   if (ImGui::IsKeyPressed(90))
-      mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-   if (ImGui::IsKeyPressed(69))
-      mCurrentGizmoOperation = ImGuizmo::ROTATE;
-   if (ImGui::IsKeyPressed(82)) // r Key
-      mCurrentGizmoOperation = ImGuizmo::SCALE;
+   // HUSH_CUSTOM: We do not want to inherit this behaviour
+   // 
+   // if (ImGui::IsKeyPressed(90))
+   //    mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+   // if (ImGui::IsKeyPressed(69))
+   //    mCurrentGizmoOperation = ImGuizmo::ROTATE;
+   // if (ImGui::IsKeyPressed(82)) // r Key
+   //    mCurrentGizmoOperation = ImGuizmo::SCALE;
    if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
       mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
    ImGui::SameLine();

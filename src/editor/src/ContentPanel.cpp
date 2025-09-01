@@ -10,6 +10,7 @@
 #include "Result.hpp"
 #include "Loaders/GltfLoadFunctions.hpp"
 #include "UI.hpp"
+#include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include "crypto/Hashing.hpp"
@@ -50,7 +51,7 @@ void Hush::ContentPanel::OnRender() {
 			UI::S_INITIALIZED = true;
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
-		bool isMouseInScene = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+		bool isMouseInScene = UIUtils::IsMouseInScene();
 		this->DrawFiles(isMouseInScene);
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
 		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
