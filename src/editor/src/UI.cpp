@@ -1,5 +1,6 @@
 #include "UI.hpp"
 #include "CommandPanel.hpp"
+#include "DevPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
@@ -11,8 +12,8 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include "ContentPanel.hpp"
-#include "Components/Transform.hpp"
 
+// NOLINTNEXTLINE
 #define ADD_PANEL(activeScene, panelsMap, panelType) panelsMap[typeid(panelType)] = CreatePanel<panelType>(activeScene)
 
 Hush::UI::UI()
@@ -30,6 +31,7 @@ void Hush::UI::Init(Scene *parentScene)
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, InspectorPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, DevPanel);
 }
 
 void Hush::UI::DrawPanels()
