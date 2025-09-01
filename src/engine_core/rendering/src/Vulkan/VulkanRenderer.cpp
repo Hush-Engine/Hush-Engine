@@ -200,17 +200,19 @@ void Hush::VulkanRenderer::InitImGui()
 
 void Hush::VulkanRenderer::PushMesh(const WorldTransform* xform, const Mesh* mesh)
 {
+	HUSH_ASSERT(xform != nullptr && mesh != nullptr, "Null component data received on the renderer!");
+	const GPUMeshBuffers& meshBuffers = mesh->GetMeshBuffers();
 	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
 	{
 		Hush::VkRenderObject def{};
 		def.indexCount = s.count;
 		def.firstIndex = s.startIndex;
-		GpuAllocatedBuffer indexAllocatedBuffer = mesh->GetMeshBuffers().indexBuffer;
+		GpuAllocatedBuffer indexAllocatedBuffer = meshBuffers.indexBuffer;
 		def.indexBuffer = static_cast<VkBuffer>(indexAllocatedBuffer.GetBuffer());
 		def.material = s.material->GetInternalMaterial();
 
 		def.transform = xform->GetTransformationMatrix();
-		def.vertexBufferAddress = mesh->GetMeshBuffers().vertexBufferAddress;
+		def.vertexBufferAddress = meshBuffers.vertexBufferAddress;
 		if (s.material->GetInternalMaterial()->passType == Hush::EMaterialPass::Transparent)
 		{
 			this->m_mainDrawContext.transparentSurfaces.push_back(def);

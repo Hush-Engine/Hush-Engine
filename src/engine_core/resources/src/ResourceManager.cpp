@@ -40,8 +40,9 @@ void Hush::ResourceManager::FreePending() {
 	// TODO: Parallel for
 	for(const HandleId& handle : this->m_deletionQueue) {
 		// Get the ref and call its deleter
-		this->m_references[handle].deleter(reinterpret_cast<void*>(handle));
+		this->m_references.at(handle).deleter(reinterpret_cast<void*>(handle));
 	}
+	this->m_deletionQueue.clear();
 }
 
 Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view& name, const std::byte* data, const size_t& size) {

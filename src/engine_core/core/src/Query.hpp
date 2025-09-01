@@ -158,8 +158,8 @@ namespace Hush
 	private:
 		friend class Scene;
 
-		void *m_query;
-		Scene *m_scene;
+		void *m_query = nullptr;
+		Scene *m_scene = nullptr;
 	};
 
 	namespace impl

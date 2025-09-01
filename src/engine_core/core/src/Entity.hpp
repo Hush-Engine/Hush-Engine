@@ -50,7 +50,7 @@ namespace Hush
 			Name() = default;
 			
 			Name(const std::string_view& name) {
-				HUSH_COND_FAIL_MSG(name.size() < MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
+				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
 				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
 				std::copy_n(name.data(), copyLength, this->name.data());
 				// NOLINTNEXTLINE

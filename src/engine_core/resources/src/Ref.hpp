@@ -66,6 +66,11 @@ namespace Hush
 		    HandleId previousElement = this->m_element;
 		    IResourceManager* previousMananger = this->m_resourceManager;
 
+		    // We're assigning to ourselves, do not increase
+		    if (previousMananger == other.m_resourceManager && previousElement == other.m_element) {
+		    	return *this;
+		    }
+
 		    // Only increase ref count if source is valid (not scheduled for deletion)
 		    if (!other.IsNull()) { // We actually sort of need to test this tbh
 		        other.m_resourceManager->IncreaseRefCount(other.m_element);
