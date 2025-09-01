@@ -1,6 +1,5 @@
 #include "UI.hpp"
 #include "CommandPanel.hpp"
-#include "DevPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
@@ -31,7 +30,6 @@ void Hush::UI::Init(Scene *parentScene)
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, InspectorPanel);
-	ADD_PANEL(parentScene, this->m_activePanels, DevPanel);
 }
 
 void Hush::UI::DrawPanels()

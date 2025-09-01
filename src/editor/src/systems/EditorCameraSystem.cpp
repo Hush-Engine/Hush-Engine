@@ -1,8 +1,14 @@
 #include "EditorCameraSystem.hpp"
-#include "HushEngine.hpp"
+#include "MathUtils.hpp"
 #include "Renderer.hpp"
+#include "Scene.hpp"
 #include "WindowManager.hpp"
+#include "../UIUtils.hpp"
 #include <glm/ext/vector_float3.hpp>
+
+
+constexpr float CAM_PITCH_MIN = -90.f * Hush::MathUtils::DEG_TO_RAD;
+constexpr float CAM_PITCH_MAX = 90.f * Hush::MathUtils::DEG_TO_RAD;
 
 void Hush::EditorCameraSystem::Init() {
 	IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
@@ -21,7 +27,7 @@ void Hush::EditorCameraSystem::OnUpdate(float delta) {
 	glm::mat4 viewMatrix = this->m_editorCamera->GetViewMatrix();
 	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 	glm::vec3& positionRef = this->m_editorCamera->GetPosition();
-	if (InputManager::GetMouseScrollAcceleration().y != 0.0F)
+	if (InputManager::GetMouseScrollAcceleration().y != 0.0F && UIUtils::IsMouseInScene())
 	{
 		constexpr float zoomSpeed = 100.F;
 		positionRef += forward * InputManager::GetMouseScrollAcceleration().y * zoomSpeed * delta;
@@ -85,7 +91,7 @@ void Hush::EditorCameraSystem::OnUpdate(float delta) {
 		float& yaw = this->m_editorCamera->GetYaw();
 		float& pitch = this->m_editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;
-		pitch += mouseAcceleration.y * mouseLookSpeed * delta;
+		pitch = MathUtils::Clamp(pitch + mouseAcceleration.y * mouseLookSpeed * delta, CAM_PITCH_MIN, CAM_PITCH_MAX);
 	}
 }
 
