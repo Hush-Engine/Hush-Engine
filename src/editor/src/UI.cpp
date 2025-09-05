@@ -24,7 +24,6 @@ void Hush::UI::Init(Scene *parentScene)
 {
 	this->SetupImGuiStyle();
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
-	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
