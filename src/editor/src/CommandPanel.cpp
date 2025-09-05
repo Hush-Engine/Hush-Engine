@@ -67,6 +67,11 @@ void Hush::CommandPanel::OnRender()
 	case EState::AddComponentMode:
 		this->AddComponentPopup();
 		break;
+	case EState::None:
+	case EState::Editing:
+	case EState::ForceFocus:
+	case EState::IsPopupMode:
+		break;
 	}
 
 	ImGui::SetNextWindowClass(&windowClass);
@@ -330,12 +335,12 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 
 void Hush::CommandPanel::RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId)
 {
-
-	if (!ImGui::Selectable(entityName.data()))
+	auto narrowedEntity = static_cast<int32_t>(entityId);
+	ImGui::PushID(narrowedEntity);
+	if (ImGui::Selectable(entityName.data()))
 	{
-		return;
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityId);
+		this->CloseCommandMode();
 	}
-
-	UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityId);
-	this->CloseCommandMode();
+	ImGui::PopID();
 }

@@ -5,6 +5,7 @@
 #include "InspectorPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
+#include <cstring>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/trigonometric.hpp>
