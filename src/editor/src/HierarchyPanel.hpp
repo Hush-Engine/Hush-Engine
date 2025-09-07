@@ -6,7 +6,10 @@
 
 #pragma once
 
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "IEditorPanel.hpp"
+#include "Query.hpp"
 
 namespace Hush
 {
@@ -19,5 +22,6 @@ namespace Hush
 
 	private:
 		Scene *m_activeScene;
+		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
 	};
 } // namespace Hush

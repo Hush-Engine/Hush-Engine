@@ -1,21 +1,17 @@
 #include "HierarchyPanel.hpp"
+#include <cstdint>
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
 #include <optional>
-#include <string_view>
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "InspectorPanel.hpp"
-#include "Logger.hpp"
 #include "UI.hpp"
-
-constexpr ImGuiWindowFlags DOCK_BASE_FLAGS =
-	ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-	ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
+	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }
 
 void Hush::HierarchyPanel::OnRender()
@@ -24,9 +20,7 @@ void Hush::HierarchyPanel::OnRender()
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
-	Query<WorldTransform, LocalTransform, Entity::Name> allEntities =
-		this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
-	allEntities.Each([&inspectorPanel](Entity &entity, WorldTransform &_, LocalTransform &localxForm, Entity::Name& name) {
+	this->m_inspectableEntitiesQuery.Each([&inspectorPanel](Entity &entity, WorldTransform &_, LocalTransform &localxForm, Entity::Name& name) {
 		bool selected = inspectorPanel.GetInspectTarget().has_value() &&
 						inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
 		// Get the selectable that's related to the parent
@@ -34,11 +28,13 @@ void Hush::HierarchyPanel::OnRender()
 		{
 			// localxForm.GetParentId();
 		}
-		if (!ImGui::Selectable(name.name.data(), selected))
+		auto narrowedId = static_cast<int32_t>(entity.GetId());
+		ImGui::PushID(narrowedId);
+		if (ImGui::Selectable(name.name.data(), selected))
 		{
-			return;
+			inspectorPanel.SetInspectTarget(entity.GetId());
 		}
-		inspectorPanel.SetInspectTarget(entity.GetId());
+		ImGui::PopID();
 	});
 
 	ImGui::End();

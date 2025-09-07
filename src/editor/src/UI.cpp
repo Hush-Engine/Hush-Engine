@@ -5,6 +5,7 @@
 #include "InspectorPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
+#include <cstring>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/trigonometric.hpp>
@@ -23,7 +24,6 @@ Hush::UI::UI()
 void Hush::UI::Init(Scene *parentScene)
 {
 	this->SetupImGuiStyle();
-	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
