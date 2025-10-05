@@ -3,6 +3,7 @@
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
+#include "NotificationPanel.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
 #include <cstring>
@@ -25,6 +26,7 @@ void Hush::UI::Init(Scene *parentScene)
 {
 	this->SetupImGuiStyle();
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
+	ADD_PANEL(parentScene, this->m_activePanels, NotificationPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
@@ -226,7 +228,6 @@ bool Hush::UI::BeginCenterPopup(const char *label, bool transparent)
 
 bool Hush::UI::CustomSelectable(const char *label, bool *isHovered, ImDrawList *drawList, bool forceHover)
 {
-
 	ImVec2 textSize = ImGui::CalcTextSize(label);
 	ImVec2 pos = ImGui::GetCursorScreenPos();
 
