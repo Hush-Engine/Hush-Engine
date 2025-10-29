@@ -69,7 +69,6 @@ void Hush::NotificationPanel::OnRender(float deltaTime) {
 		constexpr float verticalGap = 4.f;
 		constexpr float startYOffset = 20;
 		const ImVec2 toastPos = ImVec2(renderTargetWidth - maxDimensions.x, renderTargetHeight - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
-		LogFormat(ELogLevel::Info, "Entity: {}, Toast position: ({}, {})", entity.GetId(), toastPos.x, toastPos.y);
 		ImGui::SetNextWindowPos(toastPos);
 		ImGui::SetNextWindowSize(toastSize);
 		std::string notificationName = name.data();

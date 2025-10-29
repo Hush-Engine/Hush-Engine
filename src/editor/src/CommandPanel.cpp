@@ -152,7 +152,6 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 			constexpr ToastNotification::EToastType type = ToastNotification::EToastType::Info;
 			Entity entity = this->m_activeScene->CreateEntity();
 			entity.EmplaceComponent<ToastNotification>(addEntityHelp, notificationTime, type);
-			LogFormat(ELogLevel::Info, "Entity ID with toast: {}", entity.GetId());
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
