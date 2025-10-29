@@ -26,7 +26,7 @@ namespace Hush
 
 		void Init(Scene *activeScene) noexcept override;
 
-		void OnRender() override;
+		void OnRender(float deltaTime) override;
 
 	private:
 		static inline constexpr std::string_view DEFAULT_CMD_PANEL_TEXT = "Type \":\" to enter command mode";

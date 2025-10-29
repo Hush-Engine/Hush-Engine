@@ -24,7 +24,7 @@ namespace Hush
 
 		virtual ~IEditorPanel() = default;
 
-		virtual void OnRender() = 0;
+		virtual void OnRender(float deltaTime) = 0;
 
 		virtual void Init(Scene *activeScene) noexcept = 0;
 	};

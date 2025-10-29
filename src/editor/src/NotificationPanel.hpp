@@ -8,12 +8,13 @@ namespace Hush {
 	
 	class NotificationPanel : public IEditorPanel {
 	public:
-		void OnRender() override;
+		void OnRender(float deltaTime) override;
 
 		void Init(Scene *activeScene) noexcept override;
 
 	private:
 		Query<ToastNotification> m_toastQuery;
+		Scene* m_scene;
 	};
 	
 }

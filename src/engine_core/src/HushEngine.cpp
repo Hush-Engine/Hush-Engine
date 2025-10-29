@@ -49,7 +49,7 @@ void Hush::HushEngine::Run()
 
 		rendererImpl->NewUIFrame();
 
-		this->m_app->OnRender();
+		this->m_app->OnRender(deltaTime);
 
 		rendererImpl->Draw(deltaTime);
 

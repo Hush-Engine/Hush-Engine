@@ -67,6 +67,17 @@ namespace Hush
 		{
 			return glm::vec4(0.0F);
 		}
+		
+		constexpr static Color Red()
+		{
+			return glm::vec4(1.f, 0.f, 0.f, 1.0F);
+		}
+		
+		constexpr static Color WarnYellow()
+		{
+			// NOLINTNEXTLINE
+			return glm::vec4(0.921f, 0.8f, 0.388f, 1.0f);
+		}
 
 		constexpr static Color Magenta()
 		{
@@ -101,6 +112,30 @@ namespace Hush
 			// Pack into a single 32-bit value as ARGB
 			return (static_cast<uint32_t>(aComponent) << 24) | (static_cast<uint32_t>(rComponent) << 16) |
 				   (static_cast<uint32_t>(gComponent) << 8) | static_cast<uint32_t>(bComponent);
+		}
+
+		[[nodiscard]]
+		constexpr uint32_t ToColor32RGBA() const {
+			constexpr float maxFloatColorValue = 255.0F;
+			auto rComponent = static_cast<uint8_t>(glm::clamp(m_rgba.x, 0.0F, 1.0F) * maxFloatColorValue);
+			auto gComponent = static_cast<uint8_t>(glm::clamp(m_rgba.y, 0.0F, 1.0F) * maxFloatColorValue);
+			auto bComponent = static_cast<uint8_t>(glm::clamp(m_rgba.z, 0.0F, 1.0F) * maxFloatColorValue);
+			auto aComponent = static_cast<uint8_t>(glm::clamp(m_rgba.w, 0.0F, 1.0F) * maxFloatColorValue);
+
+			return (static_cast<uint32_t>(rComponent) << 24) | (static_cast<uint32_t>(gComponent) << 16) |
+				   (static_cast<uint32_t>(bComponent) << 8) | static_cast<uint32_t>(aComponent);
+		}
+
+		[[nodiscard]]
+		constexpr uint32_t ToColor32ABGR() const {
+			constexpr float maxFloatColorValue = 255.0F;
+			auto rComponent = static_cast<uint8_t>(glm::clamp(m_rgba.x, 0.0F, 1.0F) * maxFloatColorValue);
+			auto gComponent = static_cast<uint8_t>(glm::clamp(m_rgba.y, 0.0F, 1.0F) * maxFloatColorValue);
+			auto bComponent = static_cast<uint8_t>(glm::clamp(m_rgba.z, 0.0F, 1.0F) * maxFloatColorValue);
+			auto aComponent = static_cast<uint8_t>(glm::clamp(m_rgba.w, 0.0F, 1.0F) * maxFloatColorValue);
+
+			return (static_cast<uint32_t>(aComponent) << 24) | (static_cast<uint32_t>(bComponent) << 16) |
+				   (static_cast<uint32_t>(gComponent) << 8) | static_cast<uint32_t>(rComponent);
 		}
 
 	private:

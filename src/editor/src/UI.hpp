@@ -29,7 +29,7 @@ namespace Hush
 
 		void Init(Scene *parentScene);
 
-		void DrawPanels();
+		void DrawPanels(float deltaTime);
 
 		template <class T>
 		[[nodiscard]]

@@ -14,6 +14,6 @@ namespace Hush
 	{
 	public:
 		void Init(Scene *activeScene) noexcept override;
-		void OnRender() noexcept override;
+		void OnRender(float deltaTime) noexcept override;
 	};
 } // namespace Hush

@@ -11,7 +11,7 @@ namespace Hush
 	class InspectorPanel final : public IEditorPanel
 	{
 	public:
-		void OnRender() override;
+		void OnRender(float deltaTime) override;
 
 		void Init(Scene *activeScene) noexcept override;
 

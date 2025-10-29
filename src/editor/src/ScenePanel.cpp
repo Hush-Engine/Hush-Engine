@@ -9,7 +9,7 @@ void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 	(void)activeScene;
 }
 
-void Hush::ScenePanel::OnRender() noexcept
+void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 {
 	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
 	ImGui::End();

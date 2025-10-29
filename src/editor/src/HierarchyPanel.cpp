@@ -14,7 +14,7 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }
 
-void Hush::HierarchyPanel::OnRender()
+void Hush::HierarchyPanel::OnRender(float deltaTime)
 {
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);

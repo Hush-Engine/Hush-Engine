@@ -3,6 +3,7 @@
 #include "imgui/imgui.h"
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <string_view>
 
 // Some global types for convinience
@@ -16,18 +17,20 @@ namespace Hush {
 		};
 	
 		static constexpr size_t NOTIFICATION_MAX_LENGTH = 64;
-		// NOLINTNEXTLINE
-		char text[NOTIFICATION_MAX_LENGTH] = {};
+		std::string text;
 
 		float remainingTime;
+		float originalTime;
 
 		EToastType type;
 
-		ToastNotification(std::string_view text, float remainingTime, EToastType type) : remainingTime(remainingTime) {
-			// NOLINTNEXTLINE
-			std::memcpy(this->text, text.data(), text.size());
-			this->text[text.size()] = '\0';
+		ToastNotification(std::string_view text, float remainingTime, EToastType type) {
+			// NOLINTBEGIN
+			this->text = text;
+			this->remainingTime = remainingTime;
+			this->originalTime = remainingTime;
 			this->type = type;
+			// NOLINTEND
 		}
 	};
 }

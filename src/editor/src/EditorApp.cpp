@@ -57,10 +57,10 @@ public:
 		this->m_scene->FixedUpdate(delta);
 	}
 
-	void OnRender() override
+	void OnRender(float delta) override
 	{
 		this->m_scene->Render();
-		this->m_userInterface.DrawPanels();
+		this->m_userInterface.DrawPanels(delta);
 	}
 
 	void OnPostRender() override

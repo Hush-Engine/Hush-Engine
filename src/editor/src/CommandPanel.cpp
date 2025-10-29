@@ -53,7 +53,7 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
     });
 }
 
-void Hush::CommandPanel::OnRender()
+void Hush::CommandPanel::OnRender(float deltaTime)
 {
 	ImGuiWindowClass windowClass{};
 	windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
@@ -147,10 +147,12 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		if (textCmd.empty())
 		{
 			// Open the entity search panel or create a new one
-			constexpr std::string_view addEntityHelp = "The add-entity command should be followed by the name of the entity you want to add!";
+			constexpr const char* addEntityHelp = "The add-entity command should be followed by the name of the entity you want to add!";
 			constexpr float notificationTime = 3.f;
 			constexpr ToastNotification::EToastType type = ToastNotification::EToastType::Info;
-			this->m_activeScene->CreateEntity().EmplaceComponent<ToastNotification>(addEntityHelp, notificationTime, type);
+			Entity entity = this->m_activeScene->CreateEntity();
+			entity.EmplaceComponent<ToastNotification>(addEntityHelp, notificationTime, type);
+			LogFormat(ELogLevel::Info, "Entity ID with toast: {}", entity.GetId());
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add

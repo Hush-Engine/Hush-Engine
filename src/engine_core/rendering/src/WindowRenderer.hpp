@@ -7,6 +7,7 @@
 #pragma once
 
 // Let's tell SDL we got main covered
+#include <cstdint>
 #define SDL_MAIN_HANDLED
 
 #include <SDL2/SDL.h>
@@ -40,6 +41,8 @@ namespace Hush
 
 		[[nodiscard]]
 		bool IsActive() const noexcept;
+
+		void GetWindowSize(int32_t* width, int32_t* height);
 
 	private:
 		/// @brief Pointer that represents the unique instance of an SDL window associated with this context

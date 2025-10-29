@@ -18,7 +18,7 @@ namespace Hush
 	public:
 		void Init(Scene *activeScene) noexcept override;
 
-		void OnRender() override;
+		void OnRender(float deltaTime) override;
 
 	private:
 		Scene *m_activeScene;

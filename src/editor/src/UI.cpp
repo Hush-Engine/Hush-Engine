@@ -34,14 +34,14 @@ void Hush::UI::Init(Scene *parentScene)
 	ADD_PANEL(parentScene, this->m_activePanels, InspectorPanel);
 }
 
-void Hush::UI::DrawPanels()
+void Hush::UI::DrawPanels(float deltaTime)
 {
 	UI::DockSpace("HushDockspace", "Demo dockspace");
 	UI::DrawPlayButton();
 	// NOLINTNEXTLINE
 	for (auto &pairEntry : this->m_activePanels)
 	{
-		pairEntry.second->OnRender();
+		pairEntry.second->OnRender(deltaTime);
 	}
 	ImGui::EndFrame();
 	ImGui::Render();
