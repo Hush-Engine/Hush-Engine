@@ -6,6 +6,7 @@
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
+#include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
 #include "definitions/KeyCode.hpp"
@@ -52,7 +53,7 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
     });
 }
 
-void Hush::CommandPanel::OnRender()
+void Hush::CommandPanel::OnRender(float deltaTime)
 {
 	ImGuiWindowClass windowClass{};
 	windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
@@ -146,6 +147,11 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		if (textCmd.empty())
 		{
 			// Open the entity search panel or create a new one
+			constexpr const char* addEntityHelp = "The add-entity command should be followed by the name of the entity you want to add!";
+			constexpr float notificationTime = 3.f;
+			constexpr ToastNotification::EToastType type = ToastNotification::EToastType::Info;
+			Entity entity = this->m_activeScene->CreateEntity();
+			entity.EmplaceComponent<ToastNotification>(addEntityHelp, notificationTime, type);
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
@@ -193,13 +199,12 @@ void Hush::CommandPanel::RebuildAvailableCommands()
 	this->m_currentlyAvailableCommands = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(BUILT_IN_COMMANDS, queryStr);
 }
 
-void Hush::CommandPanel::UpdateCommandList()
-{
+
+void Hush::CommandPanel::UpdateCommandList() {
 	if (this->m_currState != EState::Editing)
 	{
 		return;
 	}
-
 	EState previousState = this->m_currState;
 	if (ImGui::IsKeyPressed(ImGuiKey_Tab, true))
 	{
@@ -207,48 +212,89 @@ void Hush::CommandPanel::UpdateCommandList()
 		int32_t nextIdx = this->m_selectedCommandIdx + 1;
 		this->m_selectedCommandIdx = MathUtils::CircleBack(nextIdx, 0, BUILT_IN_COMMANDS.size() - 1);
 	}
-
-	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * 2.0F});
-
-	ImGui::SetNextWindowPos(
-		{this->m_commandPanelPos.x, this->m_commandPanelPos.y - (this->m_commandPanelHeight * 2.0F)});
-	ImGui::SetNextWindowBgAlpha(0.5F);
+	constexpr float panelHeightOffset = 2.0f;
+	constexpr float backgroundAlpha = 0.5f;
+	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * panelHeightOffset});
+	ImGui::SetNextWindowPos({this->m_commandPanelPos.x, this->m_commandPanelPos.y - (this->m_commandPanelHeight * panelHeightOffset)});
+	ImGui::SetNextWindowBgAlpha(backgroundAlpha);
 	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
-	// Show all commands that match
-	ImDrawList *drawList = ImGui::GetWindowDrawList();
-	for (size_t i = 0; i < this->m_currentlyAvailableCommands.size(); i++)
+	
+	// Calculate table dimensions
+	const size_t totalCommands = this->m_currentlyAvailableCommands.size();
+	if (totalCommands == 0)
 	{
-
-		const std::string_view &command = this->m_currentlyAvailableCommands.at(i);
-		bool hovered = false;
-		bool forceHover = this->m_selectedCommandIdx == i;
-		bool submitted = UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
-
-		if (hovered && this->m_currState == EState::ForceFocus)
-		{
-			this->m_panelText = std::string(":") + command.data();
-		}
-		if (submitted)
-		{
-			// Next words from space
-			auto offset = static_cast<int32_t>(this->m_panelText.find(' ')) + 1;
-			std::string_view cmdText;
-			if (offset != 0)
-			{
-				// The command was submitted with additional data
-				cmdText = StringUtils::SubstrView(this->m_panelText, offset, (int32_t)this->m_panelText.size());
-			}
-			std::string pureCommand = this->m_panelText.substr(1, offset - 2);
-			uint32_t commandHash = Hashing::Fnv1a(pureCommand.data(), pureCommand.size());
-			this->SubmitCommand(commandHash, cmdText);
-		}
+		ImGui::End();
+		return;
 	}
+	
+	// Determine number of columns based on window width
+	constexpr float itemWidth = 150.0f;
+	constexpr float spacing = 10.0f;
+	const float availableWidth = ImGui::GetContentRegionAvail().x;
+	const int32_t numColumns = std::max(1, static_cast<int32_t>(availableWidth / (itemWidth + spacing)));
+	const auto numRows = static_cast<int32_t>((totalCommands + numColumns - 1) / numColumns);
+	
+	ImDrawList *drawList = ImGui::GetWindowDrawList();
+	
+	// Create table
+	if (ImGui::BeginTable("CommandTable", numColumns, 
+		ImGuiTableFlags_None | ImGuiTableFlags_SizingStretchSame))
+	{
+		// Setup columns
+		for (int col = 0; col < numColumns; col++)
+		{
+			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+		}
+		
+		// Populate table rows
+		size_t commandIdx = 0;
+		for (int32_t row = 0; row < numRows; row++)
+		{
+			ImGui::TableNextRow();
+			
+			for (int32_t col = 0; col < numColumns && commandIdx < totalCommands; col++)
+			{
+				ImGui::TableSetColumnIndex(col);
+				
+				const std::string_view &command = this->m_currentlyAvailableCommands.at(commandIdx);
+				bool hovered = false;
+				bool forceHover = this->m_selectedCommandIdx == static_cast<int>(commandIdx);
+				bool submitted = UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
+				
+				if (hovered && this->m_currState == EState::ForceFocus)
+				{
+					this->m_panelText = std::string(":") + command.data();
+				}
+				
+				if (submitted)
+				{
+					// Next words from space
+					auto offset = static_cast<int32_t>(this->m_panelText.find(' ')) + 1;
+					std::string_view cmdText;
+					if (offset != 0)
+					{
+						// The command was submitted with additional data
+						cmdText = StringUtils::SubstrView(this->m_panelText, offset, (int32_t)this->m_panelText.size());
+					}
+					std::string pureCommand = this->m_panelText.substr(1, offset - 2);
+					uint32_t commandHash = Hashing::Fnv1a(pureCommand.data(), pureCommand.size());
+					this->SubmitCommand(commandHash, cmdText);
+				}
+				
+				commandIdx++;
+			}
+		}
+		
+		ImGui::EndTable();
+	}
+	
 	this->m_currState = this->m_currState != EState::None &&
 								!Bitwise::HasCompositeFlag((int32_t)this->m_currState, (int32_t)EState::IsPopupMode)
 							? previousState
 							: this->m_currState;
 	ImGui::End();
 }
+
 
 void Hush::CommandPanel::AddComponentPopup()
 {

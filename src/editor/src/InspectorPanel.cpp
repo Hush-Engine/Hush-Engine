@@ -138,7 +138,7 @@ void Hush::Serialize(Transform *component)
 	}
 }
 
-void Hush::InspectorPanel::OnRender()
+void Hush::InspectorPanel::OnRender(float deltaTime)
 {
 	ImGui::Begin("Inspector");
 	if (this->m_inspectTarget.has_value())

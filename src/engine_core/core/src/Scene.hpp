@@ -167,6 +167,9 @@ namespace Hush
 		/// @param entity Entity to destroy
 		void DestroyEntity(Entity &&entity);
 
+
+		void DestroyEntity(Entity &entity);
+
 		/// Get the component registered id by name
 		/// @param name Component name
 		/// @return The component id if it exists, std::nullopt otherwise

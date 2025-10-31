@@ -6,7 +6,7 @@ void Hush::StatsPanel::Init(Scene *activeScene) noexcept
 	(void)activeScene;
 }
 
-void Hush::StatsPanel::OnRender() noexcept
+void Hush::StatsPanel::OnRender(float deltaTime) noexcept
 {
 	ImGui::Begin("Hush Engine Stats");
 	ImGui::Text("Delta time: %.4fs", this->m_deltaTime);

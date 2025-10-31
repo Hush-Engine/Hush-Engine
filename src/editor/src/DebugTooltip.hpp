@@ -9,7 +9,7 @@ namespace Hush
 	{
 	public:
 		static inline DebugTooltip *s_debugTooltip = nullptr;
-		void OnRender() noexcept override;
+		void OnRender(float deltaTime) noexcept override;
 
 		void Init(Scene *activeScene) noexcept override
 		{

@@ -42,7 +42,7 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 	this->m_modelLoader.SetResourceManager(this->m_resourceManager);
 }
 
-void Hush::ContentPanel::OnRender() {
+void Hush::ContentPanel::OnRender(float deltaTime) {
 	if (ImGui::Begin("Project", nullptr, CONTENT_PANEL_FLAGS))
 	{        
 		if (this->m_dirty) {
