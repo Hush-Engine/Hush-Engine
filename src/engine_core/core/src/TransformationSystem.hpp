@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "ISystem.hpp"
+#include "Query.hpp"
 namespace Hush
 {
 
@@ -30,5 +33,7 @@ namespace Hush
 
 		/// OnPostRender() is called after rendering.
 		void OnPostRender() override;
+	private:
+		Query<WorldTransform, LocalTransform> m_parentedEntitiesQuery;
 	};
 } // namespace Hush
