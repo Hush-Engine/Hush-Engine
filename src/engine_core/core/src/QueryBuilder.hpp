@@ -6,8 +6,10 @@
 
 #pragma once
 #include "Entity.hpp"
+#include "Query.hpp"
 #include <array>
 #include <cstddef>
+#include <span>
 
 namespace Hush {
 
@@ -18,17 +20,17 @@ namespace Hush {
 		
 		void WithRelationship(std::byte* queryDesc, uint8_t* termCountRef, const Entity& relationship, const Entity& target);
 
+		void InitDescriptor(std::byte* queryDesc, std::span<Entity::EntityId> components);
+		
 		void* InitQuery(void* world, const std::byte* queryDesc);
 		
 	}
 	
+	class Scene;
+	
 	template <typename... Components>
 	class QueryBuilder {
 	public:
-		QueryBuilder(void* rawEcsWorld) {
-			this->m_world = rawEcsWorld;
-		}
-
 		/**
 		@brief Adds a relationship filter to the query
 		@param relationship Relationship to filter entities by
@@ -47,16 +49,25 @@ namespace Hush {
 		
 		Query<Components...> Build() {
 			void* initializedQuery = impl::QueryBuilderImpl::InitQuery(this->m_world, this->m_opaqueDesc.data());
-			return {};
+			return Query<Components ...>(RawQuery {this->m_scene, initializedQuery});
 		}
 
 	private:
+		friend class Scene;
+		
+		QueryBuilder(Scene* scene, void* rawEcsWorld, std::span<Entity::EntityId> components) {
+			this->m_world = rawEcsWorld;
+			impl::QueryBuilderImpl::InitDescriptor(this->m_opaqueDesc.data(), components);
+		}
+
 		static constexpr size_t COMP_COUNT = sizeof...(Components);
 		static constexpr size_t DESC_ALIGN = 8;
 		static constexpr size_t DESC_SIZE = 2440;
 		
 		alignas(DESC_ALIGN) std::array<std::byte, DESC_SIZE> m_opaqueDesc{};
+		// We need the world apart from the scene to avoid including it as a full on header on this compilation unit
 		void* m_world = nullptr;
+		Scene* m_scene = nullptr;
 		uint8_t m_termCount = COMP_COUNT;
 	};
 	

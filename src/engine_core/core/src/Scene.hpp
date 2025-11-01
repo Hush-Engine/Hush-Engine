@@ -11,6 +11,7 @@
 #include "Logger.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
+#include "QueryBuilder.hpp"
 #include "executors/ThreadPool.hpp"
 
 #include <array>
@@ -188,6 +189,16 @@ namespace Hush
 
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
+		{
+			std::array<Entity::EntityId, sizeof...(Components)> components = {RegisterIfNeededSlow<Components>()...};
+
+			auto rawQuery = CreateRawQuery(components, cacheMode);
+
+			return Query<Components...>(std::move(rawQuery));
+		}
+
+		template <typename... Components>
+		QueryBuilder<Components...> CreateQueryBuilder(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
 		{
 			std::array<Entity::EntityId, sizeof...(Components)> components = {RegisterIfNeededSlow<Components>()...};
 

@@ -3,7 +3,6 @@
 #include "EcsTerms.hpp"
 #include <flecs.h>
 
-
 void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte* queryDesc, uint8_t* termCountRef, const Entity& relationship) {
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
 	auto* desc = reinterpret_cast<ecs_query_desc_t*>(queryDesc);
@@ -18,11 +17,21 @@ void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte* queryDesc, uint8_
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
 	auto* desc = reinterpret_cast<ecs_query_desc_t*>(queryDesc);
 	
-	ecs_term_t relTerm{
+	ecs_term_t relTerm {
 		.id = ecs_pair(relationship.GetId(), target.GetId())
 	};
 	desc->terms[*termCountRef] = relTerm;
 	(*termCountRef)++;
+}
+
+void Hush::impl::QueryBuilderImpl::InitDescriptor(std::byte* queryDesc, std::span<Entity::EntityId> components) {
+	auto* desc = reinterpret_cast<ecs_query_desc_t*>(queryDesc);
+
+	// Copy the components to the query description
+	for (std::uint32_t i = 0; i < components.size(); ++i)
+	{
+		desc->terms[i].id = components[i];
+	}
 }
 
 void* Hush::impl::QueryBuilderImpl::InitQuery(void* world, const std::byte* queryDesc) {
