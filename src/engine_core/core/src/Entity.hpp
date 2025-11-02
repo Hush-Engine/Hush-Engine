@@ -231,6 +231,12 @@ namespace Hush
 		/// @param entity Entity to destroy.
 		static void Destroy(Entity &&entity);
 
+		void SetParent(const Entity& parent);
+		
+		void AddChild(const Entity& child);
+		
+		Entity GetParent();
+
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;
 

@@ -7,6 +7,7 @@ hush_add_library(
         src/Entity.cpp
         src/Components/Transform.cpp
         src/Query.cpp
+        src/QueryBuilder.cpp
         src/serialization/Serialization.cpp
         src/serialization/Deserialization.cpp
         src/serialization/Formats/JsonSerializer.cpp

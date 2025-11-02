@@ -202,9 +202,7 @@ namespace Hush
 		{
 			std::array<Entity::EntityId, sizeof...(Components)> components = {RegisterIfNeededSlow<Components>()...};
 
-			auto rawQuery = CreateRawQuery(components, cacheMode);
-
-			return Query<Components...>(std::move(rawQuery));
+			return QueryBuilder<Components...>(this, this->m_world, components);
 		}
 
 		/// Add an engine system to the scene

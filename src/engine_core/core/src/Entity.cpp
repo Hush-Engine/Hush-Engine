@@ -4,6 +4,8 @@
 	\brief Scene entity
 */
 #include "Entity.hpp"
+#include "EcsTerms.hpp"
+#include "Logger.hpp"
 #include "Scene.hpp"
 
 #include <flecs.h>
@@ -70,6 +72,21 @@ void Hush::Entity::Destroy(Entity &&entity)
 	Scene *scene = entity.m_ownerScene;
 
 	scene->DestroyEntity(std::move(entity));
+}
+
+void Hush::Entity::SetParent(const Entity& parent) {
+	LogError("Set Parent Not Yet Implemented");
+}
+
+void Hush::Entity::AddChild(const Entity& child) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_add_pair(world, child.GetId(), EcsTerms::CHILD_OF, this->GetId());
+}
+
+Hush::Entity Hush::Entity::GetParent() {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	Entity::EntityId parentId = ecs_get_parent(world, this->m_entityId);
+	return Entity {this->m_ownerScene, parentId};
 }
 
 Hush::Entity::EntityId Hush::Entity::GetId() const
