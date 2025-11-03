@@ -20,6 +20,7 @@ void Hush::TransformationSystem::OnShutdown()
 
 void Hush::TransformationSystem::OnUpdate(float delta)
 {
+	(void)delta;
 	this->m_parentedEntitiesQuery.Each([](Entity& entity, WorldTransform& worldXform, LocalTransform& localXform) {
 		// Get the parents xform and multiply that by the local xform... that now becomes the global xform
 		Entity parent = entity.GetParent();
@@ -33,6 +34,7 @@ void Hush::TransformationSystem::OnUpdate(float delta)
 
 void Hush::TransformationSystem::OnFixedUpdate(float delta)
 {
+	(void)delta;
 }
 
 void Hush::TransformationSystem::OnRender()

@@ -2,6 +2,7 @@
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Query.hpp"
+#include "Scene.hpp"
 #include "WindowManager.hpp"
 
 

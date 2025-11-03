@@ -75,6 +75,7 @@ void Hush::Entity::Destroy(Entity &&entity)
 }
 
 void Hush::Entity::SetParent(const Entity& parent) {
+	(void)parent;
 	LogError("Set Parent Not Yet Implemented");
 }
 

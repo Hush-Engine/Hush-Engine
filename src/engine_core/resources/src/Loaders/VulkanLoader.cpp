@@ -90,6 +90,7 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 			// parent transformation to it
 			WorldTransform *childXform = childEntity.GetComponent<WorldTransform>();
 			LocalTransform *childlocalXform = childEntity.GetComponent<LocalTransform>();
+			entity.AddChild(childEntity);
 			childXform->SetTransformationMatrix(xformComponent->XForm(*childXform));
 			childlocalXform->SetParent(entity.GetId());
 		}
