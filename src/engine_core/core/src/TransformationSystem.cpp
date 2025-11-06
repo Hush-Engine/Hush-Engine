@@ -1,18 +1,12 @@
 #include "TransformationSystem.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
-#include "EcsTerms.hpp"
 #include "Mat4Math.hpp"
 #include "Scene.hpp"
 
 void Hush::TransformationSystem::Init()
 {
-	// Entity childOfRel = this->GetScene().EntityFromIdUnchecked(EcsTerms::CHILD_OF);
-	this->m_transformableEntitiesQuery = this->GetScene()
-		.CreateQueryBuilder<WorldTransform, LocalTransform>()
-		// .WithRelationship(childOfRel)
-		.Build();
-	
+	this->m_transformableEntitiesQuery = this->GetScene().CreateQuery<WorldTransform, LocalTransform>();
 }
 
 void Hush::TransformationSystem::OnShutdown()
