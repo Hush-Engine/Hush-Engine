@@ -172,6 +172,10 @@ std::optional<Hush::Entity> Hush::Scene::EntityFromId(EntityId id)
 	return Entity{this, id};
 }
 
+Hush::Entity Hush::Scene::EntityFromIdUnchecked(EntityId id) {
+	return Entity{this, id};
+}
+
 Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const
 {
 	struct ComponentInfo

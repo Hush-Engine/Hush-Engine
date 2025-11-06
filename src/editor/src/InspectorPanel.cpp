@@ -1,9 +1,11 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
 #include "InputManager.hpp"
+#include "Mat4Math.hpp"
 #include "Renderer.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
@@ -178,7 +180,7 @@ void Hush::InspectorPanel::RenderProperties()
 	Entity::Name* entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
 	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
 	ImGui::SeparatorText(entityName->name.data());
-	WorldTransform *transform = this->m_inspectTarget->GetComponent<WorldTransform>();
+	LocalTransform *transform = this->m_inspectTarget->GetComponent<LocalTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
 	// Get all the other entity's components
@@ -221,11 +223,28 @@ void Hush::InspectorPanel::RenderGizmo() {
 	glm::mat4 projMat = cam.GetProjectionMatrix();
 	auto* viewMatPtr = reinterpret_cast<float*>(&viewMat);
 	auto* projMatPtr = reinterpret_cast<float*>(&projMat);
-	WorldTransform* xform = this->m_inspectTarget->GetComponent<WorldTransform>();
-	glm::mat xformMat = xform->GetTransformationMatrix();
-	auto* xformMatrix = reinterpret_cast<float*>(&xformMat);
-	if (ImGuizmo::Manipulate(viewMatPtr, projMatPtr, this->m_currentGizmoOp, ImGuizmo::MODE::WORLD, xformMatrix))
+	
+	
+WorldTransform* worldXform = this->m_inspectTarget->GetComponent<WorldTransform>();
+	LocalTransform* localXform = this->m_inspectTarget->GetComponent<LocalTransform>();
+	
+	glm::mat4 worldMatrix = worldXform->GetTransformationMatrix();
+	auto* worldMatrixPtr = reinterpret_cast<float*>(&worldMatrix);
+	
+	if (!ImGuizmo::Manipulate(viewMatPtr, projMatPtr, this->m_currentGizmoOp, ImGuizmo::MODE::LOCAL, worldMatrixPtr))
 	{
-		xform->SetTransformationMatrix(xformMat);
+		return;
 	}
+	
+	glm::mat4 newLocalMatrix = worldMatrix;
+	
+	Entity parent = this->m_inspectTarget->GetParent();
+	if (parent.IsValid()) {
+		WorldTransform* parentWorldXform = parent.GetComponent<WorldTransform>();
+		glm::mat4 parentWorldMatrix = parentWorldXform->GetTransformationMatrix();
+		
+		newLocalMatrix = glm::inverse(parentWorldMatrix) * worldMatrix;
+	}
+	
+	localXform->SetTransformationMatrix(newLocalMatrix);
 }

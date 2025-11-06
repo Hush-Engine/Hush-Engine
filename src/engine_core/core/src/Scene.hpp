@@ -184,6 +184,8 @@ namespace Hush
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
+		Entity EntityFromIdUnchecked(EntityId id);
+
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
@@ -200,6 +202,7 @@ namespace Hush
 		template <typename... Components>
 		QueryBuilder<Components...> CreateQueryBuilder(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
 		{
+			(void)cacheMode;
 			std::array<Entity::EntityId, sizeof...(Components)> components = {RegisterIfNeededSlow<Components>()...};
 
 			return QueryBuilder<Components...>(this, this->m_world, components);

@@ -4,7 +4,6 @@
 #include "Components/WorldTransform.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
-#include "Scene.hpp"
 
 namespace Hush
 {

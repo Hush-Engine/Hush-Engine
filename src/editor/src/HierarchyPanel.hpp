@@ -8,11 +8,14 @@
 
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "IEditorPanel.hpp"
 #include "Query.hpp"
+#include <unordered_set>
 
 namespace Hush
 {
+	class InspectorPanel;
 	class HierarchyPanel final : public IEditorPanel
 	{
 	public:
@@ -23,5 +26,8 @@ namespace Hush
 	private:
 		Scene *m_activeScene;
 		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
+
+		// Small helper without recursion
+		void GenerateEntitySelectableTree(const Entity& entity, const Entity::Name& name, InspectorPanel* inspector);
 	};
 } // namespace Hush

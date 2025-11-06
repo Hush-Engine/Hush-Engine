@@ -2,14 +2,15 @@
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "EcsTerms.hpp"
+#include "Mat4Math.hpp"
 #include "Scene.hpp"
 
 void Hush::TransformationSystem::Init()
 {
-	Entity childOfRel = this->GetScene().EntityFromId(EcsTerms::CHILD_OF).value();
-	this->m_parentedEntitiesQuery = this->GetScene()
+	// Entity childOfRel = this->GetScene().EntityFromIdUnchecked(EcsTerms::CHILD_OF);
+	this->m_transformableEntitiesQuery = this->GetScene()
 		.CreateQueryBuilder<WorldTransform, LocalTransform>()
-		.WithRelationship(childOfRel)
+		// .WithRelationship(childOfRel)
 		.Build();
 	
 }
@@ -21,14 +22,15 @@ void Hush::TransformationSystem::OnShutdown()
 void Hush::TransformationSystem::OnUpdate(float delta)
 {
 	(void)delta;
-	this->m_parentedEntitiesQuery.Each([](Entity& entity, WorldTransform& worldXform, LocalTransform& localXform) {
+	this->m_transformableEntitiesQuery.Each([](Entity& entity, WorldTransform& worldXform, LocalTransform& localXform) {
 		// Get the parents xform and multiply that by the local xform... that now becomes the global xform
 		Entity parent = entity.GetParent();
-		if (parent.GetId() == Entity::INVALID_ENTITY) {
-			return;
+		glm::mat4 worldMatrix = Mat4Math::IDENTITY;
+		if (parent.IsValid()) {
+			WorldTransform* parentWorldXform = parent.GetComponent<WorldTransform>();
+			worldMatrix = parentWorldXform->GetTransformationMatrix();
 		}
-		WorldTransform* parentWorldXform = parent.GetComponent<WorldTransform>();
-		worldXform.SetTransformationMatrix(parentWorldXform->XForm(localXform));
+		worldXform.SetTransformationMatrix(worldMatrix * localXform.GetTransformationMatrix());
 	});
 }
 

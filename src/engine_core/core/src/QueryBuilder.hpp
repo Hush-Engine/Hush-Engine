@@ -38,12 +38,12 @@ namespace Hush {
 		using this function is equivalent to WithRelationship(relationship, EcsTerms::WILDCARD)
 		*/
 		inline QueryBuilder& WithRelationship(const Entity& relationship) {
-			impl::QueryBuilderImpl::WithRelationship(this->m_opaqueDesc.data(), relationship);
+			impl::QueryBuilderImpl::WithRelationship(this->m_opaqueDesc.data(), &this->m_termCount, relationship);
 			return *this;
 		}
 		
 		inline QueryBuilder& WithRelationship(const Entity& relationship, const Entity& target) {
-			impl::QueryBuilderImpl::WithRelationship(this->m_opaqueDesc.data(), relationship, target);
+			impl::QueryBuilderImpl::WithRelationship(this->m_opaqueDesc.data(), &this->m_termCount, relationship, target);
 			return *this;
 		}
 		
@@ -57,6 +57,7 @@ namespace Hush {
 		
 		QueryBuilder(Scene* scene, void* rawEcsWorld, std::span<Entity::EntityId> components) {
 			this->m_world = rawEcsWorld;
+			this->m_scene = scene;
 			impl::QueryBuilderImpl::InitDescriptor(this->m_opaqueDesc.data(), components);
 		}
 
