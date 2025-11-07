@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-// Some global types for convinience
+// Some global types for convenience
 namespace Hush {
 	
 	struct ToastNotification {

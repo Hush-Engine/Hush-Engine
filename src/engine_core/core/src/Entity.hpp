@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string_view>
 
@@ -38,19 +39,21 @@ namespace Hush
 	class [[hush::export]] Entity
 	{
 	public:
-		
 		constexpr static size_t MAX_ENTITY_NAME_LENGTH = 32;
 		using EntityId = std::uint64_t;
-		constexpr static EntityId INVALID_ENTITY = 0;
+		constexpr static EntityId INVALID_ENTITY_ID = 0;
 
 		/// @brief Component that holds the name of an entity
-		struct Name {
+		struct Name
+		{
 			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> name{}; // Handle null terminator!!!
-			
+
 			Name() = default;
-			
-			Name(const std::string_view& name) {
-				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH, "Maximum character length for entity name was exceeded");
+
+			Name(const std::string_view &name)
+			{
+				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH,
+								   "Maximum character length for entity name was exceeded");
 				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
 				std::copy_n(name.data(), copyLength, this->name.data());
 				// NOLINTNEXTLINE
@@ -86,6 +89,10 @@ namespace Hush
 			return *this;
 		}
 
+		static Entity Null() {
+			return Entity {nullptr, 0};
+		}
+		
 		/// Checks if the entity has a component of the given type.
 		/// @tparam T Type of the component.
 		/// @return True if the entity has the component, false otherwise.
@@ -231,8 +238,31 @@ namespace Hush
 		/// @param entity Entity to destroy.
 		static void Destroy(Entity &&entity);
 
+		void SetParent(const Entity &parent);
+
+		void AddChild(const Entity &child);
+
+		[[nodiscard]]
+		Entity GetParent() const;
+
+		/// @brief Gets the child at the specified index, returns an invalid entity if none is found
+		/// @param index Index of the child to get
+		/// @returns The child entity at the index or INVALID_ENTITY
+		[[nodiscard]]
+		Entity GetChildAt(int32_t index) const;
+
+		[[nodiscard]] int32_t GetChildCount() const;
+
+		void EachChild(std::function<void(Entity&)> func) const;
+
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;
+
+		[[nodiscard]]
+		inline bool IsValid() const
+		{
+			return this->m_entityId != INVALID_ENTITY_ID;
+		}
 
 	private:
 		friend class Scene;

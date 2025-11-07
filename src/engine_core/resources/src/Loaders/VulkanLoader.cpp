@@ -1,5 +1,6 @@
 #include "Assertions.hpp"
 #include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "Loaders/IModelLoader.hpp"
 #include "Ref.hpp"
 #include "Renderer.hpp"
@@ -50,6 +51,9 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 	// TODO: render these meshes instead of the loaded nodes, or store these in there idk
 	// HUSH_ASSERT(loadedAsset->meshes.size() != loadedAsset->nodes.size(), "Meshes vector size does not match nodes
 	// size");
+
+	// TODO:
+	// bool shouldCreateFatherEntity = loadedAsset->nodes.size() > 1;
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
 		Entity entity = activeScene->CreateEntityWithName(mesh.name.empty() ? "LoadedMesh" : mesh.name);
@@ -62,6 +66,21 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 		entities.emplace_back(std::move(entity));
 	}
 
+	// In the case the mesh has multiple top level nodes, we need to create a "father" entity
+	// that corresponds to the asset's in-game representation 
+
+	// Maybe use the name of the file?
+	Entity fatherEntity = Entity::Null();
+	
+	
+	// Create at origin, this should potentially be at the mouse's world position later on
+	if (entities.size() > 1) {
+		fatherEntity = activeScene->CreateEntityWithName(filePath.stem().string());
+		fatherEntity.AddComponent<WorldTransform>();
+		fatherEntity.AddComponent<LocalTransform>();
+	}
+
+
 	for (fastgltf::Node &node : loadedAsset->nodes)
 	{
 		if (!node.meshIndex.has_value())
@@ -70,13 +89,14 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 		}
 
 		Entity &entity = entities[node.meshIndex.value()];
-		WorldTransform *xformComponent = entity.GetComponent<WorldTransform>();
 		LocalTransform *localXformComponent = entity.GetComponent<LocalTransform>();
 
 		glm::mat4 nodeXform = GltfLoadFunctions::GetNodeTransform(node);
 
-		xformComponent->SetTransformationMatrix(nodeXform);
 		localXformComponent->SetTransformationMatrix(nodeXform);
+		if (fatherEntity.IsValid()) {
+			fatherEntity.AddChild(entity);
+		}
 
 		if (node.children.empty())
 		{
@@ -84,14 +104,8 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 		}
 		for (size_t &c : node.children)
 		{
-			// Foreach node, we need to adjust the transformation so that the world xform is the world * local
 			Entity &childEntity = entities[c];
-			// At this point world and local transforms are the same, so we can just fetch the world and apply the
-			// parent transformation to it
-			WorldTransform *childXform = childEntity.GetComponent<WorldTransform>();
-			LocalTransform *childlocalXform = childEntity.GetComponent<LocalTransform>();
-			childXform->SetTransformationMatrix(xformComponent->XForm(*childXform));
-			childlocalXform->SetParent(entity.GetId());
+			entity.AddChild(childEntity);
 		}
 	}
 

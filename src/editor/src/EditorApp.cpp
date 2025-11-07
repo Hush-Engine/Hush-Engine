@@ -7,6 +7,7 @@
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "Scene.hpp"
+#include "TransformationSystem.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "components/EditorInfo.hpp"
@@ -36,6 +37,7 @@ public:
 	{
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
+		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
 		entt.AddComponent<Hush::EditorInfo>();

@@ -26,9 +26,10 @@ namespace Hush
 	/// For more information about the iterator, see \ref QueryIterator.
 	class [[hush::export]] RawQuery
 	{
+	public:
+		/// @brief For internals only, this function is not intended to be used outside of the Scene and QueryBuilder classes
 		RawQuery(Scene *scene, void *query);
 
-	public:
 		/// Cache mode for the query.
 		enum class [[hush::export]] ECacheMode
 		{

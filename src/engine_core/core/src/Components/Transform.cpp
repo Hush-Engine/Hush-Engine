@@ -1,5 +1,6 @@
 #include "../../base/src/Common.hpp"
 #include "Transform.hpp"
+#include <glm/ext/quaternion_common.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -108,6 +109,11 @@ glm::mat4 Hush::Transform::GetTransformationMatrix() const
 glm::mat4 Hush::Transform::XForm(const Transform &other) const
 {
 	return this->GetTransformationMatrix() * other.GetTransformationMatrix();
+}
+
+
+glm::mat4 Hush::Transform::InvXForm(const Transform &other) const {
+	return glm::inverse(this->GetTransformationMatrix()) * other.GetTransformationMatrix();
 }
 
 glm::mat4 Hush::Transform::operator*(const Transform &other) const

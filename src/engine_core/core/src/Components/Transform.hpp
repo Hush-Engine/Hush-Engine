@@ -71,6 +71,9 @@ namespace Hush
 		[[nodiscard]]
 		glm::mat4 XForm(const Transform &other) const;
 
+		[[nodiscard]]
+		glm::mat4 InvXForm(const Transform &other) const;
+
 		glm::mat4 operator*(const Transform &other) const;
 
 	private:

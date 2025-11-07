@@ -1,14 +1,19 @@
 #pragma once
 
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "ISystem.hpp"
+#include "Query.hpp"
 namespace Hush
 {
 
 	// Takes care of all transformation calculations per entity
 	// this also determines how entities are rendered since their global transform component is updated
-	class TransformationSystem : public ISystem
+	class TransformationSystem final : public ISystem
 	{
 	public:
+		using ISystem::ISystem;
+
 		void Init() override;
 
 		/// OnShutdown() is called when the system is shutting down.
@@ -30,5 +35,12 @@ namespace Hush
 
 		/// OnPostRender() is called after rendering.
 		void OnPostRender() override;
+		
+		[[nodiscard]]
+		std::string_view GetName() const override {
+			return "TransformationSystem";
+		}
+	private:
+		Query<WorldTransform, LocalTransform> m_transformableEntitiesQuery;
 	};
 } // namespace Hush
