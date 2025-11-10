@@ -41,7 +41,7 @@
 	}
 #else
 // noop
-#define HUSH_ASSERT(condition, fmtFormat, ...)
+#define HUSH_ASSERT(condition, fmtFormat, ...) static_cast<void>(condition) // To avoid unused variable warnings
 #endif
 #define HUSH_RESULT_ASSERT(result, message, ...)                                                                       \
 	HUSH_ASSERT(result.has_value(), "{} error: {}", message, magic_enum::enum_name(result.error()))
