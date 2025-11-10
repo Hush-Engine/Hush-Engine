@@ -687,7 +687,8 @@ namespace Hush::Serialization
 	template <typename T, typename = void>
 	struct Visitor : public IVisitor
 	{
-		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType) : IVisitor(parent, describingType)
+		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType)
+			: IVisitor(parent, describingType)
 		{
 			(void)parent;
 			(void)value;
@@ -695,7 +696,8 @@ namespace Hush::Serialization
 		}
 	};
 
-	template <typename T> requires (BuiltinVisitors::ExistsBuiltinVisitor<T> && !IsDeserializable<T>)
+	template <typename T>
+		requires(BuiltinVisitors::ExistsBuiltinVisitor<T> && !IsDeserializable<T>)
 	struct Visitor<T> : public BuiltinVisitors::Visitor<T>
 	{
 		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType)
@@ -705,16 +707,17 @@ namespace Hush::Serialization
 	};
 
 	template <IsDeserializable T>
-	struct Visitor<T> : public decltype(std::declval<T&>().Deserialize(std::declval<IVisitor*>(), EFormatDescribingType::NonSelfDescribing))
+	struct Visitor<T> : public decltype(std::declval<T &>().Deserialize(std::declval<IVisitor *>(),
+																		EFormatDescribingType::NonSelfDescribing))
 	{
-		using Parent = decltype(std::declval<T&>().Deserialize(std::declval<IVisitor*>(), EFormatDescribingType::NonSelfDescribing));
+		using Parent = decltype(std::declval<T &>().Deserialize(std::declval<IVisitor *>(),
+																EFormatDescribingType::NonSelfDescribing));
 		using Type = T;
 
-		Visitor(IVisitor *parent, T *value, EFormatDescribingType describingType)
+		Visitor(IVisitor * parent, T * value, EFormatDescribingType describingType)
 			: Parent(parent, value, describingType)
 		{
 		}
 	};
-
 
 } // namespace Hush::Serialization

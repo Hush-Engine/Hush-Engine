@@ -89,10 +89,11 @@ namespace Hush
 			return *this;
 		}
 
-		static Entity Null() {
-			return Entity {nullptr, 0};
+		static Entity Null()
+		{
+			return Entity{nullptr, 0};
 		}
-		
+
 		/// Checks if the entity has a component of the given type.
 		/// @tparam T Type of the component.
 		/// @return True if the entity has the component, false otherwise.
@@ -251,9 +252,10 @@ namespace Hush
 		[[nodiscard]]
 		Entity GetChildAt(int32_t index) const;
 
-		[[nodiscard]] int32_t GetChildCount() const;
+		[[nodiscard]]
+		int32_t GetChildCount() const;
 
-		void EachChild(std::function<void(Entity&)> func) const;
+		void EachChild(std::function<void(Entity &)> func) const;
 
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;

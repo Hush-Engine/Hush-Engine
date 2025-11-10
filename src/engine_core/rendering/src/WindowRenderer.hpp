@@ -42,7 +42,7 @@ namespace Hush
 		[[nodiscard]]
 		bool IsActive() const noexcept;
 
-		void GetWindowSize(int32_t* width, int32_t* height);
+		void GetWindowSize(int32_t *width, int32_t *height);
 
 	private:
 		/// @brief Pointer that represents the unique instance of an SDL window associated with this context

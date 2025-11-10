@@ -28,6 +28,6 @@ namespace Hush
 		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
 
 		// Small helper without recursion
-		void GenerateEntitySelectableTree(const Entity& entity, const Entity::Name& name, InspectorPanel* inspector);
+		void GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name, InspectorPanel *inspector);
 	};
 } // namespace Hush

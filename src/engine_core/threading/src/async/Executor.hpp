@@ -17,7 +17,7 @@ namespace Hush::Threading
 		/// If T is not a pointer, it should have a Schedule method.
 		template <typename T>
 		concept Executor = requires(T executor) {
-			{ executor.Schedule() } ;
+			{ executor.Schedule() };
 		} || requires(T *executor) {
 			{ executor->Schedule() };
 		};

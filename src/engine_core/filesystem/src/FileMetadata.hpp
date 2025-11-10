@@ -2,18 +2,21 @@
 
 #include "serialization/Serialization.hpp"
 
-namespace Hush {
+namespace Hush
+{
 
 	// TODO: Let's do some unions and stuff
 
 	/// @brief Describes the contents of a metadata file that links the resources
-	struct FileMetadata {
+	struct FileMetadata
+	{
 		static inline constexpr uint16_t VERSION = 1;
 		uint16_t metadataVersion;
 		uint32_t id;
 
-		template<class T>
-		Serialization::ESerializationError Serialize(T &serializer) const {
+		template <class T>
+		Serialization::ESerializationError Serialize(T &serializer) const
+		{
 			auto error = serializer.Serialize("metadataVersion", this->metadataVersion);
 			if (error != Hush::Serialization::ESerializationError::None)
 			{
@@ -22,5 +25,4 @@ namespace Hush {
 			return serializer.Serialize("id", this->id);
 		}
 	};
-}
-
+} // namespace Hush

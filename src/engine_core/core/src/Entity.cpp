@@ -76,44 +76,52 @@ void Hush::Entity::Destroy(Entity &&entity)
 	scene->DestroyEntity(std::move(entity));
 }
 
-void Hush::Entity::SetParent(const Entity& parent) {
+void Hush::Entity::SetParent(const Entity &parent)
+{
 	(void)parent;
 	LogError("Set Parent Not Yet Implemented");
 }
 
-void Hush::Entity::AddChild(const Entity& child) {
+void Hush::Entity::AddChild(const Entity &child)
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_add_pair(world, child.GetId(), EcsTerms::CHILD_OF, this->GetId());
 }
 
-Hush::Entity Hush::Entity::GetParent() const {
+Hush::Entity Hush::Entity::GetParent() const
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	Entity::EntityId parentId = ecs_get_parent(world, this->m_entityId);
-	return Entity {this->m_ownerScene, parentId};
+	return Entity{this->m_ownerScene, parentId};
 }
 
-
-void Hush::Entity::EachChild(std::function<void(Entity&)> func) const {
+void Hush::Entity::EachChild(std::function<void(Entity &)> func) const
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_iter_t it = ecs_each_id(world, ecs_pair(EcsTerms::CHILD_OF, this->m_entityId));
-	while (ecs_children_next(&it)) {
-		for (int32_t i = 0; i < it.count; i++) {
-			Entity ent {this->m_ownerScene, it.entities[i]};
+	while (ecs_children_next(&it))
+	{
+		for (int32_t i = 0; i < it.count; i++)
+		{
+			Entity ent{this->m_ownerScene, it.entities[i]};
 			func(ent);
 		}
 	}
 }
 
-Hush::Entity Hush::Entity::GetChildAt(int32_t index) const {
+Hush::Entity Hush::Entity::GetChildAt(int32_t index) const
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_iter_t it = ecs_each_id(world, ecs_pair(EcsTerms::CHILD_OF, this->m_entityId));
-	if (!ecs_children_next(&it) || it.count < 1) {
-		return Entity {this->m_ownerScene, INVALID_ENTITY_ID};
+	if (!ecs_children_next(&it) || it.count < 1)
+	{
+		return Entity{this->m_ownerScene, INVALID_ENTITY_ID};
 	}
-	return Entity {this->m_ownerScene, it.entities[index]};
+	return Entity{this->m_ownerScene, it.entities[index]};
 }
 
-int32_t Hush::Entity::GetChildCount() const {
+int32_t Hush::Entity::GetChildCount() const
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_iter_t it = ecs_each_id(world, ecs_pair(EcsTerms::CHILD_OF, this->m_entityId));
 	ecs_children_next(&it);

@@ -22,13 +22,15 @@ namespace Hush
 		ReadWrite,
 	};
 
-	enum class EFileFlags : uint16_t {
+	enum class EFileFlags : uint16_t
+	{
 		Directory,
 		File,
 		Metadata
 	};
 
-	enum class EFileExtension : uint32_t { // All as uppercase to normalize hashing
+	enum class EFileExtension : uint32_t
+	{ // All as uppercase to normalize hashing
 		UNKNOWN,
 		PNG,
 		META,
@@ -51,19 +53,28 @@ namespace Hush
 		EFileOpenMode mode = EFileOpenMode::None;
 		EFileFlags flags = EFileFlags::File;
 		EFileExtension extension = EFileExtension::UNKNOWN;
-		
-		[[nodiscard]] inline bool IsCodeFile() const {
+
+		[[nodiscard]]
+		inline bool IsCodeFile() const
+		{
 			return this->extension == EFileExtension::CPP || this->extension == EFileExtension::CSHARP;
 		}
 
-		[[nodiscard]] inline bool IsModelFile() const {
-			return this->extension == EFileExtension::GLB || this->extension == EFileExtension::FBX || this->extension == EFileExtension::GLTF; 
+		[[nodiscard]]
+		inline bool IsModelFile() const
+		{
+			return this->extension == EFileExtension::GLB || this->extension == EFileExtension::FBX ||
+				   this->extension == EFileExtension::GLTF;
 		}
-		
-		[[nodiscard]] inline bool ShouldGenerateMetaFile() const {
-			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKNOWN && this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT && !this->IsCodeFile();
+
+		[[nodiscard]]
+		inline bool ShouldGenerateMetaFile() const
+		{
+			return this->flags != EFileFlags::Directory && this->extension != EFileExtension::UNKNOWN &&
+				   this->extension != EFileExtension::PDF && this->extension != EFileExtension::TXT &&
+				   !this->IsCodeFile();
 		}
-	} ;
+	};
 
 	/// File interface for the VFS.
 	/// A file is a resource that maps to a specific path in the VFS.

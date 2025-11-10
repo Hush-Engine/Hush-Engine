@@ -7,7 +7,7 @@ namespace Hush::MathUtils
 	constexpr float TAU = PI * 2.0f;
 	constexpr float RAD_TO_DEG = 180.0f / PI;
 	constexpr float DEG_TO_RAD = PI / 180.0f;
-	
+
 	inline float Clamp(float value, float min, float max)
 	{
 		const float t = value < min ? min : value;

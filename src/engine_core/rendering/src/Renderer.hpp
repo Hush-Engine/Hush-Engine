@@ -51,10 +51,11 @@ namespace Hush
 
 		virtual void InitImGui() = 0;
 
-		/// @brief Must be called before every new frame to clear out all the stale mesh and transform data (this is the responsibility of the RenderingSystem)
+		/// @brief Must be called before every new frame to clear out all the stale mesh and transform data (this is the
+		/// responsibility of the RenderingSystem)
 		virtual void ClearDrawContext() = 0;
-		
-		virtual void PushMesh(const WorldTransform* xform, const Mesh* mesh) = 0;
+
+		virtual void PushMesh(const WorldTransform *xform, const Mesh *mesh) = 0;
 
 		virtual void DestroyMesh(const std::string_view &name) = 0;
 
@@ -92,6 +93,6 @@ namespace Hush
 		// TODO: Figure out a better system to get the editor camera
 		[[nodiscard]]
 		virtual const EditorCamera &GetEditorCamera() const noexcept = 0;
-		virtual EditorCamera* GetEditorCamera() noexcept = 0;
+		virtual EditorCamera *GetEditorCamera() noexcept = 0;
 	};
 } // namespace Hush

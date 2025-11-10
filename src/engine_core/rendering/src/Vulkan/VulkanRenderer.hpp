@@ -72,11 +72,11 @@ namespace Hush
 		void InitializeCommands() noexcept;
 
 		void InitImGui() override;
-		
+
 		void ClearDrawContext() override;
-		
-		void PushMesh(const WorldTransform* xform, const Mesh* mesh) override;
-		
+
+		void PushMesh(const WorldTransform *xform, const Mesh *mesh) override;
+
 		// void PushMesh(const WorldTransform* xform, Ref<Mesh> mesh) override;
 
 		void DestroyMesh(const std::string_view &name) override;
@@ -171,8 +171,8 @@ namespace Hush
 		[[nodiscard]]
 		ShaderModuleLoader &GetShaderModuleLoader() noexcept;
 
-		EditorCamera* GetEditorCamera() noexcept override;
-		
+		EditorCamera *GetEditorCamera() noexcept override;
+
 	private:
 		void Configure(vkb::Instance vkbInstance);
 

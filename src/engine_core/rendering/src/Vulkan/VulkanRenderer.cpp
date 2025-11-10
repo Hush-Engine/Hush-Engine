@@ -198,10 +198,10 @@ void Hush::VulkanRenderer::InitImGui()
 	this->m_uiForwarder->SetupImGui(this);
 }
 
-void Hush::VulkanRenderer::PushMesh(const WorldTransform* xform, const Mesh* mesh)
+void Hush::VulkanRenderer::PushMesh(const WorldTransform *xform, const Mesh *mesh)
 {
 	HUSH_ASSERT(xform != nullptr && mesh != nullptr, "Null component data received on the renderer!");
-	const GPUMeshBuffers& meshBuffers = mesh->GetMeshBuffers();
+	const GPUMeshBuffers &meshBuffers = mesh->GetMeshBuffers();
 	for (const Hush::GeoSurface &s : mesh->GetSurfaces())
 	{
 		Hush::VkRenderObject def{};
@@ -222,10 +222,10 @@ void Hush::VulkanRenderer::PushMesh(const WorldTransform* xform, const Mesh* mes
 			this->m_mainDrawContext.opaqueSurfaces.push_back(def);
 		}
 	}
-	
 }
 
-void Hush::VulkanRenderer::ClearDrawContext() {
+void Hush::VulkanRenderer::ClearDrawContext()
+{
 	this->m_mainDrawContext.transparentSurfaces.clear();
 	this->m_mainDrawContext.opaqueSurfaces.clear();
 }
@@ -341,8 +341,8 @@ void Hush::VulkanRenderer::InitRendering()
 	constexpr float initialFOV = 70.0F;
 	constexpr float nearPlane = 0.1f;
 	constexpr float farPlane = 4000.0f;
-	this->m_editorCamera =
-		EditorCamera(initialFOV, static_cast<float>(this->m_width), static_cast<float>(this->m_height), nearPlane, farPlane);
+	this->m_editorCamera = EditorCamera(initialFOV, static_cast<float>(this->m_width),
+										static_cast<float>(this->m_height), nearPlane, farPlane);
 
 	this->CreateSyncObjects();
 
@@ -601,12 +601,13 @@ void *Hush::VulkanRenderer::GetWindowContext() const noexcept
 	return this->m_windowContext;
 }
 
-
-const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept {
+const Hush::EditorCamera &Hush::VulkanRenderer::GetEditorCamera() const noexcept
+{
 	return this->m_editorCamera;
 }
 
-Hush::EditorCamera* Hush::VulkanRenderer::GetEditorCamera() noexcept {
+Hush::EditorCamera *Hush::VulkanRenderer::GetEditorCamera() noexcept
+{
 	return &this->m_editorCamera;
 }
 
@@ -679,7 +680,6 @@ void Hush::VulkanRenderer::InitVmaAllocator()
 
 	this->AddToDeletionQueue([&]() { vmaDestroyAllocator(m_allocator); });
 }
-
 
 void Hush::VulkanRenderer::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
 										   VkImageLayout newLayout)
@@ -1021,7 +1021,7 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 										  GpuAllocatedBuffer::EMemoryUsage::CpuToGpu, this->m_allocator);
 
 	////write the buffer
-	void* mappedData = gpuSceneDataBuffer.GetMappedData();
+	void *mappedData = gpuSceneDataBuffer.GetMappedData();
 	HUSH_ASSERT(mappedData != nullptr, "Mapped data for GPU buffer is null!");
 	auto *sceneUniformData = reinterpret_cast<GPUSceneData *>(mappedData);
 	*sceneUniformData = this->m_sceneData;
@@ -1032,8 +1032,8 @@ void Hush::VulkanRenderer::DrawGeometry(VkCommandBuffer cmd)
 
 	// Local scope to use another writer later one
 	{
-		this->m_frameDescriptor.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()), sizeof(GPUSceneData), 0,
-						   VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		this->m_frameDescriptor.WriteBuffer(0, static_cast<VkBuffer>(gpuSceneDataBuffer.GetBuffer()),
+											sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		this->m_frameDescriptor.UpdateSet(this->m_device, globalDescriptor);
 	}
 

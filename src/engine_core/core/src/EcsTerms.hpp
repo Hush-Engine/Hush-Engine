@@ -8,8 +8,9 @@
 
 #include "Entity.hpp"
 
-namespace Hush::EcsTerms {
+namespace Hush::EcsTerms
+{
 	extern const Entity::EntityId WILDCARD;
 	extern const Entity::EntityId ANY;
 	extern const Entity::EntityId CHILD_OF;
-}
+} // namespace Hush::EcsTerms

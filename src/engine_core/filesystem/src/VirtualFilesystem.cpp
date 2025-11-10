@@ -46,16 +46,17 @@ void Hush::VirtualFilesystem::Unmount(std::string_view virtualPath)
 std::vector<Hush::FileInfo> Hush::VirtualFilesystem::ListPath(std::string_view virtualPath, EListOptions options)
 {
 	std::optional<ResolvedPath> resolved = this->ResolveFileSystem(virtualPath);
-	
+
 	if (!resolved)
 	{
 		LogFormat(ELogLevel::Debug, "Mount point for {} not found", virtualPath);
 		return {};
 	}
-	
+
 	(void)options;
 	auto result = resolved->filesystem->ListPath(resolved->path);
-	if (result.has_error()) {
+	if (result.has_error())
+	{
 		return {};
 	}
 	return result.value();
@@ -87,10 +88,12 @@ void Hush::VirtualFilesystem::MountFileSystemInternal(std::string_view path,
 	m_mountedFileSystems.emplace_back(std::string(path), std::move(resourceLoader));
 }
 
-
-Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFilesystem::ResolveVirtualPath(const std::string_view& path) {
+Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFilesystem::ResolveVirtualPath(
+	const std::string_view &path)
+{
 	std::optional<ResolvedPath> resolvedPath = this->ResolveFileSystem(path);
-	if (!resolvedPath) {
+	if (!resolvedPath)
+	{
 		LogFormat(ELogLevel::Debug, "Mount point for {} not found", path);
 		return EError::FileDoesntExist;
 	}
@@ -99,11 +102,9 @@ Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFil
 
 std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::ResolveFileSystem(std::string_view path)
 {
-	if (std::filesystem::path(path).is_absolute()) {
-		return ResolvedPath {
-			.filesystem = this->m_mountedFileSystems[0].filesystem.get(),
-			.path = path
-		};
+	if (std::filesystem::path(path).is_absolute())
+	{
+		return ResolvedPath{.filesystem = this->m_mountedFileSystems[0].filesystem.get(), .path = path};
 	}
 
 	// We need to iterate on all filesystems in backward order.

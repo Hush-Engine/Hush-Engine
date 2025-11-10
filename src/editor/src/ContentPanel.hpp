@@ -23,24 +23,25 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
-
 		void GenerateMetaFiles();
-		
+
 		void RefreshDirectory();
 
 		void DrawFiles(bool isMouseInScene);
-		
-		void CreateInnerResources(const FileInfo& fileData, const FileMetadata& metadata);
-		
-		void MakeMetaFile(const FileInfo& fileData, const FileMetadata& metadata);
-		
-		[[nodiscard]] bool CanBeDroppedToScene(const FileInfo& fileData) const;
-		
-		ResourceManager* m_resourceManager = nullptr;
-		VirtualFilesystem* m_filesystem = nullptr;
-		Scene* m_scene = nullptr;
+
+		void CreateInnerResources(const FileInfo &fileData, const FileMetadata &metadata);
+
+		void MakeMetaFile(const FileInfo &fileData, const FileMetadata &metadata);
+
+		[[nodiscard]]
+		bool CanBeDroppedToScene(const FileInfo &fileData) const;
+
+		ResourceManager *m_resourceManager = nullptr;
+		VirtualFilesystem *m_filesystem = nullptr;
+		Scene *m_scene = nullptr;
 		VulkanLoader m_modelLoader;
-		// TEMP: <a href="https://www.flaticon.com/free-icons/folder" title="folder icons">Folder icons created by Gajah Mada - Flaticon</a>
+		// TEMP: <a href="https://www.flaticon.com/free-icons/folder" title="folder icons">Folder icons created by Gajah
+		// Mada - Flaticon</a>
 		Ref<ImageTexture> m_folderImage;
 		Ref<ImageTexture> m_fileImage;
 

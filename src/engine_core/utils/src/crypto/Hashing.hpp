@@ -48,7 +48,6 @@ namespace Hush::Hashing
 		return Fnv1a64(data.data(), static_cast<uint32_t>(data.size()));
 	}
 
-	
 } // namespace Hush::Hashing
 
 // NOLINTNEXTLINE

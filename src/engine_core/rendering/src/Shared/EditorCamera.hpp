@@ -10,17 +10,21 @@ namespace Hush
 
 		EditorCamera(float degFov, float width, float height, float nearP, float farP);
 
-		[[nodiscard]] glm::mat4 GetViewMatrix() const noexcept;
+		[[nodiscard]]
+		glm::mat4 GetViewMatrix() const noexcept;
 
-		[[nodiscard]] glm::mat4 GetOrientationMatrix() const noexcept;
+		[[nodiscard]]
+		glm::mat4 GetOrientationMatrix() const noexcept;
 
-		[[nodiscard]] const glm::vec3& GetPosition() const noexcept;
-		
-		[[nodiscard]] glm::vec3& GetPosition() noexcept;
+		[[nodiscard]]
+		const glm::vec3 &GetPosition() const noexcept;
 
-		float& GetPitch() noexcept;
-		
-		float& GetYaw() noexcept;
+		[[nodiscard]]
+		glm::vec3 &GetPosition() noexcept;
+
+		float &GetPitch() noexcept;
+
+		float &GetYaw() noexcept;
 
 	private:
 		float ApplyAccelerationCurve(float blend);

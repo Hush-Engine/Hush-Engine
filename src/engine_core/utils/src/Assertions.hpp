@@ -60,12 +60,12 @@
 		return;                                                                                                        \
 	}
 
-#define HUSH_COND_FAIL_MSG_V(condition, retval, fmtFormat, ...)                                                                  \
+#define HUSH_COND_FAIL_MSG_V(condition, retval, fmtFormat, ...)                                                        \
 	if (!(condition))                                                                                                  \
 	{                                                                                                                  \
 		Hush::LogFormat(Hush::ELogLevel::Error, "Condition failed at {} line {}! " fmtFormat, __FILE__, __LINE__,      \
 						##__VA_ARGS__);                                                                                \
-		return retval;                                                                                                        \
+		return retval;                                                                                                 \
 	}
 
 #define HUSH_STATIC_ASSERT(condition, ...) static_assert(condition, #__VA_ARGS__)

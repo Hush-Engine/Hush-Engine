@@ -73,7 +73,7 @@ namespace Hush::Threading
 			SelfDeleteTask &operator=(const SelfDeleteTask &) = delete;
 
 			[[nodiscard]]
-			promise_type* GetPromise() const noexcept
+			promise_type *GetPromise() const noexcept
 			{
 				return m_promise;
 			}
@@ -97,6 +97,7 @@ namespace Hush::Threading
 				}
 				return false;
 			}
+
 		private:
 			promise_type *m_promise;
 		};

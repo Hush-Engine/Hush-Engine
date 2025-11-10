@@ -15,21 +15,23 @@ constexpr ImU32 WARN_TOAST_COLOR = Hush::Color::WarnYellow().ToColor32ABGR();
 constexpr ImU32 UPDATE_TOAST_COLOR = IM_COL32(3, 182, 252, 255);
 constexpr ImGuiWindowFlags_ TOAST_FLAGS = ImGuiWindowFlags_NoScrollbar;
 
-void Hush::NotificationPanel::OnRender(float deltaTime) {
+void Hush::NotificationPanel::OnRender(float deltaTime)
+{
 	// Get all entries in the queue and fade them out
 	size_t currentToastIndex = -1;
-	this->m_toastQuery.Each([&currentToastIndex, this, deltaTime](Entity& entity, ToastNotification& notification) {
-		
+	this->m_toastQuery.Each([&currentToastIndex, this, deltaTime](Entity &entity, ToastNotification &notification) {
 		currentToastIndex++; // Increase this first for early return
-		if (notification.remainingTime <= 0.f) {
+		if (notification.remainingTime <= 0.f)
+		{
 			this->m_scene->DestroyEntity(entity);
 			return;
 		}
 		// NOLINTBEGIN
-		
+
 		std::string_view name = magic_enum::enum_name(notification.type);
 
-		switch (notification.type) {
+		switch (notification.type)
+		{
 		case ToastNotification::EToastType::Info:
 			ImGui::PushStyleColor(ImGuiCol_WindowBg, INFO_TOAST_COLOR);
 			ImGui::PushStyleColor(ImGuiCol_TitleBg, INFO_TOAST_COLOR);
@@ -54,9 +56,11 @@ void Hush::NotificationPanel::OnRender(float deltaTime) {
 		WindowManager::GetMainWindow()->GetWindowSize(&renderTargetWidth, &renderTargetHeight);
 		constexpr ImVec2 maxDimensions = {400, 100}; // Some way to make height auto grow??
 		constexpr float padding = 8.f;
-		float wrapWidth = maxDimensions.x - padding * 2; // 2 is for the window padding (padding for our component + padding for the window)
+		float wrapWidth =
+			maxDimensions.x -
+			padding * 2; // 2 is for the window padding (padding for our component + padding for the window)
 		ImVec2 textSize = ImGui::CalcTextSize(notification.text.c_str(), nullptr, false, wrapWidth);
-		
+
 		float toastWindowHeight = textSize.y + ImGui::GetFrameHeightWithSpacing() + padding * 2;
 
 		constexpr float minHeight = 100.0f;
@@ -68,7 +72,9 @@ void Hush::NotificationPanel::OnRender(float deltaTime) {
 		// We need something different, the next toast notification will be at the currToastIndex * the max height
 		constexpr float verticalGap = 4.f;
 		constexpr float startYOffset = 20;
-		const ImVec2 toastPos = ImVec2(renderTargetWidth - maxDimensions.x, renderTargetHeight - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
+		const ImVec2 toastPos =
+			ImVec2(renderTargetWidth - maxDimensions.x,
+				   renderTargetHeight - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
 		ImGui::SetNextWindowPos(toastPos);
 		ImGui::SetNextWindowSize(toastSize);
 		std::string notificationName = name.data();
@@ -83,9 +89,8 @@ void Hush::NotificationPanel::OnRender(float deltaTime) {
 	});
 }
 
-void Hush::NotificationPanel::Init(Scene *activeScene) noexcept {
+void Hush::NotificationPanel::Init(Scene *activeScene) noexcept
+{
 	this->m_scene = activeScene;
 	this->m_toastQuery = activeScene->CreateQuery<ToastNotification>();
 }
-
-

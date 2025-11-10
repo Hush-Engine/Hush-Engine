@@ -9,23 +9,24 @@
 constexpr float CAM_PITCH_MIN = -89.5f * Hush::MathUtils::DEG_TO_RAD;
 constexpr float CAM_PITCH_MAX = 89.5f * Hush::MathUtils::DEG_TO_RAD;
 
-void Hush::EditorCameraSystem::Init() {
-	IRenderer* renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+void Hush::EditorCameraSystem::Init()
+{
+	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 	this->m_editorCamera = renderer->GetEditorCamera();
 	// There should only ever be ONE EditorInfo component in the active scene
-	this->GetScene().CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef){
-		this->m_editorInfo = &infoRef;
-    });
+	this->GetScene().CreateQuery<EditorInfo>().Each(
+		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
 }
 
-void Hush::EditorCameraSystem::OnShutdown() {
-	
+void Hush::EditorCameraSystem::OnShutdown()
+{
 }
 
-void Hush::EditorCameraSystem::OnUpdate(float delta) {
+void Hush::EditorCameraSystem::OnUpdate(float delta)
+{
 	glm::mat4 viewMatrix = this->m_editorCamera->GetViewMatrix();
 	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-	glm::vec3& positionRef = this->m_editorCamera->GetPosition();
+	glm::vec3 &positionRef = this->m_editorCamera->GetPosition();
 	if (InputManager::GetMouseScrollAcceleration().y != 0.0F && UIUtils::IsMouseInScene())
 	{
 		constexpr float zoomSpeed = 100.F;
@@ -35,7 +36,8 @@ void Hush::EditorCameraSystem::OnUpdate(float delta) {
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
 		// Only reset the state if we controlled the current one
-		if (this->m_editorInfo->currentState == EEditorState::FreeLook) {
+		if (this->m_editorInfo->currentState == EEditorState::FreeLook)
+		{
 			this->m_editorInfo->currentState = EEditorState::None;
 		}
 		return;
@@ -87,15 +89,16 @@ void Hush::EditorCameraSystem::OnUpdate(float delta) {
 	if (mouseAcceleration != glm::vec2{0.0F})
 	{
 		constexpr float mouseLookSpeed = 3.0F;
-		float& yaw = this->m_editorCamera->GetYaw();
-		float& pitch = this->m_editorCamera->GetPitch();
+		float &yaw = this->m_editorCamera->GetYaw();
+		float &pitch = this->m_editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;
 		pitch = MathUtils::Clamp(pitch + mouseAcceleration.y * mouseLookSpeed * delta, CAM_PITCH_MIN, CAM_PITCH_MAX);
 	}
 }
 
 // NOLINTBEGIN
-float Hush::EditorCameraSystem::ApplyAccelerationCurve(float blend) {
+float Hush::EditorCameraSystem::ApplyAccelerationCurve(float blend)
+{
 	// From a custom asymmetrical sigmoidal curve, formula approximated by: https://mycurvefit.com/
 	// Raw formula: y = 1.082116 + (0.02923327 - 1.082116)/(1 + (x/0.2473429)^3.32689)^0.5257619
 	constexpr float offset = 1.082116f;
@@ -108,22 +111,23 @@ float Hush::EditorCameraSystem::ApplyAccelerationCurve(float blend) {
 }
 // NOLINTEND
 
-void Hush::EditorCameraSystem::OnFixedUpdate(float delta) {
-	
+void Hush::EditorCameraSystem::OnFixedUpdate(float delta)
+{
 }
 
-void Hush::EditorCameraSystem::OnRender() {
-	
+void Hush::EditorCameraSystem::OnRender()
+{
 }
 
-void Hush::EditorCameraSystem::OnPreRender() {
-	
+void Hush::EditorCameraSystem::OnPreRender()
+{
 }
 
-void Hush::EditorCameraSystem::OnPostRender() {
-	
+void Hush::EditorCameraSystem::OnPostRender()
+{
 }
 
-std::string_view Hush::EditorCameraSystem::GetName() const {
+std::string_view Hush::EditorCameraSystem::GetName() const
+{
 	return "EditorCameraSystem";
 }
