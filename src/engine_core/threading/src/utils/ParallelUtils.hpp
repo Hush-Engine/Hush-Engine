@@ -74,7 +74,7 @@ namespace Hush::Threading
 				co_return;
 			};
 
-			Task<void> task = RunOn(executor, forTask(std::forward<Fn>(function), current, next));
+			Task<void> task = RunOn(executor, forTask(function, current, next));
 			tasks.push_back(std::move(task));
 
 			current = next;

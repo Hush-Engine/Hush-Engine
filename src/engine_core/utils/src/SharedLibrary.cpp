@@ -32,8 +32,9 @@ Hush::SharedLibrary::~SharedLibrary()
 	if (m_nativeHandle != nullptr)
 	{
 #if HUSH_PLATFORM_WIN
-		CloseHandle(m_nativeHandle);
+		FreeLibrary(static_cast<HMODULE>(m_nativeHandle));
 #else
+		dlclose(m_nativeHandle);
 #endif
 	}
 }
@@ -44,7 +45,7 @@ Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibra
 #if HUSH_PLATFORM_WIN
 	auto *handle = LoadLibraryA(libraryName.data());
 #else
-	auto *handle = dlopen(libraryPath.data(), RTLD_LAZY);
+	auto *handle = dlopen(libraryName.data(), RTLD_LAZY);
 
 #endif
 
