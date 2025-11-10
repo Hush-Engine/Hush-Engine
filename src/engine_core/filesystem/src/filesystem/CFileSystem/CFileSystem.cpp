@@ -60,9 +60,7 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 	fseek(file, 0, SEEK_SET);
 
 	// Get last modified
-	struct stat result
-	{
-	};
+	struct stat result{};
 	if (stat(realPathStr.c_str(), &result) != 0)
 	{
 		return IFile::EError::OperationNotSupported;
@@ -78,26 +76,29 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 	return std::make_unique<CFile>(file, std::move(metadata));
 }
 
-
-Hush::Result<std::vector<Hush::FileInfo>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view& path) {
+Hush::Result<std::vector<Hush::FileInfo>, Hush::IFile::EError> Hush::CFileSystem::ListPath(const std::string_view &path)
+{
 	// I know this is technically C++ and not C, but cross platform C path listing is a pain in the ass
 	const std::filesystem::path realPath = m_root / path;
-	HUSH_COND_FAIL_V(std::filesystem::exists(realPath) && std::filesystem::is_directory(realPath), IFile::EError::PathDoesntExist);
+	HUSH_COND_FAIL_V(std::filesystem::exists(realPath) && std::filesystem::is_directory(realPath),
+					 IFile::EError::PathDoesntExist);
 	std::vector<FileInfo> result;
-	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(realPath)) {
-		FileInfo metadata = {
-			.path = entry.path().generic_string(),
-			.mode = EFileOpenMode::None,
-			.flags = entry.is_directory() ? EFileFlags::Directory : EFileFlags::File 
-		};
-		if (entry.path().has_extension()){
+	for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(realPath))
+	{
+		FileInfo metadata = {.path = entry.path().generic_string(),
+							 .mode = EFileOpenMode::None,
+							 .flags = entry.is_directory() ? EFileFlags::Directory : EFileFlags::File};
+		if (entry.path().has_extension())
+		{
 			std::string extensionWithDot = entry.path().extension().string();
 
 			// Handle cases for `file.. or file.`
-			if (extensionWithDot.size() > 1) {
-		        std::string rawExtension = StringUtils::ToUpper(StringUtils::SubstrView(extensionWithDot, 1, static_cast<int32_t>(extensionWithDot.size())));
-		        metadata.extension = this->ToKnownExtension(rawExtension);
-		    }			
+			if (extensionWithDot.size() > 1)
+			{
+				std::string rawExtension = StringUtils::ToUpper(
+					StringUtils::SubstrView(extensionWithDot, 1, static_cast<int32_t>(extensionWithDot.size())));
+				metadata.extension = this->ToKnownExtension(rawExtension);
+			}
 		}
 		result.emplace_back(metadata);
 	}

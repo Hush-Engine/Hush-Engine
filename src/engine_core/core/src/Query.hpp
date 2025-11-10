@@ -27,7 +27,8 @@ namespace Hush
 	class [[hush::export]] RawQuery
 	{
 	public:
-		/// @brief For internals only, this function is not intended to be used outside of the Scene and QueryBuilder classes
+		/// @brief For internals only, this function is not intended to be used outside of the Scene and QueryBuilder
+		/// classes
 		RawQuery(Scene *scene, void *query);
 
 		/// Cache mode for the query.
@@ -111,7 +112,8 @@ namespace Hush
 			[[nodiscard, hush::export]]
 			std::uint64_t GetEntityAt(std::size_t index) const;
 
-			[[nodiscard]] Scene *GetScene() const
+			[[nodiscard]]
+			Scene *GetScene() const
 			{
 				return m_scene;
 			}
@@ -172,7 +174,7 @@ namespace Hush
 		public:
 			// Default constructor for simple member reference
 			QueryImpl() = default;
-			
+
 			QueryImpl(RawQuery query) noexcept
 				: m_rawQuery(std::move(query))
 			{
@@ -204,7 +206,8 @@ namespace Hush
 				return m_rawQuery;
 			}
 
-			[[nodiscard]] const RawQuery &GetRawQuery() const
+			[[nodiscard]]
+			const RawQuery &GetRawQuery() const
 			{
 				return m_rawQuery;
 			}
@@ -279,7 +282,7 @@ namespace Hush
 
 		// Default constructor to keep query references as class members
 		Query() = default;
-		
+
 		/// Constructor.
 		/// @param query Raw query.
 		Query(RawQuery query) noexcept

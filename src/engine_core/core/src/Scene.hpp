@@ -108,9 +108,11 @@ namespace Hush
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type
 		template <class T, class Func>
-		void AddComponentObserver(EComponentObserverType observerType, Func &&callback) {
+		void AddComponentObserver(EComponentObserverType observerType, Func &&callback)
+		{
 			Entity::EntityId event = 0;
-			switch (observerType) {
+			switch (observerType)
+			{
 			case EComponentObserverType::Add:
 				event = EcsOnAdd;
 				break;
@@ -122,44 +124,42 @@ namespace Hush
 				break;
 			default:
 				// TODO: Error here
-				LogFormat(ELogLevel::Error, "Component observer {} not recognized!", static_cast<int32_t>(observerType));
+				LogFormat(ELogLevel::Error, "Component observer {} not recognized!",
+						  static_cast<int32_t>(observerType));
 				return;
 			}
 
 			const Entity::EntityId componentId = RegisterIfNeededSlow<T>();
 
-			auto* world = static_cast<ecs_world_t*>(this->m_world);
-			ecs_term_t queryTerm = {
-				.id = componentId,
-				.inout = EcsIn
-			};
-			ecs_query_desc_t query = {
-				.terms = { queryTerm }
-			};
+			auto *world = static_cast<ecs_world_t *>(this->m_world);
+			ecs_term_t queryTerm = {.id = componentId, .inout = EcsIn};
+			ecs_query_desc_t query = {.terms = {queryTerm}};
 
-			using CallbackFunc_t = std::function<void(Entity::EntityId, T*)>;
+			using CallbackFunc_t = std::function<void(Entity::EntityId, T *)>;
 			// Horrible hack, but we wanted to use the C API
 			// NOLINTNEXTLINE
-			auto* function = new CallbackFunc_t(std::forward<Func>(callback));
-			
-			ecs_observer_desc_t observerDesc = {
-				.query = query,
-				.events = { event },
-				.callback = [](ecs_iter_t* it) {
-					if (it->count <= 0) {
-						return;
-					}
-					Entity::EntityId eventEntity = it->entities[0];
-					T* component = ecs_field(it, T, 0);
-					auto* callbackFunc = reinterpret_cast<CallbackFunc_t*>(it->callback_ctx);
-					(*callbackFunc)(eventEntity, component);
-				},
-				.callback_ctx = function,
-				.callback_ctx_free = [](void* ctx) {
-					// NOLINTNEXTLINE
-					delete reinterpret_cast<CallbackFunc_t*>(ctx);
-				}
-			};
+			auto *function = new CallbackFunc_t(std::forward<Func>(callback));
+
+			ecs_observer_desc_t observerDesc = {.query = query,
+												.events = {event},
+												.callback =
+													[](ecs_iter_t *it) {
+														if (it->count <= 0)
+														{
+															return;
+														}
+														Entity::EntityId eventEntity = it->entities[0];
+														T *component = ecs_field(it, T, 0);
+														auto *callbackFunc =
+															reinterpret_cast<CallbackFunc_t *>(it->callback_ctx);
+														(*callbackFunc)(eventEntity, component);
+													},
+												.callback_ctx = function,
+												.callback_ctx_free =
+													[](void *ctx) {
+														// NOLINTNEXTLINE
+														delete reinterpret_cast<CallbackFunc_t *>(ctx);
+													}};
 			// TODO: Add this to a member vector so that we can delete it afterwards
 			Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 		}
@@ -167,7 +167,6 @@ namespace Hush
 		/// Destroy an entity.
 		/// @param entity Entity to destroy
 		void DestroyEntity(Entity &&entity);
-
 
 		void DestroyEntity(Entity &entity);
 

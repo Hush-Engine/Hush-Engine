@@ -63,8 +63,8 @@ namespace Hush
 
 		Scene *m_activeScene;
 
-		EditorInfo* m_editorInfo;
-		
+		EditorInfo *m_editorInfo;
+
 		bool m_keyboardFocusSet = false;
 
 		std::vector<std::string_view> m_currentlyAvailableCommands;

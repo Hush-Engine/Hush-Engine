@@ -3,8 +3,10 @@
 #include "Shared/EditorCamera.hpp"
 #include "../components/EditorInfo.hpp"
 
-namespace Hush {
-	class EditorCameraSystem final : public ISystem {
+namespace Hush
+{
+	class EditorCameraSystem final : public ISystem
+	{
 	public:
 		EditorCameraSystem(const EditorCameraSystem &) = delete;
 		EditorCameraSystem(EditorCameraSystem &&) = delete;
@@ -41,14 +43,14 @@ namespace Hush {
 		/// @return Name of the system
 		[[nodiscard]]
 		std::string_view GetName() const override;
-	private:
-		
-		float ApplyAccelerationCurve(float blend);
-		
-		EditorCamera* m_editorCamera{};
 
-		EditorInfo* m_editorInfo = nullptr;
-		
+	private:
+		float ApplyAccelerationCurve(float blend);
+
+		EditorCamera *m_editorCamera{};
+
+		EditorInfo *m_editorInfo = nullptr;
+
 		float m_blendValue = 0.0F;
 	};
-}
+} // namespace Hush

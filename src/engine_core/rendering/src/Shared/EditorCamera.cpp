@@ -4,7 +4,9 @@
 #include <glm/gtx/quaternion.hpp>
 
 Hush::EditorCamera::EditorCamera(float degFov, float width, float height, float nearP, float farP)
-	: Camera(degFov, width, height, nearP, farP), m_yaw(0.0F), m_pitch(0.0F)
+	: Camera(degFov, width, height, nearP, farP),
+	  m_yaw(0.0F),
+	  m_pitch(0.0F)
 {
 	this->m_position = glm::vec3(0.F, 1.F, 5.F);
 }
@@ -17,12 +19,12 @@ glm::mat4 Hush::EditorCamera::GetOrientationMatrix() const noexcept
 	return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
 }
 
-const glm::vec3& Hush::EditorCamera::GetPosition() const noexcept
+const glm::vec3 &Hush::EditorCamera::GetPosition() const noexcept
 {
 	return this->m_position;
 }
 
-glm::vec3& Hush::EditorCamera::GetPosition() noexcept
+glm::vec3 &Hush::EditorCamera::GetPosition() noexcept
 {
 	return this->m_position;
 }
@@ -35,10 +37,12 @@ glm::mat4 Hush::EditorCamera::GetViewMatrix() const noexcept
 	return glm::inverse(viewMatrix);
 }
 
-float& Hush::EditorCamera::GetYaw() noexcept {
+float &Hush::EditorCamera::GetYaw() noexcept
+{
 	return this->m_yaw;
 }
 
-float& Hush::EditorCamera::GetPitch() noexcept {
+float &Hush::EditorCamera::GetPitch() noexcept
+{
 	return this->m_pitch;
 }

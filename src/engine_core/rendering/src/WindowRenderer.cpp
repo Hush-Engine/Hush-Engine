@@ -52,8 +52,8 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene *activeScene)
 	this->m_isActive = true;
 }
 
-
-void Hush::WindowRenderer::GetWindowSize(int32_t* width, int32_t* height) {
+void Hush::WindowRenderer::GetWindowSize(int32_t *width, int32_t *height)
+{
 	SDL_GetWindowSize(this->m_windowPtr, width, height);
 }
 

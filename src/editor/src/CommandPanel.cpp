@@ -47,10 +47,9 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
-	
-	activeScene->CreateQuery<EditorInfo>().Each([this](Entity& entity, EditorInfo& infoRef){
-		this->m_editorInfo = &infoRef;
-    });
+
+	activeScene->CreateQuery<EditorInfo>().Each(
+		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
 }
 
 void Hush::CommandPanel::OnRender(float deltaTime)
@@ -133,9 +132,10 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 	this->m_selectedCommandIdx = -1;
 	this->m_keyboardFocusSet = false;
-	if (this->m_editorInfo->currentState == EEditorState::CommandMode) {
+	if (this->m_editorInfo->currentState == EEditorState::CommandMode)
+	{
 		this->m_editorInfo->currentState = EEditorState::None;
-	} 
+	}
 }
 
 void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view &textCmd)
@@ -147,7 +147,8 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		if (textCmd.empty())
 		{
 			// Open the entity search panel or create a new one
-			constexpr const char* addEntityHelp = "The add-entity command should be followed by the name of the entity you want to add!";
+			constexpr const char *addEntityHelp =
+				"The add-entity command should be followed by the name of the entity you want to add!";
 			constexpr float notificationTime = 3.f;
 			constexpr ToastNotification::EToastType type = ToastNotification::EToastType::Info;
 			Entity entity = this->m_activeScene->CreateEntity();
@@ -199,8 +200,8 @@ void Hush::CommandPanel::RebuildAvailableCommands()
 	this->m_currentlyAvailableCommands = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(BUILT_IN_COMMANDS, queryStr);
 }
 
-
-void Hush::CommandPanel::UpdateCommandList() {
+void Hush::CommandPanel::UpdateCommandList()
+{
 	if (this->m_currState != EState::Editing)
 	{
 		return;
@@ -215,10 +216,11 @@ void Hush::CommandPanel::UpdateCommandList() {
 	constexpr float panelHeightOffset = 2.0f;
 	constexpr float backgroundAlpha = 0.5f;
 	ImGui::SetNextWindowSize({this->m_commandPanelWidth, this->m_commandPanelHeight * panelHeightOffset});
-	ImGui::SetNextWindowPos({this->m_commandPanelPos.x, this->m_commandPanelPos.y - (this->m_commandPanelHeight * panelHeightOffset)});
+	ImGui::SetNextWindowPos(
+		{this->m_commandPanelPos.x, this->m_commandPanelPos.y - (this->m_commandPanelHeight * panelHeightOffset)});
 	ImGui::SetNextWindowBgAlpha(backgroundAlpha);
 	ImGui::Begin("Available commands", nullptr, ImGuiWindowFlags_NoCollapse);
-	
+
 	// Calculate table dimensions
 	const size_t totalCommands = this->m_currentlyAvailableCommands.size();
 	if (totalCommands == 0)
@@ -226,46 +228,45 @@ void Hush::CommandPanel::UpdateCommandList() {
 		ImGui::End();
 		return;
 	}
-	
+
 	// Determine number of columns based on window width
 	constexpr float itemWidth = 150.0f;
 	constexpr float spacing = 10.0f;
 	const float availableWidth = ImGui::GetContentRegionAvail().x;
 	const int32_t numColumns = std::max(1, static_cast<int32_t>(availableWidth / (itemWidth + spacing)));
 	const auto numRows = static_cast<int32_t>((totalCommands + numColumns - 1) / numColumns);
-	
+
 	ImDrawList *drawList = ImGui::GetWindowDrawList();
-	
+
 	// Create table
-	if (ImGui::BeginTable("CommandTable", numColumns, 
-		ImGuiTableFlags_None | ImGuiTableFlags_SizingStretchSame))
+	if (ImGui::BeginTable("CommandTable", numColumns, ImGuiTableFlags_None | ImGuiTableFlags_SizingStretchSame))
 	{
 		// Setup columns
 		for (int col = 0; col < numColumns; col++)
 		{
 			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
 		}
-		
+
 		// Populate table rows
 		size_t commandIdx = 0;
 		for (int32_t row = 0; row < numRows; row++)
 		{
 			ImGui::TableNextRow();
-			
+
 			for (int32_t col = 0; col < numColumns && commandIdx < totalCommands; col++)
 			{
 				ImGui::TableSetColumnIndex(col);
-				
+
 				const std::string_view &command = this->m_currentlyAvailableCommands.at(commandIdx);
 				bool hovered = false;
 				bool forceHover = this->m_selectedCommandIdx == static_cast<int>(commandIdx);
 				bool submitted = UI::CustomSelectable(command.data(), &hovered, drawList, forceHover);
-				
+
 				if (hovered && this->m_currState == EState::ForceFocus)
 				{
 					this->m_panelText = std::string(":") + command.data();
 				}
-				
+
 				if (submitted)
 				{
 					// Next words from space
@@ -280,21 +281,20 @@ void Hush::CommandPanel::UpdateCommandList() {
 					uint32_t commandHash = Hashing::Fnv1a(pureCommand.data(), pureCommand.size());
 					this->SubmitCommand(commandHash, cmdText);
 				}
-				
+
 				commandIdx++;
 			}
 		}
-		
+
 		ImGui::EndTable();
 	}
-	
+
 	this->m_currState = this->m_currState != EState::None &&
 								!Bitwise::HasCompositeFlag((int32_t)this->m_currState, (int32_t)EState::IsPopupMode)
 							? previousState
 							: this->m_currState;
 	ImGui::End();
 }
-
 
 void Hush::CommandPanel::AddComponentPopup()
 {
@@ -359,8 +359,8 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	std::vector<std::string> entityNames;
 	std::string_view searchEntityName(this->m_searchInputText);
 	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name& name, WorldTransform &transform) {
-	    std::string_view currEntityName = name.name.data();
+	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name, WorldTransform &transform) {
+		std::string_view currEntityName = name.name.data();
 		if (searchEntityName.empty())
 		{
 			RenderEntitySelectable(currEntityName, entity.GetId());

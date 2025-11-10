@@ -5,13 +5,14 @@
 #include "Shared/ImageTexture.hpp"
 #include <vector>
 
-namespace Hush {
+namespace Hush
+{
 	class IRenderer;
 	class ResourceManager;
-	
-	class IModelLoader {
-	public:
 
+	class IModelLoader
+	{
+	public:
 		enum class EError
 		{
 			None = 0,
@@ -19,7 +20,7 @@ namespace Hush {
 			InvalidMeshFile,
 			FormatNotSupported
 		};
-		
+
 		IModelLoader(const IModelLoader &) = default;
 		IModelLoader(IModelLoader &&) = default;
 		IModelLoader &operator=(const IModelLoader &) = default;
@@ -28,12 +29,14 @@ namespace Hush {
 
 		IModelLoader() = default;
 
-		virtual void SetResourceManager(ResourceManager* resourceManager) = 0;
+		virtual void SetResourceManager(ResourceManager *resourceManager) = 0;
 
-		[[nodiscard]] virtual ResourceManager* GetResourceManager() const = 0;
+		[[nodiscard]]
+		virtual ResourceManager *GetResourceManager() const = 0;
 
-		virtual Result<std::vector<Entity>, EError> LoadMeshes(IRenderer *engine, const std::filesystem::path& filePath, Scene *activeScene) = 0;
-		
-		virtual GpuAllocatedImage LoadTexture(IRenderer* engine, const ImageTexture &texture) = 0;
+		virtual Result<std::vector<Entity>, EError> LoadMeshes(IRenderer *engine, const std::filesystem::path &filePath,
+															   Scene *activeScene) = 0;
+
+		virtual GpuAllocatedImage LoadTexture(IRenderer *engine, const ImageTexture &texture) = 0;
 	};
-}
+} // namespace Hush

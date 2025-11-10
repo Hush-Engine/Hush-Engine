@@ -27,9 +27,9 @@ namespace Hush::Reflection
 			return id != other.id;
 		}
 	};
-}
+} // namespace Hush::Reflection
 
-template<>
+template <>
 struct std::hash<Hush::Reflection::TypeId>
 {
 	std::size_t operator()(const Hush::Reflection::TypeId &typeId) const noexcept

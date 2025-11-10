@@ -29,21 +29,22 @@
 #include "Components/MeshReference.hpp"
 #include "../../core/src/Scene.hpp"
 
-
-void Hush::VulkanLoader::SetResourceManager(ResourceManager* resourceManager) {
+void Hush::VulkanLoader::SetResourceManager(ResourceManager *resourceManager)
+{
 	this->m_resourceManager = resourceManager;
 }
 
-Hush::ResourceManager *Hush::VulkanLoader::GetResourceManager() const {
+Hush::ResourceManager *Hush::VulkanLoader::GetResourceManager() const
+{
 	return this->m_resourceManager;
 }
 
-
-Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::VulkanLoader::LoadMeshes(IRenderer *engine, const std::filesystem::path& filePath, Scene *activeScene)
+Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::VulkanLoader::LoadMeshes(
+	IRenderer *engine, const std::filesystem::path &filePath, Scene *activeScene)
 {
 	HUSH_ASSERT(this->m_resourceManager != nullptr, "Failed to load meshes resource manager is null!");
 	fastgltf::Expected<fastgltf::Asset> loadedAsset = GltfLoadFunctions::GetAssetFromFile(filePath);
-	
+
 	HUSH_ASSERT(loadedAsset, "GLTF asset at {} not properly loaded, error: {}!", filePath.string(),
 				fastgltf::getErrorMessage(loadedAsset.error()));
 
@@ -67,19 +68,18 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 	}
 
 	// In the case the mesh has multiple top level nodes, we need to create a "father" entity
-	// that corresponds to the asset's in-game representation 
+	// that corresponds to the asset's in-game representation
 
 	// Maybe use the name of the file?
 	Entity fatherEntity = Entity::Null();
-	
-	
+
 	// Create at origin, this should potentially be at the mouse's world position later on
-	if (entities.size() > 1) {
+	if (entities.size() > 1)
+	{
 		fatherEntity = activeScene->CreateEntityWithName(filePath.stem().string());
 		fatherEntity.AddComponent<WorldTransform>();
 		fatherEntity.AddComponent<LocalTransform>();
 	}
-
 
 	for (fastgltf::Node &node : loadedAsset->nodes)
 	{
@@ -94,7 +94,8 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 		glm::mat4 nodeXform = GltfLoadFunctions::GetNodeTransform(node);
 
 		localXformComponent->SetTransformationMatrix(nodeXform);
-		if (fatherEntity.IsValid()) {
+		if (fatherEntity.IsValid())
+		{
 			fatherEntity.AddChild(entity);
 		}
 
@@ -136,13 +137,15 @@ std::vector<Hush::GpuAllocatedImage> Hush::VulkanLoader::LoadAllTextures(const f
 	return loadedTexturesResult;
 }
 
-Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
-													   Entity &entityRef, IRenderer *engine)
+Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh,
+																const fastgltf::Asset &asset, Entity &entityRef,
+																IRenderer *engine)
 {
-	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	auto *rendererImpl = dynamic_cast<VulkanRenderer *>(engine);
 	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
 	// Load a mesh through the resource loader
-	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
+	Ref<Mesh> meshAsset = this->m_resourceManager->AllocateRef<Mesh>(
+		mesh.name); // TODO: We should probably append the name of the file or something to avoid conflicts
 
 	meshAsset->SetName(mesh.name);
 
@@ -253,15 +256,15 @@ Hush::MeshReference *Hush::VulkanLoader::CreateMeshFromGltfMesh(const fastgltf::
 	meshAsset->CalculateTangentBasis();
 	meshAsset->SetMeshBuffers(rendererImpl->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
 	// Add the component to the entity
-	auto* result = &entityRef.EmplaceComponent<MeshReference>(meshAsset);
+	auto *result = &entityRef.EmplaceComponent<MeshReference>(meshAsset);
 	return result;
 }
 
 std::shared_ptr<Hush::GLTFMetallicRoughness> Hush::VulkanLoader::GenerateMaterial(
-	size_t materialIdx, const fastgltf::Asset &asset, IRenderer *engine,
-	DescriptorAllocatorGrowable &allocatorPool, const std::vector<GpuAllocatedImage> &loadedTextures)
+	size_t materialIdx, const fastgltf::Asset &asset, IRenderer *engine, DescriptorAllocatorGrowable &allocatorPool,
+	const std::vector<GpuAllocatedImage> &loadedTextures)
 {
-	auto* rendererImpl = dynamic_cast<VulkanRenderer*>(engine);
+	auto *rendererImpl = dynamic_cast<VulkanRenderer *>(engine);
 	HUSH_ASSERT(rendererImpl != nullptr, "Renderer is not of compatible implementation (Vulkan expected)");
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);

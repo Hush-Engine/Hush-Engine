@@ -23,7 +23,7 @@ namespace Hush::Threading::Executors
 	struct ThreadPoolOptions
 	{
 		uint32_t numThreads = std::thread::hardware_concurrency(); // Default to number of hardware threads
-		bool pinToCore = false; // Whether to pin threads to cores (default: false)
+		bool pinToCore = false;									   // Whether to pin threads to cores (default: false)
 	};
 
 	class WorkerThread;

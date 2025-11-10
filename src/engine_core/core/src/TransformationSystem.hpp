@@ -35,11 +35,13 @@ namespace Hush
 
 		/// OnPostRender() is called after rendering.
 		void OnPostRender() override;
-		
+
 		[[nodiscard]]
-		std::string_view GetName() const override {
+		std::string_view GetName() const override
+		{
 			return "TransformationSystem";
 		}
+
 	private:
 		Query<WorldTransform, LocalTransform> m_transformableEntitiesQuery;
 	};

@@ -26,13 +26,13 @@ TEST_CASE("Entity creation", "[entity]")
 
 	SECTION("CreateEntityWithName")
 	{
-		const std::string_view baseName = "MyEntity"; 
+		const std::string_view baseName = "MyEntity";
 		REQUIRE(entity2.GetComponent<Hush::Entity::Name>() != nullptr);
-		const auto* nameComp = entity2.GetComponent<Hush::Entity::Name>();
+		const auto *nameComp = entity2.GetComponent<Hush::Entity::Name>();
 		const std::string_view actualName{nameComp->name.data()};
-		REQUIRE(actualName == baseName);		
+		REQUIRE(actualName == baseName);
 	}
-	
+
 	SECTION("DifferentEntities")
 	{
 		REQUIRE(entity.GetId() != entity2.GetId());

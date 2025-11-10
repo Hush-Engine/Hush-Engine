@@ -23,15 +23,18 @@ namespace Hush
 
 		ImageTexture(const std::byte *data, size_t size);
 
-		[[nodiscard]] int32_t GetWidth() const noexcept;
+		[[nodiscard]]
+		int32_t GetWidth() const noexcept;
 
-		[[nodiscard]] int32_t GetHeight() const noexcept;
+		[[nodiscard]]
+		int32_t GetHeight() const noexcept;
 
-		[[nodiscard]] const std::byte *GetImageData() const noexcept;
+		[[nodiscard]]
+		const std::byte *GetImageData() const noexcept;
 
 	private:
 		int32_t m_width{};
 		int32_t m_height{};
-		std::byte* m_data = nullptr;
+		std::byte *m_data = nullptr;
 	};
 } // namespace Hush

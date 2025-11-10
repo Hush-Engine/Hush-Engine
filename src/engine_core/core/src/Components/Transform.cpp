@@ -111,8 +111,8 @@ glm::mat4 Hush::Transform::XForm(const Transform &other) const
 	return this->GetTransformationMatrix() * other.GetTransformationMatrix();
 }
 
-
-glm::mat4 Hush::Transform::InvXForm(const Transform &other) const {
+glm::mat4 Hush::Transform::InvXForm(const Transform &other) const
+{
 	return glm::inverse(this->GetTransformationMatrix()) * other.GetTransformationMatrix();
 }
 

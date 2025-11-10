@@ -39,8 +39,8 @@ namespace Hush
 	private:
 		std::vector<GpuAllocatedImage> LoadAllTextures(const fastgltf::Asset &asset, IRenderer *engine);
 
-		MeshReference *CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset, Entity &entityRef,
-									 IRenderer *engine);
+		MeshReference *CreateMeshFromGltfMesh(const fastgltf::Mesh &mesh, const fastgltf::Asset &asset,
+											  Entity &entityRef, IRenderer *engine);
 
 		std::shared_ptr<GLTFMetallicRoughness> GenerateMaterial(size_t materialIdx, const fastgltf::Asset &asset,
 																IRenderer *engine,

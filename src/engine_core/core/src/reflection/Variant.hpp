@@ -134,7 +134,8 @@ namespace Hush::Reflection
 		template <typename T, typename... Args>
 		static Variant CreateInPlace(Args &&...args)
 		{
-			static_assert(std::is_constructible_v<T, Args...>, "Type T is not constructible with the provided arguments");
+			static_assert(std::is_constructible_v<T, Args...>,
+						  "Type T is not constructible with the provided arguments");
 
 			Variant variant;
 			variant.m_typeId = GetTypeId<T>();

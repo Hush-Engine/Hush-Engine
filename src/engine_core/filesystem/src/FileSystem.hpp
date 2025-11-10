@@ -55,10 +55,12 @@ namespace Hush
 																	   EFileOpenMode mode = EFileOpenMode::Read) = 0;
 
 		/// Lists all the contents of a specific path
-		virtual Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view& path) = 0;
+		virtual Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view &path) = 0;
 
-		EFileExtension ToKnownExtension(const std::string_view& extensionUppercase) {
-			switch (Hashing::Fnv1a(extensionUppercase)) {
+		EFileExtension ToKnownExtension(const std::string_view &extensionUppercase)
+		{
+			switch (Hashing::Fnv1a(extensionUppercase))
+			{
 			case Hashing::Fnv1a("PNG"):
 				return EFileExtension::PNG;
 			case Hashing::Fnv1a("META"):

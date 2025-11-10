@@ -11,8 +11,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
-
-fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(const std::filesystem::path& file) {
+fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(const std::filesystem::path &file)
+{
 	if (!std::filesystem::exists(file))
 	{
 		return fastgltf::Error::InvalidPath;
@@ -133,13 +133,15 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
 	return EError::None;
 }
 
-
-std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image& image, const fastgltf::Asset& asset, fastgltf::MimeType* outMimeType) {
+std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image &image,
+																	   const fastgltf::Asset &asset,
+																	   fastgltf::MimeType *outMimeType)
+{
 	const fastgltf::sources::Vector *vectorData = std::get_if<fastgltf::sources::Vector>(&image.data);
 	if (vectorData != nullptr)
 	{
 		*outMimeType = vectorData->mimeType;
-		return {reinterpret_cast<const std::byte*>(vectorData->bytes.data()), vectorData->bytes.size()};
+		return {reinterpret_cast<const std::byte *>(vectorData->bytes.data()), vectorData->bytes.size()};
 	}
 	const fastgltf::sources::BufferView *bufferViewData = std::get_if<fastgltf::sources::BufferView>(&image.data);
 
@@ -166,11 +168,12 @@ std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDat
 {
 	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
 	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
-	if (!byteBuffer.empty()) {
+	if (!byteBuffer.empty())
+	{
 		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
 	}
 	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
-	
+
 	// TODO: support for file byte offset
 	if (uriData == nullptr || uriData->fileByteOffset > 0)
 	{
