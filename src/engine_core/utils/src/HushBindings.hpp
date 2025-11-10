@@ -3,9 +3,7 @@
 	\date 2024-02-01
 	\brief Hush Engine bindings utils
 */
-
-// clang-format off
-// clang-tidy: off
+// NOLINTBEGIN
 
 #pragma once
 
@@ -67,5 +65,4 @@ namespace Hush::Export
 	}
 }
 
-// clang-format on
-// clang-tidy: on
+// NOLINTEND

@@ -507,7 +507,7 @@ namespace Hush
 						},
 						components);
 
-					std::apply(func, component);
+					std::apply(std::forward<Func>(func), component);
 				}
 			}
 		}
@@ -538,7 +538,7 @@ namespace Hush
 						components);
 
 					auto finalTuple = std::tuple_cat(std::make_tuple(entityId), component);
-					std::apply(func, finalTuple);
+					std::apply(std::forward<Func>(func), finalTuple);
 				}
 			}
 		}
@@ -570,7 +570,7 @@ namespace Hush
 
 					auto finalTuple =
 						std::tuple_cat(std::make_tuple(Entity(GetRawQuery().GetScene(), entityId)), component);
-					std::apply(func, finalTuple);
+					std::apply(std::forward<Func>(func), finalTuple);
 				}
 			}
 		}

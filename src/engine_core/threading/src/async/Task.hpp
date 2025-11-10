@@ -6,10 +6,11 @@
 
 #pragma once
 
+// NOLINTBEGIN(readability-identifier-naming, modernize-use-nodiscard)
+
 #include <Logger.hpp>
-#include <assert.h>
+#include <cassert>
 #include <coroutine>
-#include <variant>
 
 namespace Hush::Threading
 {
@@ -67,9 +68,12 @@ namespace Hush::Threading
 		template <typename T>
 		struct TaskPromise : public PromiseBase
 		{
-			TaskPromise() noexcept
-			{
-			}
+			TaskPromise() noexcept = default;
+
+			TaskPromise(const TaskPromise &) = delete;
+			TaskPromise(TaskPromise &&) = delete;
+			TaskPromise &operator=(const TaskPromise &) = delete;
+			TaskPromise &operator=(TaskPromise &&) = delete;
 
 			Task<T> get_return_object() noexcept;
 
@@ -134,9 +138,7 @@ namespace Hush::Threading
 		template <>
 		struct TaskPromise<void> : public PromiseBase
 		{
-			TaskPromise() noexcept
-			{
-			}
+			TaskPromise() noexcept = default;
 
 			Task<void> get_return_object() noexcept;
 
@@ -340,3 +342,5 @@ namespace Hush::Threading
 
 	} // namespace impl
 } // namespace Hush::Threading
+
+// NOLINTEND(readability-identifier-naming,modernize-use-nodiscard)

@@ -20,14 +20,14 @@ impl CliCommand for ShaderCompileCommand {
             let extra_string = if self.verbose {
                 String::new()
             } else {
-                format!("\n{}", error)
+                format!("\n{error}")
             };
             tracing::error!("Build Failed{}", extra_string);
             return Ok(ExitCode::FAILURE);
         }
 
         // Get all the .frag and .vert files
-        let filter = vec!["frag", "vert", "comp"];
+        let filter = ["frag", "vert", "comp"];
         let commands = std::fs::read_dir("./res/")
             .unwrap()
             .filter_map(|f| f.ok())
@@ -38,7 +38,7 @@ impl CliCommand for ShaderCompileCommand {
             })
             .map(|entry| {
                 let path = entry.path();
-                return format!("glslang -V {} -o {}.spv", path.display(), path.display());
+                format!("glslang -V {} -o {}.spv", path.display(), path.display())
             })
             .collect::<Vec<_>>()
             .join(" && ");

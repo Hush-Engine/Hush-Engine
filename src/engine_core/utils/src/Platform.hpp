@@ -55,7 +55,7 @@ namespace Hush
 
 	/// @brief Get the current platform
 	/// @return EPlatform
-	inline constexpr EPlatform GetCurrentPlatform()
+	constexpr EPlatform GetCurrentPlatform()
 	{
 #if HUSH_PLATFORM_WIN
 		return EPlatform::Win64;

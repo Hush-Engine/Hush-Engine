@@ -6,9 +6,12 @@
 
 #pragma once
 
+// NOLINTBEGIN(readability-identifier-naming, modernize-use-nodiscard)
+
 #include "TaskTraits.hpp"
 #include <atomic>
 #include <coroutine>
+#include <variant>
 
 namespace Hush::Threading
 {
@@ -20,6 +23,11 @@ namespace Hush::Threading
 		struct SyncWaitPromiseBase
 		{
 			SyncWaitPromiseBase() noexcept = default;
+
+			SyncWaitPromiseBase(const SyncWaitPromiseBase &) = default;
+			SyncWaitPromiseBase(SyncWaitPromiseBase &&) = delete;
+			SyncWaitPromiseBase &operator=(const SyncWaitPromiseBase &) = default;
+			SyncWaitPromiseBase &operator=(SyncWaitPromiseBase &&) = delete;
 
 			std::suspend_always initial_suspend() noexcept
 			{
@@ -80,7 +88,7 @@ namespace Hush::Threading
 			}
 
 			template <typename U>
-				requires(std::is_reference_v<T> && std::is_constructible_v<T, U &&> ||
+				requires((std::is_reference_v<T> && std::is_constructible_v<T, U &&>) ||
 						 (!std::is_reference_v<T> && std::is_constructible_v<ResultType, U>))
 			void return_value(U &&value) noexcept
 			{
@@ -212,6 +220,10 @@ namespace Hush::Threading
 			using CoroutineType = std::coroutine_handle<SyncWaitPromise>;
 
 			SyncWaitPromise() noexcept = default;
+			SyncWaitPromise(const SyncWaitPromise &) = default;
+			SyncWaitPromise(SyncWaitPromise &&) = delete;
+			SyncWaitPromise &operator=(const SyncWaitPromise &) = default;
+			SyncWaitPromise &operator=(SyncWaitPromise &&) = delete;
 			~SyncWaitPromise() = default;
 
 			void Start(std::atomic_flag &done) noexcept
@@ -318,6 +330,9 @@ namespace Hush::Threading
 			return *this;
 		}
 
+		SyncWaitTask(const SyncWaitTask &) = delete;
+		SyncWaitTask &operator=(const SyncWaitTask &) = delete;
+
 		/// Destructor
 		~SyncWaitTask()
 		{
@@ -379,6 +394,7 @@ namespace Hush::Threading
 	namespace impl
 	{
 		template <Concepts::Awaitable A, typename T = typename Concepts::AwaitableTraits<A>::ResultType>
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-reference-coroutine-parameters)
 		static SyncWaitTask<T> MakeSyncWaitTask(A &&awaitable)
 		{
 			if constexpr (std::is_void_v<T>)
@@ -405,6 +421,7 @@ namespace Hush::Threading
 
 		done.wait(false, std::memory_order_relaxed);
 
+		// NOLINTBEGIN(bugprone-branch-clone)
 		if constexpr (std::is_void_v<T>)
 		{
 			task.promise().Result();
@@ -423,5 +440,8 @@ namespace Hush::Threading
 			// Copy the result
 			return task.promise().Result();
 		}
+		// NOLINTEND(bugprone-branch-clone)
 	}
 } // namespace Hush::Threading
+
+// NOLINTEND(readability-identifier-naming, modernize-use-nodiscard)

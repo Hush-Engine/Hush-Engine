@@ -25,7 +25,7 @@ namespace Hush::Vector3Math
 	}
 
 	/// @brief Performs a narrowing conversion from vec4 to vec3
-	constexpr inline glm::vec3 FromVec4(const glm::vec4 &vec)
+	constexpr glm::vec3 FromVec4(const glm::vec4 &vec)
 	{
 		return {vec};
 	}

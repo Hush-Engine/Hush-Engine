@@ -6,7 +6,6 @@
 
 #pragma once
 #include "Platform.hpp"
-#include <string>
 #include <StringUtils.hpp>
 
 namespace Hush::Networking
@@ -14,18 +13,21 @@ namespace Hush::Networking
 
 #if HUSH_PLATFORM_WIN
 	template <uint32_t N>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
 		const char *cmd = StringUtils::CompileTimeConcat("start ", url).data();
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_OSX
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
 		const char *cmd = StringUtils::CompileTimeConcat("open ", url).data();
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_LINUX
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
 		const char *cmd = StringUtils::CompileTimeConcat("xdg-open ", url).data();

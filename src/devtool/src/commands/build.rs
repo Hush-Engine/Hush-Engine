@@ -54,7 +54,7 @@ impl CliCommand for BuildCommand {
             let extra_string = if self.verbose {
                 String::new()
             } else {
-                format!("\n{}", error)
+                format!("\n{error}")
             };
             tracing::error!("Build Failed{}", extra_string);
         }

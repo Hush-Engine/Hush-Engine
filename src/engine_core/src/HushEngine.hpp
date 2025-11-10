@@ -10,7 +10,6 @@
 #include "HushBindings.hpp"
 #include "executors/ThreadPool.hpp"
 
-#include <optional>
 #include <string_view>
 
 namespace Hush
@@ -26,9 +25,9 @@ namespace Hush
 		HushEngine(const HushEngine &) = delete;
 		HushEngine &operator=(const HushEngine &) = delete;
 
-		HushEngine(HushEngine &&) noexcept = default;
+		HushEngine(HushEngine &&) noexcept = delete;
 
-		HushEngine &operator=(HushEngine &&) noexcept = default;
+		HushEngine &operator=(HushEngine &&) noexcept = delete;
 
 		/// @brief Intended to be used for engine systems, user-defined systems should be added using
 		/// `Hush::Scene::AddSystem()`

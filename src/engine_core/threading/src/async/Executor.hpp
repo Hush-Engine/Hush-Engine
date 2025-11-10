@@ -30,7 +30,7 @@ namespace Hush::Threading
 		template <typename T>
 		struct ExecutorTraits<T>
 		{
-			static constexpr bool is_executor = Executor<T>;
+			static constexpr bool IS_EXECUTOR = Executor<T>;
 			using ReturnType = std::invoke_result_t<decltype(&T::Schedule), T>;
 		};
 
@@ -45,7 +45,6 @@ namespace Hush::Threading
 	}
 
 	template <typename T>
-	[[nodiscard]]
 	void SpawnOn(Hush::Threading::Concepts::Executor auto *executor, Task<T> task)
 	{
 		auto wrapperTask = [](Hush::Threading::Concepts::Executor auto *executor, Task<T> t) -> Task<void> {

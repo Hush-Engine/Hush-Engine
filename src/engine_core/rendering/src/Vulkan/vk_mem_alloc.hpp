@@ -3,6 +3,8 @@
 	\date 2024-05-19
 	\brief Memory allocation utilities from github
 */
+
+// NOLINTBEGIN
 #pragma once
 // Disable all warnings
 #ifdef _MSC_VER
@@ -20035,3 +20037,5 @@ external projects but are not going to be included into this repository.
 // MSVC
 #pragma warning(pop)
 #endif
+
+// NOLINTEND

@@ -1,9 +1,10 @@
 #pragma once
 #include <cmath>
+#include <numbers>
 
 namespace Hush::MathUtils
 {
-	constexpr float PI = 3.1415926535897932384626433832795f;
+	constexpr float PI = std::numbers::pi_v<float>;
 	constexpr float TAU = PI * 2.0f;
 	constexpr float RAD_TO_DEG = 180.0f / PI;
 	constexpr float DEG_TO_RAD = PI / 180.0f;
@@ -30,7 +31,7 @@ namespace Hush::MathUtils
 	inline float Lerp(float from, float to, float t)
 	{
 		const float tClamped = Clamp(t, 0.0f, 1.0f);
-		return from + (to - from) * tClamped;
+		return from + ((to - from) * tClamped);
 	}
 
 	inline float Pow(float x, float n)

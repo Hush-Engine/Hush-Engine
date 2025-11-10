@@ -9,7 +9,7 @@
 #include "async/SyncWait.hpp"
 #include "async/Task.hpp"
 #include "async/WhenAll.hpp"
-#include "executors/ThreadPool.hpp"
+#include "async/Executor.hpp"
 
 namespace Hush::Threading
 {
@@ -18,7 +18,7 @@ namespace Hush::Threading
 
 	template <typename It, typename Fn>
 		requires(std::is_invocable_v<Fn, std::add_lvalue_reference_t<typename std::iterator_traits<It>::value_type>>)
-	Task<void> ParallelFor(Hush::Threading::Concepts::Executor auto *executor, It begin, It end, Fn &&function)
+	Task<void> ParallelFor(Hush::Threading::Concepts::Executor auto *executor, It begin, It end, Fn function)
 	{
 		// We need to calculate how many tasks we are going to create.
 		// For this, we need to split the range into chunks.
