@@ -63,6 +63,6 @@ namespace Hush::Export
 		// Do nothing
 		(void)name;
 	}
-}
+} // namespace Hush::Export
 
 // NOLINTEND

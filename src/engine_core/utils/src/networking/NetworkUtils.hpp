@@ -20,14 +20,14 @@ namespace Hush::Networking
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_OSX
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
 		const char *cmd = StringUtils::CompileTimeConcat("open ", url).data();
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_LINUX
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
 		const char *cmd = StringUtils::CompileTimeConcat("xdg-open ", url).data();

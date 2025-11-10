@@ -57,12 +57,11 @@ namespace Hush::Threading::Executors
 		ThreadPool(ThreadPoolOptions options = ThreadPoolOptions());
 
 	public:
-
-	    ThreadPool(const ThreadPool& other) = delete;
-	    ThreadPool& operator=(const ThreadPool& other) = delete;
-	    ThreadPool(ThreadPool&& other) noexcept = delete;
-	    ThreadPool& operator=(ThreadPool&& other) noexcept = delete;
-	    ThreadPool() = delete;
+		ThreadPool(const ThreadPool &other) = delete;
+		ThreadPool &operator=(const ThreadPool &other) = delete;
+		ThreadPool(ThreadPool &&other) noexcept = delete;
+		ThreadPool &operator=(ThreadPool &&other) noexcept = delete;
+		ThreadPool() = delete;
 
 		~ThreadPool();
 
