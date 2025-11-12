@@ -75,6 +75,11 @@ namespace Hush::Serialization
 			(void)format;
 		}
 
+		IVisitor(const IVisitor &) = default;
+		IVisitor(IVisitor &&) = delete;
+		IVisitor &operator=(const IVisitor &) = default;
+		IVisitor &operator=(IVisitor &&) = delete;
+
 		virtual ~IVisitor() = default;
 
 		/// Visit a signed 8-bit integer.
@@ -291,7 +296,7 @@ namespace Hush::Serialization
 
 			IntType *value;
 
-			static constexpr bool IsUnsigned = std::is_unsigned_v<IntType>;
+			static constexpr bool IS_UNSIGNED = std::is_unsigned_v<IntType>;
 			static_assert(std::is_integral_v<IntType>, "IntVisitor must be specialized for integral types");
 
 			IntVisitor(IVisitor *parent, IntType *value, EFormatDescribingType describingType)
@@ -356,7 +361,7 @@ namespace Hush::Serialization
 
 			Result VisitInt8(std::int8_t v) override
 			{
-				if constexpr (IsUnsigned)
+				if constexpr (IS_UNSIGNED)
 				{
 					if (v < 0)
 					{
@@ -380,7 +385,7 @@ namespace Hush::Serialization
 
 			Result VisitInt16(std::int16_t v) override
 			{
-				if constexpr (IsUnsigned)
+				if constexpr (IS_UNSIGNED)
 				{
 					if (v < 0)
 					{
@@ -404,7 +409,7 @@ namespace Hush::Serialization
 
 			Result VisitInt32(std::int32_t v) override
 			{
-				if constexpr (IsUnsigned)
+				if constexpr (IS_UNSIGNED)
 				{
 					if (v < 0)
 					{
@@ -428,7 +433,7 @@ namespace Hush::Serialization
 
 			Result VisitInt64(std::int64_t v) override
 			{
-				if constexpr (IsUnsigned)
+				if constexpr (IS_UNSIGNED)
 				{
 					if (v < 0)
 					{
@@ -436,7 +441,7 @@ namespace Hush::Serialization
 					}
 				}
 
-				using BiggerType = std::conditional_t<IsUnsigned, std::uint64_t, std::int64_t>;
+				using BiggerType = std::conditional_t<IS_UNSIGNED, std::uint64_t, std::int64_t>;
 
 				if constexpr (static_cast<BiggerType>(std::numeric_limits<IntType>::max()) <
 							  static_cast<BiggerType>(std::numeric_limits<std::int64_t>::max()))
@@ -642,7 +647,7 @@ namespace Hush::Serialization
 			}
 
 			std::map<std::string, std::string> *value{};
-			std::string currentKey{};
+			std::string currentKey;
 
 			Result VisitObjectStart() override
 			{

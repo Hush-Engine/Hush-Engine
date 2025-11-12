@@ -1,4 +1,0 @@
-# {{filename}}
-# {{author}}
-# {{date}}
-# {{brief}}

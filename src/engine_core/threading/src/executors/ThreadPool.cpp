@@ -29,7 +29,8 @@ namespace Hush::Threading::Executors
 	static constexpr size_t WORKER_QUEUE_SIZE = 256;		  // Size of the worker queue
 	static constexpr size_t GLOBAL_QUEUE_STEALING_COUNT = 64; // Number of tasks to steal from the global queue
 
-	thread_local WorkerThread *g_currentWorkerThread = nullptr;
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+	thread_local WorkerThread *G_CURRENT_WORKER_THREAD = nullptr;
 
 	class WorkerThread
 	{
@@ -41,7 +42,7 @@ namespace Hush::Threading::Executors
 			m_thread = std::jthread([this, &startBarrier, threadAffinity](std::stop_token stopToken) {
 				const auto threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
 				Hush::LogFormat(ELogLevel::Debug, "Worker thread started with ID: {}", threadId);
-				g_currentWorkerThread = this;
+				G_CURRENT_WORKER_THREAD = this;
 				if (threadAffinity >= 0)
 				{
 					SetCurrentThreadAffinity(threadAffinity);
@@ -95,8 +96,8 @@ namespace Hush::Threading::Executors
 	private:
 		void WorkerFunction(std::stop_token stopToken)
 		{
-			static constexpr uint32_t BUSY_LOOP_ITERATIONS = 1000;
-			static constexpr size_t STEALING_COUNT = 16; // We will try to steal this many tasks at once
+			static constexpr uint32_t busyLoopIterations = 1000;
+			static constexpr size_t stealingCount = 16; // We will try to steal this many tasks at once
 
 			while (!stopToken.stop_requested())
 			{
@@ -113,7 +114,7 @@ namespace Hush::Threading::Executors
 				}
 				// If we reach here, it means we didn't find a task in our worker queue, so we need to steal from other
 				// threads
-				for (uint32_t i = 0; i < BUSY_LOOP_ITERATIONS; ++i)
+				for (uint32_t i = 0; i < busyLoopIterations; ++i)
 				{
 					if (!m_stealers.empty())
 					{
@@ -123,7 +124,7 @@ namespace Hush::Threading::Executors
 						Result<std::tuple<TaskOperation *, size_t>, EStealError> result =
 							stealer.StealAndPop(m_workerQueue, [](size_t count) {
 								(void)count; // Unused parameter, but we need to keep the signature
-								return STEALING_COUNT;
+								return stealingCount;
 							});
 
 						if (result.has_error())
@@ -198,7 +199,7 @@ namespace Hush::Threading::Executors
 	{
 		m_awaitingCoroutine = awaitingCoroutine;
 
-		if (g_currentWorkerThread != nullptr && g_currentWorkerThread->m_workerQueue.Push(this))
+		if (G_CURRENT_WORKER_THREAD != nullptr && G_CURRENT_WORKER_THREAD->m_workerQueue.Push(this))
 		{
 			// We are already in a worker thread and successfully pushed the task to the worker queue, so we
 			// just finished.
@@ -222,7 +223,7 @@ Hush::Threading::Executors::ThreadPool::ThreadPool(ThreadPoolOptions options)
 	// Create worker threads
 	for (uint32_t i = 0; i < options.numThreads; i++)
 	{
-		int32_t threadAffinity = options.pinToCore && i < numCores ? i : -1;
+		int32_t threadAffinity = options.pinToCore && i < numCores ? static_cast<int32_t>(i) : -1;
 		m_threads.emplace_back(std::make_unique<WorkerThread>(*this, m_threadsBarrier, threadAffinity));
 	}
 

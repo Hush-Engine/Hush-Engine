@@ -29,21 +29,23 @@ Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept
 
 Hush::SharedLibrary::~SharedLibrary()
 {
-	if (m_nativeHandle)
+	if (m_nativeHandle != nullptr)
 	{
 #if HUSH_PLATFORM_WIN
-		CloseHandle(m_nativeHandle);
+		FreeLibrary(static_cast<HMODULE>(m_nativeHandle));
 #else
+		dlclose(m_nativeHandle);
 #endif
 	}
 }
+
 Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
 	std::string_view libraryName) noexcept
 {
 #if HUSH_PLATFORM_WIN
 	auto *handle = LoadLibraryA(libraryName.data());
 #else
-	auto *handle = dlopen(libraryPath.data(), RTLD_LAZY);
+	auto *handle = dlopen(libraryName.data(), RTLD_LAZY);
 
 #endif
 
@@ -60,7 +62,7 @@ void *Hush::SharedLibrary::GetRawSymbol(std::string_view symbolName)
 #if HUSH_PLATFORM_WIN
 	auto *winHandle = static_cast<HMODULE>(m_nativeHandle);
 
-	return GetProcAddress(winHandle, symbolName.data());
+	return reinterpret_cast<void *>(GetProcAddress(winHandle, symbolName.data()));
 #else
 	return nullptr;
 #endif

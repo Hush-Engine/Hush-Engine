@@ -5,6 +5,7 @@
 */
 
 #pragma once
+// NOLINTBEGIN(readability-identifier-naming,modernize-use-nodiscard)
 
 #include "Assertions.hpp"
 #include "TaskTraits.hpp"
@@ -41,6 +42,8 @@ namespace Hush::Threading
 				}
 				return *this;
 			}
+
+			~WhenAllLatch() = default;
 
 			bool IsReady() const noexcept
 			{
@@ -118,8 +121,18 @@ namespace Hush::Threading
 			{
 			}
 
+			WhenAllReadyAwaitable &operator=(WhenAllReadyAwaitable &&rhs) noexcept
+			{
+				if (this != &rhs)
+				{
+					m_latch = std::move(rhs.m_latch);
+					m_tasks = std::move(rhs.m_tasks);
+				}
+				return *this;
+			}
+
 			WhenAllReadyAwaitable &operator=(const WhenAllReadyAwaitable &) = delete;
-			WhenAllReadyAwaitable &operator=(WhenAllReadyAwaitable &&) noexcept = delete;
+			~WhenAllReadyAwaitable() = default;
 
 			auto operator co_await() & noexcept
 			{
@@ -207,7 +220,7 @@ namespace Hush::Threading
 		public:
 			explicit WhenAllReadyAwaitable(TaskContainerType &&tasks) noexcept
 				: m_latch(std::size(tasks)),
-				  m_tasks(std::forward<TaskContainerType>(tasks))
+				  m_tasks(std::move(tasks))
 			{
 			}
 			WhenAllReadyAwaitable(const WhenAllReadyAwaitable &) = delete;
@@ -219,6 +232,8 @@ namespace Hush::Threading
 
 			WhenAllReadyAwaitable &operator=(const WhenAllReadyAwaitable &) = delete;
 			WhenAllReadyAwaitable &operator=(WhenAllReadyAwaitable &&) noexcept = delete;
+
+			~WhenAllReadyAwaitable() = default;
 
 			auto operator co_await() & noexcept
 			{
@@ -554,7 +569,7 @@ namespace Hush::Threading
 	{
 		return impl::WhenAllReadyAwaitable<
 			std::tuple<impl::WhenAllTask<typename Concepts::AwaitableTraits<Awaitables>::ResultType>...>>(
-			std::make_tuple(impl::MakeWhenAllTask(std::move(awaitables)...)));
+			std::make_tuple(impl::MakeWhenAllTask(std::forward(awaitables)...)));
 	}
 
 	template <std::ranges::range RangeType,
@@ -578,5 +593,6 @@ namespace Hush::Threading
 
 		return impl::WhenAllReadyAwaitable<std::vector<impl::WhenAllTask<T>>>(std::move(tasks));
 	}
-
 } // namespace Hush::Threading
+
+// NOLINTEND(readability-identifier-naming,modernize-use-nodiscard)

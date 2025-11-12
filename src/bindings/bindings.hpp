@@ -4,6 +4,7 @@
 	\brief Hush Engine bindings container
 */
 #pragma once
+// NOLINTBEGIN
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,4 +16,5 @@
 #include "HushEngine.hpp"
 #include "Scene.hpp"
 #include "Components/Transform.hpp"
-#include "glm/vec4.hpp"
+
+// NOLINTEND

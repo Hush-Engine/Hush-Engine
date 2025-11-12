@@ -5,6 +5,9 @@
 */
 
 #pragma once
+
+// NOLINTBEGIN(readability-identifier-naming, modernize-use-nodiscard)
+
 #include "Task.hpp"
 
 namespace Hush::Threading
@@ -16,9 +19,8 @@ namespace Hush::Threading
 		class SelfDeletePromise
 		{
 		public:
-			SelfDeletePromise() noexcept
-			{
-			}
+			SelfDeletePromise() noexcept = default;
+
 			SelfDeletePromise(SelfDeletePromise &&) noexcept = default;
 			SelfDeletePromise(const SelfDeletePromise &) = delete;
 			SelfDeletePromise &operator=(SelfDeletePromise &&) noexcept = default;
@@ -86,7 +88,7 @@ namespace Hush::Threading
 
 			bool Resume() const noexcept
 			{
-				if (m_promise)
+				if (m_promise != nullptr)
 				{
 					auto handle = GetCoroutineHandle();
 					if (!handle.done())
@@ -114,3 +116,5 @@ namespace Hush::Threading
 		co_return;
 	}
 } // namespace Hush::Threading
+
+// NOLINTEND(readability-identifier-naming, modernize-use-nodiscard)

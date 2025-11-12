@@ -31,12 +31,13 @@ namespace Hush::StringUtils
 		return strCpy;
 	}
 
-	constexpr inline std::string_view SubstrView(const std::string &str, int32_t offset, int32_t endIdx)
+	constexpr std::string_view SubstrView(const std::string &str, int32_t offset, int32_t endIdx)
 	{
 		return {str.begin() + offset, str.begin() + endIdx};
 	}
 
 	template <uint32_t N1, uint32_t N2>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto CompileTimeConcat(const char (&str1)[N1], const char (&str2)[N2])
 	{
 		std::array<char, N1 + N2 - 1> result{}; // Subtract 1 for the null terminator

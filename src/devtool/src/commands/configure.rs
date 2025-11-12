@@ -26,10 +26,10 @@ impl ConfigureCommand {
 
         if cmake_command.status.success() {
             let output = String::from_utf8_lossy(&cmake_command.stdout);
-            println!("{}", output);
+            println!("{output}");
         } else {
             let error = String::from_utf8_lossy(&cmake_command.stdout);
-            eprintln!("Error listing presets: {}", error);
+            eprintln!("Error listing presets: {error}");
         }
 
         Ok(())
@@ -68,7 +68,7 @@ impl CliCommand for ConfigureCommand {
             .arg("-S")
             .arg(".")
             .arg("-B")
-            .arg(format!("build/{}", preset))
+            .arg(format!("build/{preset}"))
             .stdout(stdout_output)
             .stderr(stderr_output)
             .stdin(Stdio::null())
@@ -81,7 +81,7 @@ impl CliCommand for ConfigureCommand {
             let extra_string = if self.verbose {
                 String::new()
             } else {
-                format!("\n{}", error)
+                format!("\n{error}")
             };
             tracing::error!("Configuring Failed{}", extra_string);
         }

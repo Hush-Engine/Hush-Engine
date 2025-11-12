@@ -7,17 +7,13 @@
 #pragma once
 
 #include <thread>
-#include <atomic>
 #include <vector>
 #include <async/Task.hpp>
 #include <barrier>
 #include <mutex>
-#include "async/Executor.hpp"
 
-namespace Hush::Threading
-{
-	class TaskOperation;
-}
+// NOLINTBEGIN(readability-identifier-naming,modernize-use-nodiscard)
+
 namespace Hush::Threading::Executors
 {
 	struct ThreadPoolOptions
@@ -61,6 +57,12 @@ namespace Hush::Threading::Executors
 		ThreadPool(ThreadPoolOptions options = ThreadPoolOptions());
 
 	public:
+		ThreadPool(const ThreadPool &other) = delete;
+		ThreadPool &operator=(const ThreadPool &other) = delete;
+		ThreadPool(ThreadPool &&other) noexcept = delete;
+		ThreadPool &operator=(ThreadPool &&other) noexcept = delete;
+		ThreadPool() = delete;
+
 		~ThreadPool();
 
 		TaskOperation Schedule();
@@ -77,12 +79,12 @@ namespace Hush::Threading::Executors
 		friend class WorkerThread;
 		friend class TaskOperation;
 
-		void PushWork(TaskOperation *task_operation);
+		void PushWork(TaskOperation *taskOperation);
 
 		void NotifyWorkers();
 
 		template <typename F>
-		void LockAndExecuteTasksQueueOp(F &&stealFunc)
+		void LockAndExecuteTasksQueueOp(F stealFunc)
 		{
 			std::lock_guard lock(m_globalTasksMutex);
 			stealFunc(m_globalTasks);
@@ -94,3 +96,5 @@ namespace Hush::Threading::Executors
 		std::barrier<> m_threadsBarrier;			// Used to synchronize thread start/stop
 	};
 } // namespace Hush::Threading::Executors
+
+// NOLINTEND(readability-identifier-naming,modernize-use-nodiscard)

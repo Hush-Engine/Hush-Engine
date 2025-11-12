@@ -37,7 +37,7 @@ namespace Hush::Threading
 	/// @param workerHead Worker's head index.
 	/// @param stealerHead Stealer's head index.
 	/// @return A 64-bit integer containing both indices packed together.
-	constexpr uint64_t pack(uint32_t workerHead, uint32_t stealerHead) noexcept
+	constexpr uint64_t Pack(uint32_t workerHead, uint32_t stealerHead) noexcept
 	{
 		return (static_cast<uint64_t>(workerHead) << 32) | static_cast<uint64_t>(stealerHead);
 	}
@@ -45,7 +45,7 @@ namespace Hush::Threading
 	/// Unpack a 64-bit integer into two 32-bit integers.
 	/// @param value The 64-bit integer to unpack.
 	/// @return A tuple containing the worker's head index and the stealer's head index.
-	constexpr std::tuple<uint32_t, uint32_t> unpack(uint64_t value) noexcept
+	constexpr std::tuple<uint32_t, uint32_t> Unpack(uint64_t value) noexcept
 	{
 		return {static_cast<uint32_t>(value >> 32),
 				static_cast<uint32_t>(value & std::numeric_limits<uint32_t>::max())};
@@ -170,7 +170,7 @@ namespace Hush::Threading
 		Result<std::tuple<uint32_t, uint32_t>, EStealError> Steal(Worker<T, Size> &dest, F &countFunc);
 
 		template <typename F>
-		Result<std::tuple<T, size_t>, EStealError> StealAndPop(Worker<T, Size> &dest, F &&countFunc);
+		Result<std::tuple<T, size_t>, EStealError> StealAndPop(Worker<T, Size> &dest, F countFunc);
 
 	private:
 		std::shared_ptr<StealingQueue<T, Size>> m_workerQueue;
@@ -236,7 +236,7 @@ namespace Hush::Threading
 	{
 		if constexpr (std::is_destructible_v<T>)
 		{
-			const auto workerHead = std::get<0>(unpack(m_head.load(std::memory_order::relaxed)));
+			const auto workerHead = std::get<0>(Unpack(m_head.load(std::memory_order::relaxed)));
 			const auto tail = m_tail.load(std::memory_order::relaxed);
 
 			const auto itemCount = tail - workerHead;
@@ -271,7 +271,7 @@ namespace Hush::Threading
 
 		while (true)
 		{
-			auto [workerHead, stealerHead] = unpack(heads);
+			auto [workerHead, stealerHead] = Unpack(heads);
 
 			if (stealerHead != workerHead)
 			{
@@ -295,7 +295,7 @@ namespace Hush::Threading
 				return EStealError::Empty;
 			}
 
-			const auto newHeads = pack(workerHead + count, stealerHead);
+			const auto newHeads = Pack(workerHead + count, stealerHead);
 
 			if (m_head.compare_exchange_weak(heads, newHeads, std::memory_order::acquire, std::memory_order::acquire))
 			{
@@ -318,7 +318,7 @@ namespace Hush::Threading
 	Result<std::tuple<uint32_t, uint32_t>, EStealError> Stealer<T, Size>::Steal(Worker<T, Size> &dest, F &countFunc)
 	{
 		const auto destTail = dest.m_workerQueue->m_tail.load(std::memory_order::acquire);
-		const auto destStealerHead = std::get<1>(unpack(dest.m_workerQueue->m_head.load(std::memory_order::acquire)));
+		const auto destStealerHead = std::get<1>(Unpack(dest.m_workerQueue->m_head.load(std::memory_order::acquire)));
 		const auto destFreeCapacity = dest.m_workerQueue->Capacity() - (destTail - destStealerHead);
 
 		const auto stealResult = m_workerQueue->MarkForSteal(countFunc, static_cast<uint32_t>(destFreeCapacity));
@@ -338,9 +338,9 @@ namespace Hush::Threading
 
 		while (true)
 		{
-			const auto [workerHead, stealerHead] = unpack(heads);
+			const auto [workerHead, stealerHead] = Unpack(heads);
 
-			const auto packedResult = pack(workerHead, workerHead);
+			const auto packedResult = Pack(workerHead, workerHead);
 			const auto res = m_workerQueue->m_head.compare_exchange_weak(
 				heads, packedResult, std::memory_order::acq_rel, std::memory_order::acquire);
 
@@ -354,10 +354,10 @@ namespace Hush::Threading
 	}
 	template <typename T, size_t Size>
 	template <typename F>
-	Result<std::tuple<T, size_t>, EStealError> Stealer<T, Size>::StealAndPop(Worker<T, Size> &dest, F &&countFunc)
+	Result<std::tuple<T, size_t>, EStealError> Stealer<T, Size>::StealAndPop(Worker<T, Size> &dest, F countFunc)
 	{
 		const auto destTail = dest.m_workerQueue->m_tail.load(std::memory_order::relaxed);
-		const auto destStealerHead = std::get<1>(unpack(dest.m_workerQueue->m_head.load(std::memory_order::acquire)));
+		const auto destStealerHead = std::get<1>(Unpack(dest.m_workerQueue->m_head.load(std::memory_order::acquire)));
 		const auto destFreeCapacity = dest.m_workerQueue->Capacity() - (destTail - destStealerHead);
 
 		const auto stealResult = m_workerQueue->MarkForSteal(countFunc, static_cast<uint32_t>(destFreeCapacity));
@@ -384,9 +384,9 @@ namespace Hush::Threading
 
 		while (true)
 		{
-			const auto [workerHead, sh] = unpack(heads);
+			const auto [workerHead, sh] = Unpack(heads);
 
-			const auto packedResult = pack(workerHead, workerHead);
+			const auto packedResult = Pack(workerHead, workerHead);
 			const auto res = m_workerQueue->m_head.compare_exchange_weak(
 				heads, packedResult, std::memory_order::acq_rel, std::memory_order::acquire);
 
@@ -419,7 +419,7 @@ namespace Hush::Threading
 	template <typename T, size_t Size>
 	size_t Worker<T, Size>::SpareCapacity() const noexcept
 	{
-		const auto stealerHead = std::get<1>(unpack(m_workerQueue->m_head.load(std::memory_order::relaxed)));
+		const auto stealerHead = std::get<1>(Unpack(m_workerQueue->m_head.load(std::memory_order::relaxed)));
 		const auto tail = m_workerQueue->m_tail.load(std::memory_order::relaxed);
 
 		const auto length = tail - stealerHead;
@@ -430,7 +430,7 @@ namespace Hush::Threading
 	template <typename T, size_t Size>
 	bool Worker<T, Size>::IsEmpty() const noexcept
 	{
-		const auto workerHead = std::get<0>(unpack(m_workerQueue->m_head.load(std::memory_order::relaxed)));
+		const auto workerHead = std::get<0>(Unpack(m_workerQueue->m_head.load(std::memory_order::relaxed)));
 		const auto tail = m_workerQueue->m_tail.load(std::memory_order::relaxed);
 
 		return tail == workerHead;
@@ -439,7 +439,7 @@ namespace Hush::Threading
 	template <typename T, size_t Size>
 	bool Worker<T, Size>::Push(T &&value) noexcept
 	{
-		const auto stealerHead = std::get<1>(unpack(m_workerQueue->m_head.load(std::memory_order::acquire)));
+		const auto stealerHead = std::get<1>(Unpack(m_workerQueue->m_head.load(std::memory_order::acquire)));
 		const auto tail = m_workerQueue->m_tail.load(std::memory_order::relaxed);
 
 		if ((tail - stealerHead) > m_workerQueue->m_mask)
@@ -459,11 +459,11 @@ namespace Hush::Threading
 	{
 		auto heads = m_workerQueue->m_head.load(std::memory_order::acquire);
 
-		uint32_t prev_worker_head{};
+		uint32_t prevWorkerHead{};
 
 		while (true)
 		{
-			const auto [workerHead, stealerHead] = unpack(heads);
+			const auto [workerHead, stealerHead] = Unpack(heads);
 			const auto tail = m_workerQueue->m_tail.load(std::memory_order::relaxed);
 
 			if (tail == workerHead)
@@ -471,17 +471,17 @@ namespace Hush::Threading
 				return std::nullopt; // Queue is empty
 			}
 
-			const auto next_heads = pack(workerHead + 1, stealerHead + (stealerHead == workerHead));
+			const auto nextHeads = Pack(workerHead + 1, stealerHead + (stealerHead == workerHead));
 
-			if (m_workerQueue->m_head.compare_exchange_weak(heads, next_heads, std::memory_order::acq_rel,
+			if (m_workerQueue->m_head.compare_exchange_weak(heads, nextHeads, std::memory_order::acq_rel,
 															std::memory_order::acquire))
 			{
-				prev_worker_head = workerHead;
+				prevWorkerHead = workerHead;
 				break;
 			}
 			heads = m_workerQueue->m_head.load(std::memory_order::acquire);
 		}
 
-		return std::make_optional(std::move(m_workerQueue->ReadAt(prev_worker_head)));
+		return std::make_optional(std::move(m_workerQueue->ReadAt(prevWorkerHead)));
 	}
 } // namespace Hush::Threading

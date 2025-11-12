@@ -156,10 +156,8 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
-		entityToCreate = this->m_activeScene->CreateEntityWithName(textCmd).GetId();
-		this->m_activeScene->RegisterComponentId(textCmd, entityToCreate);
-		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<WorldTransform>();
-		this->m_activeScene->EntityFromId(entityToCreate)->AddComponent<LocalTransform>();
+		this->m_activeScene->EntityFromIdUnchecked(entityToCreate).AddComponent<WorldTransform>();
+		this->m_activeScene->EntityFromIdUnchecked(entityToCreate).AddComponent<LocalTransform>();
 		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
 		break;
 	case EBuiltinCommands::FindEntity:
@@ -200,6 +198,7 @@ void Hush::CommandPanel::RebuildAvailableCommands()
 	this->m_currentlyAvailableCommands = ArrayUtils::FuzzyFind<Arr_t, std::string_view>(BUILT_IN_COMMANDS, queryStr);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Hush::CommandPanel::UpdateCommandList()
 {
 	if (this->m_currState != EState::Editing)
@@ -309,16 +308,16 @@ void Hush::CommandPanel::AddComponentPopup()
 	ImGui::Text("Select a component to add");
 	if (this->m_keyboardFocusSet)
 	{
-		ImGui::SetKeyboardFocusHere();
-		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
+		memset(static_cast<void *>(this->m_searchInputText), 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
 	}
-	UI::InputTextWithHint("##Search", "i.e. Rigidbody", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
+	UI::InputTextWithHint("##Search", "i.e. Rigidbody", static_cast<char *>(this->m_searchInputText),
+						  MAX_ALLOWED_ENTITY_NAME, true);
 	// Find built in components
 	using Arr_t = std::array<std::string_view, 2>;
 	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
 	std::vector<std::string_view> componentNames =
-		ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, this->m_searchInputText);
+		ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, static_cast<char *>(this->m_searchInputText));
 	for (const std::string_view &componentName : componentNames)
 	{
 		if (!ImGui::Selectable(componentName.data()))
@@ -351,13 +350,13 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	{
 		ImGui::SetKeyboardFocusHere();
 		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
-		this->m_keyboardFocusSet = false;
 	}
-	UI::InputTextWithHint("##Search", "i.e. Player", this->m_searchInputText, MAX_ALLOWED_ENTITY_NAME, true);
+	UI::InputTextWithHint("##Search", "i.e. Player", static_cast<char *>(this->m_searchInputText),
+						  MAX_ALLOWED_ENTITY_NAME, true);
 	// Then find all entities in the scene here
 	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
 	std::vector<std::string> entityNames;
-	std::string_view searchEntityName(this->m_searchInputText);
+	std::string_view searchEntityName(static_cast<char *>(this->m_searchInputText));
 	entityNames.reserve(query.begin().Size());
 	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name, WorldTransform &transform) {
 		std::string_view currEntityName = name.name.data();

@@ -26,14 +26,14 @@ namespace Hush::Bitwise
 
 	template <class T, class U>
 		requires BitComparable<T, U>
-	constexpr inline bool HasFlag(T base, U flag)
+	constexpr bool HasFlag(T base, U flag)
 	{
 		return (base & flag) == flag;
 	}
 
 	template <class T, class U>
 		requires BitComparable<T, U>
-	constexpr inline bool HasCompositeFlag(T base, U compositeFlag)
+	constexpr bool HasCompositeFlag(T base, U compositeFlag)
 	{
 		return (base & compositeFlag) != 0;
 	}
