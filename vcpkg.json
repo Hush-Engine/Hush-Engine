@@ -3,27 +3,25 @@
   "version": "0.1.0",
   "dependencies": [
     "catch2",
+    "catch2",
+    "fastgltf",
     "fastgltf",
     "flecs",
     "fmt",
     "glm",
+    "glm",
     "magic-enum",
     "outcome",
+    "outcome",
+    "rapidjson",
     {
-      "name": "sdl2",
-      "features": [
-        "vulkan"
-      ]
+      "name": "sdl3",
+      "features": ["vulkan"]
     },
     "spdlog",
+    "spirv-reflect",
     "vk-bootstrap",
     "volk",
-    "vulkan",
-    "glm",
-    "outcome",
-    "fastgltf",
-    "catch2",
-    "spirv-reflect",
-    "rapidjson"
+    "vulkan"
   ]
 }

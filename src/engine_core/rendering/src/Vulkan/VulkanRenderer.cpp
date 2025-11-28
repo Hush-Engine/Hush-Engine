@@ -13,7 +13,7 @@
 #include "Logger.hpp"
 #include "Platform.hpp"
 
-#include <SDL2/SDL_vulkan.h>
+#include <SDL3/SDL_vulkan.h>
 
 #if HUSH_PLATFORM_WIN
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -54,7 +54,7 @@ PFN_vkVoidFunction Hush::VulkanRenderer::CustomVulkanFunctionLoader(const char *
 }
 
 Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
-	: Hush::IRenderer(windowContext),
+	: Hush::IRenderer(windowContext, ERenderingBackend::Vulkan),
 	  m_windowContext(windowContext),
 	  m_globalDescriptorAllocator()
 {
@@ -86,7 +86,8 @@ Hush::VulkanRenderer::VulkanRenderer(void *windowContext)
 	volkLoadInstance(this->m_vulkanInstance);
 	auto *sdlWindowContext = static_cast<SDL_Window *>(windowContext);
 	// Creates the Vulkan Surface from the SDL window context
-	SDL_bool createSurfaceResult = SDL_Vulkan_CreateSurface(sdlWindowContext, this->m_vulkanInstance, &this->m_surface);
+	SDL_bool createSurfaceResult =
+		SDL_Vulkan_CreateSurface(sdlWindowContext, this->m_vulkanInstance, nullptr, &this->m_surface);
 	HUSH_ASSERT(createSurfaceResult == SDL_TRUE, "Cannot create vulkan surface, error: {}!", SDL_GetError());
 	LogTrace("Initialized vulkan surface");
 	// Configure our renderer with the proper extensions / device properties, etc.

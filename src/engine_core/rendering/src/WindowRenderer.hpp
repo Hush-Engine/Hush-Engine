@@ -10,7 +10,7 @@
 #include <cstdint>
 #define SDL_MAIN_HANDLED
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <InputManager.hpp>
 #include <memory>
 
