@@ -22,6 +22,7 @@
     "spirv-reflect",
     "vk-bootstrap",
     "volk",
-    "vulkan"
+    "vulkan",
+    "boost-unordered"
   ]
 }

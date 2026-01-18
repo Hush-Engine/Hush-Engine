@@ -24,6 +24,7 @@ hush_add_library(
              src/RenderGraph/ResourceNode.cpp
              src/RenderGraph/RenderPassNode.cpp
              src/RenderGraph/RenderGraph.cpp
+             src/RenderGraph/RenderG.hpp
         PUBLIC_HEADER_DIRS src
 )
 
@@ -78,6 +79,7 @@ target_link_libraries(HushRendering PUBLIC
         HushUtils
         HushInput
         webgpu
+        Boost::unordered
 )
 
 if (NOT HUSH_RENDERER_IMPL)

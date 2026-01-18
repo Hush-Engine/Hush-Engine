@@ -22,7 +22,7 @@ hush_add_library(
 )
 add_library(Hush::Core ALIAS HushCore)
 
-target_link_libraries(HushCore PUBLIC $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static> Hush::Threading Hush::Utils Hush::Log zadeh rapidjson)
+target_link_libraries(HushCore PUBLIC $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static> Hush::Threading Hush::Utils Hush::Log zadeh rapidjson Boost::unordered)
 
 add_test_target(
         TARGET_NAME HushCoreTest
