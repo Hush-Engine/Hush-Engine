@@ -15,7 +15,7 @@
     "outcome",
     "rapidjson",
     {
-      "name": "sdl3",
+      "name": "sdl2",
       "features": ["vulkan"]
     },
     "spdlog",

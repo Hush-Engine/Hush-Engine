@@ -1,10 +1,8 @@
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
-#include "RenderGraph/ResourceId.hpp"
 #include "Scene.hpp"
-#include "RenderGraph/RenderGraph.hpp"
-
+#include "RenderGraph/RenderG.hpp"
 #include <memory>
 
 class ExampleApp final : public Hush::IApplication
@@ -24,22 +22,35 @@ public:
 
 	void Init() override
 	{
-		Hush::RenderGraph::RenderGraph graph;
+	    using namespace Hush::Exp::RenderGraph;
+		Hush::Exp::RenderGraph::RenderGraph graph;
 
-		struct PassData
+		struct CustomData
 		{
-			Hush::RenderGraph::ResourceId inputResource;
-			Hush::RenderGraph::ResourceId outputResource;
-		};
-		auto &passData = graph.AddPass<PassData>(
-			"My Pass",
-			[](Hush::RenderGraph::RenderGraph::BuildContext &ctx, PassData &passData) {
-				passData.inputResource = ctx.Create<PassData>("", {});
-			},
-			[](PassData &data, void *ctx) {
 
-			},
-			Hush::RenderGraph::EPassType::Graphics);
+		};
+
+		const auto &passData = graph.AddPass<CustomData>(Hush::Exp::RenderGraph::EPassType::Graphics,
+		"CustomPass",
+            [](RenderGraph::BuildContext& ctx, CustomData& data)
+            {
+                std::cout << "  [Build] Post-Process Pass\n";
+
+                // data.finalOutput = ctx.Create<Texture>("Final Image", Texture::Descriptor{
+                //     .width = 1920,
+                //     .height = 1080,
+                //     .format = 0, // RGBA8 LDR
+                //     .name = "FinalImage"
+                // });
+            },
+            [](CustomData& data, void* ctx)
+            {
+                // auto* renderCtx = static_cast<MockRenderContext*>(ctx);
+                // std::cout << "  [Execute] Post-Process Pass (Frame " << renderCtx->frameNumber << ")\n";
+                // std::cout << "    - Applying bloom\n";
+                // std::cout << "    - Tone mapping HDR -> LDR\n";
+                // std::cout << "    - Final output ready for presentation!\n";
+            });
 	}
 
 	void Update(float delta) override

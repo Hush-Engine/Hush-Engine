@@ -1,41 +1,49 @@
+/*! \file RenderG.cpp
+	\author Alan Ramirez Herrera
+	\date 2025-11-17
+	\brief RenderGraph implementation for rendering based on DAG scheduling
+*/
+
 #include "RenderG.hpp"
 #include <Assertions.hpp>
+#include <algorithm>
 
-Hush::Exp::RenderGraph::RenderPassNode::RenderPassNode(std::string_view name)
-    : m_name(name)
-{
-}
+using namespace Hush::Exp::RenderGraph;
 
-bool Hush::Exp::RenderGraph::RenderPassNode::WritesResource(ResourceId id) const
+void RenderGraph::Compile()
 {
-    return m_writtenResources.find(id) != m_writtenResources.end();
-}
+    if (m_state == ERenderGraphState::Compiled)
+    {
+        return; // Already compiled
+    }
 
-void Hush::Exp::RenderGraph::RenderPassNode::SetHasCrossDependency(RenderPassNode &other)
-{
-    m_syncSignalRequired = true;
-    other.m_nodesToSync.push_back(this);
-}
+    // Clear previous compilation data
+    m_adjacencyList.clear();
+    m_topologicalOrderedNodes.clear();
+    m_dependencyLevels.clear();
+    m_detectedQueueCount = 1;
 
-void Hush::Exp::RenderGraph::RenderGraph::Compile()
-{
+    // Build and optimize the graph
     BuildAdjacencyList();
     TopologicalSort();
     BuildDependencyLevels();
     FinalizeDependencyLevels();
     CullRedundantSyncPoints();
+
+    m_state = ERenderGraphState::Compiled;
 }
 
-void Hush::Exp::RenderGraph::RenderGraph::BuildAdjacencyList()
+void RenderGraph::BuildAdjacencyList()
 {
     m_adjacencyList.resize(m_passes.size());
 
+    // Build adjacency list by checking write-to-read dependencies
     for (uint32_t nodeIndex = 0; nodeIndex < m_passes.size(); ++nodeIndex)
     {
         RenderPassNode& passNode = m_passes[nodeIndex];
-		std::vector<uint32_t> &adjacentNodeIndices = m_adjacencyList[nodeIndex];
+        std::vector<uint32_t>& adjacentNodeIndices = m_adjacencyList[nodeIndex];
 
-		for (uint32_t otherNodeIndex = 0; otherNodeIndex < m_passes.size(); ++otherNodeIndex)
+        for (uint32_t otherNodeIndex = 0; otherNodeIndex < m_passes.size(); ++otherNodeIndex)
         {
             if (nodeIndex == otherNodeIndex)
             {
@@ -44,30 +52,29 @@ void Hush::Exp::RenderGraph::RenderGraph::BuildAdjacencyList()
 
             RenderPassNode& otherPassNode = m_passes[otherNodeIndex];
 
-            // We need to check if any of the other node reads a resource written by the current node.
-            // If so, we have a dependency between passNode -> otherPassNode
-            for (const ResourceId& otherReadResources : otherPassNode.m_readResources)
-    		{
-                // This means that otherPassNode depends on passNode
-                if (passNode.WritesResource(otherReadResources))
+            // Check if otherPassNode reads any resource written by passNode
+            for (const ResourceId& otherReadResource : otherPassNode.m_readResources)
+            {
+                if (passNode.WritesResource(otherReadResource))
                 {
+                    // passNode -> otherPassNode dependency
                     adjacentNodeIndices.push_back(otherNodeIndex);
 
+                    // Check for cross-queue dependency
                     if (otherPassNode.m_queueIndex != passNode.m_queueIndex)
                     {
-                        // We have a cross-queue dependency!
-                        // This means that we need to insert an explicit synchronization point between the two passes.
                         passNode.SetHasCrossDependency(otherPassNode);
                     }
 
-                    break; // No need to check other resources for this otherPassNode
+                    break; // No need to check other resources
                 }
             }
         }
-	}
+    }
 }
 
-void Hush::Exp::RenderGraph::RenderGraph::DFS(uint32_t nodeIndex, std::vector<bool>& visited, std::vector<bool> &onStack, bool& isCyclic)
+void RenderGraph::DFS(uint32_t nodeIndex, std::vector<bool>& visited,
+                      std::vector<bool>& onStack, bool& isCyclic)
 {
     if (isCyclic)
     {
@@ -77,9 +84,10 @@ void Hush::Exp::RenderGraph::RenderGraph::DFS(uint32_t nodeIndex, std::vector<bo
     visited[nodeIndex] = true;
     onStack[nodeIndex] = true;
 
+    // Visit all adjacent nodes
     for (uint32_t neighborIndex : m_adjacencyList[nodeIndex])
     {
-        if (visited[neighborIndex] && onStack[nodeIndex])
+        if (onStack[neighborIndex])
         {
             // We found a back edge, indicating a cycle
             isCyclic = true;
@@ -94,10 +102,11 @@ void Hush::Exp::RenderGraph::RenderGraph::DFS(uint32_t nodeIndex, std::vector<bo
 
     onStack[nodeIndex] = false;
 
+    // Add to result in post-order
     m_topologicalOrderedNodes.push_back(&m_passes[nodeIndex]);
 }
 
-void Hush::Exp::RenderGraph::RenderGraph::TopologicalSort()
+void RenderGraph::TopologicalSort()
 {
     m_topologicalOrderedNodes.clear();
     std::vector<bool> visited(m_passes.size(), false);
@@ -110,84 +119,234 @@ void Hush::Exp::RenderGraph::RenderGraph::TopologicalSort()
         {
             DFS(nodeIndex, visited, onStack, isCyclic);
 
-            HUSH_ASSERT(isCyclic, "Render graph contains cycles! Cannot proceed with execution.");
+            HUSH_ASSERT(!isCyclic, "Render graph contains cycles! Cannot proceed with execution.");
         }
     }
 
+    // Reverse to get correct topological order
     std::reverse(m_topologicalOrderedNodes.begin(), m_topologicalOrderedNodes.end());
 }
 
-void Hush::Exp::RenderGraph::RenderGraph::BuildDependencyLevels()
+void RenderGraph::BuildDependencyLevels()
 {
-    std::vector<int32_t> longestPathLengths(m_topologicalOrderedNodes.size(), 0);
+    // Longest path algorithm to determine dependency levels
+    std::vector<int32_t> longestPathLengths(m_passes.size(), 0);
 
-    uint32_t currentLevelIndex = 1;
+    uint32_t maxLevelIndex = 0;
 
-    for (uint32_t nodeIndex = 0; nodeIndex < m_topologicalOrderedNodes.size(); ++nodeIndex)
+    // Calculate longest path for each node
+    for (RenderPassNode* node : m_topologicalOrderedNodes)
     {
-        const uint32_t originalIndex = m_topologicalOrderedNodes[nodeIndex]->m_unorderedPassIndex;
-        const uint32_t adjacencyListIndex = originalIndex;
+        const uint32_t nodeOriginalIndex = node->m_unorderedPassIndex;
 
-       for (auto adjacentNodeIndex : m_adjacencyList[adjacencyListIndex])
-       {
-            if (longestPathLengths[adjacentNodeIndex] < longestPathLengths[nodeIndex] + 1)
+        // Update distances to adjacent nodes
+        for (uint32_t adjacentNodeIndex : m_adjacencyList[nodeOriginalIndex])
+        {
+            int32_t newPathLength = longestPathLengths[nodeOriginalIndex] + 1;
+            if (longestPathLengths[adjacentNodeIndex] < newPathLength)
             {
-                int32_t newLongestPathLength = longestPathLengths[nodeIndex] + 1;
-                longestPathLengths[adjacentNodeIndex] = newLongestPathLength;
-                // +1 since levels are 1-indexed
-                currentLevelIndex = std::max(currentLevelIndex, static_cast<uint32_t>(newLongestPathLength + 1));
+                longestPathLengths[adjacentNodeIndex] = newPathLength;
+                maxLevelIndex = std::max(maxLevelIndex, static_cast<uint32_t>(newPathLength));
             }
-       }
+        }
+    }
 
-       m_dependencyLevels.resize(currentLevelIndex);
-       m_detectedQueueCount = 1;
+    // Resize to accommodate all levels (0-indexed)
+    m_dependencyLevels.resize(maxLevelIndex + 1);
 
-       for (uint32_t i = 0; i < m_topologicalOrderedNodes.size(); ++i)
-       {
-            RenderPassNode& node = m_passes[nodeIndex];
-            const auto levelIndex = static_cast<uint32_t>(longestPathLengths[i]);
+    // Assign nodes to their dependency levels
+    uint32_t i = 0;
+    for (RenderPassNode& node : m_passes)
+    {
+        const auto levelIndex = static_cast<uint32_t>(longestPathLengths[i]);
 
-            DependencyLevel& level = m_dependencyLevels[levelIndex];
-            level.m_levelIndex = levelIndex;
-            level.AddNode(&node);
+        DependencyLevel& level = m_dependencyLevels[levelIndex];
+        level.m_levelIndex = levelIndex;
+        level.AddNode(&node);
 
-            node.m_dependencyLevelIndex = levelIndex;
+        node.m_dependencyLevelIndex = levelIndex;
 
-            m_detectedQueueCount = std::max(m_detectedQueueCount, node.m_queueIndex + 1);
-       }
+        // Track maximum queue index
+        m_detectedQueueCount = std::max(m_detectedQueueCount, node.m_queueIndex + 1);
+        ++i;
     }
 }
 
-void Hush::Exp::RenderGraph::RenderGraph::CullRedundantSynchronizations()
+void RenderGraph::FinalizeDependencyLevels()
 {
+    // Organize passes per queue within each dependency level
+    for (DependencyLevel& level : m_dependencyLevels)
+    {
+        level.m_nodesPerQueue.resize(m_detectedQueueCount);
+
+        for (RenderPassNode* node : level.m_passNodes)
+        {
+            const uint32_t queueIndex = node->m_queueIndex;
+            level.m_nodesPerQueue[queueIndex].push_back(node);
+
+            // Track queues involved in cross-dependencies
+            if (node->m_syncSignalRequired)
+            {
+                level.m_queuesInvolvedInCrossDependencies.insert(queueIndex);
+            }
+        }
+    }
+}
+
+void RenderGraph::CullRedundantSyncPoints()
+{
+    // Initialize SSIS (Sufficient Synchronization Index Set) for each node
     for (RenderPassNode& node : m_passes)
     {
         node.m_syncIndexSet.resize(m_detectedQueueCount, RenderPassNode::INVALID_SYNC_INDEX);
     }
 
+    // First pass: Build SSIS by finding closest dependencies on each queue
     for (DependencyLevel& level : m_dependencyLevels)
     {
-        // For the first pass, we need to find the closest sync point to sync and compute the sufficient sync index set.
-        // for each pass in the level
-        for (RenderPassNode *passNode : level.m_passNodes)
+        for (RenderPassNode* passNode : level.m_passNodes)
         {
-            std::vector<const RenderPassNode*> nodesToSync{m_detectedQueueCount, nullptr};
+            // Initialize own queue index with node's own index
+            passNode->m_syncIndexSet[passNode->m_queueIndex] = passNode->m_unorderedPassIndex;
 
-            for (RenderPassNode* dependencyNode : passNode->m_nodesToSync)
+            // Find closest dependency on each other queue
+            for (RenderPassNode* depNode : passNode->m_nodesToSync)
             {
-                const RenderPassNode* closestSyncNode = nodesToSync[dependencyNode->m_queueIndex];
+                const uint32_t depQueueIndex = depNode->m_queueIndex;
+                const uint32_t depNodeIndex = depNode->m_unorderedPassIndex;
 
-                // TODO: a
-                if (closestSyncNode == nullptr ||
-                    dependencyNode->m_dependencyLevelIndex > closestSyncNode->m_dependencyLevelIndex)
+                uint64_t& currentClosest = passNode->m_syncIndexSet[depQueueIndex];
+
+                if (currentClosest == RenderPassNode::INVALID_SYNC_INDEX ||
+                    depNodeIndex > currentClosest)
                 {
-                    nodesToSync[dependencyNode->m_queueIndex] = dependencyNode;
+                    currentClosest = depNodeIndex;
                 }
             }
-
-            passNode->m_nodesToSync.clear();
-
         }
     }
 
+    // Second pass: Cull redundant synchronizations using SSIS comparison
+    for (DependencyLevel& level : m_dependencyLevels)
+    {
+        for (RenderPassNode* passNode : level.m_passNodes)
+        {
+            if (passNode->m_nodesToSync.empty())
+            {
+                continue;
+            }
+
+            // Build list of queues we need to sync with
+            std::vector<uint32_t> queuesToSyncWith;
+            for (uint32_t q = 0; q < m_detectedQueueCount; ++q)
+            {
+                if (q != passNode->m_queueIndex &&
+                    passNode->m_syncIndexSet[q] != RenderPassNode::INVALID_SYNC_INDEX)
+                {
+                    queuesToSyncWith.push_back(q);
+                }
+            }
+
+            if (queuesToSyncWith.empty())
+            {
+                passNode->m_nodesToSync.clear();
+                continue;
+            }
+
+            // Iteratively find minimal set of nodes to sync with
+            std::vector<RenderPassNode*> nodesToKeep;
+            auto remainingDeps = passNode->m_nodesToSync;
+
+            while (!queuesToSyncWith.empty() && !remainingDeps.empty())
+            {
+                RenderPassNode* bestNode = nullptr;
+                uint32_t maxQueuesCovered = 0;
+
+                // Find node that covers maximum queues
+                for (RenderPassNode* depNode : remainingDeps)
+                {
+                    uint32_t queuesCovered = 0;
+
+                    for (uint32_t q : queuesToSyncWith)
+                    {
+                        // Compare SSIS values
+                        uint64_t requiredSyncIndex = passNode->m_syncIndexSet[q];
+                        uint64_t providedSyncIndex = depNode->m_syncIndexSet[q];
+
+                        // For same queue, adjust by -1 due to SSIS assignment rule
+                        if (q == passNode->m_queueIndex && requiredSyncIndex != RenderPassNode::INVALID_SYNC_INDEX)
+                        {
+                            requiredSyncIndex--;
+                        }
+
+                        if (providedSyncIndex != RenderPassNode::INVALID_SYNC_INDEX &&
+                            requiredSyncIndex <= providedSyncIndex)
+                        {
+                            queuesCovered++;
+                        }
+                    }
+
+                    if (queuesCovered > maxQueuesCovered)
+                    {
+                        maxQueuesCovered = queuesCovered;
+                        bestNode = depNode;
+                    }
+                }
+
+                if (bestNode != nullptr && maxQueuesCovered > 0)
+                {
+                    nodesToKeep.push_back(bestNode);
+
+                    // Remove covered queues
+                    auto newEnd = std::remove_if(queuesToSyncWith.begin(), queuesToSyncWith.end(),
+                        [&](uint32_t q) {
+                            uint64_t requiredSyncIndex = passNode->m_syncIndexSet[q];
+                            uint64_t providedSyncIndex = bestNode->m_syncIndexSet[q];
+
+                            if (q == passNode->m_queueIndex && requiredSyncIndex != RenderPassNode::INVALID_SYNC_INDEX)
+                            {
+                                requiredSyncIndex--;
+                            }
+
+                            return providedSyncIndex != RenderPassNode::INVALID_SYNC_INDEX &&
+                                   requiredSyncIndex <= providedSyncIndex;
+                        });
+                    queuesToSyncWith.erase(newEnd, queuesToSyncWith.end());
+
+                    // Remove best node from remaining deps
+                    remainingDeps.erase(
+                        std::remove(remainingDeps.begin(), remainingDeps.end(), bestNode),
+                        remainingDeps.end());
+                }
+                else
+                {
+                    break; // No more beneficial nodes
+                }
+            }
+
+            // Replace with culled list
+            passNode->m_nodesToSync = nodesToKeep;
+        }
+    }
+}
+
+void RenderGraph::Execute(void* ctx)
+{
+    HUSH_ASSERT(!IsDirty(), "Cannot execute dirty render graph! Call Compile() first.");
+    HUSH_ASSERT(ctx != nullptr, "Render context cannot be null!");
+
+    // Execute passes level by level
+    for (const DependencyLevel& level : m_dependencyLevels)
+    {
+        // Execute all passes in this level
+        // Passes within a level can potentially execute in parallel
+        for (RenderPassNode* passNode : level.m_passNodes)
+        {
+            // TODO: Handle synchronization points
+            // if (passNode->m_syncSignalRequired) { /* signal */ }
+            // for (auto* syncNode : passNode->m_nodesToSync) { /* wait */ }
+
+            passNode->Execute(ctx);
+        }
+    }
 }

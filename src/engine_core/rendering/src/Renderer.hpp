@@ -15,13 +15,15 @@
 #include "../../resources/src/Ref.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
-#include <SDL3/SDL.h>
+#include <SDL2/SDL.h>
 #include <cstdint>
 #include <functional>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/vec3.hpp>
 #include <memory>
 #include <string_view>
+
+#include "IGraphicsDevice.hpp"
 
 namespace Hush
 {

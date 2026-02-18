@@ -7,10 +7,12 @@
 #pragma once
 
 // Let's tell SDL we got main covered
+#include "IGraphicsDevice.hpp"
+#include <SDL2/SDL_video.h>
 #include <cstdint>
 #define SDL_MAIN_HANDLED
 
-#include <SDL3/SDL.h>
+#include <SDL2/SDL.h>
 #include <InputManager.hpp>
 #include <memory>
 
@@ -51,7 +53,7 @@ namespace Hush
 
 		SDL_Renderer *m_rendererPtr = nullptr;
 
-		std::unique_ptr<Hush::IRenderer> m_windowRenderer;
+		std::unique_ptr<Hush::Graphics::IGraphicsDevice> m_windowRenderer;
 
 		bool m_isActive = false;
 
@@ -61,9 +63,9 @@ namespace Hush
 
 		constexpr uint32_t GetInitialRendererFlags()
 		{
-			return SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_SHOWN |
-				   SDL_WindowFlags::SDL_WINDOW_MOUSE_GRABBED | SDL_WindowFlags::SDL_WINDOW_MOUSE_CAPTURE |
-				   SDL_WindowFlags::SDL_WINDOW_RESIZABLE;
+			return SDL_WINDOW_VULKAN |
+				   SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_MOUSE_CAPTURE |
+				   SDL_WINDOW_RESIZABLE;
 		}
 	};
 

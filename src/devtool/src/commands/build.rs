@@ -15,6 +15,10 @@ pub struct BuildCommand {
     /// Verbose output
     #[arg(default_value_t = false, short, long)]
     verbose: bool,
+
+    /// Target
+    #[arg(short, long)]
+    target: Option<String>,
 }
 
 impl CliCommand for BuildCommand {
@@ -41,6 +45,11 @@ impl CliCommand for BuildCommand {
         let cmake_command = std::process::Command::new("cmake")
             .arg("--build")
             .arg(format!("build/{}", self.preset))
+            .arg(if let Some(target) = &self.target {
+                format!("--target={}", target)
+            } else {
+                String::new()
+            })
             .stdout(stdout_output)
             .stderr(stderr_output)
             .stdin(Stdio::null())

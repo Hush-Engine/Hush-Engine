@@ -1,9 +1,10 @@
 #include "InputManager.hpp"
 #include "Logger.hpp"
+#include "Platform.hpp"
 #include "definitions/KeyCode.hpp"
 #include "definitions/KeyStates.hpp"
 #include <magic_enum/magic_enum.hpp>
-#include <SDL3/SDL_mouse.h>
+#include <SDL2/SDL_mouse.h>
 
 #define IS_CURRENTLY_PRESSED(key) (key == EKeyState::Pressed || key == EKeyState::Held)
 
@@ -113,7 +114,8 @@ void Hush::InputManager::ResetMouseAcceleration()
 
 void Hush::InputManager::SetCursorLock(ECursorLockMode lockMode)
 {
-	SDL_SetRelativeMouseMode(static_cast<SDL_bool>(lockMode));
+    HUSH_UNUSED(lockMode);
+	// SDL_SetRelativeMouseMode(static_cast<SDL_bool>(lockMode));
 }
 
 void Hush::InputManager::UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState)

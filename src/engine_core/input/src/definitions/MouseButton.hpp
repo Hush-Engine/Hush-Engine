@@ -1,7 +1,7 @@
 /*! \file MouseButton.hpp
 	\author Kyn21kx
 	\date 2024-03-06
-	\brief Enum to handle possible mouse buttons coming from SDL3
+	\brief Enum to handle possible mouse buttons coming from SDL2
 */
 
 #pragma once

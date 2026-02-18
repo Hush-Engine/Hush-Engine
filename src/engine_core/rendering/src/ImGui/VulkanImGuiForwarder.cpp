@@ -3,7 +3,7 @@
 #include "VulkanImGuiForwarder.hpp"
 #include "Logger.hpp"
 #include "Vulkan/VulkanRenderer.hpp"
-#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 #include <imgui/imgui.h>
 #include <Vulkan/VkUtilsFactory.hpp>
@@ -28,7 +28,7 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
 	HUSH_ASSERT(ImGui_ImplVulkan_LoadFunctions(VulkanRenderer::CustomVulkanFunctionLoader),
 				"Loading vulkan functions to imgui failed");
 
-	HUSH_ASSERT(ImGui_ImplSDL3_InitForVulkan(sdlWindow), "ImGui SDL3 init failed with error: {}!", SDL_GetError());
+	HUSH_ASSERT(ImGui_ImplSDL2_InitForVulkan(sdlWindow), "ImGui SDL2 init failed with error: {}!", SDL_GetError());
 
 	// Get the rendering functions
 	HUSH_ASSERT(ImGui_ImplVulkan_Init(&initData), "ImGui Vulkan init failed");
@@ -37,14 +37,14 @@ void Hush::VulkanImGuiForwarder::SetupImGui(IRenderer *renderer)
 void Hush::VulkanImGuiForwarder::NewFrame()
 {
 	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
 	ImGuizmo::BeginFrame();
 }
 
 void Hush::VulkanImGuiForwarder::HandleEvent(const SDL_Event *event) noexcept
 {
-	ImGui_ImplSDL3_ProcessEvent(event);
+	ImGui_ImplSDL2_ProcessEvent(event);
 }
 
 void Hush::VulkanImGuiForwarder::EndFrame()
@@ -54,7 +54,7 @@ void Hush::VulkanImGuiForwarder::EndFrame()
 
 void Hush::VulkanImGuiForwarder::Dispose() noexcept
 {
-	ImGui_ImplSDL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
 	ImGui_ImplVulkan_Shutdown();
 }
 

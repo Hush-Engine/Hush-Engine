@@ -13,7 +13,7 @@
 #include "Logger.hpp"
 #include "Platform.hpp"
 
-#include <SDL3/SDL_vulkan.h>
+#include <SDL2/SDL_vulkan.h>
 
 #if HUSH_PLATFORM_WIN
 #define VK_USE_PLATFORM_WIN32_KHR

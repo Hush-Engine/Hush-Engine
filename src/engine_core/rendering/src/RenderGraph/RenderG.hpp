@@ -39,6 +39,16 @@ struct std::hash<Hush::Exp::RenderGraph::ResourceId>
     }
 };
 
+// Hash for boost
+template<>
+struct boost::hash<Hush::Exp::RenderGraph::ResourceId>
+{
+    std::size_t operator()(const Hush::Exp::RenderGraph::ResourceId& rid) const noexcept
+    {
+        return std::hash<uint32_t>{}(rid.id);
+    }
+};
+
 namespace Hush::Exp::RenderGraph
 {
     /// Base class for all passes.
@@ -78,6 +88,13 @@ namespace Hush::Exp::RenderGraph
         PassData data;
     };
 
+    enum class EPassType : uint8_t
+    {
+        Graphics = 0,
+        Compute = 1,
+        Transfer = 2,
+    };
+
     /// Represents a single pass inside of the render graph.
     ///
     /// A pass is a unit of work that reads and writes GPU resources.
@@ -97,16 +114,17 @@ namespace Hush::Exp::RenderGraph
             NeverCull,
         };
 
-    private:
         RenderPassNode(std::string_view name, uint32_t nodeId, EPassType passType,
                       std::unique_ptr<PassBase> &&pass)
             : m_name(name),
-              m_unorderedPassIndex(nodeId),
               m_pass(std::move(pass)),
               m_passType(passType),
-              m_queueIndex(static_cast<uint32_t>(passType))
+              m_queueIndex(static_cast<uint32_t>(passType)),
+              m_unorderedPassIndex(nodeId)
         {
         }
+
+    private:
 
         /// Check if this pass writes to a resource
         [[nodiscard]]
@@ -152,13 +170,6 @@ namespace Hush::Exp::RenderGraph
         uint32_t m_unorderedPassIndex = 0;
         uint32_t m_dependencyLevelIndex = 0;
         bool m_syncSignalRequired = false;
-    };
-
-    enum class EPassType : uint8_t
-    {
-        Graphics = 0,
-        Compute = 1,
-        Transfer = 2,
     };
 
     /// Render graph implementation based on DAG scheduling.
@@ -228,10 +239,10 @@ namespace Hush::Exp::RenderGraph
 
             /// Create a resource inside of the pass
             template <Hush::RenderGraph::ResourceConcept T>
-            ResourceId Create(std::string_view name, const typename T::Descriptor &&desc)
+            ResourceId Create([[maybe_unused]] std::string_view name, [[maybe_unused]] const typename T::Descriptor &&desc)
             {
                 // TODO: Implement resource creation when resource management is added
-                ResourceId id{static_cast<uint32_t>(m_renderGraph.m_nextResourceId++)};
+                ResourceId id{m_renderGraph.m_nextResourceId++};
                 m_passNode.AddWrittenResource(id);
                 return id;
             }
