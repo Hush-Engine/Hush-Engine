@@ -1,16 +1,23 @@
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "RHI/GraphicsResources.hpp"
+#include "RHI/GraphicsTypes.hpp"
+#include "RHI/IGraphicsDevice.hpp"
+#include "RenderGraph/RenderGraph.hpp"
+#include "Systems/RenderGraphSystem.hpp"
 #include "Scene.hpp"
-#include "RenderGraph/RenderG.hpp"
+#include "WindowRenderer.hpp"
 #include <memory>
+#include <iostream>
 
 class ExampleApp final : public Hush::IApplication
 {
 public:
-	ExampleApp(Hush::HushEngine *engine)
-		: m_scene(std::make_unique<Hush::Scene>(engine, engine->GetEngineThreadPool()))
+	ExampleApp(Hush::HushEngine *engine) : m_engine(engine), m_scene(std::make_unique<Hush::Scene>(engine, engine->GetEngineThreadPool()))
 	{
+	    Hush::LogInfo("Example app created");
+
 	}
 
 	ExampleApp(const ExampleApp &) = delete;
@@ -22,60 +29,127 @@ public:
 
 	void Init() override
 	{
-	    using namespace Hush::Exp::RenderGraph;
-		Hush::Exp::RenderGraph::RenderGraph graph;
+        this->m_scene->AddEngineSystem(new Hush::Graphics::RenderGraphSystem(*this->m_scene, &this->m_engine->GetWindowRenderer()->GetRenderGraph()));
 
-		struct CustomData
-		{
+        Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("RenderGraphBuilder");
+        auto& builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
 
-		};
+        builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) {
+            this->SetupRenderGraph(graph);
+        };
 
-		const auto &passData = graph.AddPass<CustomData>(Hush::Exp::RenderGraph::EPassType::Graphics,
-		"CustomPass",
-            [](RenderGraph::BuildContext& ctx, CustomData& data)
-            {
-                std::cout << "  [Build] Post-Process Pass\n";
+        this->m_scene->Init();
+	}
 
-                // data.finalOutput = ctx.Create<Texture>("Final Image", Texture::Descriptor{
-                //     .width = 1920,
-                //     .height = 1080,
-                //     .format = 0, // RGBA8 LDR
-                //     .name = "FinalImage"
-                // });
-            },
-            [](CustomData& data, void* ctx)
-            {
-                // auto* renderCtx = static_cast<MockRenderContext*>(ctx);
-                // std::cout << "  [Execute] Post-Process Pass (Frame " << renderCtx->frameNumber << ")\n";
-                // std::cout << "    - Applying bloom\n";
-                // std::cout << "    - Tone mapping HDR -> LDR\n";
-                // std::cout << "    - Final output ready for presentation!\n";
-            });
+	void SetupRenderGraph(Hush::RenderGraph::RenderGraph &graph)
+	{
+    	using namespace Hush::RenderGraph;
+    	using namespace Hush::Graphics;
+
+    	// Create render graph
+    	IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
+
+    	struct ClearPassData
+    	{
+    		ResourceId renderTexture;
+    	};
+
+    	const auto& clearPassData = graph.AddPass<ClearPassData>(
+    		EPassType::Graphics, "ClearPass",
+    		// BUILD PHASE: Declare resource usage
+    		[this](RenderGraph::BuildContext &ctx, ClearPassData &data) {
+
+    		    int32_t width = 0;
+                    int32_t height = 0;
+
+                    this->m_engine->GetWindowRenderer()->GetWindowSize(&width, &height);
+
+    			// Create intermediate render texture
+    			data.renderTexture = ctx.Create<TextureResource>("ClearPass_RenderTexture",
+                        TextureDescriptor{
+                            .width = static_cast<uint32_t>(width),
+                            .height = static_cast<uint32_t>(height),
+                            .format = ETextureFormat::BGRA8_UNORM,
+                            .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
+                        });
+
+    			// This pass should never be culled
+    			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+    		},
+    		// EXECUTE PHASE: Perform rendering
+    		[](ClearPassData &data, Hush::Graphics::ICommandList *cmdList, const Hush::RenderGraph::ResourceManager& resourceManager) {
+    			auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
+
+    			// Build render pass descriptor
+    			RenderPassDescriptor renderPass{};
+    			renderPass.debugLabel = "ClearPass";
+
+    			RenderPassColorAttachment colorAttachment{};
+    			colorAttachment.texture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+    			colorAttachment.loadOp = ELoadOp::Clear;
+    			colorAttachment.storeOp = EStoreOp::Store;
+    			colorAttachment.clearValue = ClearColorValue{0.1f, 0.2f, 0.3f, 1.0f}; // Clear to a dark blue color
+    			renderPass.AddColorAttachment(colorAttachment);
+
+    			// Execute render pass
+    			cmd->BeginRenderPass(renderPass);
+    			// No draw calls - just clearing
+    			cmd->EndRenderPass();
+    		});
+
+    	struct CopyToBackbufferPassData
+    	{
+    		ResourceId renderTexture;
+    	    ResourceId backbuffer;
+    	};
+
+    	graph.AddPass<CopyToBackbufferPassData>(
+    		EPassType::Transfer, "CopyToBackbuffer",
+    		// BUILD PHASE
+    		[&clearPassData, device](RenderGraph::BuildContext &ctx, CopyToBackbufferPassData &data) {
+
+    			// Read from post-process output
+    			data.renderTexture = ctx.Read(clearPassData.renderTexture);
+    			data.backbuffer = ctx.Import<ImportedTextureResource>("Backbuffer", ImportedTextureResource{
+                        .texture = device->GetCurrentFrameTexture(),
+                    });
+
+    		},
+    		// EXECUTE PHASE
+    		[](CopyToBackbufferPassData &data, Hush::Graphics::ICommandList *cmdList, const Hush::RenderGraph::ResourceManager& resourceManager) {
+    			auto *cmd =
+    				static_cast<Hush::Graphics::ICopyCommandList *>(cmdList); // NOLINT(*-pro-type-static-cast-downcast)
+
+    			auto *sourceTexture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+                    auto *destinationTexture = resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
+
+    			cmd->CopyTexture(sourceTexture, 0, 0, 0, destinationTexture, 0, 0, 0, sourceTexture->GetWidth(), sourceTexture->GetHeight(), 1);
+    		});
 	}
 
 	void Update(float delta) override
 	{
-		this->m_scene->Update(delta);
+		GetScene()->Update(delta);
 	}
 
 	void FixedUpdate(float delta) override
 	{
-		this->m_scene->FixedUpdate(delta);
+		GetScene()->FixedUpdate(delta);
 	}
 
 	void OnRender(float delta) override
 	{
-		this->m_scene->Render();
+		GetScene()->Render();
 	}
 
 	void OnPostRender() override
 	{
-		this->m_scene->PostRender();
+		GetScene()->PostRender();
 	}
 
 	void OnPreRender() override
 	{
-		this->m_scene->PreRender();
+		GetScene()->PreRender();
 	}
 
 	void DisposeFrame() override
@@ -85,7 +159,7 @@ public:
 	[[nodiscard]]
 	std::string_view GetAppName() const noexcept override
 	{
-		return "Hush Example";
+		return "Hush RenderGraph + RHI Demo";
 	}
 
 	Hush::Scene *GetScene() noexcept override
@@ -94,6 +168,7 @@ public:
 	}
 
 private:
+	Hush::HushEngine *m_engine;
 	std::unique_ptr<Hush::Scene> m_scene;
 };
 

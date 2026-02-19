@@ -72,9 +72,10 @@ Hush::EMaterialPass Hush::GltfLoadFunctions::GetMaterialPassFromFastGltfPass(fas
 	}
 }
 
-Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(
-	Hush::GLTFMetallicRoughness *outMaterialResources, const fastgltf::Asset &asset, const fastgltf::Material &material,
-	const void *loadedTextures)
+Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(void *outMaterialResources,
+																			 const fastgltf::Asset &asset,
+																			 const fastgltf::Material &material,
+																			 const void *loadedTextures)
 {
 	// Each rendering implementation will cast the out material resources and the loaded textures
 	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);

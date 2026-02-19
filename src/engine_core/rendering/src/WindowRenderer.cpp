@@ -53,7 +53,12 @@ static std::unique_ptr<Hush::Graphics::IGraphicsDevice> CreateGraphicsDevice(Hus
     }
     #endif // HUSH_VULKAN
 
+    #if defined(HUSH_WEBGPU_IMPL)
+    Hush::LogWarn("Preferred graphics API is not supported on this platform, falling back to WebGPU");
+    return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
+    #else
     return nullptr;
+    #endif
 }
 
 Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Scene *activeScene) noexcept
@@ -94,12 +99,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 
 	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
 
-	// TODO:
-	// this->m_windowRenderer = std::make_unique<Hush::WebGPURenderer>(this->m_windowPtr, ERenderingBackend::D3D12);
-	// this->m_windowRenderer->SetActiveScene(activeScene);
-	// this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-	// this->m_windowRenderer->InitImGui();
-	// this->m_windowRenderer->InitRendering();
+	this->m_renderGraph = std::make_unique<Hush::RenderGraph::RenderGraph>(this->m_windowRenderer.get());
 	this->m_isActive = true;
 }
 
@@ -195,5 +195,12 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 	case SDL_WINDOWEVENT_RESTORED:
 		*isActive = true;
 		break;
+	case SDL_WINDOWEVENT_RESIZED:
+	    Hush::LogFormat(ELogLevel::Info, "Window resized to {}x{}", windowEvent.data1, windowEvent.data2);
+	    this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
+		// Note: resizing might invalidate the render graph resources, so we need to rebuild it
+		//       We pass true to indicate that we want to keep the passes.
+		this->m_renderGraph->Reset();
+        break;
 	}
 }

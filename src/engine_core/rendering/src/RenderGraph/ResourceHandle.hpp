@@ -10,11 +10,15 @@
 #include <memory>
 #include <concepts>
 #include "Assertions.hpp"
-#include <string_view>
+
+namespace Hush::Graphics
+{
+    class IGraphicsDevice;
+}
 
 namespace Hush::RenderGraph
 {
-    class RenderPassNode;
+    class RenderGraph;
 
 
 	template <typename T>
@@ -22,10 +26,10 @@ namespace Hush::RenderGraph
 		// T must have a nested type called Descriptor
 		typename T::Descriptor;
 		{
-			a.CreateResource(std::declval<const typename T::Descriptor &>(), static_cast<void *>(nullptr))
+			a.CreateResource(std::declval<const typename T::Descriptor &>(), static_cast<Graphics::IGraphicsDevice *>(nullptr))
 		} -> std::same_as<void>;
 		{
-			a.DestroyResource(std::declval<const typename T::Descriptor &>(), static_cast<void *>(nullptr))
+			a.DestroyResource(std::declval<const typename T::Descriptor &>(), static_cast<Graphics::IGraphicsDevice *>(nullptr))
 		} -> std::same_as<void>;
 
 		std::is_default_constructible_v<T>;
@@ -49,7 +53,6 @@ namespace Hush::RenderGraph
 	public:
 	    static constexpr uint32_t RESOURCE_INITIAL_VERSION = 1;
 
-
 		ResourceHandle() = delete;
 		ResourceHandle(const ResourceHandle&) = delete;
 		ResourceHandle(ResourceHandle &&) noexcept = default;
@@ -70,59 +73,60 @@ namespace Hush::RenderGraph
 			return m_resourceId;
 		}
 
-		void CreateResource(void *ctx)
-           {
-               m_resourcePtr->CreateResource(ctx);
-           }
+		void CreateResource(Hush::Graphics::IGraphicsDevice *ctx)
+        {
+            m_resourcePtr->CreateResource(ctx);
+        }
 
-           void DestroyResource(void *ctx)
-           {
-               m_resourcePtr->DestroyResource(ctx);
-           }
+        void DestroyResource(Hush::Graphics::IGraphicsDevice *ctx)
+        {
+            m_resourcePtr->DestroyResource(ctx);
+        }
 
-           void BeforeRead(uint32_t flags, void *ctx)
-           {
-               m_resourcePtr->BeforeRead(flags, ctx);
-           }
+        void BeforeRead(uint32_t flags, void *ctx)
+        {
+            m_resourcePtr->BeforeRead(flags, ctx);
+        }
 
-           void BeforeWrite(uint32_t flags, void *ctx)
-           {
-               m_resourcePtr->BeforeWrite(flags, ctx);
-           }
+        void BeforeWrite(uint32_t flags, void *ctx)
+        {
+            m_resourcePtr->BeforeWrite(flags, ctx);
+        }
 
-           template <ResourceConcept T>
-           [[nodiscard]]
-           const typename T::Descriptor &GetDescriptor() const
-           {
-               HUSH_ASSERT(m_resourcePtr != nullptr, "Resource pointer cannot be null!");
-               const auto derivedPtr = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
-               HUSH_ASSERT(derivedPtr != nullptr, "Failed to cast resource model to the requested type!");
-               return derivedPtr->descriptor;
-           }
+        template <ResourceConcept T>
+        [[nodiscard]]
+        const typename T::Descriptor &GetDescriptor() const
+        {
+            HUSH_ASSERT(m_resourcePtr != nullptr, "Resource pointer cannot be null!");
+            const auto derivedPtr = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
+            HUSH_ASSERT(derivedPtr != nullptr, "Failed to cast resource model to the requested type!");
+            return derivedPtr->descriptor;
+        }
 
-           template <ResourceConcept T>
-           T& GetResourceInstance()
-           {
-               HUSH_ASSERT(m_resourcePtr != nullptr, "Resource pointer cannot be null!");
-               const auto derivedPtr = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
-               HUSH_ASSERT(derivedPtr != nullptr, "Failed to cast resource model to the requested type!");
-               return derivedPtr->resourceInstance;
-           }
+        template <ResourceConcept T>
+        T& GetResourceInstance()
+        {
+            HUSH_ASSERT(m_resourcePtr != nullptr, "Resource pointer cannot be null!");
+            const auto derivedPtr = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
+            HUSH_ASSERT(derivedPtr != nullptr, "Failed to cast resource model to the requested type!");
+            return derivedPtr->resourceInstance;
+        }
 
-       private:
-           template <ResourceConcept T>
-           ResourceHandle(const typename T::Descriptor &descriptor, T &&resourceInstance,
-                          EHandleType handleType, uint32_t resourceId)
-               : m_resourcePtr(std::make_unique<ResourceModel<T>>(descriptor, std::forward(resourceInstance))),
-                 m_handleType(handleType),
-                 m_resourceId(resourceId)
-           {
-           }
+    private:
+        template <ResourceConcept T>
+        ResourceHandle(const typename T::Descriptor &descriptor, T &&resourceInstance,
+                        EHandleType handleType, uint32_t resourceId)
+            : m_resourcePtr(std::make_unique<ResourceModel<T>>(descriptor, std::forward<T>(resourceInstance))),
+                m_handleType(handleType),
+                m_resourceId(resourceId)
+        {
+        }
 
 	private:
 		class IResourceModel
 		{
 		public:
+		    IResourceModel() = default;
 			IResourceModel(const IResourceModel &) = default;
 			IResourceModel(IResourceModel &&) = default;
 			IResourceModel &operator=(const IResourceModel &) = default;
@@ -130,9 +134,9 @@ namespace Hush::RenderGraph
 
 			virtual ~IResourceModel() = default;
 
-			virtual void CreateResource(void *ctx) = 0;
+			virtual void CreateResource(Hush::Graphics::IGraphicsDevice *ctx) = 0;
 
-			virtual void DestroyResource(void *ctx) = 0;
+			virtual void DestroyResource(Hush::Graphics::IGraphicsDevice *ctx) = 0;
 
 			virtual void BeforeRead(uint32_t flags, void *ctx) = 0;
 
@@ -168,12 +172,12 @@ namespace Hush::RenderGraph
 
 			~ResourceModel() override = default;
 
-			void CreateResource(void *ctx) override
+			void CreateResource(Hush::Graphics::IGraphicsDevice *ctx) override
 			{
 				resourceInstance.CreateResource(descriptor, ctx);
 			}
 
-			void DestroyResource(void *ctx) override
+			void DestroyResource(Hush::Graphics::IGraphicsDevice *ctx) override
 			{
 				resourceInstance.DestroyResource(descriptor, ctx);
 			}
@@ -206,9 +210,6 @@ namespace Hush::RenderGraph
 
 	private:
 		std::unique_ptr<IResourceModel> m_resourcePtr;
-
-		RenderPassNode *m_producer = nullptr;
-		RenderPassNode *m_lastConsumer = nullptr;
 
 		const EHandleType m_handleType;
 		const uint32_t m_resourceId{};

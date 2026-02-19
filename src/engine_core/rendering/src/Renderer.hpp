@@ -23,8 +23,6 @@
 #include <memory>
 #include <string_view>
 
-#include "IGraphicsDevice.hpp"
-
 namespace Hush
 {
 	class Scene;
