@@ -24,7 +24,6 @@
 constexpr int DEFAULT_WINDOW_HEIGHT = 720;
 constexpr int DEFAULT_WINDOW_WIDTH = 1280;
 
-
 namespace Hush
 {
 	class WindowRenderer
@@ -52,13 +51,13 @@ namespace Hush
 		void GetWindowSize(int32_t *width, int32_t *height);
 
 		[[nodiscard]]
-		Hush::RenderGraph::RenderGraph& GetRenderGraph()
-        {
-            return *this->m_renderGraph;
-        }
+		Hush::RenderGraph::RenderGraph &GetRenderGraph()
+		{
+			return *this->m_renderGraph;
+		}
 
 		[[nodiscard]]
-		Hush::Graphics::IGraphicsDevice* GetGraphicsDevice() noexcept
+		Hush::Graphics::IGraphicsDevice *GetGraphicsDevice() noexcept
 		{
 			return this->m_windowRenderer.get();
 		}
@@ -82,8 +81,7 @@ namespace Hush
 
 		constexpr uint32_t GetInitialRendererFlags()
 		{
-			return SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_MOUSE_CAPTURE |
-				   SDL_WINDOW_RESIZABLE;
+			return SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_MOUSE_CAPTURE | SDL_WINDOW_RESIZABLE;
 		}
 	};
 

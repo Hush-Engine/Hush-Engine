@@ -329,10 +329,10 @@ void RenderGraph::CullRedundantSyncPoints()
 
 void RenderGraph::Execute()
 {
-    HUSH_ASSERT(!IsDirty(), "Cannot execute dirty render graph! Call Compile() first.");
-    HUSH_ASSERT(m_device != nullptr, "Graphics device cannot be null!");
+	HUSH_ASSERT(!IsDirty(), "Cannot execute dirty render graph! Call Compile() first.");
+	HUSH_ASSERT(m_device != nullptr, "Graphics device cannot be null!");
 
-    auto graphicsCmd = m_device->CreateGraphicsCommandList();
+	auto graphicsCmd = m_device->CreateGraphicsCommandList();
 	auto computeCmd = m_device->CreateComputeCommandList();
 	auto transferCmd = m_device->CreateCopyCommandList();
 
@@ -363,24 +363,24 @@ void RenderGraph::Execute()
 	}
 
 	// After executing all passes, submit command lists to the device
-    if (graphicsCmd)
-    {
-        graphicsCmd->Close();
-        std::array<Hush::Graphics::ICommandList*, 1> cmdLists = {graphicsCmd.get()};
+	if (graphicsCmd)
+	{
+		graphicsCmd->Close();
+		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {graphicsCmd.get()};
 		m_device->GetGraphicsQueue()->Submit(cmdLists);
-    }
+	}
 
-    if (computeCmd)
-    {
-        computeCmd->Close();
-        std::array<Hush::Graphics::ICommandList*, 1> cmdLists = {computeCmd.get()};
+	if (computeCmd)
+	{
+		computeCmd->Close();
+		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {computeCmd.get()};
 		m_device->GetComputeQueue()->Submit(cmdLists);
-    }
+	}
 
-    if (transferCmd)
-    {
-        transferCmd->Close();
-        std::array<Hush::Graphics::ICommandList*, 1> cmdLists = {transferCmd.get()};
+	if (transferCmd)
+	{
+		transferCmd->Close();
+		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {transferCmd.get()};
 		m_device->GetTransferQueue()->Submit(cmdLists);
-    }
+	}
 }

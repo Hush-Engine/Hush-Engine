@@ -101,7 +101,7 @@ namespace Hush::Graphics
 		deviceDesc.label = wgpu::StringView("Hush Graphics Device");
 
 		m_device = m_adapter.requestDevice(deviceDesc);
-        HUSH_ASSERT(m_device, "Failed to request WebGPU device");
+		HUSH_ASSERT(m_device, "Failed to request WebGPU device");
 
 		LogTrace("WebGPU device initialization skipped (stub)");
 	}
@@ -205,20 +205,20 @@ namespace Hush::Graphics
 
 		wgpu::Texture texture = m_device.createTexture(desc);
 
-        if (texture != nullptr)
-        {
-            wgpu::TextureViewDescriptor viewDesc = {};
-            viewDesc.format = ConvertTextureFormat(descriptor.format);
-            viewDesc.dimension = wgpu::TextureViewDimension::_2D;
-            viewDesc.baseMipLevel = 0;
-            viewDesc.mipLevelCount = descriptor.mipLevels;
-            viewDesc.baseArrayLayer = 0;
-            viewDesc.arrayLayerCount = descriptor.depth;
+		if (texture != nullptr)
+		{
+			wgpu::TextureViewDescriptor viewDesc = {};
+			viewDesc.format = ConvertTextureFormat(descriptor.format);
+			viewDesc.dimension = wgpu::TextureViewDimension::_2D;
+			viewDesc.baseMipLevel = 0;
+			viewDesc.mipLevelCount = descriptor.mipLevels;
+			viewDesc.baseArrayLayer = 0;
+			viewDesc.arrayLayerCount = descriptor.depth;
 
-            wgpu::TextureView textureView = texture.createView(viewDesc);
+			wgpu::TextureView textureView = texture.createView(viewDesc);
 
-            return std::make_unique<Hush::Graphics::WebGPUTexture>(texture, textureView, descriptor);
-        }
+			return std::make_unique<Hush::Graphics::WebGPUTexture>(texture, textureView, descriptor);
+		}
 
 		return nullptr;
 	}
@@ -273,16 +273,17 @@ namespace Hush::Graphics
 		wgpu::Texture texture = surfaceTexture.texture;
 		m_currentFrameView = texture.createView();
 
-		m_currentFrameTexture = WebGPUTexture(texture, m_currentFrameView, TextureDescriptor{
-            .width = m_width,
-            .height = m_height,
-            .depth = 1,
-            .mipLevels = 1,
-            .sampleCount = 1,
-            .format = ConvertToEngineTextureFormat(m_surfaceFormat),
-            .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
-            .ownedByExternalSource = true,
-        });
+		m_currentFrameTexture = WebGPUTexture(texture, m_currentFrameView,
+											  TextureDescriptor{
+												  .width = m_width,
+												  .height = m_height,
+												  .depth = 1,
+												  .mipLevels = 1,
+												  .sampleCount = 1,
+												  .format = ConvertToEngineTextureFormat(m_surfaceFormat),
+												  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
+												  .ownedByExternalSource = true,
+											  });
 	}
 
 	void WebGPUGraphicsDevice::EndFrame()
@@ -293,9 +294,9 @@ namespace Hush::Graphics
 	}
 
 	IGraphicsTexture *WebGPUGraphicsDevice::GetCurrentFrameTexture() const
-    {
-        return &m_currentFrameTexture;
-    }
+	{
+		return &m_currentFrameTexture;
+	}
 
 	void WebGPUGraphicsDevice::Resize(uint32_t width, uint32_t height)
 	{
@@ -484,58 +485,58 @@ namespace Hush::Graphics
 	}
 
 	ETextureFormat WebGPUGraphicsDevice::ConvertToEngineTextureFormat(wgpu::TextureFormat format)
-    {
-        switch (format)
-        {
-        case wgpu::TextureFormat::R8Unorm:
-            return ETextureFormat::R8_UNORM;
-        case wgpu::TextureFormat::R8Snorm:
-            return ETextureFormat::R8_SNORM;
-        case wgpu::TextureFormat::R8Uint:
-            return ETextureFormat::R8_UINT;
-        case wgpu::TextureFormat::R8Sint:
-            return ETextureFormat::R8_SINT;
+	{
+		switch (format)
+		{
+		case wgpu::TextureFormat::R8Unorm:
+			return ETextureFormat::R8_UNORM;
+		case wgpu::TextureFormat::R8Snorm:
+			return ETextureFormat::R8_SNORM;
+		case wgpu::TextureFormat::R8Uint:
+			return ETextureFormat::R8_UINT;
+		case wgpu::TextureFormat::R8Sint:
+			return ETextureFormat::R8_SINT;
 
-        case wgpu::TextureFormat::R16Uint:
-            return ETextureFormat::R16_UNORM; // Assuming original was UNORM
-        case wgpu::TextureFormat::R16Sint:
-            return ETextureFormat::R16_SNORM; // Assuming original was SNORM
-        case wgpu::TextureFormat::R16Float:
-            return ETextureFormat::R16_FLOAT;
+		case wgpu::TextureFormat::R16Uint:
+			return ETextureFormat::R16_UNORM; // Assuming original was UNORM
+		case wgpu::TextureFormat::R16Sint:
+			return ETextureFormat::R16_SNORM; // Assuming original was SNORM
+		case wgpu::TextureFormat::R16Float:
+			return ETextureFormat::R16_FLOAT;
 
-        case wgpu::TextureFormat::R32Uint:
-            return ETextureFormat::R32_UINT;
-        case wgpu::TextureFormat::R32Sint:
-            return ETextureFormat::R32_SINT;
-        case wgpu::TextureFormat::R32Float:
-            return ETextureFormat::R32_FLOAT;
+		case wgpu::TextureFormat::R32Uint:
+			return ETextureFormat::R32_UINT;
+		case wgpu::TextureFormat::R32Sint:
+			return ETextureFormat::R32_SINT;
+		case wgpu::TextureFormat::R32Float:
+			return ETextureFormat::R32_FLOAT;
 
-        case wgpu::TextureFormat::RG8Unorm:
-            return ETextureFormat::RG8_UNORM;
-        case wgpu::TextureFormat::RG8Snorm:
-            return ETextureFormat::RG8_SNORM;
-        case wgpu::TextureFormat::RG16Float:
-            return ETextureFormat::RG16_FLOAT;
-        case wgpu::TextureFormat::RG32Float:
-            return ETextureFormat::RG32_FLOAT;
+		case wgpu::TextureFormat::RG8Unorm:
+			return ETextureFormat::RG8_UNORM;
+		case wgpu::TextureFormat::RG8Snorm:
+			return ETextureFormat::RG8_SNORM;
+		case wgpu::TextureFormat::RG16Float:
+			return ETextureFormat::RG16_FLOAT;
+		case wgpu::TextureFormat::RG32Float:
+			return ETextureFormat::RG32_FLOAT;
 
-        case wgpu::TextureFormat::RGBA8Unorm:
-            return ETextureFormat::RGBA8_UNORM;
-        case wgpu::TextureFormat::RGBA8UnormSrgb:
-            return ETextureFormat::RGBA8_SRGB;
-        case wgpu::TextureFormat::RGBA16Float:
-            return ETextureFormat::RGBA16_FLOAT;
-        case wgpu::TextureFormat::RGBA32Float:
-            return ETextureFormat::RGBA32_FLOAT;
+		case wgpu::TextureFormat::RGBA8Unorm:
+			return ETextureFormat::RGBA8_UNORM;
+		case wgpu::TextureFormat::RGBA8UnormSrgb:
+			return ETextureFormat::RGBA8_SRGB;
+		case wgpu::TextureFormat::RGBA16Float:
+			return ETextureFormat::RGBA16_FLOAT;
+		case wgpu::TextureFormat::RGBA32Float:
+			return ETextureFormat::RGBA32_FLOAT;
 
-        case wgpu::TextureFormat::BGRA8Unorm:
-            return ETextureFormat::BGRA8_UNORM;
-        case wgpu::TextureFormat::BGRA8UnormSrgb:
-            return ETextureFormat::BGRA8_SRGB;
+		case wgpu::TextureFormat::BGRA8Unorm:
+			return ETextureFormat::BGRA8_UNORM;
+		case wgpu::TextureFormat::BGRA8UnormSrgb:
+			return ETextureFormat::BGRA8_SRGB;
 
-        default:
-            LogWarn("Unknown WebGPU texture format, defaulting to RGBA8_UNORM");
-            return ETextureFormat::RGBA8_UNORM;
+		default:
+			LogWarn("Unknown WebGPU texture format, defaulting to RGBA8_UNORM");
+			return ETextureFormat::RGBA8_UNORM;
 		}
 	}
 

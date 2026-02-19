@@ -9,5 +9,5 @@
 
 namespace Hush::RenderGraph
 {
-    using ResourceId = uint32_t;
+	using ResourceId = uint32_t;
 }

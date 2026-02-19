@@ -19,46 +19,47 @@
 
 static inline Hush::Graphics::EGraphicsAPI GetPreferredGraphicsAPI()
 {
-    constexpr Hush::EPlatform currentPlatform = Hush::GetCurrentPlatform();
+	constexpr Hush::EPlatform currentPlatform = Hush::GetCurrentPlatform();
 
-    switch (currentPlatform)
-    {
-        case Hush::EPlatform::Win64:
-            return Hush::Graphics::EGraphicsAPI::D3D12;
-        case Hush::EPlatform::Linux:
-            return Hush::Graphics::EGraphicsAPI::Vulkan;
-        case Hush::EPlatform::OSX:
-            return Hush::Graphics::EGraphicsAPI::Metal;
-        case Hush::EPlatform::Emscripten:
-            return Hush::Graphics::EGraphicsAPI::WebGPU;
-        default:
-            Hush::LogWarn("Unrecognized platform, defaulting to Vulkan graphics API");
-            return Hush::Graphics::EGraphicsAPI::Vulkan;
-    }
+	switch (currentPlatform)
+	{
+	case Hush::EPlatform::Win64:
+		return Hush::Graphics::EGraphicsAPI::D3D12;
+	case Hush::EPlatform::Linux:
+		return Hush::Graphics::EGraphicsAPI::Vulkan;
+	case Hush::EPlatform::OSX:
+		return Hush::Graphics::EGraphicsAPI::Metal;
+	case Hush::EPlatform::Emscripten:
+		return Hush::Graphics::EGraphicsAPI::WebGPU;
+	default:
+		Hush::LogWarn("Unrecognized platform, defaulting to Vulkan graphics API");
+		return Hush::Graphics::EGraphicsAPI::Vulkan;
+	}
 }
 
 /// @brief Create a graphics device from a given API and window context.
 ///
-static std::unique_ptr<Hush::Graphics::IGraphicsDevice> CreateGraphicsDevice(Hush::Graphics::EGraphicsAPI api, void* windowHandle)
+static std::unique_ptr<Hush::Graphics::IGraphicsDevice> CreateGraphicsDevice(Hush::Graphics::EGraphicsAPI api,
+																			 void *windowHandle)
 {
-    #if defined(HUSH_VULKAN)
-    if (api == Hush::Graphics::EGraphicsAPI::Vulkan)
-    {
-        // return std::make_unique<Hush::Graphics::VulkanRenderer>(windowHandle);
-    }
-    #elif defined(HUSH_WEBGPU_IMPL)
-    if (api == Hush::Graphics::EGraphicsAPI::WebGPU)
-    {
-        return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
-    }
-    #endif // HUSH_VULKAN
+#if defined(HUSH_VULKAN)
+	if (api == Hush::Graphics::EGraphicsAPI::Vulkan)
+	{
+		// return std::make_unique<Hush::Graphics::VulkanRenderer>(windowHandle);
+	}
+#elif defined(HUSH_WEBGPU_IMPL)
+	if (api == Hush::Graphics::EGraphicsAPI::WebGPU)
+	{
+		return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
+	}
+#endif // HUSH_VULKAN
 
-    #if defined(HUSH_WEBGPU_IMPL)
-    Hush::LogWarn("Preferred graphics API is not supported on this platform, falling back to WebGPU");
-    return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
-    #else
-    return nullptr;
-    #endif
+#if defined(HUSH_WEBGPU_IMPL)
+	Hush::LogWarn("Preferred graphics API is not supported on this platform, falling back to WebGPU");
+	return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
+#else
+	return nullptr;
+#endif
 }
 
 Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Scene *activeScene) noexcept
@@ -164,7 +165,7 @@ Hush::WindowRenderer::~WindowRenderer()
 
 Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
 {
-    return nullptr;
+	return nullptr;
 	// return this->m_windowRenderer.get();
 }
 
@@ -196,11 +197,10 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 		*isActive = true;
 		break;
 	case SDL_WINDOWEVENT_RESIZED:
-	    Hush::LogFormat(ELogLevel::Info, "Window resized to {}x{}", windowEvent.data1, windowEvent.data2);
-	    this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
+		Hush::LogFormat(ELogLevel::Info, "Window resized to {}x{}", windowEvent.data1, windowEvent.data2);
+		this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
 		// Note: resizing might invalidate the render graph resources, so we need to rebuild it
-		//       We pass true to indicate that we want to keep the passes.
 		this->m_renderGraph->Reset();
-        break;
+		break;
 	}
 }

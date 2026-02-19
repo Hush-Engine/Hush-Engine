@@ -114,7 +114,7 @@ void Hush::InputManager::ResetMouseAcceleration()
 
 void Hush::InputManager::SetCursorLock(ECursorLockMode lockMode)
 {
-    HUSH_UNUSED(lockMode);
+	HUSH_UNUSED(lockMode);
 	// SDL_SetRelativeMouseMode(static_cast<SDL_bool>(lockMode));
 }
 

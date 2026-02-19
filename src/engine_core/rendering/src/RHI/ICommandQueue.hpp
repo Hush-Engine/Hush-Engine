@@ -22,23 +22,25 @@ namespace Hush::Graphics
 		ICommandQueue() = default;
 		virtual ~ICommandQueue() = default;
 
-		ICommandQueue(const ICommandQueue&) = delete;
-		ICommandQueue& operator=(const ICommandQueue&) = delete;
-		ICommandQueue(ICommandQueue&&) = delete;
-		ICommandQueue& operator=(ICommandQueue&&) = delete;
+		ICommandQueue(const ICommandQueue &) = delete;
+		ICommandQueue &operator=(const ICommandQueue &) = delete;
+		ICommandQueue(ICommandQueue &&) = delete;
+		ICommandQueue &operator=(ICommandQueue &&) = delete;
 
 		/// @brief Get queue type
-		[[nodiscard]] virtual EQueueType GetQueueType() const = 0;
+		[[nodiscard]]
+		virtual EQueueType GetQueueType() const = 0;
 
 		/// @brief Submit commands for execution
 		/// @param commandLists Array of command lists to submit
-		virtual void Submit(std::span<ICommandList*> commandLists) = 0;
+		virtual void Submit(std::span<ICommandList *> commandLists) = 0;
 
 		/// @brief Wait for all commands to complete
 		virtual void WaitIdle() = 0;
 
 		/// @brief Get native handle (API-specific)
-		[[nodiscard]] virtual void* GetNativeHandle() const = 0;
+		[[nodiscard]]
+		virtual void *GetNativeHandle() const = 0;
 	};
 
 } // namespace Hush::Graphics

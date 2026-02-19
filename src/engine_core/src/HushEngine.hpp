@@ -57,9 +57,9 @@ namespace Hush
 		}
 
 		Hush::WindowRenderer *GetWindowRenderer() noexcept
-        {
-            return m_windowRenderer.get();
-        }
+		{
+			return m_windowRenderer.get();
+		}
 
 	private:
 		void Init();

@@ -20,7 +20,8 @@ void Hush::HushEngine::Run()
 	this->m_app = LoadApplication(this);
 
 	this->m_isApplicationRunning = true;
-	this->m_windowRenderer = std::make_unique<WindowRenderer>(this->m_app->GetAppName().data(), this->m_app->GetScene());
+	this->m_windowRenderer =
+		std::make_unique<WindowRenderer>(this->m_app->GetAppName().data(), this->m_app->GetScene());
 
 	auto *graphicsDevice = this->m_windowRenderer->GetGraphicsDevice();
 

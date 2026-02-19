@@ -18,16 +18,16 @@ namespace Hush::Graphics
 	/// @brief Load operation for render pass attachments
 	enum class ELoadOp
 	{
-		Load,      // Preserve existing contents
-		Clear,     // Clear to a specified value
-		DontCare,  // Don't care about existing contents (optimization hint)
+		Load,	  // Preserve existing contents
+		Clear,	  // Clear to a specified value
+		DontCare, // Don't care about existing contents (optimization hint)
 	};
 
 	/// @brief Store operation for render pass attachments
 	enum class EStoreOp
 	{
-		Store,     // Store results to memory
-		DontCare,  // Don't care about storing (optimization hint)
+		Store,	  // Store results to memory
+		DontCare, // Don't care about storing (optimization hint)
 	};
 
 	/// @brief Color clear value
@@ -40,7 +40,12 @@ namespace Hush::Graphics
 
 		constexpr ClearColorValue() = default;
 		constexpr ClearColorValue(float r, float g, float b, float a = 1.0f)
-			: r(r), g(g), b(b), a(a) {}
+			: r(r),
+			  g(g),
+			  b(b),
+			  a(a)
+		{
+		}
 	};
 
 	/// @brief Depth/stencil clear value
@@ -51,13 +56,16 @@ namespace Hush::Graphics
 
 		constexpr ClearDepthStencilValue() = default;
 		constexpr ClearDepthStencilValue(float depth, uint32_t stencil = 0)
-			: depth(depth), stencil(stencil) {}
+			: depth(depth),
+			  stencil(stencil)
+		{
+		}
 	};
 
 	/// @brief Color attachment descriptor for render passes
 	struct RenderPassColorAttachment
 	{
-		IGraphicsTexture* texture = nullptr;
+		IGraphicsTexture *texture = nullptr;
 		uint32_t mipLevel = 0;
 		uint32_t arrayLayer = 0;
 		ELoadOp loadOp = ELoadOp::Clear;
@@ -65,13 +73,13 @@ namespace Hush::Graphics
 		ClearColorValue clearValue = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Optional resolve target for MSAA
-		IGraphicsTexture* resolveTarget = nullptr;
+		IGraphicsTexture *resolveTarget = nullptr;
 	};
 
 	/// @brief Depth/stencil attachment descriptor for render passes
 	struct RenderPassDepthStencilAttachment
 	{
-		IGraphicsTexture* texture = nullptr;
+		IGraphicsTexture *texture = nullptr;
 		uint32_t mipLevel = 0;
 		uint32_t arrayLayer = 0;
 
@@ -95,13 +103,13 @@ namespace Hush::Graphics
 		uint32_t colorAttachmentCount = 0;
 
 		// Optional depth/stencil attachment
-		RenderPassDepthStencilAttachment* depthStencilAttachment = nullptr;
+		RenderPassDepthStencilAttachment *depthStencilAttachment = nullptr;
 
 		// Debug label
 		std::string_view debugLabel;
 
 		/// @brief Helper to add a color attachment
-		void AddColorAttachment(const RenderPassColorAttachment& attachment)
+		void AddColorAttachment(const RenderPassColorAttachment &attachment)
 		{
 			if (colorAttachmentCount < 8)
 			{
@@ -110,7 +118,7 @@ namespace Hush::Graphics
 		}
 
 		/// @brief Helper to set depth/stencil attachment
-		void SetDepthStencilAttachment(RenderPassDepthStencilAttachment* attachment)
+		void SetDepthStencilAttachment(RenderPassDepthStencilAttachment *attachment)
 		{
 			depthStencilAttachment = attachment;
 		}

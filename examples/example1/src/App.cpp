@@ -14,10 +14,10 @@
 class ExampleApp final : public Hush::IApplication
 {
 public:
-	ExampleApp(Hush::HushEngine *engine) : m_engine(engine), m_scene(std::make_unique<Hush::Scene>(engine, engine->GetEngineThreadPool()))
+	ExampleApp(Hush::HushEngine *engine)
+		: m_engine(engine),
+		  m_scene(std::make_unique<Hush::Scene>(engine, engine->GetEngineThreadPool()))
 	{
-	    Hush::LogInfo("Example app created");
-
 	}
 
 	ExampleApp(const ExampleApp &) = delete;
@@ -29,102 +29,104 @@ public:
 
 	void Init() override
 	{
-        this->m_scene->AddEngineSystem(new Hush::Graphics::RenderGraphSystem(*this->m_scene, &this->m_engine->GetWindowRenderer()->GetRenderGraph()));
+		this->m_scene->AddEngineSystem(new Hush::Graphics::RenderGraphSystem(
+			*this->m_scene, &this->m_engine->GetWindowRenderer()->GetRenderGraph()));
 
-        Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("RenderGraphBuilder");
-        auto& builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
+		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("RenderGraphBuilder");
+		auto &builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
 
-        builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) {
-            this->SetupRenderGraph(graph);
-        };
+		builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) { this->SetupRenderGraph(graph); };
 
-        this->m_scene->Init();
+		this->m_scene->Init();
 	}
 
 	void SetupRenderGraph(Hush::RenderGraph::RenderGraph &graph)
 	{
-    	using namespace Hush::RenderGraph;
-    	using namespace Hush::Graphics;
+		using namespace Hush::RenderGraph;
+		using namespace Hush::Graphics;
 
-    	// Create render graph
-    	IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
+		// Create render graph
+		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-    	struct ClearPassData
-    	{
-    		ResourceId renderTexture;
-    	};
+		struct ClearPassData
+		{
+			ResourceId renderTexture;
+		};
 
-    	const auto& clearPassData = graph.AddPass<ClearPassData>(
-    		EPassType::Graphics, "ClearPass",
-    		// BUILD PHASE: Declare resource usage
-    		[this](RenderGraph::BuildContext &ctx, ClearPassData &data) {
+		const auto &clearPassData = graph.AddPass<ClearPassData>(
+			EPassType::Graphics, "ClearPass",
+			// BUILD PHASE: Declare resource usage
+			[this](RenderGraph::BuildContext &ctx, ClearPassData &data) {
+				int32_t width = 0;
+				int32_t height = 0;
 
-    		    int32_t width = 0;
-                    int32_t height = 0;
+				this->m_engine->GetWindowRenderer()->GetWindowSize(&width, &height);
 
-                    this->m_engine->GetWindowRenderer()->GetWindowSize(&width, &height);
+				// Create intermediate render texture
+				data.renderTexture = ctx.Create<TextureResource>(
+					"ClearPass_RenderTexture", TextureDescriptor{
+												   .width = static_cast<uint32_t>(width),
+												   .height = static_cast<uint32_t>(height),
+												   .format = ETextureFormat::BGRA8_UNORM,
+												   .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
+											   });
 
-    			// Create intermediate render texture
-    			data.renderTexture = ctx.Create<TextureResource>("ClearPass_RenderTexture",
-                        TextureDescriptor{
-                            .width = static_cast<uint32_t>(width),
-                            .height = static_cast<uint32_t>(height),
-                            .format = ETextureFormat::BGRA8_UNORM,
-                            .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
-                        });
+				// This pass should never be culled
+				// ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+			},
+			// EXECUTE PHASE: Perform rendering
+			[](ClearPassData &data, Hush::Graphics::ICommandList *cmdList,
+			   const Hush::RenderGraph::ResourceManager &resourceManager) {
+				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
 
-    			// This pass should never be culled
-    			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
-    		},
-    		// EXECUTE PHASE: Perform rendering
-    		[](ClearPassData &data, Hush::Graphics::ICommandList *cmdList, const Hush::RenderGraph::ResourceManager& resourceManager) {
-    			auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
+				// Build render pass descriptor
+				RenderPassDescriptor renderPass{};
+				renderPass.debugLabel = "ClearPass";
 
-    			// Build render pass descriptor
-    			RenderPassDescriptor renderPass{};
-    			renderPass.debugLabel = "ClearPass";
+				RenderPassColorAttachment colorAttachment{};
+				colorAttachment.texture =
+					resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+				colorAttachment.loadOp = ELoadOp::Clear;
+				colorAttachment.storeOp = EStoreOp::Store;
+				colorAttachment.clearValue = ClearColorValue{0.1f, 0.2f, 0.3f, 1.0f}; // Clear to a dark blue color
+				renderPass.AddColorAttachment(colorAttachment);
 
-    			RenderPassColorAttachment colorAttachment{};
-    			colorAttachment.texture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
-    			colorAttachment.loadOp = ELoadOp::Clear;
-    			colorAttachment.storeOp = EStoreOp::Store;
-    			colorAttachment.clearValue = ClearColorValue{0.1f, 0.2f, 0.3f, 1.0f}; // Clear to a dark blue color
-    			renderPass.AddColorAttachment(colorAttachment);
+				// Execute render pass
+				cmd->BeginRenderPass(renderPass);
+				// No draw calls - just clearing
+				cmd->EndRenderPass();
+			});
 
-    			// Execute render pass
-    			cmd->BeginRenderPass(renderPass);
-    			// No draw calls - just clearing
-    			cmd->EndRenderPass();
-    		});
+		struct CopyToBackbufferPassData
+		{
+			ResourceId renderTexture;
+			ResourceId backbuffer;
+		};
 
-    	struct CopyToBackbufferPassData
-    	{
-    		ResourceId renderTexture;
-    	    ResourceId backbuffer;
-    	};
+		graph.AddPass<CopyToBackbufferPassData>(
+			EPassType::Transfer, "CopyToBackbuffer",
+			// BUILD PHASE
+			[&clearPassData, device](RenderGraph::BuildContext &ctx, CopyToBackbufferPassData &data) {
+				// Read from post-process output
+				data.renderTexture = ctx.Read(clearPassData.renderTexture);
+				data.backbuffer =
+					ctx.Import<ImportedTextureResource>("Backbuffer", ImportedTextureResource{
+																		  .texture = device->GetCurrentFrameTexture(),
+																	  });
+			},
+			// EXECUTE PHASE
+			[](CopyToBackbufferPassData &data, Hush::Graphics::ICommandList *cmdList,
+			   const Hush::RenderGraph::ResourceManager &resourceManager) {
+				auto *cmd =
+					static_cast<Hush::Graphics::ICopyCommandList *>(cmdList); // NOLINT(*-pro-type-static-cast-downcast)
 
-    	graph.AddPass<CopyToBackbufferPassData>(
-    		EPassType::Transfer, "CopyToBackbuffer",
-    		// BUILD PHASE
-    		[&clearPassData, device](RenderGraph::BuildContext &ctx, CopyToBackbufferPassData &data) {
+				auto *sourceTexture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+				auto *destinationTexture =
+					resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
 
-    			// Read from post-process output
-    			data.renderTexture = ctx.Read(clearPassData.renderTexture);
-    			data.backbuffer = ctx.Import<ImportedTextureResource>("Backbuffer", ImportedTextureResource{
-                        .texture = device->GetCurrentFrameTexture(),
-                    });
-
-    		},
-    		// EXECUTE PHASE
-    		[](CopyToBackbufferPassData &data, Hush::Graphics::ICommandList *cmdList, const Hush::RenderGraph::ResourceManager& resourceManager) {
-    			auto *cmd =
-    				static_cast<Hush::Graphics::ICopyCommandList *>(cmdList); // NOLINT(*-pro-type-static-cast-downcast)
-
-    			auto *sourceTexture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
-                    auto *destinationTexture = resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
-
-    			cmd->CopyTexture(sourceTexture, 0, 0, 0, destinationTexture, 0, 0, 0, sourceTexture->GetWidth(), sourceTexture->GetHeight(), 1);
-    		});
+				cmd->CopyTexture(sourceTexture, 0, 0, 0, destinationTexture, 0, 0, 0, sourceTexture->GetWidth(),
+								 sourceTexture->GetHeight(), 1);
+			});
 	}
 
 	void Update(float delta) override

@@ -35,14 +35,22 @@ namespace Hush::Graphics
 		TextureDescriptor descriptor;
 
 		/// @brief Get the underlying texture (convenience accessor)
-		[[nodiscard]] IGraphicsTexture* Get() const { return texture.get(); }
+		[[nodiscard]]
+		IGraphicsTexture *Get() const
+		{
+			return texture.get();
+		}
 
 		/// @brief Check if the resource is valid
-		[[nodiscard]] bool IsValid() const { return texture != nullptr; }
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return texture != nullptr;
+		}
 
-		void CreateResource(const TextureDescriptor& textureDescriptor, IGraphicsDevice* device);
+		void CreateResource(const TextureDescriptor &textureDescriptor, IGraphicsDevice *device);
 
-		void DestroyResource(const TextureDescriptor& textureDescriptor, IGraphicsDevice* device);
+		void DestroyResource(const TextureDescriptor &textureDescriptor, IGraphicsDevice *device);
 	};
 
 	/// @brief Buffer resource descriptor for RenderGraph
@@ -58,10 +66,18 @@ namespace Hush::Graphics
 		BufferDescriptor descriptor;
 
 		/// @brief Get the underlying buffer (convenience accessor)
-		[[nodiscard]] IGraphicsBuffer* Get() const { return buffer.get(); }
+		[[nodiscard]]
+		IGraphicsBuffer *Get() const
+		{
+			return buffer.get();
+		}
 
 		/// @brief Check if the resource is valid
-		[[nodiscard]] bool IsValid() const { return buffer != nullptr; }
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return buffer != nullptr;
+		}
 	};
 
 	/// @brief Import/external texture resource for RenderGraph
@@ -71,19 +87,29 @@ namespace Hush::Graphics
 		using Descriptor = TextureDescriptor;
 
 		/// @brief Imported texture handle
-		IGraphicsTexture* texture = nullptr;
+		IGraphicsTexture *texture = nullptr;
 
 		/// @brief Get the underlying texture (convenience accessor)
-		[[nodiscard]] IGraphicsTexture* Get() const { return texture; }
+		[[nodiscard]]
+		IGraphicsTexture *Get() const
+		{
+			return texture;
+		}
 
 		/// @brief Check if the resource is valid
-		[[nodiscard]] bool IsValid() const { return texture != nullptr; }
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return texture != nullptr;
+		}
 
-		void CreateResource([[maybe_unused]] const TextureDescriptor& textureDescriptor, [[maybe_unused]] IGraphicsDevice* device)
+		void CreateResource([[maybe_unused]] const TextureDescriptor &textureDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
 		{
 		}
 
-		void DestroyResource([[maybe_unused]] const TextureDescriptor& textureDescriptor, [[maybe_unused]] IGraphicsDevice* device)
+		void DestroyResource([[maybe_unused]] const TextureDescriptor &textureDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
 		{
 		}
 	};
@@ -95,13 +121,21 @@ namespace Hush::Graphics
 		using Descriptor = BufferDescriptor;
 
 		/// @brief Imported buffer handle
-		IGraphicsBuffer* buffer = nullptr;
+		IGraphicsBuffer *buffer = nullptr;
 
 		/// @brief Get the underlying buffer (convenience accessor)
-		[[nodiscard]] IGraphicsBuffer* Get() const { return buffer; }
+		[[nodiscard]]
+		IGraphicsBuffer *Get() const
+		{
+			return buffer;
+		}
 
 		/// @brief Check if the resource is valid
-		[[nodiscard]] bool IsValid() const { return buffer != nullptr; }
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return buffer != nullptr;
+		}
 	};
 
 	// ============================================================================
@@ -115,23 +149,26 @@ namespace Hush::Graphics
 	public:
 		virtual ~IRenderContext() = default;
 
-		IRenderContext(const IRenderContext&) = delete;
-		IRenderContext& operator=(const IRenderContext&) = delete;
-		IRenderContext(IRenderContext&&) = delete;
-		IRenderContext& operator=(IRenderContext&&) = delete;
+		IRenderContext(const IRenderContext &) = delete;
+		IRenderContext &operator=(const IRenderContext &) = delete;
+		IRenderContext(IRenderContext &&) = delete;
+		IRenderContext &operator=(IRenderContext &&) = delete;
 
 		// ========================================================================
 		// Command List Access
 		// ========================================================================
 
 		/// @brief Get graphics command list for the current pass
-		[[nodiscard]] virtual IGraphicsCommandList* GetGraphicsCommandList() = 0;
+		[[nodiscard]]
+		virtual IGraphicsCommandList *GetGraphicsCommandList() = 0;
 
 		/// @brief Get compute command list for the current pass
-		[[nodiscard]] virtual IComputeCommandList* GetComputeCommandList() = 0;
+		[[nodiscard]]
+		virtual IComputeCommandList *GetComputeCommandList() = 0;
 
 		/// @brief Get transfer/copy command list for the current pass
-		[[nodiscard]] virtual ICopyCommandList* GetCopyCommandList() = 0;
+		[[nodiscard]]
+		virtual ICopyCommandList *GetCopyCommandList() = 0;
 
 		// ========================================================================
 		// Resource Resolution
@@ -140,29 +177,34 @@ namespace Hush::Graphics
 		/// @brief Resolve a resource ID to a texture
 		/// @param resourceId Resource ID from the render graph
 		/// @return Texture pointer, or nullptr if not found or wrong type
-		[[nodiscard]] virtual IGraphicsTexture* GetTexture(uint32_t resourceId) = 0;
+		[[nodiscard]]
+		virtual IGraphicsTexture *GetTexture(uint32_t resourceId) = 0;
 
 		/// @brief Resolve a resource ID to a buffer
 		/// @param resourceId Resource ID from the render graph
 		/// @return Buffer pointer, or nullptr if not found or wrong type
-		[[nodiscard]] virtual IGraphicsBuffer* GetBuffer(uint32_t resourceId) = 0;
+		[[nodiscard]]
+		virtual IGraphicsBuffer *GetBuffer(uint32_t resourceId) = 0;
 
 		// ========================================================================
 		// Device Access
 		// ========================================================================
 
 		/// @brief Get the graphics device for resource creation or queries
-		[[nodiscard]] virtual IGraphicsDevice* GetDevice() = 0;
+		[[nodiscard]]
+		virtual IGraphicsDevice *GetDevice() = 0;
 
 		// ========================================================================
 		// Frame Information
 		// ========================================================================
 
 		/// @brief Get current frame index (for double/triple buffering)
-		[[nodiscard]] virtual uint32_t GetFrameIndex() const = 0;
+		[[nodiscard]]
+		virtual uint32_t GetFrameIndex() const = 0;
 
 		/// @brief Get swapchain texture for presenting (if available)
-		[[nodiscard]] virtual IGraphicsTexture* GetSwapchainTexture() = 0;
+		[[nodiscard]]
+		virtual IGraphicsTexture *GetSwapchainTexture() = 0;
 	};
 
 	// ============================================================================
@@ -191,7 +233,8 @@ namespace Hush::Graphics
 		ELoadOp depthLoadOp = ELoadOp::Clear;
 
 		/// @brief Helper to build a RenderPassDescriptor from this data
-		[[nodiscard]] RenderPassDescriptor BuildDescriptor(IRenderContext* ctx) const
+		[[nodiscard]]
+		RenderPassDescriptor BuildDescriptor(IRenderContext *ctx) const
 		{
 			RenderPassDescriptor desc{};
 

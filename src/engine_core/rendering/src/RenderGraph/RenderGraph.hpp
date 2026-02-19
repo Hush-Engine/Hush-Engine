@@ -67,59 +67,59 @@ struct boost::hash<Hush::RenderGraph::ResourceId>
 
 namespace Hush::RenderGraph
 {
-    /// Manages resources within the render graph, including creation, tracking, and resolution.
-    ///
-    /// @note This resources are logical resources declared during the build phase. But Hush::RenderGraph::ResourceHandle represents the actual GPU resource created during execution.
-   	class ResourceManager
+	/// Manages resources within the render graph, including creation, tracking, and resolution.
+	///
+	/// @note This resources are logical resources declared during the build phase. But
+	/// Hush::RenderGraph::ResourceHandle represents the actual GPU resource created during execution.
+	class ResourceManager
 	{
 	public:
-        ResourceManager() = default;
-        ~ResourceManager() = default;
+		ResourceManager() = default;
+		~ResourceManager() = default;
 
-        ResourceManager(const ResourceManager &) = delete;
-        ResourceManager &operator=(const ResourceManager &) = delete;
-        ResourceManager(ResourceManager &&) = delete;
-        ResourceManager &operator=(ResourceManager &&) = delete;
+		ResourceManager(const ResourceManager &) = delete;
+		ResourceManager &operator=(const ResourceManager &) = delete;
+		ResourceManager(ResourceManager &&) = delete;
+		ResourceManager &operator=(ResourceManager &&) = delete;
 
-        void AddResource(ResourceId id, Hush::RenderGraph::ResourceHandle handle)
-        {
-            m_resources.emplace(id, std::move(handle));
-        }
+		void AddResource(ResourceId id, Hush::RenderGraph::ResourceHandle handle)
+		{
+			m_resources.emplace(id, std::move(handle));
+		}
 
-        [[nodiscard]]
-        Hush::RenderGraph::ResourceHandle *GetResourceHandle(const ResourceId &id) const
-        {
-            auto it = m_resources.find(id);
-            if (it != m_resources.end())
-            {
-                return &it->second;
-            }
-            return nullptr; // Resource not found
-        }
+		[[nodiscard]]
+		Hush::RenderGraph::ResourceHandle *GetResourceHandle(const ResourceId &id) const
+		{
+			auto it = m_resources.find(id);
+			if (it != m_resources.end())
+			{
+				return &it->second;
+			}
+			return nullptr; // Resource not found
+		}
 
-        template <typename T>
-        [[nodiscard]]
-        T* GetResource(const ResourceId &id) const
-        {
-            auto *handle = GetResourceHandle(id);
+		template <typename T>
+		[[nodiscard]]
+		T *GetResource(const ResourceId &id) const
+		{
+			auto *handle = GetResourceHandle(id);
 
-            if (handle)
-            {
-                return &handle->GetResourceInstance<T>();
-            }
+			if (handle)
+			{
+				return &handle->GetResourceInstance<T>();
+			}
 
-            return nullptr; // Resource not found or type mismatch
-        }
+			return nullptr; // Resource not found or type mismatch
+		}
 
-        void Clear()
-        {
-            m_resources.clear();
-        }
+		void Clear()
+		{
+			m_resources.clear();
+		}
 
-       private:
-           mutable boost::unordered_flat_map<ResourceId, Hush::RenderGraph::ResourceHandle> m_resources;
+	private:
+		mutable boost::unordered_flat_map<ResourceId, Hush::RenderGraph::ResourceHandle> m_resources;
 	};
-
 
 	/// Base class for all passes.
 	///
@@ -139,12 +139,12 @@ namespace Hush::RenderGraph
 		///
 		/// @param commandList Command list appropriate for this pass type.
 		/// @param resourceManager Provides access to resources declared in the graph.
-		virtual void Execute(Hush::Graphics::ICommandList *commandList, const ResourceManager& resourceManager) = 0;
+		virtual void Execute(Hush::Graphics::ICommandList *commandList, const ResourceManager &resourceManager) = 0;
 	};
 
 	/// Templated pass implementation that stores PassData and execution callback
 	template <typename PassData, typename ExecuteFn>
-		requires(std::is_invocable_r_v<void, ExecuteFn, PassData &, Hush::Graphics::ICommandList *, ResourceManager&>)
+		requires(std::is_invocable_r_v<void, ExecuteFn, PassData &, Hush::Graphics::ICommandList *, ResourceManager &>)
 	class Pass : public PassBase
 	{
 	public:
@@ -153,7 +153,7 @@ namespace Hush::RenderGraph
 		{
 		}
 
-		void Execute(Hush::Graphics::ICommandList *cmdList, const ResourceManager& resourceManager) override
+		void Execute(Hush::Graphics::ICommandList *cmdList, const ResourceManager &resourceManager) override
 		{
 			execFn(data, cmdList, resourceManager);
 		}
@@ -212,7 +212,7 @@ namespace Hush::RenderGraph
 			other.m_nodesToSync.push_back(this);
 		}
 
-		void Execute(Hush::Graphics::ICommandList *cmdList, ResourceManager& resourceManager)
+		void Execute(Hush::Graphics::ICommandList *cmdList, ResourceManager &resourceManager)
 		{
 			m_pass->Execute(cmdList, resourceManager);
 		}
@@ -317,9 +317,10 @@ namespace Hush::RenderGraph
 				ResourceId id{m_renderGraph.m_nextResourceId++};
 				m_passNode.AddWrittenResource(id);
 
-                Hush::RenderGraph::ResourceHandle handle = Hush::RenderGraph::ResourceHandle(desc, T{}, Hush::RenderGraph::ResourceHandle::EHandleType::Transient, id.id);
+				Hush::RenderGraph::ResourceHandle handle = Hush::RenderGraph::ResourceHandle(
+					desc, T{}, Hush::RenderGraph::ResourceHandle::EHandleType::Transient, id.id);
 
-                handle.CreateResource(m_renderGraph.m_device);
+				handle.CreateResource(m_renderGraph.m_device);
 
 				m_renderGraph.m_resourceManager.AddResource(id, std::move(handle));
 				return id;
@@ -330,17 +331,21 @@ namespace Hush::RenderGraph
 			/// @param name Debug name for the resource (optional)
 			/// @param externalResource The actual resource instance created outside the graph
 			/// @return ResourceId that can be used to reference this resource in the graph
-			/// @note Imported resources are treated as read-only in the graph, since they are managed externally. If you need to write to an imported resource, you should create a transient resource and copy data between them.
+			/// @note Imported resources are treated as read-only in the graph, since they are managed externally. If
+			/// you need to write to an imported resource, you should create a transient resource and copy data between
+			/// them.
 			template <Hush::RenderGraph::ResourceConcept T>
-			ResourceId Import([[maybe_unused]] std::string_view name, T&& externalResource)
+			ResourceId Import([[maybe_unused]] std::string_view name, T &&externalResource)
 			{
-			    ResourceId id{m_renderGraph.m_nextResourceId++};
-                m_passNode.AddReadResource(id);
+				ResourceId id{m_renderGraph.m_nextResourceId++};
+				m_passNode.AddReadResource(id);
 
-                Hush::RenderGraph::ResourceHandle handle = Hush::RenderGraph::ResourceHandle(typename T::Descriptor{}, std::forward<T>(externalResource), Hush::RenderGraph::ResourceHandle::EHandleType::External, id.id);
+				Hush::RenderGraph::ResourceHandle handle =
+					Hush::RenderGraph::ResourceHandle(typename T::Descriptor{}, std::forward<T>(externalResource),
+													  Hush::RenderGraph::ResourceHandle::EHandleType::External, id.id);
 
-                m_renderGraph.m_resourceManager.AddResource(id, std::move(handle));
-                return id;
+				m_renderGraph.m_resourceManager.AddResource(id, std::move(handle));
+				return id;
 			}
 
 			/// Set the culling mode for this pass
@@ -364,14 +369,16 @@ namespace Hush::RenderGraph
 		};
 
 	public:
-		RenderGraph(Graphics::IGraphicsDevice* device) : m_device(device)
-        {
-        }
+		RenderGraph(Graphics::IGraphicsDevice *device)
+			: m_device(device)
+		{
+		}
 
 		/// Add a pass with typed local data and the two callbacks (build, execute)
 		template <typename PassData, typename BuildFn, typename ExecuteFn>
-			requires(std::is_invocable_r_v<void, BuildFn, BuildContext &, PassData &> &&
-					 std::is_invocable_r_v<void, ExecuteFn, PassData &, Hush::Graphics::ICommandList *, ResourceManager&>)
+			requires(
+				std::is_invocable_r_v<void, BuildFn, BuildContext &, PassData &> &&
+				std::is_invocable_r_v<void, ExecuteFn, PassData &, Hush::Graphics::ICommandList *, ResourceManager &>)
 		const PassData &AddPass(EPassType passType, std::string_view name, BuildFn &&buildFn, ExecuteFn &&execFn)
 		{
 			// Create the pass execution context
@@ -411,7 +418,7 @@ namespace Hush::RenderGraph
 		/// Reset the graph to allow rebuilding
 		void Reset()
 		{
-		    m_passes.clear();
+			m_passes.clear();
 			m_adjacencyList.clear();
 			m_topologicalOrderedNodes.clear();
 			m_dependencyLevels.clear();
@@ -454,10 +461,10 @@ namespace Hush::RenderGraph
 
 		ResourceManager m_resourceManager;
 
-		Graphics::IGraphicsDevice* m_device;
+		Graphics::IGraphicsDevice *m_device;
 
 		ERenderGraphState m_state = ERenderGraphState::Dirty;
 		uint32_t m_detectedQueueCount = 1;
 		uint32_t m_nextResourceId = 1;
 	};
-} // namespace Hush::Exp::RenderGraph
+} // namespace Hush::RenderGraph

@@ -82,7 +82,7 @@ namespace Hush::Graphics
 		void EndFrame() override;
 
 		[[nodiscard]]
-		IGraphicsTexture* GetCurrentFrameTexture() const override;
+		IGraphicsTexture *GetCurrentFrameTexture() const override;
 
 		void Resize(uint32_t width, uint32_t height) override;
 

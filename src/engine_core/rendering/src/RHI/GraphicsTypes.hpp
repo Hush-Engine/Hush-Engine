@@ -128,9 +128,9 @@ namespace Hush::Graphics
 	/// @brief Memory access flags
 	enum class EMemoryAccess
 	{
-		CPUNone,      // GPU only
-		CPUWrite,     // CPU can write, GPU can read
-		CPURead,      // CPU can read, GPU can write
+		CPUNone,	  // GPU only
+		CPUWrite,	  // CPU can write, GPU can read
+		CPURead,	  // CPU can read, GPU can write
 		CPUReadWrite, // CPU can read/write
 	};
 
@@ -148,7 +148,7 @@ namespace Hush::Graphics
 		uint64_t size = 0;
 		EBufferUsage usage = EBufferUsage::None;
 		EMemoryAccess memoryAccess = EMemoryAccess::CPUNone;
-		const char* debugName = nullptr;
+		const char *debugName = nullptr;
 	};
 
 	/// @brief Texture creation descriptor
@@ -162,9 +162,10 @@ namespace Hush::Graphics
 		uint32_t sampleCount = 1;
 		ETextureFormat format = ETextureFormat::RGBA8_UNORM;
 		ETextureUsage usage = ETextureUsage::Sampled;
-		const char* debugName = nullptr;
+		const char *debugName = nullptr;
 
-		bool ownedByExternalSource = false; // Indicates if the texture is managed externally (e.g., swapchain backbuffer)
+		bool ownedByExternalSource =
+			false; // Indicates if the texture is managed externally (e.g., swapchain backbuffer)
 	};
 
 	/// @brief Device capabilities

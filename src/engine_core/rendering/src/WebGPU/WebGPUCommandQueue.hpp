@@ -17,22 +17,31 @@ namespace Hush::Graphics
 		WebGPUCommandQueue(wgpu::Queue queue, EQueueType type);
 		~WebGPUCommandQueue() override = default;
 
-		WebGPUCommandQueue(const WebGPUCommandQueue&) = delete;
-		WebGPUCommandQueue(WebGPUCommandQueue&&) = delete;
-		WebGPUCommandQueue& operator=(const WebGPUCommandQueue&) = delete;
-		WebGPUCommandQueue& operator=(WebGPUCommandQueue&&) = delete;
+		WebGPUCommandQueue(const WebGPUCommandQueue &) = delete;
+		WebGPUCommandQueue(WebGPUCommandQueue &&) = delete;
+		WebGPUCommandQueue &operator=(const WebGPUCommandQueue &) = delete;
+		WebGPUCommandQueue &operator=(WebGPUCommandQueue &&) = delete;
 
-		[[nodiscard]] EQueueType GetQueueType() const override { return m_queueType; }
+		[[nodiscard]]
+		EQueueType GetQueueType() const override
+		{
+			return m_queueType;
+		}
 
-		void Submit(std::span<ICommandList*> commandLists) override;
+		void Submit(std::span<ICommandList *> commandLists) override;
 
 		void WaitIdle() override;
 
-		[[nodiscard]] void* GetNativeHandle() const override;
+		[[nodiscard]]
+		void *GetNativeHandle() const override;
 
-		[[nodiscard]] wgpu::Queue GetQueue() const { return m_queue; }
+		[[nodiscard]]
+		wgpu::Queue GetQueue() const
+		{
+			return m_queue;
+		}
 
-		wgpu::CommandEncoder CreateEncoder(const char* label = nullptr);
+		wgpu::CommandEncoder CreateEncoder(const char *label = nullptr);
 
 	private:
 		wgpu::Queue m_queue;

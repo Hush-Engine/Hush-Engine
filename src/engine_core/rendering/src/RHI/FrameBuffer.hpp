@@ -9,17 +9,19 @@
 
 namespace Hush::Graphics
 {
-    class IFrameBuffer
-    {
-        public:
-            virtual ~IFrameBuffer() = default;
+	class IFrameBuffer
+	{
+	public:
+		virtual ~IFrameBuffer() = default;
 
-            IFrameBuffer(const IFrameBuffer&) = delete;
-            IFrameBuffer(IFrameBuffer&&) = delete;
-            IFrameBuffer& operator=(const IFrameBuffer&) = delete;
-            IFrameBuffer& operator=(IFrameBuffer&&) = delete;
+		IFrameBuffer(const IFrameBuffer &) = delete;
+		IFrameBuffer(IFrameBuffer &&) = delete;
+		IFrameBuffer &operator=(const IFrameBuffer &) = delete;
+		IFrameBuffer &operator=(IFrameBuffer &&) = delete;
 
-            [[nodiscard]] virtual uint32_t GetWidth() const = 0;
-            [[nodiscard]] virtual uint32_t GetHeight() const = 0;
-    };
-}
+		[[nodiscard]]
+		virtual uint32_t GetWidth() const = 0;
+		[[nodiscard]]
+		virtual uint32_t GetHeight() const = 0;
+	};
+} // namespace Hush::Graphics

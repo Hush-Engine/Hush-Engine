@@ -13,27 +13,57 @@ namespace Hush::Graphics
 	/// @brief WebGPU texture implementation
 	class WebGPUTexture : public IGraphicsTexture
 	{
-	    friend class WebGPUGraphicsDevice;
+		friend class WebGPUGraphicsDevice;
 
 		WebGPUTexture() = default;
+
 	public:
-		WebGPUTexture(wgpu::Texture texture, wgpu::TextureView view, const TextureDescriptor& desc);
+		WebGPUTexture(wgpu::Texture texture, wgpu::TextureView view, const TextureDescriptor &desc);
 		~WebGPUTexture() override;
 
-		WebGPUTexture(const WebGPUTexture&) = delete;
-		WebGPUTexture(WebGPUTexture&& rhs) noexcept;
-		WebGPUTexture& operator=(const WebGPUTexture&) = delete;
-		WebGPUTexture& operator=(WebGPUTexture&&) noexcept;
+		WebGPUTexture(const WebGPUTexture &) = delete;
+		WebGPUTexture(WebGPUTexture &&rhs) noexcept;
+		WebGPUTexture &operator=(const WebGPUTexture &) = delete;
+		WebGPUTexture &operator=(WebGPUTexture &&) noexcept;
 
-		[[nodiscard]] uint32_t GetWidth() const override { return m_descriptor.width; }
-		[[nodiscard]] uint32_t GetHeight() const override { return m_descriptor.height; }
-		[[nodiscard]] uint32_t GetDepth() const override { return m_descriptor.depth; }
-		[[nodiscard]] ETextureFormat GetFormat() const override { return m_descriptor.format; }
-		[[nodiscard]] uint32_t GetMipLevels() const override { return m_descriptor.mipLevels; }
-		[[nodiscard]] void* GetNativeHandle() const override;
+		[[nodiscard]]
+		uint32_t GetWidth() const override
+		{
+			return m_descriptor.width;
+		}
+		[[nodiscard]]
+		uint32_t GetHeight() const override
+		{
+			return m_descriptor.height;
+		}
+		[[nodiscard]]
+		uint32_t GetDepth() const override
+		{
+			return m_descriptor.depth;
+		}
+		[[nodiscard]]
+		ETextureFormat GetFormat() const override
+		{
+			return m_descriptor.format;
+		}
+		[[nodiscard]]
+		uint32_t GetMipLevels() const override
+		{
+			return m_descriptor.mipLevels;
+		}
+		[[nodiscard]]
+		void *GetNativeHandle() const override;
 
-		[[nodiscard]] wgpu::Texture GetTexture() const { return m_texture; }
-		[[nodiscard]] wgpu::TextureView GetView() const { return m_view; }
+		[[nodiscard]]
+		wgpu::Texture GetTexture() const
+		{
+			return m_texture;
+		}
+		[[nodiscard]]
+		wgpu::TextureView GetView() const
+		{
+			return m_view;
+		}
 
 	private:
 		wgpu::Texture m_texture;

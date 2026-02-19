@@ -27,23 +27,26 @@ namespace Hush::Graphics
 		IGraphicsDevice() = default;
 		virtual ~IGraphicsDevice() = default;
 
-		IGraphicsDevice(const IGraphicsDevice&) = delete;
-		IGraphicsDevice& operator=(const IGraphicsDevice&) = delete;
-		IGraphicsDevice(IGraphicsDevice&&) = delete;
-		IGraphicsDevice& operator=(IGraphicsDevice&&) = delete;
+		IGraphicsDevice(const IGraphicsDevice &) = delete;
+		IGraphicsDevice &operator=(const IGraphicsDevice &) = delete;
+		IGraphicsDevice(IGraphicsDevice &&) = delete;
+		IGraphicsDevice &operator=(IGraphicsDevice &&) = delete;
 
 		// ========================================================================
 		// Device Information
 		// ========================================================================
 
 		/// @brief Get the graphics API backend
-		[[nodiscard]] virtual EGraphicsAPI GetAPI() const = 0;
+		[[nodiscard]]
+		virtual EGraphicsAPI GetAPI() const = 0;
 
 		/// @brief Get device capabilities
-		[[nodiscard]] virtual GraphicsDeviceCapabilities GetCapabilities() const = 0;
+		[[nodiscard]]
+		virtual GraphicsDeviceCapabilities GetCapabilities() const = 0;
 
 		/// @brief Check if device is initialized
-		[[nodiscard]] virtual bool IsInitialized() const = 0;
+		[[nodiscard]]
+		virtual bool IsInitialized() const = 0;
 
 		// ========================================================================
 		// Resource Creation
@@ -52,14 +55,14 @@ namespace Hush::Graphics
 		/// @brief Create a buffer
 		/// @param descriptor Buffer creation parameters
 		/// @return Created buffer, or nullptr on failure
-		[[nodiscard]] virtual std::shared_ptr<IGraphicsBuffer> CreateBuffer(
-			const BufferDescriptor& descriptor) = 0;
+		[[nodiscard]]
+		virtual std::shared_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) = 0;
 
 		/// @brief Create a texture
 		/// @param descriptor Texture creation parameters
 		/// @return Created texture, or nullptr on failure
-		[[nodiscard]] virtual std::unique_ptr<IGraphicsTexture> CreateTexture(
-			const TextureDescriptor& descriptor) = 0;
+		[[nodiscard]]
+		virtual std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) = 0;
 
 		// ========================================================================
 		// Command List Creation
@@ -67,26 +70,33 @@ namespace Hush::Graphics
 
 		/// @brief Create a copy command list
 		/// @return Created command list, or nullptr on failure
-		[[nodiscard]] virtual std::unique_ptr<ICopyCommandList> CreateCopyCommandList() = 0;
+		[[nodiscard]]
+		virtual std::unique_ptr<ICopyCommandList> CreateCopyCommandList() = 0;
 
 		/// @brief Create a compute command list
 		/// @return Created command list, or nullptr on failure
-		[[nodiscard]] virtual std::unique_ptr<IComputeCommandList> CreateComputeCommandList() = 0;
+		[[nodiscard]]
+		virtual std::unique_ptr<IComputeCommandList> CreateComputeCommandList() = 0;
 
 		/// @brief Create a graphics command list
 		/// @return Created command list, or nullptr on failure
-		[[nodiscard]] virtual std::unique_ptr<IGraphicsCommandList> CreateGraphicsCommandList() = 0;
+		[[nodiscard]]
+		virtual std::unique_ptr<IGraphicsCommandList> CreateGraphicsCommandList() = 0;
 
 		/// @brief Get the main graphics queue
-		/// @note This might return the same queue as GetComputeQueue or GetTransferQueue if the API doesn't support separate queues
+		/// @note This might return the same queue as GetComputeQueue or GetTransferQueue if the API doesn't support
+		/// separate queues
 		///       Which is the case for WebGPU. To check if separate queues are supported, use the capabilities struct.
-		[[nodiscard]] virtual ICommandQueue* GetGraphicsQueue() = 0;
+		[[nodiscard]]
+		virtual ICommandQueue *GetGraphicsQueue() = 0;
 
 		/// @brief Get a compute queue (if supported)
-		[[nodiscard]] virtual ICommandQueue* GetComputeQueue() = 0;
+		[[nodiscard]]
+		virtual ICommandQueue *GetComputeQueue() = 0;
 
 		/// @brief Get a transfer queue (if supported)
-		[[nodiscard]] virtual ICommandQueue* GetTransferQueue() = 0;
+		[[nodiscard]]
+		virtual ICommandQueue *GetTransferQueue() = 0;
 
 		// ========================================================================
 		// Frame Management
@@ -101,7 +111,7 @@ namespace Hush::Graphics
 
 		/// @brief Get the current frame's swapchain texture
 		[[nodiscard]]
-		virtual IGraphicsTexture* GetCurrentFrameTexture() const = 0;
+		virtual IGraphicsTexture *GetCurrentFrameTexture() const = 0;
 
 		/// @brief Resize the swapchain
 		/// @param width New width
@@ -110,13 +120,14 @@ namespace Hush::Graphics
 
 		/// @brief Add a function to the deletion queue for deferred cleanup
 		/// @param deleteFunc Deletion function
-		virtual void AddToDeletionQueue(std::function<void()>&& deleteFunc) = 0;
+		virtual void AddToDeletionQueue(std::function<void()> &&deleteFunc) = 0;
 
 		/// @brief Flush deletion queue
 		virtual void FlushDeletionQueue() = 0;
 
 		/// @brief Get native device handle (API-specific)
-		[[nodiscard]] virtual void* GetNativeHandle() const = 0;
+		[[nodiscard]]
+		virtual void *GetNativeHandle() const = 0;
 	};
 
 } // namespace Hush::Graphics
