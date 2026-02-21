@@ -19,7 +19,7 @@
 #include "RHI/GraphicsResources.hpp"
 #include "RHI/GraphicsTypes.hpp"
 #include "Renderer.hpp"
-#include "RenderGraph/RenderGraph.hpp"
+#include "RenderGraph/RenderDevice.hpp"
 
 constexpr int DEFAULT_WINDOW_HEIGHT = 720;
 constexpr int DEFAULT_WINDOW_WIDTH = 1280;
@@ -48,12 +48,19 @@ namespace Hush
 		[[nodiscard]]
 		bool IsActive() const noexcept;
 
-		void GetWindowSize(int32_t *width, int32_t *height);
+		[[nodiscard]]
+		glm::u32vec2 GetWindowSize() noexcept;
 
 		[[nodiscard]]
 		Hush::RenderGraph::RenderGraph &GetRenderGraph()
 		{
-			return *this->m_renderGraph;
+			return this->m_renderDevice->GetRenderGraph();
+		}
+
+		[[nodiscard]]
+		Hush::RenderGraph::RenderDevice &GetRenderDevice()
+		{
+			return *this->m_renderDevice;
 		}
 
 		[[nodiscard]]
@@ -71,7 +78,7 @@ namespace Hush
 
 		std::unique_ptr<Hush::Graphics::IGraphicsDevice> m_windowRenderer;
 
-		std::unique_ptr<Hush::RenderGraph::RenderGraph> m_renderGraph;
+		std::unique_ptr<Hush::RenderGraph::RenderDevice> m_renderDevice;
 
 		bool m_isActive = false;
 

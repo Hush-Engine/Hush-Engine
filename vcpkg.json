@@ -23,6 +23,7 @@
     "vk-bootstrap",
     "volk",
     "vulkan",
-    "boost-unordered"
+    "boost-unordered",
+    "shader-slang"
   ]
 }

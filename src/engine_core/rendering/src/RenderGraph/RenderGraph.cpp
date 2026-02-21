@@ -1,12 +1,15 @@
 /*! \file RenderGraph.cpp
 	\author Alan Ramirez Herrera
 	\date 2025-11-17
-	\brief RenderGraph implementation for rendering based on DAG scheduling
+	\brief RenderGraph compilation implementation based on DAG scheduling.
+
+	This file contains only graph compilation logic: adjacency list construction,
+	topological sorting, dependency level assignment, and SSIS-based synchronization
+	point culling. All execution logic (fences, barriers, batching, submission)
+	lives in RenderGraphExecutor.cpp.
 */
 
 #include "RenderGraph.hpp"
-#include "RHI/ICommandList.hpp"
-#include "RHI/IGraphicsDevice.hpp"
 #include <Assertions.hpp>
 #include <algorithm>
 
@@ -191,12 +194,15 @@ void RenderGraph::FinalizeDependencyLevels()
 				level.m_queuesInvolvedInCrossDependencies.insert(queueIndex);
 			}
 		}
+
+		// Detect multi-queue reads for transition rerouting
+		level.DetectMultiQueueReads();
 	}
 }
 
 void RenderGraph::CullRedundantSyncPoints()
 {
-	// Initialize SSIS (Sufficient Synchronization Index Set) for each node
+	// Initialize SSIS for each node
 	for (RenderPassNode &node : m_passes)
 	{
 		node.m_syncIndexSet.resize(m_detectedQueueCount, RenderPassNode::INVALID_SYNC_INDEX);
@@ -327,60 +333,103 @@ void RenderGraph::CullRedundantSyncPoints()
 	}
 }
 
-void RenderGraph::Execute()
+bool Hush::RenderGraph::RenderPassNode::WritesResource(ResourceId id) const
 {
-	HUSH_ASSERT(!IsDirty(), "Cannot execute dirty render graph! Call Compile() first.");
-	HUSH_ASSERT(m_device != nullptr, "Graphics device cannot be null!");
+	return m_writtenResources.find(id) != m_writtenResources.end();
+}
 
-	auto graphicsCmd = m_device->CreateGraphicsCommandList();
-	auto computeCmd = m_device->CreateComputeCommandList();
-	auto transferCmd = m_device->CreateCopyCommandList();
+void Hush::RenderGraph::RenderPassNode::SetHasCrossDependency(RenderPassNode &other)
+{
+	m_syncSignalRequired = true;
+	other.m_nodesToSync.push_back(this);
+}
 
-	// Execute passes level by level
-	for (const DependencyLevel &level : m_dependencyLevels)
+void Hush::RenderGraph::RenderPassNode::Execute(Hush::Graphics::ICommandList *cmdList, ResourceManager &resourceManager)
+{
+	m_pass->Execute(cmdList, resourceManager);
+}
+
+void Hush::RenderGraph::RenderPassNode::AddReadResource(ResourceId id)
+{
+	m_readResources.insert(id);
+}
+void Hush::RenderGraph::RenderPassNode::AddWrittenResource(ResourceId id)
+{
+	m_writtenResources.insert(id);
+}
+void Hush::RenderGraph::RenderPassNode::SetReadState(ResourceId id, Hush::Graphics::EResourceState state)
+{
+	m_resourceReadStates[id] = state;
+}
+Hush::Graphics::EResourceState Hush::RenderGraph::RenderPassNode::GetReadState(ResourceId id) const
+{
+	auto it = m_resourceReadStates.find(id);
+	return it != m_resourceReadStates.end() ? it->second : Hush::Graphics::EResourceState::Undefined;
+}
+Hush::Graphics::EResourceState Hush::RenderGraph::RenderPassNode::GetWriteState(ResourceId id) const
+{
+	auto it = m_resourceWriteStates.find(id);
+	return it != m_resourceWriteStates.end() ? it->second : Hush::Graphics::EResourceState::Undefined;
+}
+
+void Hush::RenderGraph::RenderGraph::DependencyLevel::DetectMultiQueueReads()
+{
+	m_resourcesReadByMultipleQueues.clear();
+	m_queuesInvolvedInCrossDependencies.clear();
+
+	// Map: ResourceId -> set of queue indices that read it
+	boost::unordered_flat_map<ResourceId, boost::unordered_flat_set<uint32_t>> resourceReaders;
+
+	for (RenderPassNode *node : m_passNodes)
 	{
-		// Execute all passes in this level
-		// Passes within a level can potentially execute in parallel
-		for (RenderPassNode *passNode : level.m_passNodes)
+		for (const ResourceId &rid : node->m_readResources)
 		{
-			// TODO: Handle synchronization points
-			// if (passNode->m_syncSignalRequired) { /* signal */ }
-			// for (auto* syncNode : passNode->m_nodesToSync) { /* wait */ }
-
-			if (passNode->m_queueIndex == 0)
-			{
-				passNode->Execute(graphicsCmd.get(), m_resourceManager);
-			}
-			else if (passNode->m_queueIndex == 1)
-			{
-				passNode->Execute(graphicsCmd.get(), m_resourceManager);
-			}
-			else if (passNode->m_queueIndex == 2)
-			{
-				passNode->Execute(transferCmd.get(), m_resourceManager);
-			}
+			resourceReaders[rid].insert(node->m_queueIndex);
 		}
 	}
 
-	// After executing all passes, submit command lists to the device
-	if (graphicsCmd)
+	for (auto &[rid, queues] : resourceReaders)
 	{
-		graphicsCmd->Close();
-		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {graphicsCmd.get()};
-		m_device->GetGraphicsQueue()->Submit(cmdLists);
+		if (queues.size() > 1)
+		{
+			m_resourcesReadByMultipleQueues.insert(rid);
+			for (uint32_t q : queues)
+			{
+				m_queuesInvolvedInCrossDependencies.insert(q);
+			}
+		}
 	}
+}
 
-	if (computeCmd)
-	{
-		computeCmd->Close();
-		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {computeCmd.get()};
-		m_device->GetComputeQueue()->Submit(cmdLists);
-	}
+Hush::RenderGraph::ResourceId Hush::RenderGraph::RenderGraph::BuildContext::Read(
+	ResourceId id, Hush::Graphics::EResourceState desiredState)
+{
+	m_passNode.AddReadResource(id);
+	m_passNode.SetReadState(id, desiredState);
+	return id;
+}
 
-	if (transferCmd)
-	{
-		transferCmd->Close();
-		std::array<Hush::Graphics::ICommandList *, 1> cmdLists = {transferCmd.get()};
-		m_device->GetTransferQueue()->Submit(cmdLists);
-	}
+Hush::RenderGraph::ResourceId Hush::RenderGraph::RenderGraph::BuildContext::Write(
+	ResourceId id, Hush::Graphics::EResourceState desiredState)
+{
+	m_passNode.AddWrittenResource(id);
+	m_passNode.SetWriteState(id, desiredState);
+	return id;
+}
+
+void Hush::RenderGraph::RenderGraph::BuildContext::SetCullingMode(RenderPassNode::EPassCullingMode cullMode)
+{
+	m_passNode.m_cullingMode = cullMode;
+}
+
+void Hush::RenderGraph::RenderGraph::Reset()
+{
+	m_passes.clear();
+	m_adjacencyList.clear();
+	m_topologicalOrderedNodes.clear();
+	m_dependencyLevels.clear();
+	m_importedResourceInitialStates.clear();
+	m_state = ERenderGraphState::Dirty;
+	m_nextResourceId = 1; // 0 is invalid
+	m_resourceManager.Clear();
 }

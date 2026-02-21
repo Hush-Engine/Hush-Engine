@@ -2,9 +2,9 @@ name: CI devtool
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
 
 jobs:
   format-devtool:
@@ -22,7 +22,7 @@ jobs:
     needs: format-devtool
     strategy:
       matrix:
-        os: [ windows-latest ]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -62,9 +62,8 @@ jobs:
     needs: build-devtool
     strategy:
       matrix:
-        build-type: [ debug, release ]
-        os: [ windows-latest ]
-
+        build-type: [debug, release]
+        os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -117,11 +116,11 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Configure hush
-        run: ./hush-devtool.exe configure -p windows-x64-${{ matrix.build-type }} -v
+        run: ./hush-devtool.exe configure --preset windows-x64-${{ matrix.build-type }} -v
 
-     # Diff with the target branch if it's a PR
+      # Diff with the target branch if it's a PR
       - name: Format hush
         run: ./hush-devtool.exe format --check -v --print-files --all-files
 
       - name: Build hush
-        run: ./hush-devtool.exe build -p windows-x64-${{ matrix.build-type }} -v
+        run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v

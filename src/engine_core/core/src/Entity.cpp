@@ -47,11 +47,11 @@ bool Hush::Entity::HasComponentRaw(EntityId componentId)
 	return ecs_has_id(world, m_entityId, componentId);
 }
 
-void *Hush::Entity::EmplaceComponentRaw(EntityId componentId, bool &isNew)
+void *Hush::Entity::EmplaceComponentRaw(EntityId componentId, size_t componentSize, bool &isNew)
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
-	void *component = ecs_emplace_id(world, m_entityId, componentId, &isNew);
+	void *component = ecs_emplace_id(world, m_entityId, componentId, componentSize, &isNew);
 
 	return component;
 }

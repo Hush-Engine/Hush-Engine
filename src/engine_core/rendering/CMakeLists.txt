@@ -25,12 +25,14 @@ hush_add_library(
              # RenderGraph
              src/RenderGraph/RenderGraph.cpp
              src/RenderGraph/ResourceHandle.hpp
+             src/RenderGraph/RenderGraphExecutor.cpp
 
              # Systems
              src/Systems/RenderGraphSystem.cpp
 
              # RHI
              src/RHI/GraphicsResources.cpp
+             src/RHI/ShaderCompiler.cpp
 
         PUBLIC_HEADER_DIRS src
 )
@@ -44,6 +46,7 @@ if ("HUSH_WEBGPU_IMPL" IN_LIST HUSH_RENDERER_IMPL)
         src/WebGPU/WebGPUCommandQueue.cpp
         src/WebGPU/WebGPUGraphicsDevice.cpp
         src/WebGPU/WebGPUTexture.cpp
+        src/WebGPU/WebGPUBindGroup.cpp
     )
 
     target_link_libraries(HushRendering PUBLIC
@@ -69,4 +72,5 @@ target_link_libraries(HushRendering PUBLIC
         HushInput
         webgpu
         Boost::unordered
+        slang::slang
 )

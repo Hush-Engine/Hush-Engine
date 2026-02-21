@@ -5,6 +5,7 @@
 */
 #include "WebGPUCommandQueue.hpp"
 #include "WebGPUCommandList.hpp"
+#include "WebGPUFence.hpp"
 #include "Logger.hpp"
 
 namespace Hush::Graphics
@@ -49,6 +50,80 @@ namespace Hush::Graphics
 		}
 
 		m_queue.submit(wgpuCommandBuffers.size(), wgpuCommandBuffers.data());
+	}
+
+	void WebGPUCommandQueue::SubmitBatched(const SubmitInfo &submitInfo)
+	{
+		// WebGPU has a single queue, so cross-queue GPU waits don't apply.
+		// We honour the contract by performing CPU-side waits on the emulated
+		// fence values so that the render graph executor's ordering invariants
+		// are respected even though the GPU work is already serialized.
+		for (const auto &wait : submitInfo.waitFences)
+		{
+			if (wait.fence != nullptr)
+			{
+				auto *webgpuFence = dynamic_cast<WebGPUFence *>(wait.fence);
+				// CPU-side spin/wait — in practice the value should already be
+				// reached because WebGPU serializes everything on one queue.
+				if (webgpuFence != nullptr)
+				{
+					webgpuFence->WaitCPU(wait.value);
+				}
+			}
+		}
+
+		if (!submitInfo.commandLists.empty())
+		{
+			// Submit expects a span of ICommandList*; the vector is contiguous.
+			Submit(std::span<ICommandList *>(const_cast<ICommandList **>(submitInfo.commandLists.data()),
+											 submitInfo.commandLists.size()));
+		}
+
+		for (const auto &signal : submitInfo.signalFences)
+		{
+			if (signal.fence != nullptr)
+			{
+				auto *webgpuFence = dynamic_cast<WebGPUFence *>(signal.fence);
+				if (webgpuFence != nullptr)
+				{
+					webgpuFence->SignalCPU(signal.value);
+				}
+			}
+		}
+	}
+
+	void WebGPUCommandQueue::Signal(IFence *fence, uint64_t value)
+	{
+		if (fence == nullptr)
+		{
+			return;
+		}
+
+		// CPU-side emulation: immediately mark the fence as signaled.
+		// Because WebGPU serializes all work on a single queue the signal is
+		// logically "after" all previously submitted work.
+		auto *webgpuFence = dynamic_cast<WebGPUFence *>(fence);
+		if (webgpuFence != nullptr)
+		{
+			webgpuFence->SignalCPU(value);
+		}
+	}
+
+	void WebGPUCommandQueue::Wait(IFence *fence, uint64_t value)
+	{
+		if (fence == nullptr)
+		{
+			return;
+		}
+
+		// CPU-side emulation: block until the emulated fence reaches the value.
+		// In practice the value should already be reached since WebGPU has only
+		// one queue, but we honour the contract for correctness.
+		auto *webgpuFence = dynamic_cast<WebGPUFence *>(fence);
+		if (webgpuFence != nullptr)
+		{
+			webgpuFence->WaitCPU(value);
+		}
 	}
 
 	void WebGPUCommandQueue::WaitIdle()

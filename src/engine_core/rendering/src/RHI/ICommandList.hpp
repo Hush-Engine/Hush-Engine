@@ -5,13 +5,18 @@
 */
 #pragma once
 
+#include "GraphicsTypes.hpp"
 #include "IGraphicsBuffer.hpp"
 #include "IGraphicsTexture.hpp"
 #include "RenderPass.hpp"
+#include <span>
+#include <cstdint>
 
 namespace Hush::Graphics
 {
 	class IPipeline;
+	class IBindGroup;
+	class IComputePipeline;
 
 	/// @brief Base interface for command lists, which are used to record GPU commands for execution.
 	class ICommandList
@@ -30,6 +35,43 @@ namespace Hush::Graphics
 
 		/// @brief Close command list after recording
 		virtual void Close() = 0;
+
+		/// @brief Record one or more resource state transition barriers.
+		///
+		/// Transitions move a resource from one GPU usage state to another
+		/// (e.g. RenderTarget -> ShaderResource). The GPU must not access the
+		/// resource in the new state until the barrier completes.
+		///
+		/// @param barriers Array of transition barrier descriptors.
+		virtual void ResourceBarrier(std::span<const ResourceBarrierDescriptor> barriers) = 0;
+
+		/// @brief Record one or more UAV (Unordered Access View) barriers.
+		///
+		/// Ensures all previous UAV writes to the specified resource(s) are
+		/// visible before subsequent UAV reads or writes begin.
+		///
+		/// @param barriers Array of UAV barrier descriptors.
+		virtual void UAVBarrier(std::span<const UAVBarrierDescriptor> barriers) = 0;
+
+		/// @brief Begin the first half of a split barrier (async transition).
+		///
+		/// Split barriers allow the GPU to start a resource state transition
+		/// early and overlap it with other unrelated work, completing it later
+		/// with EndSplitBarrier(). This can hide transition latency.
+		///
+		/// @param barriers Array of split barrier descriptors to begin.
+		/// @note Not all backends support split barriers. Implementations that
+		///       don't may treat this as a no-op and perform the full transition
+		///       in EndSplitBarrier() instead.
+		virtual void BeginSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) = 0;
+
+		/// @brief Complete the second half of a split barrier.
+		///
+		/// Must be paired with a prior BeginSplitBarrier() call for the same
+		/// resource(s). After this call the resource is fully transitioned.
+		///
+		/// @param barriers Array of split barrier descriptors to end.
+		virtual void EndSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) = 0;
 
 		/// @brief Get native handle (API-specific)
 		[[nodiscard]]
@@ -90,7 +132,21 @@ namespace Hush::Graphics
 		/// @brief Record a compute dispatch indirect command
 		virtual void DispatchIndirect(IGraphicsBuffer *indirectArgsBuffer, uint64_t offset) = 0;
 
-		// TODO: Finish IComputeCommandList.
+		/// @brief Bind a compute pipeline for subsequent dispatch calls.
+		///
+		/// @param pipeline The compute pipeline to bind (must be a valid IComputePipeline).
+		virtual void BindComputePipeline(IComputePipeline *pipeline) = 0;
+
+		/// @brief Set a bind group at the given group/set index for compute operations.
+		///
+		/// The bind group must conform to the layout declared at that index in
+		/// the currently bound compute pipeline's descriptor.
+		///
+		/// @param groupIndex The group/set index (0-based, corresponds to @group(N) in WGSL).
+		/// @param bindGroup  The bind group to set.
+		/// @param dynamicOffsets Optional dynamic offsets for dynamic uniform/storage buffer bindings.
+		virtual void SetComputeBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+										 std::span<const uint32_t> dynamicOffsets = {}) = 0;
 	};
 
 	/// @brief Command list interface for graphics operations.
@@ -182,6 +238,22 @@ namespace Hush::Graphics
 		///
 		/// @param pipeline Pipeline to bind (must be a graphics pipeline compatible with the current render pass)
 		virtual void BindPipeline(IPipeline *pipeline) = 0;
+
+		/// @brief Set a bind group at the given group/set index for graphics operations.
+		///
+		/// The bind group must conform to the layout declared at that index in
+		/// the currently bound graphics pipeline's descriptor.
+		///
+		/// In WebGPU terms this corresponds to setBindGroup on the render pass
+		/// encoder. In Vulkan terms this maps to vkCmdBindDescriptorSets.
+		///
+		/// @param groupIndex The group/set index (0-based, corresponds to @group(N)
+		///                   in WGSL / set = N in Vulkan / space N in D3D12).
+		/// @param bindGroup  The bind group to set.
+		/// @param dynamicOffsets Optional dynamic offsets for dynamic uniform/storage
+		///                      buffer bindings within the bind group.
+		virtual void SetBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+								  std::span<const uint32_t> dynamicOffsets = {}) = 0;
 	};
 
 } // namespace Hush::Graphics

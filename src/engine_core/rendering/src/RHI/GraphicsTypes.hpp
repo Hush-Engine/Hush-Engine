@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 namespace Hush::Graphics
 {
@@ -142,6 +143,111 @@ namespace Hush::Graphics
 		Transfer,
 	};
 
+	/// @brief Resource state flags for barrier transitions.
+	///
+	/// These represent the logical usage state of a GPU resource.
+	/// A resource can be in a combined read state (multiple read flags OR'd together),
+	/// but only one write state at a time.
+	///
+	/// Modeled after D3D12 resource states / Vulkan image layouts.
+	enum class EResourceState : uint32_t
+	{
+		Undefined = 0,
+
+		// Read states (can be combined)
+		VertexBuffer = 1 << 0,
+		IndexBuffer = 1 << 1,
+		ConstantBuffer = 1 << 2,
+		NonPixelShaderAccess = 1 << 3,
+		PixelShaderAccess = 1 << 4,
+		IndirectArgument = 1 << 5,
+		CopySource = 1 << 6,
+		DepthStencilRead = 1 << 7,
+		Present = 1 << 8,
+
+		// Write states (mutually exclusive with each other)
+		RenderTarget = 1 << 16,
+		DepthStencilWrite = 1 << 17,
+		UnorderedAccess = 1 << 18,
+		CopyDestination = 1 << 19,
+
+		// Convenience combinations
+		AnyShaderAccess = NonPixelShaderAccess | PixelShaderAccess,
+		GenericRead = VertexBuffer | IndexBuffer | ConstantBuffer | AnyShaderAccess | IndirectArgument | CopySource,
+	};
+
+	inline EResourceState operator|(EResourceState a, EResourceState b)
+	{
+		return static_cast<EResourceState>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline EResourceState operator&(EResourceState a, EResourceState b)
+	{
+		return static_cast<EResourceState>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	inline EResourceState &operator|=(EResourceState &a, EResourceState b)
+	{
+		a = a | b;
+		return a;
+	}
+
+	inline bool HasFlag(EResourceState state, EResourceState flag)
+	{
+		return (static_cast<uint32_t>(state) & static_cast<uint32_t>(flag)) != 0;
+	}
+
+	/// @brief Returns true if the state contains any write flag
+	inline bool IsWriteState(EResourceState state)
+	{
+		constexpr uint32_t writeMask = static_cast<uint32_t>(EResourceState::RenderTarget) |
+									   static_cast<uint32_t>(EResourceState::DepthStencilWrite) |
+									   static_cast<uint32_t>(EResourceState::UnorderedAccess) |
+									   static_cast<uint32_t>(EResourceState::CopyDestination);
+		return (static_cast<uint32_t>(state) & writeMask) != 0;
+	}
+
+	/// @brief Describes a resource state transition barrier
+	struct ResourceBarrierDescriptor
+	{
+		/// Opaque pointer to the resource (IGraphicsBuffer* or IGraphicsTexture*)
+		void *resource = nullptr;
+		/// State before the barrier
+		EResourceState stateBefore = EResourceState::Undefined;
+		/// State after the barrier
+		EResourceState stateAfter = EResourceState::Undefined;
+		/// Subresource index (use UINT32_MAX for all subresources)
+		uint32_t subresource = UINT32_MAX;
+	};
+
+	/// @brief Describes a split barrier (begin/end pair for overlapped transitions).
+	///
+	/// Split barriers allow the GPU to begin a transition early and complete it later,
+	/// hiding latency by overlapping the transition with other work.
+	struct SplitBarrierDescriptor
+	{
+		void *resource = nullptr;
+		EResourceState stateBefore = EResourceState::Undefined;
+		EResourceState stateAfter = EResourceState::Undefined;
+		uint32_t subresource = UINT32_MAX;
+	};
+
+	/// @brief UAV (Unordered Access View) barrier — ensures all UAV writes complete
+	/// before subsequent UAV reads or writes on the same resource.
+	struct UAVBarrierDescriptor
+	{
+		void *resource = nullptr; ///< nullptr means barrier on all UAV resources
+	};
+
+	/// @brief A batch of barriers to issue in a single call
+	struct BarrierGroup
+	{
+		std::vector<ResourceBarrierDescriptor> transitions;
+		std::vector<UAVBarrierDescriptor> uavBarriers;
+		std::vector<SplitBarrierDescriptor> beginSplitBarriers;
+		std::vector<SplitBarrierDescriptor> endSplitBarriers;
+	};
+
 	/// @brief Buffer creation descriptor
 	struct BufferDescriptor
 	{
@@ -182,6 +288,33 @@ namespace Hush::Graphics
 		bool supportsGeometryShader = false;
 		bool supportsTessellation = false;
 		bool supportsRayTracing = false;
+
+		/// @brief Whether the device exposes a dedicated async compute queue
+		bool hasAsyncComputeQueue = false;
+		/// @brief Whether the device exposes a dedicated transfer/copy queue
+		bool hasDedicatedTransferQueue = false;
+		/// @brief Whether the device supports timeline (monotonic) fences
+		bool supportsTimelineFences = false;
+
+		/// @brief Bitmask of EResourceState values supported for transitions on the graphics queue.
+		/// Graphics queues typically support all states.
+		uint32_t graphicsQueueSupportedStates = static_cast<uint32_t>(EResourceState::GenericRead) |
+												static_cast<uint32_t>(EResourceState::RenderTarget) |
+												static_cast<uint32_t>(EResourceState::DepthStencilWrite) |
+												static_cast<uint32_t>(EResourceState::UnorderedAccess) |
+												static_cast<uint32_t>(EResourceState::CopyDestination);
+
+		/// @brief Bitmask of EResourceState values supported for transitions on the compute queue.
+		/// Compute queues cannot transition pixel-shader-related or render-target states.
+		uint32_t computeQueueSupportedStates = static_cast<uint32_t>(EResourceState::NonPixelShaderAccess) |
+											   static_cast<uint32_t>(EResourceState::UnorderedAccess) |
+											   static_cast<uint32_t>(EResourceState::CopySource) |
+											   static_cast<uint32_t>(EResourceState::CopyDestination);
+
+		/// @brief Bitmask of EResourceState values supported for transitions on the transfer queue.
+		/// Transfer queues can only handle copy states.
+		uint32_t transferQueueSupportedStates =
+			static_cast<uint32_t>(EResourceState::CopySource) | static_cast<uint32_t>(EResourceState::CopyDestination);
 	};
 
 } // namespace Hush::Graphics

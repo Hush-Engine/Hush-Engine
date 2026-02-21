@@ -8,13 +8,10 @@
 #include "IGraphicsTexture.hpp"
 #include <array>
 #include <string_view>
+#include <optional>
 
 namespace Hush::Graphics
 {
-	// ============================================================================
-	// Render Pass Types
-	// ============================================================================
-
 	/// @brief Load operation for render pass attachments
 	enum class ELoadOp
 	{
@@ -103,7 +100,7 @@ namespace Hush::Graphics
 		uint32_t colorAttachmentCount = 0;
 
 		// Optional depth/stencil attachment
-		RenderPassDepthStencilAttachment *depthStencilAttachment = nullptr;
+		std::optional<RenderPassDepthStencilAttachment> depthStencilAttachment;
 
 		// Debug label
 		std::string_view debugLabel;
@@ -118,7 +115,7 @@ namespace Hush::Graphics
 		}
 
 		/// @brief Helper to set depth/stencil attachment
-		void SetDepthStencilAttachment(RenderPassDepthStencilAttachment *attachment)
+		void SetDepthStencilAttachment(const RenderPassDepthStencilAttachment &attachment)
 		{
 			depthStencilAttachment = attachment;
 		}

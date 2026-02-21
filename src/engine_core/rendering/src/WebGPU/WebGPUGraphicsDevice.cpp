@@ -7,7 +7,12 @@
 #include "RHI/GraphicsTypes.hpp"
 #include "RHI/IGraphicsTexture.hpp"
 #include "WebGPU/WebGPUTexture.hpp"
+#include "WebGPUBuffer.hpp"
 #include "WebGPUCommandList.hpp"
+#include "WebGPUFence.hpp"
+#include "WebGPUShaderModule.hpp"
+#include "WebGPUPipeline.hpp"
+#include "WebGPUBindGroup.hpp"
 #include "Logger.hpp"
 #include "Assertions.hpp"
 #include <SDL2/SDL.h>
@@ -18,10 +23,6 @@
 
 namespace Hush::Graphics
 {
-
-	// ============================================================================
-	// WebGPUGraphicsDevice Implementation
-	// ============================================================================
 
 	WebGPUGraphicsDevice::WebGPUGraphicsDevice(void *windowHandle)
 		: m_windowHandle(windowHandle)
@@ -72,10 +73,6 @@ namespace Hush::Graphics
 		LogTrace("WebGPU Graphics Device destroyed");
 	}
 
-	// ============================================================================
-	// Initialization
-	// ============================================================================
-
 	void WebGPUGraphicsDevice::InitializeInstance()
 	{
 		wgpu::InstanceDescriptor instanceDesc{};
@@ -108,6 +105,12 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::CreateSurface()
 	{
+		if (m_surface != nullptr)
+		{
+			m_surface.release();
+			m_surface = nullptr;
+		}
+
 		auto *window = static_cast<SDL_Window *>(m_windowHandle);
 		WGPUSurface surfaceHandle = SDL_GetWGPUSurface(static_cast<WGPUInstance>(m_instance), window);
 		HUSH_ASSERT(surfaceHandle, "Failed to create WebGPU surface");
@@ -139,7 +142,6 @@ namespace Hush::Graphics
 		m_surface.configure(config);
 
 		m_needsResize = false;
-		LogFormat(ELogLevel::Info, "Surface configured: {}x{}", width, height);
 	}
 
 	void WebGPUGraphicsDevice::QueryCapabilities()
@@ -158,11 +160,18 @@ namespace Hush::Graphics
 		m_capabilities.supportsGeometryShader = false; // Not in WebGPU
 		m_capabilities.supportsTessellation = false;   // Not in WebGPU
 		m_capabilities.supportsRayTracing = false;	   // Not in WebGPU
-	}
 
-	// ============================================================================
-	// IGraphicsDevice Implementation
-	// ============================================================================
+		// WebGPU exposes a single queue — there are no dedicated async compute
+		// or transfer queues.  The render graph's queue mapper (see
+		// MapPassTypeToQueueIndex override) collapses all pass types onto
+		// queue index 0 so that no cross-queue synchronisation is generated.
+		m_capabilities.hasAsyncComputeQueue = false;
+		m_capabilities.hasDedicatedTransferQueue = false;
+
+		// WebGPU has no native timeline/monotonic fence API.  The engine
+		// emulates timeline semantics on the CPU side (see WebGPUFence).
+		m_capabilities.supportsTimelineFences = false;
+	}
 
 	Hush::Graphics::GraphicsDeviceCapabilities WebGPUGraphicsDevice::GetCapabilities() const
 	{
@@ -174,6 +183,16 @@ namespace Hush::Graphics
 		wgpu::BufferDescriptor desc{};
 		desc.size = descriptor.size;
 		desc.usage = ConvertBufferUsage(descriptor.usage);
+
+		// WebGPU requires CopyDst usage for queue.writeBuffer() to work.
+		// If the caller requested CPU-writable memory, ensure CopyDst is set
+		// so that WriteBuffer() calls succeed.
+		if (descriptor.memoryAccess == EMemoryAccess::CPUWrite ||
+			descriptor.memoryAccess == EMemoryAccess::CPUReadWrite)
+		{
+			desc.usage = desc.usage | wgpu::BufferUsage::CopyDst;
+		}
+
 		desc.mappedAtCreation = static_cast<WGPUBool>(false);
 
 		if (descriptor.debugName != nullptr)
@@ -181,9 +200,32 @@ namespace Hush::Graphics
 			desc.label = wgpu::StringView(descriptor.debugName);
 		}
 
-		// TODO: Create buffer properly once device initialization is fixed
-		LogError("Buffer creation not yet implemented");
-		return nullptr;
+		wgpu::Buffer buffer = m_device.createBuffer(desc);
+		if (buffer == nullptr)
+		{
+			LogError("Failed to create WebGPU buffer");
+			return nullptr;
+		}
+
+		return std::make_shared<WebGPUBuffer>(buffer, descriptor);
+	}
+
+	void WebGPUGraphicsDevice::WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size)
+	{
+		if (buffer == nullptr || data == nullptr || size == 0)
+		{
+			return;
+		}
+
+		auto *webgpuBuffer = dynamic_cast<WebGPUBuffer *>(buffer);
+		if (webgpuBuffer == nullptr)
+		{
+			LogError("WriteBuffer: buffer is not a WebGPU buffer");
+			return;
+		}
+
+		wgpu::Queue queue = m_device.getQueue();
+		queue.writeBuffer(webgpuBuffer->GetBuffer(), offset, data, static_cast<size_t>(size));
 	}
 
 	std::unique_ptr<IGraphicsTexture> WebGPUGraphicsDevice::CreateTexture(const TextureDescriptor &descriptor)
@@ -223,6 +265,64 @@ namespace Hush::Graphics
 		return nullptr;
 	}
 
+	std::unique_ptr<IShaderModule> WebGPUGraphicsDevice::CreateShaderModule(const ShaderModuleDescriptor &descriptor)
+	{
+		auto module = std::make_unique<WebGPUShaderModule>(m_device, descriptor);
+		if (!module->IsValid())
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create shader module");
+			return nullptr;
+		}
+		return module;
+	}
+
+	std::unique_ptr<IGraphicsPipeline> WebGPUGraphicsDevice::CreateGraphicsPipeline(
+		const GraphicsPipelineDescriptor &descriptor)
+	{
+		auto pipeline = std::make_unique<WebGPUGraphicsPipeline>(m_device, descriptor);
+		if (!pipeline->IsValid())
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create graphics pipeline");
+			return nullptr;
+		}
+		return pipeline;
+	}
+
+	std::unique_ptr<IComputePipeline> WebGPUGraphicsDevice::CreateComputePipeline(
+		const ComputePipelineDescriptor &descriptor)
+	{
+		auto pipeline = std::make_unique<WebGPUComputePipeline>(m_device, descriptor);
+		if (!pipeline->IsValid())
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create compute pipeline");
+			return nullptr;
+		}
+		return pipeline;
+	}
+
+	std::unique_ptr<IBindGroupLayout> WebGPUGraphicsDevice::CreateBindGroupLayout(
+		const BindGroupLayoutDescriptor &descriptor)
+	{
+		auto layout = std::make_unique<WebGPUBindGroupLayout>(m_device, descriptor);
+		if (!layout->IsValid())
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create bind group layout");
+			return nullptr;
+		}
+		return layout;
+	}
+
+	std::unique_ptr<IBindGroup> WebGPUGraphicsDevice::CreateBindGroup(const BindGroupDescriptor &descriptor)
+	{
+		auto bindGroup = std::make_unique<WebGPUBindGroup>(m_device, descriptor);
+		if (!bindGroup->IsValid())
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create bind group");
+			return nullptr;
+		}
+		return bindGroup;
+	}
+
 	std::unique_ptr<ICopyCommandList> WebGPUGraphicsDevice::CreateCopyCommandList()
 	{
 		return std::make_unique<WebGPUCopyCommandList>(m_device);
@@ -236,6 +336,11 @@ namespace Hush::Graphics
 	std::unique_ptr<IGraphicsCommandList> WebGPUGraphicsDevice::CreateGraphicsCommandList()
 	{
 		return std::make_unique<WebGPUGraphicsCommandList>(m_device);
+	}
+
+	std::unique_ptr<IFence> WebGPUGraphicsDevice::CreateFence(uint64_t initialValue)
+	{
+		return std::make_unique<WebGPUFence>(initialValue);
 	}
 
 	void WebGPUGraphicsDevice::BeginFrame()
@@ -305,7 +410,8 @@ namespace Hush::Graphics
 			return;
 		}
 
-		LogFormat(ELogLevel::Info, "Resizing device: {}x{} -> {}x{}", m_width, m_height, width, height);
+		CreateSurface();
+
 		ConfigureSurface(width, height);
 	}
 
@@ -327,10 +433,6 @@ namespace Hush::Graphics
 	{
 		return static_cast<void *>(static_cast<WGPUDevice>(m_device));
 	}
-
-	// ============================================================================
-	// Conversion Helpers
-	// ============================================================================
 
 	wgpu::BufferUsage WebGPUGraphicsDevice::ConvertBufferUsage(EBufferUsage usage)
 	{
@@ -539,10 +641,6 @@ namespace Hush::Graphics
 			return ETextureFormat::RGBA8_UNORM;
 		}
 	}
-
-	// ============================================================================
-	// Callbacks
-	// ============================================================================
 
 	void WebGPUGraphicsDevice::OnDeviceError(WGPUErrorType type, char const *message, void * /*userdata*/)
 	{

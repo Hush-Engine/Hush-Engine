@@ -1,11 +1,18 @@
+/*! \file RenderGraphSystem.cpp
+	\author Alan Ramirez Herrera
+	\date 2025-02-17
+	\brief Render graph system implementation — full executor lifecycle management
+*/
 #include "RenderGraphSystem.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
+#include "Logger.hpp"
 #include "Scene.hpp"
 
-Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderGraph::RenderGraph *renderGraph)
+Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderGraph::RenderDevice *renderDevice)
 	: ISystem(scene),
-	  m_renderGraph(renderGraph)
+	  m_renderDevice(renderDevice)
 {
+	HUSH_ASSERT(m_renderDevice != nullptr, "RenderGraphSystem requires a valid RenderDevice!");
 }
 
 void Hush::Graphics::RenderGraphSystem::Init()
@@ -15,7 +22,13 @@ void Hush::Graphics::RenderGraphSystem::Init()
 
 void Hush::Graphics::RenderGraphSystem::OnShutdown()
 {
-	// We don't need to do anything here.
+	// If a frame is still active (e.g. early shutdown), try to end it cleanly
+	// so the swapchain / GPU state is not left dangling.
+	if (m_frameActive)
+	{
+		m_renderDevice->EndFrame();
+		m_frameActive = false;
+	}
 }
 
 void Hush::Graphics::RenderGraphSystem::OnUpdate([[maybe_unused]] float delta)
@@ -28,22 +41,119 @@ void Hush::Graphics::RenderGraphSystem::OnFixedUpdate([[maybe_unused]] float del
 
 void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
-	if (m_renderGraph->IsDirty())
+	// ------------------------------------------------------------------
+	// 1. Begin frame — acquire the next swapchain image.
+	//
+	//    This MUST happen before the builder lambdas run so that any call
+	//    to device->GetCurrentFrameTexture() inside an Import() or
+	//    UpdateImport() returns the correct texture for *this* frame.
+	// ------------------------------------------------------------------
+	m_renderDevice->BeginFrame();
+	m_frameActive = true;
+
+	auto &renderGraph = m_renderDevice->GetRenderGraph();
+
+	// ------------------------------------------------------------------
+	// 2. Decide whether we can take the fast path (graph already compiled
+	//    and every builder provides a frameUpdateFunc) or must do a full
+	//    rebuild.
+	//
+	//    Fast path:
+	//      - SoftReset(): only resets the executor's per-frame state
+	//        (resource state tracker, fence value counters). The graph's
+	//        passes, resources, topology, and compilation output are all
+	//        preserved.
+	//      - Invoke each builder's frameUpdateFunc so it can call
+	//        RenderGraph::UpdateImport() to swap per-frame imported
+	//        resources (e.g. the swapchain backbuffer pointer).
+	//      - Skip Compile() entirely — the graph is still compiled.
+	//
+	//    Slow path (full rebuild):
+	//      - Reset(): clears all passes, resources, and compilation state.
+	//      - Invoke each builder's builderFunc to re-declare the full
+	//        graph from scratch.
+	//      - Compile(): topological sort, dependency levels, SSIS culling.
+	//
+	//    The slow path is taken on the first frame, after a resize, after
+	//    an explicit invalidation, or when any builder has not provided a
+	//    frameUpdateFunc (to preserve backward compatibility).
+	// ------------------------------------------------------------------
+	bool canTakeFastPath = renderGraph.IsCompiled();
+
+	if (canTakeFastPath)
 	{
-		m_renderGraphBuilderQuery.Each([&](RenderGraph::RenderGraphBuilderComponent &builderComponent) {
-			// We now that there is only one RenderGraphBuilderComponent, so we can just take the first one we find and
-			// use it to build the graph.
-			builderComponent.builderFunc(*m_renderGraph);
+		// Verify every builder provides a frameUpdateFunc.  If any builder
+		// is missing one, we must fall back to the full rebuild so the
+		// graph stays correct.
+		m_renderGraphBuilderQuery.Each([&canTakeFastPath](RenderGraph::RenderGraphBuilderComponent &builderComponent) {
+			if (!builderComponent.frameUpdateFunc)
+			{
+				canTakeFastPath = false;
+			}
 		});
-		m_renderGraph->Compile();
+	}
+
+	if (canTakeFastPath)
+	{
+		// --------------------------------------------------------------
+		// FAST PATH — graph topology is unchanged, skip recompilation.
+		// --------------------------------------------------------------
+
+		// Reset only the executor's per-frame state (fence counters,
+		// resource state tracker). Graph passes and compilation are kept.
+		m_renderDevice->SoftReset();
+
+		// Let each builder update per-frame imported resources in-place.
+		m_renderGraphBuilderQuery.Each([&renderGraph](RenderGraph::RenderGraphBuilderComponent &builderComponent) {
+			builderComponent.frameUpdateFunc(renderGraph);
+		});
+	}
+	else
+	{
+		// --------------------------------------------------------------
+		// SLOW PATH — full reset + rebuild + compile.
+		// --------------------------------------------------------------
+
+		// Clear the previous frame's render graph (passes, resources,
+		// compilation state) and reset the executor's per-frame state.
+		// Fence objects themselves are kept alive and reused across frames.
+		m_renderDevice->Reset();
+
+		// Iterate every RenderGraphBuilderComponent entity and invoke its
+		// builder function.  Each builder declares render passes and
+		// resources via the RenderGraph's AddPass / BuildContext API.
+		m_renderGraphBuilderQuery.Each([&renderGraph](RenderGraph::RenderGraphBuilderComponent &builderComponent) {
+			if (builderComponent.builderFunc)
+			{
+				builderComponent.builderFunc(renderGraph);
+			}
+		});
+
+		// Topological sort, dependency level assignment, and SSIS-based
+		// synchronization point culling.  If the graph is somehow already
+		// compiled (no builder added any passes, or a builder called
+		// Compile() itself), Compile() is a no-op.
+		m_renderDevice->Compile();
 	}
 }
 
 void Hush::Graphics::RenderGraphSystem::OnRender()
 {
-	m_renderGraph->Execute();
+	if (!m_renderDevice->IsCompiled())
+	{
+		Hush::LogWarn("RenderGraphSystem::OnRender — graph is not compiled, "
+					  "skipping execution.");
+		return;
+	}
+
+	m_renderDevice->Execute();
 }
 
 void Hush::Graphics::RenderGraphSystem::OnPostRender()
 {
+	if (m_frameActive)
+	{
+		m_renderDevice->EndFrame();
+		m_frameActive = false;
+	}
 }

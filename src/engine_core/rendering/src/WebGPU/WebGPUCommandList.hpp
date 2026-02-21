@@ -6,11 +6,15 @@
 #pragma once
 
 #include "../RHI/ICommandList.hpp"
+#include "../RHI/IBindGroup.hpp"
+#include "../RHI/IPipeline.hpp"
 #include <webgpu/webgpu.hpp>
 
 namespace Hush::Graphics
 {
 	class IPipeline;
+	class IComputePipeline;
+	class IBindGroup;
 
 	/// @brief WebGPU implementation of copy command list
 	class WebGPUCopyCommandList : public ICopyCommandList
@@ -28,6 +32,12 @@ namespace Hush::Graphics
 		void Close() override;
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
+
+		// Barrier methods (noop on WebGPU — transitions are managed internally by the API)
+		void ResourceBarrier(std::span<const ResourceBarrierDescriptor> barriers) override;
+		void UAVBarrier(std::span<const UAVBarrierDescriptor> barriers) override;
+		void BeginSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
+		void EndSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
 
 		void CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst, uint64_t dstOffset,
 						uint64_t size) override;
@@ -79,6 +89,12 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
 
+		// Barrier methods (noop on WebGPU — transitions are managed internally by the API)
+		void ResourceBarrier(std::span<const ResourceBarrierDescriptor> barriers) override;
+		void UAVBarrier(std::span<const UAVBarrierDescriptor> barriers) override;
+		void BeginSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
+		void EndSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
+
 		void CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst, uint64_t dstOffset,
 						uint64_t size) override;
 
@@ -96,6 +112,11 @@ namespace Hush::Graphics
 
 		void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) override;
 		void DispatchIndirect(IGraphicsBuffer *indirectArgsBuffer, uint64_t offset) override;
+
+		void BindComputePipeline(IComputePipeline *pipeline) override;
+
+		void SetComputeBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+								 std::span<const uint32_t> dynamicOffsets = {}) override;
 
 		[[nodiscard]]
 		wgpu::CommandEncoder GetEncoder() const
@@ -134,6 +155,12 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
 
+		// Barrier methods (noop on WebGPU — transitions are managed internally by the API)
+		void ResourceBarrier(std::span<const ResourceBarrierDescriptor> barriers) override;
+		void UAVBarrier(std::span<const UAVBarrierDescriptor> barriers) override;
+		void BeginSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
+		void EndSplitBarrier(std::span<const SplitBarrierDescriptor> barriers) override;
+
 		// Copy commands
 		void CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst, uint64_t dstOffset,
 						uint64_t size) override;
@@ -153,6 +180,11 @@ namespace Hush::Graphics
 		// Compute commands
 		void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) override;
 		void DispatchIndirect(IGraphicsBuffer *indirectArgsBuffer, uint64_t offset) override;
+
+		void BindComputePipeline(IComputePipeline *pipeline) override;
+
+		void SetComputeBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+								 std::span<const uint32_t> dynamicOffsets = {}) override;
 
 		// Graphics commands
 		void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
@@ -177,6 +209,9 @@ namespace Hush::Graphics
 		void EndRenderPass() override;
 
 		void BindPipeline(IPipeline *pipeline) override;
+
+		void SetBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+						  std::span<const uint32_t> dynamicOffsets = {}) override;
 
 		[[nodiscard]]
 		wgpu::CommandEncoder GetEncoder() const

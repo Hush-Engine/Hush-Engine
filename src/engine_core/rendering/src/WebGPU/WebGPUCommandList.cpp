@@ -6,6 +6,8 @@
 #include "WebGPUCommandList.hpp"
 #include "WebGPUBuffer.hpp"
 #include "WebGPUTexture.hpp"
+#include "WebGPUPipeline.hpp"
+#include "WebGPUBindGroup.hpp"
 #include "Assertions.hpp"
 #include <webgpu/webgpu.hpp>
 
@@ -82,10 +84,6 @@ namespace Hush::Graphics
 		}
 	}
 
-	// ============================================================================
-	// WebGPUCopyCommandList
-	// ============================================================================
-
 	WebGPUCopyCommandList::WebGPUCopyCommandList(wgpu::Device device)
 		: m_device(device)
 	{
@@ -131,6 +129,28 @@ namespace Hush::Graphics
 	void *WebGPUCopyCommandList::GetNativeHandle() const
 	{
 		return static_cast<void *>(static_cast<WGPUCommandBuffer>(m_commandBuffer));
+	}
+
+	// WebGPU manages resource transitions internally — all barrier methods are noops.
+
+	void WebGPUCopyCommandList::ResourceBarrier(std::span<const ResourceBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles resource state transitions automatically.
+	}
+
+	void WebGPUCopyCommandList::UAVBarrier(std::span<const UAVBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles UAV synchronization automatically.
+	}
+
+	void WebGPUCopyCommandList::BeginSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
+	}
+
+	void WebGPUCopyCommandList::EndSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
 	}
 
 	void WebGPUCopyCommandList::CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst,
@@ -226,10 +246,6 @@ namespace Hush::Graphics
 		m_encoder.copyTextureToTexture(source, destination, copySize);
 	}
 
-	// ============================================================================
-	// WebGPUComputeCommandList
-	// ============================================================================
-
 	WebGPUComputeCommandList::WebGPUComputeCommandList(wgpu::Device device)
 		: m_device(device)
 	{
@@ -291,6 +307,28 @@ namespace Hush::Graphics
 	void *WebGPUComputeCommandList::GetNativeHandle() const
 	{
 		return static_cast<void *>(static_cast<WGPUCommandBuffer>(m_commandBuffer));
+	}
+
+	// WebGPU manages resource transitions internally — all barrier methods are noops.
+
+	void WebGPUComputeCommandList::ResourceBarrier(std::span<const ResourceBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles resource state transitions automatically.
+	}
+
+	void WebGPUComputeCommandList::UAVBarrier(std::span<const UAVBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles UAV synchronization automatically.
+	}
+
+	void WebGPUComputeCommandList::BeginSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
+	}
+
+	void WebGPUComputeCommandList::EndSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
 	}
 
 	void WebGPUComputeCommandList::CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst,
@@ -425,9 +463,37 @@ namespace Hush::Graphics
 		m_computePass.dispatchWorkgroupsIndirect(buffer->GetBuffer(), offset);
 	}
 
-	// ============================================================================
-	// WebGPUGraphicsCommandList
-	// ============================================================================
+	void WebGPUComputeCommandList::BindComputePipeline(IComputePipeline *pipeline)
+	{
+		HUSH_ASSERT(m_isRecording, "Command list must be recording");
+		HUSH_ASSERT(pipeline, "Pipeline must be valid");
+
+		// Begin compute pass if not already in one
+		if (!m_inComputePass)
+		{
+			wgpu::ComputePassDescriptor computePassDesc{};
+			computePassDesc.label = WGPUStringView("Compute Pass");
+			m_computePass = m_encoder.beginComputePass(computePassDesc);
+			m_inComputePass = true;
+		}
+
+		auto *webgpuPipeline = dynamic_cast<WebGPUComputePipeline *>(pipeline);
+		HUSH_ASSERT(webgpuPipeline, "Pipeline must be a WebGPU compute pipeline");
+		m_computePass.setPipeline(webgpuPipeline->GetPipeline());
+	}
+
+	void WebGPUComputeCommandList::SetComputeBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+													   std::span<const uint32_t> dynamicOffsets)
+	{
+		HUSH_ASSERT(m_isRecording, "Command list must be recording");
+		HUSH_ASSERT(m_inComputePass, "Must be in a compute pass to set bind group");
+		HUSH_ASSERT(bindGroup, "Bind group must be valid");
+
+		auto *webgpuBindGroup = dynamic_cast<WebGPUBindGroup *>(bindGroup);
+		HUSH_ASSERT(webgpuBindGroup, "Bind group must be a WebGPU bind group");
+		m_computePass.setBindGroup(groupIndex, webgpuBindGroup->GetBindGroup(), dynamicOffsets.size(),
+								   dynamicOffsets.data());
+	}
 
 	WebGPUGraphicsCommandList::WebGPUGraphicsCommandList(wgpu::Device device)
 		: m_device(device)
@@ -506,6 +572,28 @@ namespace Hush::Graphics
 	void *WebGPUGraphicsCommandList::GetNativeHandle() const
 	{
 		return static_cast<void *>(static_cast<WGPUCommandBuffer>(m_commandBuffer));
+	}
+
+	// WebGPU manages resource transitions internally — all barrier methods are noops.
+
+	void WebGPUGraphicsCommandList::ResourceBarrier(std::span<const ResourceBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles resource state transitions automatically.
+	}
+
+	void WebGPUGraphicsCommandList::UAVBarrier(std::span<const UAVBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU handles UAV synchronization automatically.
+	}
+
+	void WebGPUGraphicsCommandList::BeginSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
+	}
+
+	void WebGPUGraphicsCommandList::EndSplitBarrier(std::span<const SplitBarrierDescriptor> /*barriers*/)
+	{
+		// Noop: WebGPU does not support split barriers.
 	}
 
 	void WebGPUGraphicsCommandList::CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst,
@@ -788,7 +876,7 @@ namespace Hush::Graphics
 
 		// Depth/stencil attachment
 		wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{};
-		if (descriptor.depthStencilAttachment != nullptr)
+		if (descriptor.depthStencilAttachment.has_value())
 		{
 			const auto &dsAttach = *descriptor.depthStencilAttachment;
 			auto *texture = dynamic_cast<WebGPUTexture *>(dsAttach.texture);
@@ -871,10 +959,64 @@ namespace Hush::Graphics
 		HUSH_ASSERT(m_inRenderPass, "Must be in a render pass to bind pipeline");
 		HUSH_ASSERT(pipeline, "Pipeline must be valid");
 
-		// TODO: Implement when IPipeline is available
-		// For now, this is a placeholder
-		// auto* webgpuPipeline = static_cast<WebGPUPipeline*>(pipeline);
-		// m_renderPass.setPipeline(webgpuPipeline->GetPipeline());
+		if (pipeline->IsGraphics())
+		{
+			auto *webgpuPipeline = dynamic_cast<WebGPUGraphicsPipeline *>(pipeline);
+			HUSH_ASSERT(webgpuPipeline, "Pipeline must be a WebGPU graphics pipeline");
+			m_renderPass.setPipeline(webgpuPipeline->GetPipeline());
+		}
+	}
+
+	void WebGPUGraphicsCommandList::SetBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+												 std::span<const uint32_t> dynamicOffsets)
+	{
+		HUSH_ASSERT(m_isRecording, "Command list must be recording");
+		HUSH_ASSERT(m_inRenderPass, "Must be in a render pass to set bind group");
+		HUSH_ASSERT(bindGroup, "Bind group must be valid");
+
+		auto *webgpuBindGroup = dynamic_cast<WebGPUBindGroup *>(bindGroup);
+		HUSH_ASSERT(webgpuBindGroup, "Bind group must be a WebGPU bind group");
+		m_renderPass.setBindGroup(groupIndex, webgpuBindGroup->GetBindGroup(), dynamicOffsets.size(),
+								  dynamicOffsets.data());
+	}
+
+	void WebGPUGraphicsCommandList::BindComputePipeline(IComputePipeline *pipeline)
+	{
+		HUSH_ASSERT(m_isRecording, "Command list must be recording");
+		HUSH_ASSERT(pipeline, "Pipeline must be valid");
+
+		// Begin compute pass if not already in one (end render pass first if needed)
+		if (m_inRenderPass)
+		{
+			m_renderPass.end();
+			m_renderPass = nullptr;
+			m_inRenderPass = false;
+		}
+
+		if (!m_inComputePass)
+		{
+			wgpu::ComputePassDescriptor computePassDesc{};
+			computePassDesc.label = WGPUStringView("Compute Pass");
+			m_computePass = m_encoder.beginComputePass(computePassDesc);
+			m_inComputePass = true;
+		}
+
+		auto *webgpuPipeline = dynamic_cast<WebGPUComputePipeline *>(pipeline);
+		HUSH_ASSERT(webgpuPipeline, "Pipeline must be a WebGPU compute pipeline");
+		m_computePass.setPipeline(webgpuPipeline->GetPipeline());
+	}
+
+	void WebGPUGraphicsCommandList::SetComputeBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
+														std::span<const uint32_t> dynamicOffsets)
+	{
+		HUSH_ASSERT(m_isRecording, "Command list must be recording");
+		HUSH_ASSERT(m_inComputePass, "Must be in a compute pass to set compute bind group");
+		HUSH_ASSERT(bindGroup, "Bind group must be valid");
+
+		auto *webgpuBindGroup = dynamic_cast<WebGPUBindGroup *>(bindGroup);
+		HUSH_ASSERT(webgpuBindGroup, "Bind group must be a WebGPU bind group");
+		m_computePass.setBindGroup(groupIndex, webgpuBindGroup->GetBindGroup(), dynamicOffsets.size(),
+								   dynamicOffsets.data());
 	}
 
 } // namespace Hush::Graphics

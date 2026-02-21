@@ -10,3 +10,4 @@ hush_add_library(
 add_library(Hush::Log ALIAS HushLog)
 
 target_link_libraries(HushLog PUBLIC fmt::fmt spdlog::spdlog magic_enum::magic_enum)
+target_compile_definitions(HushLog PUBLIC "SPDLOG_FMT_EXTERNAL=1")

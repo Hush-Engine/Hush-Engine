@@ -9,8 +9,12 @@
 #pragma once
 
 #include "GraphicsTypes.hpp"
+#include "IBindGroup.hpp"
 #include "IGraphicsBuffer.hpp"
 #include "IGraphicsTexture.hpp"
+#include "IShaderModule.hpp"
+#include "IPipeline.hpp"
+#include "PipelineDescriptor.hpp"
 #include "RenderPass.hpp"
 #include <memory>
 #include <vector>
@@ -21,6 +25,10 @@ namespace Hush::Graphics
 	class IGraphicsCommandList;
 	class IComputeCommandList;
 	class ICopyCommandList;
+
+	// =========================================================================
+	// Texture resources
+	// =========================================================================
 
 	/// @brief Texture resource descriptor for RenderGraph
 	/// This is used during BuildContext to declare texture creation parameters
@@ -51,33 +59,6 @@ namespace Hush::Graphics
 		void CreateResource(const TextureDescriptor &textureDescriptor, IGraphicsDevice *device);
 
 		void DestroyResource(const TextureDescriptor &textureDescriptor, IGraphicsDevice *device);
-	};
-
-	/// @brief Buffer resource descriptor for RenderGraph
-	/// This is used during BuildContext to declare buffer creation parameters
-	struct BufferResource
-	{
-		using Descriptor = BufferDescriptor;
-
-		/// @brief Runtime buffer handle (set during execution)
-		std::shared_ptr<IGraphicsBuffer> buffer;
-
-		/// @brief Resource descriptor
-		BufferDescriptor descriptor;
-
-		/// @brief Get the underlying buffer (convenience accessor)
-		[[nodiscard]]
-		IGraphicsBuffer *Get() const
-		{
-			return buffer.get();
-		}
-
-		/// @brief Check if the resource is valid
-		[[nodiscard]]
-		bool IsValid() const
-		{
-			return buffer != nullptr;
-		}
 	};
 
 	/// @brief Import/external texture resource for RenderGraph
@@ -114,6 +95,41 @@ namespace Hush::Graphics
 		}
 	};
 
+	// =========================================================================
+	// Buffer resources
+	// =========================================================================
+
+	/// @brief Buffer resource descriptor for RenderGraph
+	/// This is used during BuildContext to declare buffer creation parameters
+	struct BufferResource
+	{
+		using Descriptor = BufferDescriptor;
+
+		/// @brief Runtime buffer handle (set during execution)
+		std::shared_ptr<IGraphicsBuffer> buffer;
+
+		/// @brief Resource descriptor
+		BufferDescriptor descriptor;
+
+		/// @brief Get the underlying buffer (convenience accessor)
+		[[nodiscard]]
+		IGraphicsBuffer *Get() const
+		{
+			return buffer.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return buffer != nullptr;
+		}
+
+		void CreateResource(const BufferDescriptor &bufferDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const BufferDescriptor &bufferDescriptor, IGraphicsDevice *device);
+	};
+
 	/// @brief Import/external buffer resource for RenderGraph
 	/// Used when you want to reference an existing buffer created outside the graph
 	struct ImportedBufferResource
@@ -136,11 +152,298 @@ namespace Hush::Graphics
 		{
 			return buffer != nullptr;
 		}
+
+		void CreateResource([[maybe_unused]] const BufferDescriptor &bufferDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const BufferDescriptor &bufferDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
 	};
 
-	// ============================================================================
-	// Render Context Interface for RenderGraph Execution
-	// ============================================================================
+	// =========================================================================
+	// Shader resources
+	// =========================================================================
+
+	/// @brief Shader module resource for RenderGraph
+	/// This is used during BuildContext to declare shader module creation parameters.
+	/// Owns the shader module lifetime so client code does not need to manage it.
+	struct ShaderResource
+	{
+		using Descriptor = ShaderModuleDescriptor;
+
+		/// @brief Runtime shader module handle (set during execution)
+		std::unique_ptr<IShaderModule> shaderModule;
+
+		/// @brief Resource descriptor
+		ShaderModuleDescriptor descriptor;
+
+		/// @brief Get the underlying shader module (convenience accessor)
+		[[nodiscard]]
+		IShaderModule *Get() const
+		{
+			return shaderModule.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return shaderModule != nullptr && shaderModule->IsValid();
+		}
+
+		void CreateResource(const ShaderModuleDescriptor &shaderDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const ShaderModuleDescriptor &shaderDescriptor, IGraphicsDevice *device);
+	};
+
+	/// @brief Import/external shader module resource for RenderGraph
+	/// Used when you want to reference an existing shader module created outside the graph
+	struct ImportedShaderResource
+	{
+		using Descriptor = ShaderModuleDescriptor;
+
+		/// @brief Imported shader module handle (non-owning)
+		IShaderModule *shaderModule = nullptr;
+
+		/// @brief Get the underlying shader module (convenience accessor)
+		[[nodiscard]]
+		IShaderModule *Get() const
+		{
+			return shaderModule;
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return shaderModule != nullptr && shaderModule->IsValid();
+		}
+
+		void CreateResource([[maybe_unused]] const ShaderModuleDescriptor &shaderDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const ShaderModuleDescriptor &shaderDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+	};
+
+	// =========================================================================
+	// Bind group layout resources
+	// =========================================================================
+
+	/// @brief Bind group layout resource for RenderGraph
+	/// Owns the bind group layout lifetime so client code does not need to manage it.
+	struct BindGroupLayoutResource
+	{
+		using Descriptor = BindGroupLayoutDescriptor;
+
+		/// @brief Runtime bind group layout handle
+		std::unique_ptr<IBindGroupLayout> layout;
+
+		/// @brief Resource descriptor
+		BindGroupLayoutDescriptor descriptor;
+
+		/// @brief Get the underlying bind group layout (convenience accessor)
+		[[nodiscard]]
+		IBindGroupLayout *Get() const
+		{
+			return layout.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return layout != nullptr && layout->IsValid();
+		}
+
+		void CreateResource(const BindGroupLayoutDescriptor &layoutDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const BindGroupLayoutDescriptor &layoutDescriptor, IGraphicsDevice *device);
+	};
+
+	/// @brief Import/external bind group layout resource for RenderGraph
+	/// Used when you want to reference an existing bind group layout created outside the graph
+	struct ImportedBindGroupLayoutResource
+	{
+		using Descriptor = BindGroupLayoutDescriptor;
+
+		/// @brief Imported bind group layout handle (non-owning)
+		IBindGroupLayout *layout = nullptr;
+
+		/// @brief Get the underlying bind group layout (convenience accessor)
+		[[nodiscard]]
+		IBindGroupLayout *Get() const
+		{
+			return layout;
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return layout != nullptr && layout->IsValid();
+		}
+
+		void CreateResource([[maybe_unused]] const BindGroupLayoutDescriptor &layoutDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const BindGroupLayoutDescriptor &layoutDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+	};
+
+	// =========================================================================
+	// Bind group resources
+	// =========================================================================
+
+	/// @brief Bind group resource for RenderGraph
+	/// Owns the bind group lifetime so client code does not need to manage it.
+	struct BindGroupResource
+	{
+		using Descriptor = BindGroupDescriptor;
+
+		/// @brief Runtime bind group handle
+		std::unique_ptr<IBindGroup> bindGroup;
+
+		/// @brief Resource descriptor
+		BindGroupDescriptor descriptor;
+
+		/// @brief Get the underlying bind group (convenience accessor)
+		[[nodiscard]]
+		IBindGroup *Get() const
+		{
+			return bindGroup.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return bindGroup != nullptr && bindGroup->IsValid();
+		}
+
+		void CreateResource(const BindGroupDescriptor &bindGroupDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const BindGroupDescriptor &bindGroupDescriptor, IGraphicsDevice *device);
+	};
+
+	/// @brief Import/external bind group resource for RenderGraph
+	/// Used when you want to reference an existing bind group created outside the graph
+	struct ImportedBindGroupResource
+	{
+		using Descriptor = BindGroupDescriptor;
+
+		/// @brief Imported bind group handle (non-owning)
+		IBindGroup *bindGroup = nullptr;
+
+		/// @brief Get the underlying bind group (convenience accessor)
+		[[nodiscard]]
+		IBindGroup *Get() const
+		{
+			return bindGroup;
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return bindGroup != nullptr && bindGroup->IsValid();
+		}
+
+		void CreateResource([[maybe_unused]] const BindGroupDescriptor &bindGroupDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const BindGroupDescriptor &bindGroupDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+	};
+
+	// =========================================================================
+	// Graphics pipeline resources
+	// =========================================================================
+
+	/// @brief Graphics pipeline resource for RenderGraph
+	/// Owns the graphics pipeline lifetime so client code does not need to manage it.
+	struct GraphicsPipelineResource
+	{
+		using Descriptor = GraphicsPipelineDescriptor;
+
+		/// @brief Runtime graphics pipeline handle
+		std::unique_ptr<IGraphicsPipeline> pipeline;
+
+		/// @brief Resource descriptor
+		GraphicsPipelineDescriptor descriptor;
+
+		/// @brief Get the underlying graphics pipeline (convenience accessor)
+		[[nodiscard]]
+		IGraphicsPipeline *Get() const
+		{
+			return pipeline.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return pipeline != nullptr && pipeline->IsValid();
+		}
+
+		void CreateResource(const GraphicsPipelineDescriptor &pipelineDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const GraphicsPipelineDescriptor &pipelineDescriptor, IGraphicsDevice *device);
+	};
+
+	/// @brief Import/external graphics pipeline resource for RenderGraph
+	/// Used when you want to reference an existing graphics pipeline created outside the graph
+	struct ImportedGraphicsPipelineResource
+	{
+		using Descriptor = GraphicsPipelineDescriptor;
+
+		/// @brief Imported graphics pipeline handle (non-owning)
+		IGraphicsPipeline *pipeline = nullptr;
+
+		/// @brief Get the underlying graphics pipeline (convenience accessor)
+		[[nodiscard]]
+		IGraphicsPipeline *Get() const
+		{
+			return pipeline;
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return pipeline != nullptr && pipeline->IsValid();
+		}
+
+		void CreateResource([[maybe_unused]] const GraphicsPipelineDescriptor &pipelineDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const GraphicsPipelineDescriptor &pipelineDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+	};
+
+	// =========================================================================
+	// Render execution context
+	// =========================================================================
 
 	/// @brief Render execution context provided to passes during Execute phase
 	/// This interface provides access to command lists and resource resolution
@@ -154,10 +457,6 @@ namespace Hush::Graphics
 		IRenderContext(IRenderContext &&) = delete;
 		IRenderContext &operator=(IRenderContext &&) = delete;
 
-		// ========================================================================
-		// Command List Access
-		// ========================================================================
-
 		/// @brief Get graphics command list for the current pass
 		[[nodiscard]]
 		virtual IGraphicsCommandList *GetGraphicsCommandList() = 0;
@@ -169,10 +468,6 @@ namespace Hush::Graphics
 		/// @brief Get transfer/copy command list for the current pass
 		[[nodiscard]]
 		virtual ICopyCommandList *GetCopyCommandList() = 0;
-
-		// ========================================================================
-		// Resource Resolution
-		// ========================================================================
 
 		/// @brief Resolve a resource ID to a texture
 		/// @param resourceId Resource ID from the render graph
@@ -186,17 +481,9 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		virtual IGraphicsBuffer *GetBuffer(uint32_t resourceId) = 0;
 
-		// ========================================================================
-		// Device Access
-		// ========================================================================
-
 		/// @brief Get the graphics device for resource creation or queries
 		[[nodiscard]]
 		virtual IGraphicsDevice *GetDevice() = 0;
-
-		// ========================================================================
-		// Frame Information
-		// ========================================================================
 
 		/// @brief Get current frame index (for double/triple buffering)
 		[[nodiscard]]
@@ -207,9 +494,9 @@ namespace Hush::Graphics
 		virtual IGraphicsTexture *GetSwapchainTexture() = 0;
 	};
 
-	// ============================================================================
-	// Helper Structures for Common Pass Data Patterns
-	// ============================================================================
+	// =========================================================================
+	// Common pass data structures
+	// =========================================================================
 
 	/// @brief Common data for a simple graphics pass with color and depth
 	struct GraphicsPassData
@@ -252,13 +539,13 @@ namespace Hush::Graphics
 			// Setup depth attachment
 			if (depthTarget != 0)
 			{
-				static RenderPassDepthStencilAttachment depth{};
+				RenderPassDepthStencilAttachment depth{};
 				depth.texture = ctx->GetTexture(depthTarget);
 				depth.depthLoadOp = depthLoadOp;
 				depth.depthStoreOp = EStoreOp::Store;
 				depth.depthClearValue = clearDepth;
 				depth.depthReadOnly = false;
-				desc.SetDepthStencilAttachment(&depth);
+				desc.SetDepthStencilAttachment(depth);
 			}
 
 			return desc;

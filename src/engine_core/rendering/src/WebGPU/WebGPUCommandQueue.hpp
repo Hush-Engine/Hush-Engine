@@ -30,6 +30,12 @@ namespace Hush::Graphics
 
 		void Submit(std::span<ICommandList *> commandLists) override;
 
+		void SubmitBatched(const SubmitInfo &submitInfo) override;
+
+		void Signal(IFence *fence, uint64_t value) override;
+
+		void Wait(IFence *fence, uint64_t value) override;
+
 		void WaitIdle() override;
 
 		[[nodiscard]]

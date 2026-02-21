@@ -8,6 +8,7 @@
 #include "../RHI/IGraphicsDevice.hpp"
 #include "RHI/GraphicsTypes.hpp"
 #include "RHI/IGraphicsTexture.hpp"
+#include "RHI/ShaderCompiler.hpp"
 #include "WebGPUCommandQueue.hpp"
 #include "WebGPUTexture.hpp"
 #include <webgpu/webgpu.hpp>
@@ -48,8 +49,26 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		std::shared_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) override;
 
+		void WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size) override;
+
 		[[nodiscard]]
 		std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<IShaderModule> CreateShaderModule(const ShaderModuleDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<IGraphicsPipeline> CreateGraphicsPipeline(
+			const GraphicsPipelineDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<IComputePipeline> CreateComputePipeline(const ComputePipelineDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<IBindGroupLayout> CreateBindGroupLayout(const BindGroupLayoutDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<IBindGroup> CreateBindGroup(const BindGroupDescriptor &descriptor) override;
 
 		[[nodiscard]]
 		std::unique_ptr<ICopyCommandList> CreateCopyCommandList() override;
@@ -59,6 +78,9 @@ namespace Hush::Graphics
 
 		[[nodiscard]]
 		std::unique_ptr<IGraphicsCommandList> CreateGraphicsCommandList() override;
+
+		[[nodiscard]]
+		std::unique_ptr<IFence> CreateFence(uint64_t initialValue = 0) override;
 
 		[[nodiscard]]
 		ICommandQueue *GetGraphicsQueue() override
@@ -78,6 +100,15 @@ namespace Hush::Graphics
 			return m_graphicsQueue.get();
 		}
 
+		/// WebGPU exposes a single queue — collapse all pass types onto queue 0
+		/// so the render graph never generates cross-queue sync, fences, or
+		/// separate execution plans.
+		[[nodiscard]]
+		uint32_t MapPassTypeToQueueIndex([[maybe_unused]] EQueueType passType) const override
+		{
+			return 0;
+		}
+
 		void BeginFrame() override;
 		void EndFrame() override;
 
@@ -91,10 +122,6 @@ namespace Hush::Graphics
 
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
-
-		// ========================================================================
-		// WebGPU-Specific API
-		// ========================================================================
 
 		[[nodiscard]]
 		wgpu::Device GetDevice() const

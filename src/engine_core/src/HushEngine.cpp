@@ -23,6 +23,10 @@ void Hush::HushEngine::Run()
 	this->m_windowRenderer =
 		std::make_unique<WindowRenderer>(this->m_app->GetAppName().data(), this->m_app->GetScene());
 
+	// NOTE: BeginFrame/EndFrame are now managed by RenderGraphSystem
+	// (OnPreRender and OnPostRender respectively). The graphics device
+	// pointer is kept for any non-frame-lifecycle uses that may arise.
+	[[maybe_unused]]
 	auto *graphicsDevice = this->m_windowRenderer->GetGraphicsDevice();
 
 	// Initialize any static resources we need
@@ -49,15 +53,7 @@ void Hush::HushEngine::Run()
 
 		this->m_app->OnPreRender();
 
-		graphicsDevice->BeginFrame();
-
-		// rendererImpl->NewUIFrame();
-
 		this->m_app->OnRender(deltaTime);
-
-		// rendererImpl->Draw(deltaTime)
-
-		graphicsDevice->EndFrame();
 
 		this->m_app->OnPostRender();
 

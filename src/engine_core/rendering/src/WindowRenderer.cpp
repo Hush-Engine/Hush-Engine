@@ -100,13 +100,18 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 
 	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
 
-	this->m_renderGraph = std::make_unique<Hush::RenderGraph::RenderGraph>(this->m_windowRenderer.get());
+	this->m_renderDevice = std::make_unique<Hush::RenderGraph::RenderDevice>(this->m_windowRenderer.get());
 	this->m_isActive = true;
 }
 
-void Hush::WindowRenderer::GetWindowSize(int32_t *width, int32_t *height)
+glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 {
-	SDL_GetWindowSize(this->m_windowPtr, width, height);
+    int32_t width{};
+    int32_t height{};
+
+    SDL_GetWindowSize(this->m_windowPtr, &width, &height);
+
+    return {width, height};
 }
 
 void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
@@ -196,11 +201,13 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 	case SDL_WINDOWEVENT_RESTORED:
 		*isActive = true;
 		break;
-	case SDL_WINDOWEVENT_RESIZED:
-		Hush::LogFormat(ELogLevel::Info, "Window resized to {}x{}", windowEvent.data1, windowEvent.data2);
+	case SDL_WINDOWEVENT_SIZE_CHANGED:
 		this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
-		// Note: resizing might invalidate the render graph resources, so we need to rebuild it
-		this->m_renderGraph->Reset();
+		// Mark the render graph as dirty so it is fully rebuilt next frame
+		// (transient resource dimensions depend on window size).  Unlike Reset(),
+		// Invalidate() does not clear graph data mid-frame — the slow path in
+		// RenderGraphSystem::OnPreRender() will handle the full Reset + rebuild.
+		this->m_renderDevice->Invalidate();
 		break;
 	}
 }

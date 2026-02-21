@@ -9,10 +9,6 @@
 
 namespace Hush::Graphics
 {
-	// ============================================================================
-	// Resource Interfaces
-	// ============================================================================
-
 	/// @brief Abstract buffer interface
 	class IGraphicsBuffer
 	{
