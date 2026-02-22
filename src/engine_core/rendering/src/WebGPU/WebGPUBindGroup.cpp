@@ -6,6 +6,7 @@
 
 #include "WebGPUBindGroup.hpp"
 #include "WebGPUBuffer.hpp"
+#include "WebGPUSampler.hpp"
 #include "WebGPUTexture.hpp"
 #include <vector>
 
@@ -157,11 +158,14 @@ namespace Hush::Graphics
 				}
 			}
 
-			// Sampler binding (opaque pointer — caller passes a wgpu::Sampler*)
+			// Sampler binding — caller passes an ISampler* (concrete type: WebGPUSampler)
 			if (srcEntry.sampler != nullptr)
 			{
-				auto *samplerPtr = static_cast<wgpu::Sampler *>(srcEntry.sampler);
-				dstEntry.sampler = *samplerPtr;
+				auto *webgpuSampler = dynamic_cast<WebGPUSampler *>(srcEntry.sampler);
+				if (webgpuSampler != nullptr)
+				{
+					dstEntry.sampler = webgpuSampler->GetSampler();
+				}
 			}
 		}
 

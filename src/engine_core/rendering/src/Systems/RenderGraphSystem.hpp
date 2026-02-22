@@ -3,50 +3,6 @@
 	\date 2025-02-17
 	\brief Render graph system for managing render passes, resources, and
 		   executor lifecycle.
-
-	RenderGraphSystem is the ECS system that owns the full render-graph frame
-	lifecycle. It coordinates:
-	  - Frame begin/end (swapchain acquisition and presentation)
-	  - Conditional graph rebuild or lightweight per-frame resource update
-	  - Graph compilation (topological sort, SSIS culling, dependency levels)
-	  - Graph execution via the RenderGraphExecutor (resource realization,
-		barrier computation, fence management, batched submission)
-
-	### Frame lifecycle (managed by this system)
-
-	OnPreRender() selects one of two paths depending on whether the graph is
-	already compiled and every builder provides a frameUpdateFunc:
-
-	```
-	OnPreRender():
-		RenderDevice::BeginFrame()          — acquire swapchain image
-
-		IF graph is compiled AND all builders have frameUpdateFunc:
-			[FAST PATH]
-			RenderDevice::SoftReset()       — reset executor state only
-			frameUpdateFunc(graph)          — update per-frame imports
-											  (e.g. swapchain backbuffer)
-
-		ELSE:
-			[SLOW PATH]
-			RenderDevice::Reset()           — clear graph + reset executor
-			builderFunc(graph)              — full rebuild (AddPass, etc.)
-			RenderDevice::Compile()         — topo-sort, SSIS, dep levels
-
-	OnRender():
-		RenderDevice::Execute()             — realize resources, barriers,
-											  batch cmd lists, submit
-
-	OnPostRender():
-		RenderDevice::EndFrame()            — present swapchain image
-	```
-
-	The slow path is taken on the first frame, after a resize / Invalidate(),
-	or when any builder has not provided a frameUpdateFunc (backward compat).
-
-	Because BeginFrame() is called inside OnPreRender (before the builder or
-	update lambdas run), imported resources such as the swapchain backbuffer
-	are guaranteed to reference the correct frame's texture.
 */
 
 #pragma once

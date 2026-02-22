@@ -25,6 +25,7 @@ target_link_libraries(HushLibs INTERFACE
         Hush::Filesystem $<TARGET_OBJECTS:HushFilesystem>
         Hush::Threading $<TARGET_OBJECTS:HushThreading>
         Hush::Core $<TARGET_OBJECTS:HushCore>
+        Hush::Renderer $<TARGET_OBJECTS:HushRenderer>
 )
 
 add_library(Hush::Libs ALIAS HushLibs)

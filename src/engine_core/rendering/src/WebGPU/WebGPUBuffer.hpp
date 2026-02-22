@@ -14,7 +14,7 @@ namespace Hush::Graphics
 	class WebGPUBuffer : public IGraphicsBuffer
 	{
 	public:
-		WebGPUBuffer(wgpu::Buffer buffer, const BufferDescriptor &desc);
+		WebGPUBuffer(wgpu::Buffer buffer, wgpu::Instance instance, const BufferDescriptor &desc);
 		~WebGPUBuffer() override;
 
 		WebGPUBuffer(const WebGPUBuffer &) = delete;
@@ -32,7 +32,7 @@ namespace Hush::Graphics
 		{
 			return m_descriptor.usage;
 		}
-		void *Map() override;
+		void *Map(Graphics::IGraphicsDevice *device) override;
 		void Unmap() override;
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
@@ -45,6 +45,7 @@ namespace Hush::Graphics
 
 	private:
 		wgpu::Buffer m_buffer;
+		wgpu::Instance m_instance;
 		BufferDescriptor m_descriptor;
 		void *m_mappedData = nullptr;
 	};

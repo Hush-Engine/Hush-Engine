@@ -12,7 +12,8 @@ endif()
 hush_add_library(
         TARGET_NAME HushRendering
         LIB_TYPE OBJECT
-        SRCS src/WindowRenderer.cpp
+        SRCS src/Components/Material3D.cpp
+             src/WindowRenderer.cpp
              # src/Shared/GpuAllocatedBuffer.cpp
              # src/Shared/ShaderMaterial.cpp
              # src/Shared/Mesh.cpp
@@ -46,6 +47,7 @@ if ("HUSH_WEBGPU_IMPL" IN_LIST HUSH_RENDERER_IMPL)
         src/WebGPU/WebGPUCommandQueue.cpp
         src/WebGPU/WebGPUGraphicsDevice.cpp
         src/WebGPU/WebGPUTexture.cpp
+        src/WebGPU/WebGPUSampler.cpp
         src/WebGPU/WebGPUBindGroup.cpp
     )
 

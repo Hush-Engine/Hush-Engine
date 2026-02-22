@@ -3,12 +3,34 @@
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Logger.hpp"
+#include "ResourceManager.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "VirtualFilesystem.hpp"
+#include "Systems/RenderGraphSystem.hpp"
+#include "Systems/ResourceUploadSystem.hpp"
+#include "filesystem/CFileSystem/CFileSystem.hpp"
 #include <WindowManager.hpp>
 #include <cstdint>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
 #include <imgui/imgui.h>
+
+struct Hush::HushEngine::HushEngineInternal
+{
+	Hush::VirtualFilesystem vfs;
+	Hush::ResourceManager resourceManager;
+
+	std::unique_ptr<Graphics::RenderGraphSystem> renderGraphSystem;
+	std::unique_ptr<Hush::Renderer::ResourceUploadSystem> resourceUploadSystem;
+};
+
+Hush::HushEngine::HushEngine()
+	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
+		  {.numThreads = std::thread::hardware_concurrency(), .pinToCore = true}))
+{
+	m_internal = std::make_unique<HushEngineInternal>();
+	m_internal->resourceManager.Init(&m_internal->vfs);
+}
 
 Hush::HushEngine::~HushEngine()
 {
@@ -17,17 +39,23 @@ Hush::HushEngine::~HushEngine()
 
 void Hush::HushEngine::Run()
 {
+	// Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
+	// mount additional directories or archives as needed)
+	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+
 	this->m_app = LoadApplication(this);
 
 	this->m_isApplicationRunning = true;
 	this->m_windowRenderer =
 		std::make_unique<WindowRenderer>(this->m_app->GetAppName().data(), this->m_app->GetScene());
 
-	// NOTE: BeginFrame/EndFrame are now managed by RenderGraphSystem
-	// (OnPreRender and OnPostRender respectively). The graphics device
-	// pointer is kept for any non-frame-lifecycle uses that may arise.
-	[[maybe_unused]]
-	auto *graphicsDevice = this->m_windowRenderer->GetGraphicsDevice();
+	this->m_internal->renderGraphSystem = std::make_unique<Graphics::RenderGraphSystem>(
+		*this->m_app->GetScene(), &this->m_windowRenderer->GetRenderDevice());
+
+	this->m_internal->resourceUploadSystem = std::make_unique<Hush::Renderer::ResourceUploadSystem>(
+		*this->m_app->GetScene(), this->m_internal->renderGraphSystem->GetRenderDevice());
+
+	AddDefaultSystems();
 
 	// Initialize any static resources we need
 	this->Init();
@@ -63,12 +91,6 @@ void Hush::HushEngine::Run()
 	}
 }
 
-Hush::HushEngine::HushEngine()
-	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
-		  {.numThreads = std::thread::hardware_concurrency(), .pinToCore = true}))
-{
-}
-
 void Hush::HushEngine::AddSystem(ISystem *system)
 {
 	this->m_app->GetScene()->AddEngineSystem(system);
@@ -94,6 +116,22 @@ void Hush::HushEngine::Init()
 	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
 	entity.AddComponent<LocalTransform>();
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
+}
+
+Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
+{
+	return &this->m_internal->vfs;
+}
+
+void Hush::HushEngine::AddDefaultSystems()
+{
+	this->m_app->GetScene()->AddEngineSystem(this->m_internal->renderGraphSystem.get());
+	this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
+}
+
+Hush::ResourceManager *Hush::HushEngine::GetResourceManager() noexcept
+{
+	return &this->m_internal->resourceManager;
 }
 
 extern "C" bool BundledAppExists_Internal_() HUSH_WEAK;

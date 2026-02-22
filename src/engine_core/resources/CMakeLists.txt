@@ -4,6 +4,8 @@
 hush_add_library(
         TARGET_NAME HushResources
         LIB_TYPE OBJECT
+        SRCS src/Systems/ResourceUploadSystem.cpp
+             src/ResourceManager.cpp
         # SRCS src/ResourceManager.cpp
         # src/Loaders/VulkanLoader.cpp
         # src/Loaders/GltfLoadFunctions.cpp

@@ -1,3 +1,4 @@
+#include "Components/TextureComponent.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
@@ -10,7 +11,7 @@
 #include "RHI/PipelineDescriptor.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "RenderGraph/RenderGraph.hpp"
-#include "Systems/RenderGraphSystem.hpp"
+#include "ResourceManager.hpp"
 #include "Scene.hpp"
 #include "WindowRenderer.hpp"
 #include <cstring>
@@ -18,7 +19,7 @@
 #include <memory>
 
 // NOLINTBEGIN(*-avoid-c-arrays)
-static constexpr const char *TRIANGLE_SHADER_SOURCE = R"(
+static constexpr const char *FULLSCREEN_SHADER_SOURCE = R"(
 struct Uniforms
 {
     float4x4 mvp;
@@ -29,38 +30,44 @@ struct Uniforms
 [[vk::binding(0, 0)]]
 ConstantBuffer<Uniforms> uniforms;
 
+[[vk::binding(1, 0)]]
+Texture2D<float4> tex;
+
+[[vk::binding(2, 0)]]
+SamplerState texSampler;
+
 struct VertexOutput
 {
     float4 position : SV_Position;
-    float3 color    : COLOR0;
     float2 uv       : TEXCOORD0;
 };
 
-static const float2 kPositions[3] = {
-    float2( 0.0,  0.5),
-    float2(-0.5, -0.5),
-    float2( 0.5, -0.5),
+// Centered half-size quad as two triangles (6 vertices, CCW winding)
+static const float2 kPositions[6] = {
+    float2(-0.5,  0.5),   // top-left
+    float2(-0.5, -0.5),   // bottom-left
+    float2( 0.5, -0.5),   // bottom-right
+
+    float2(-0.5,  0.5),   // top-left
+    float2( 0.5, -0.5),   // bottom-right
+    float2( 0.5,  0.5),   // top-right
 };
 
-static const float3 kColors[3] = {
-    float3(1.0, 0.0, 0.0),
-    float3(0.0, 1.0, 0.0),
-    float3(0.0, 0.0, 1.0),
-};
+static const float2 kUVs[6] = {
+    float2(0.0, 0.0),     // top-left
+    float2(0.0, 1.0),     // bottom-left
+    float2(1.0, 1.0),     // bottom-right
 
-static const float2 kUVs[3] = {
-    float2(0.5, 0.0),
-    float2(0.0, 1.0),
-    float2(1.0, 1.0),
+    float2(0.0, 0.0),     // top-left
+    float2(1.0, 1.0),     // bottom-right
+    float2(1.0, 0.0),     // top-right
 };
 
 [shader("vertex")]
 VertexOutput vertexMain(uint vertexID : SV_VertexID)
 {
     VertexOutput output;
-    float2 pos = kPositions[vertexID];
-    output.position = mul(uniforms.mvp, float4(pos, 0.0, 1.0));
-    output.color    = kColors[vertexID];
+    output.position = float4(kPositions[vertexID], 0.0, 1.0);
     output.uv       = kUVs[vertexID];
     return output;
 }
@@ -68,10 +75,7 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 [shader("fragment")]
 float4 fragmentMain(VertexOutput input) : SV_Target
 {
-    float3 color = input.color;
-    color *= uniforms.tintColor.rgb;
-    float alpha = uniforms.tintColor.a * (0.8 + 0.2 * sin(uniforms.time * 2.0));
-    return float4(color, alpha);
+    return tex.Sample(texSampler, input.uv);
 }
 )";
 // NOLINTEND(*-avoid-c-arrays)
@@ -114,18 +118,13 @@ public:
 
 	void Init() override
 	{
-		auto *renderGraphSystem = new Hush::Graphics::RenderGraphSystem( // NOLINT(*-owning-memory)
-			*this->m_scene, &this->m_engine->GetWindowRenderer()->GetRenderDevice());
-		this->m_scene->AddEngineSystem(renderGraphSystem);
-
 		if (!InitShaderResources())
 		{
 			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] ERROR: Failed to initialise shader resources!");
 		}
 
-		// ----------------------------------------------------------------
-		// 3. Register a RenderGraph builder entity.
-		// ----------------------------------------------------------------
+		this->m_scene->Init();
+
 		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("RenderGraphBuilder");
 		auto &builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
 
@@ -135,7 +134,12 @@ public:
 			this->UpdatePerFrameResources(graph);
 		};
 
-		this->m_scene->Init();
+		// Load the cat texture and keep a reference for later binding
+		auto textureEntity = this->m_scene->CreateEntity();
+		auto textureResult = m_engine->GetResourceManager()->LoadTexture("engine_res://resources/cat.jpg");
+		HUSH_ASSERT(textureResult.has_value(), "Failed to load texture resource!");
+		m_textureRef = textureResult.value();
+		textureEntity.EmplaceComponent<Hush::Ref<Hush::TextureComponent>>(m_textureRef);
 	}
 
 	void Update(float delta) override
@@ -151,6 +155,8 @@ public:
 
 	void OnPreRender() override
 	{
+		// Try to create the bind group if the texture has been uploaded to the GPU
+		EnsureBindGroup();
 		// Upload updated uniforms before the graph executes.
 		UploadUniforms();
 		GetScene()->PreRender();
@@ -173,7 +179,7 @@ public:
 	[[nodiscard]]
 	std::string_view GetAppName() const noexcept override
 	{
-		return "Hush Shader Triangle Demo";
+		return "Hush Textured Triangle Demo";
 	}
 
 	Hush::Scene *GetScene() noexcept override
@@ -213,18 +219,18 @@ private:
 		};
 
 		ShaderCompilationResult compileResult =
-			m_shaderCompiler->CompileFromSource(TRIANGLE_SHADER_SOURCE, "basic_triangle.slang", entryPoints);
+			m_shaderCompiler->CompileFromSource(FULLSCREEN_SHADER_SOURCE, "fullscreen_texture.slang", entryPoints);
 
 		if (!compileResult.success)
 		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "");
+			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Shader compilation failed.");
 			return false;
 		}
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader compiled successfully.");
 		if (!compileResult.diagnostics.empty())
 		{
-			Hush::LogFormat(Hush::ELogLevel::Info, "");
+			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}", compileResult.diagnostics);
 		}
 
 		// --- 2. Create shader modules ----------------------------------------
@@ -234,7 +240,8 @@ private:
 
 		if (vsStage == nullptr || fsStage == nullptr)
 		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Missing vertex or fragment stage in compilation result.");
+			Hush::LogFormat(Hush::ELogLevel::Error,
+							"[ExampleApp] Missing vertex or fragment stage in compilation result.");
 			return false;
 		}
 
@@ -254,36 +261,66 @@ private:
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader modules created.");
 
-		// --- 3. Create bind group layout from reflection ---------------------
+		// --- 3. Create uniform buffer ----------------------------------------
 
-		auto layoutDescs = compileResult.BuildBindGroupLayoutDescriptors();
+		m_uniformBuffer.CreateResource(
+			BufferDescriptor{
+				.size = sizeof(GpuUniforms),
+				.usage = EBufferUsage::Uniform | EBufferUsage::CopyDestination,
+				.memoryAccess = EMemoryAccess::CPUNone,
+				.debugName = "ExampleApp_Uniforms",
+			},
+			device);
 
-		if (layoutDescs.empty())
+		if (!m_uniformBuffer.IsValid())
 		{
-			// The shader has no bindings — create a minimal layout with the
-			// uniform buffer entry manually (fallback).
-			BindGroupLayoutDescriptor manualLayout{};
-			manualLayout.debugName = "TriangleBindGroupLayout";
-			BindGroupLayoutEntry uniformEntry{};
-			uniformEntry.binding = 0;
-			uniformEntry.type = EBindingType::UniformBuffer;
-			uniformEntry.stageFlags = EShaderStageFlags::Vertex | EShaderStageFlags::Fragment;
-			uniformEntry.minBufferBindingSize = sizeof(GpuUniforms);
-			manualLayout.entries.push_back(uniformEntry);
-			layoutDescs.push_back(std::move(manualLayout));
+			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create uniform buffer.");
+			return false;
 		}
 
-		// Ensure minBufferBindingSize is set (reflection might report 0).
-		for (auto &entry : layoutDescs[0].entries)
-		{
-			if (entry.type == EBindingType::UniformBuffer && entry.minBufferBindingSize == 0)
-			{
-				entry.minBufferBindingSize = sizeof(GpuUniforms);
-			}
-		}
-		layoutDescs[0].debugName = "TriangleBindGroupLayout0";
+		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Uniform buffer created.");
 
-		m_bindGroupLayout.CreateResource(layoutDescs[0], device);
+		// --- 4. Create sampler (native WebGPU) --------------------------------
+
+		if (!CreateNativeSampler(device))
+		{
+			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create sampler.");
+			return false;
+		}
+
+		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Sampler created.");
+
+		// --- 5. Create bind group layout -------------------------------------
+
+		BindGroupLayoutDescriptor layoutDesc{};
+		layoutDesc.debugName = "ExampleApp_BindGroupLayout";
+		layoutDesc.entries = {
+			// binding 0: Uniform buffer
+			BindGroupLayoutEntry{
+				.binding = 0,
+				.type = EBindingType::UniformBuffer,
+				.stageFlags = EShaderStageFlags::Vertex | EShaderStageFlags::Fragment,
+				.minBufferBindingSize = sizeof(GpuUniforms),
+			},
+			// binding 1: Sampled texture
+			BindGroupLayoutEntry{
+				.binding = 1,
+				.type = EBindingType::SampledTexture,
+				.stageFlags = EShaderStageFlags::Fragment,
+				.textureSampleType = ETextureSampleType::Float,
+				.textureViewDimension = 2, // 2D
+			},
+			// binding 2: Sampler
+			BindGroupLayoutEntry{
+				.binding = 2,
+				.type = EBindingType::Sampler,
+				.stageFlags = EShaderStageFlags::Fragment,
+				.samplerType = ESamplerBindingType::Filtering,
+			},
+		};
+
+		m_bindGroupLayout.CreateResource(layoutDesc, device);
+
 		if (!m_bindGroupLayout.IsValid())
 		{
 			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create bind group layout.");
@@ -292,98 +329,148 @@ private:
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Bind group layout created.");
 
-		BufferDescriptor bufferDesc{};
-		bufferDesc.size = sizeof(GpuUniforms);
-		bufferDesc.usage = EBufferUsage::Uniform;
-		bufferDesc.memoryAccess = EMemoryAccess::CPUWrite;
-		bufferDesc.debugName = "TriangleUniformBuffer";
-
-		m_uniformBuffer.CreateResource(bufferDesc, device);
-		if (!m_uniformBuffer.IsValid())
-		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create uniform buffer.");
-			return false;
-		}
-
-		// Write initial uniform data.
-		GpuUniforms initialUniforms{};
-		MakeIdentityMatrix(static_cast<float *>(initialUniforms.mvp), 16);
-		initialUniforms.tintColor[0] = 1.0f; // R
-		initialUniforms.tintColor[1] = 1.0f; // G
-		initialUniforms.tintColor[2] = 1.0f; // B
-		initialUniforms.tintColor[3] = 1.0f; // A
-		initialUniforms.time = 0.0f;
-
-		device->WriteBuffer(m_uniformBuffer.Get(), 0, &initialUniforms, sizeof(initialUniforms));
-
-		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Uniform buffer created and initialised.");
-
-		BindGroupDescriptor bgDesc{};
-		bgDesc.layout = m_bindGroupLayout.Get();
-		bgDesc.debugName = "TriangleBindGroup";
-
-		BindGroupEntry bufEntry{};
-		bufEntry.binding = 0;
-		bufEntry.buffer = m_uniformBuffer.Get();
-		bufEntry.offset = 0;
-		bufEntry.size = sizeof(GpuUniforms);
-		bgDesc.entries.push_back(bufEntry);
-
-		m_bindGroup.CreateResource(bgDesc, device);
-		if (!m_bindGroup.IsValid())
-		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create bind group.");
-			return false;
-		}
-
-		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Bind group created.");
-
-		// --- 6. Create the graphics pipeline ---------------------------------
+		// --- 6. Create graphics pipeline -------------------------------------
 
 		GraphicsPipelineDescriptor pipelineDesc{};
-		pipelineDesc.debugName = "TrianglePipeline";
+		pipelineDesc.debugName = "ExampleApp_TexturedTrianglePipeline";
 
-		// Vertex stage
-		pipelineDesc.vertexStage.module = m_vertexShader.Get();
-		pipelineDesc.vertexStage.entryPoint = "vertexMain";
+		pipelineDesc.vertexStage = PipelineShaderStage{
+			.module = m_vertexShader.Get(),
+			.entryPoint = "vertexMain",
+		};
+		pipelineDesc.fragmentStage = PipelineShaderStage{
+			.module = m_fragmentShader.Get(),
+			.entryPoint = "fragmentMain",
+		};
 
-		// Fragment stage
-		pipelineDesc.fragmentStage.module = m_fragmentShader.Get();
-		pipelineDesc.fragmentStage.entryPoint = "fragmentMain";
+		// No vertex buffer layouts — we generate vertices in the shader via SV_VertexID
+		pipelineDesc.primitive = PrimitiveState{
+			.topology = EPrimitiveTopology::TriangleList,
+			.cullMode = ECullModeFlags::None,
+		};
 
-		pipelineDesc.primitive.topology = EPrimitiveTopology::TriangleList;
-		pipelineDesc.primitive.cullMode = ECullModeFlags::None;
-
+		// Single color target matching the render texture format
 		ColorTargetState colorTarget{};
 		colorTarget.format = ETextureFormat::BGRA8_UNORM;
-
 		colorTarget.blendEnabled = true;
-		colorTarget.colorBlend.srcFactor = EBlendFactor::SrcAlpha;
-		colorTarget.colorBlend.dstFactor = EBlendFactor::OneMinusSrcAlpha;
-		colorTarget.colorBlend.operation = EBlendOperation::Add;
-		colorTarget.alphaBlend.srcFactor = EBlendFactor::One;
-		colorTarget.alphaBlend.dstFactor = EBlendFactor::OneMinusSrcAlpha;
-		colorTarget.alphaBlend.operation = EBlendOperation::Add;
+		colorTarget.colorBlend = BlendComponent{
+			.operation = EBlendOperation::Add,
+			.srcFactor = EBlendFactor::SrcAlpha,
+			.dstFactor = EBlendFactor::OneMinusSrcAlpha,
+		};
+		colorTarget.alphaBlend = BlendComponent{
+			.operation = EBlendOperation::Add,
+			.srcFactor = EBlendFactor::One,
+			.dstFactor = EBlendFactor::OneMinusSrcAlpha,
+		};
 		colorTarget.writeMask = EColorWriteMask::All;
-
 		pipelineDesc.colorTargets.push_back(colorTarget);
 
-		// No depth/stencil for this simple demo.
-		pipelineDesc.depthStencil.enabled = false;
-
-		// Bind group layouts — one group at set 0.
+		// Bind group layout
 		pipelineDesc.bindGroupLayouts[0] = m_bindGroupLayout.Get();
 		pipelineDesc.bindGroupLayoutCount = 1;
 
 		m_pipeline.CreateResource(pipelineDesc, device);
+
 		if (!m_pipeline.IsValid())
 		{
 			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create graphics pipeline.");
 			return false;
 		}
 
-		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Graphics pipeline created successfully.");
+		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Graphics pipeline created.");
+
 		return true;
+	}
+
+	bool CreateNativeSampler(Hush::Graphics::IGraphicsDevice *device)
+	{
+		using namespace Hush::Graphics;
+
+		SamplerDescriptor samplerDesc{};
+		samplerDesc.debugName = "ExampleApp_Sampler";
+		samplerDesc.addressModeU = EAddressMode::ClampToEdge;
+		samplerDesc.addressModeV = EAddressMode::ClampToEdge;
+		samplerDesc.addressModeW = EAddressMode::ClampToEdge;
+		samplerDesc.magFilter = EFilterMode::Linear;
+		samplerDesc.minFilter = EFilterMode::Linear;
+		samplerDesc.mipmapFilter = EFilterMode::Linear;
+		samplerDesc.lodMinClamp = 0.0f;
+		samplerDesc.lodMaxClamp = 32.0f;
+		samplerDesc.compare = ECompareFunction::Undefined;
+		samplerDesc.maxAnisotropy = 1;
+
+		m_sampler.CreateResource(samplerDesc, device);
+		return m_sampler.IsValid();
+	}
+
+	/// @brief Lazily create the bind group once the texture has been uploaded to the GPU.
+	void EnsureBindGroup()
+	{
+		// Already created
+		if (m_bindGroup.IsValid())
+		{
+			return;
+		}
+
+		// Check prerequisites
+		if (!m_uniformBuffer.IsValid() || !m_bindGroupLayout.IsValid())
+		{
+			return;
+		}
+
+		// Check that the texture has been uploaded
+		if (m_textureRef.IsNull() || !m_textureRef->IsValid() || m_textureRef->GetGpuTexture() == nullptr)
+		{
+			return;
+		}
+
+		if (!m_sampler.IsValid())
+		{
+			return;
+		}
+
+		using namespace Hush::Graphics;
+
+		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
+		if (device == nullptr)
+		{
+			return;
+		}
+
+		BindGroupDescriptor bgDesc{};
+		bgDesc.layout = m_bindGroupLayout.Get();
+		bgDesc.debugName = "ExampleApp_BindGroup";
+		bgDesc.entries = {
+			// binding 0: uniform buffer
+			BindGroupEntry{
+				.binding = 0,
+				.buffer = m_uniformBuffer.Get(),
+				.offset = 0,
+				.size = sizeof(GpuUniforms),
+			},
+			// binding 1: sampled texture
+			BindGroupEntry{
+				.binding = 1,
+				.texture = m_textureRef->GetGpuTexture(),
+			},
+			// binding 2: sampler
+			BindGroupEntry{
+				.binding = 2,
+				.sampler = m_sampler.Get(),
+			},
+		};
+
+		m_bindGroup.CreateResource(bgDesc, device);
+
+		if (m_bindGroup.IsValid())
+		{
+			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Bind group created — texture is ready for rendering.");
+		}
+		else
+		{
+			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create bind group.");
+		}
 	}
 
 	void UploadUniforms()
@@ -417,9 +504,6 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		// ----------------------------------------------------------------
-		// Pass 1: TrianglePass — clear the render texture and draw a triangle.
-		// ----------------------------------------------------------------
 		struct TrianglePassData
 		{
 			ResourceId renderTexture;
@@ -428,9 +512,10 @@ private:
 		const auto &trianglePassData = graph.AddPass<TrianglePassData>(
 			EPassType::Graphics, "TrianglePass",
 
-			// BUILD PHASE -------------------------------------------------
 			[this](RenderGraph::BuildContext &ctx, TrianglePassData &data) {
 				const auto windowSize = this->m_engine->GetWindowRenderer()->GetWindowSize();
+
+				ctx.Read(ctx.GetResourceIdByName(RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
 
 				data.renderTexture = ctx.Create<TextureResource>(
 					"TrianglePass_RenderTexture", TextureDescriptor{
@@ -441,7 +526,6 @@ private:
 												  });
 			},
 
-			// EXECUTE PHASE -----------------------------------------------
 			[this](TrianglePassData &data, Hush::Graphics::ICommandList *cmdList,
 				   const Hush::RenderGraph::ResourceManager &resourceManager) {
 				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
@@ -466,29 +550,17 @@ private:
 				// Begin render pass -------------------------------------------
 				cmd->BeginRenderPass(renderPass);
 
-				// Bind pipeline & resources -----------------------------------
+				// Draw the textured triangle if resources are ready ------------
 				if (m_pipeline.IsValid() && m_bindGroup.IsValid())
 				{
 					cmd->BindPipeline(m_pipeline.Get());
 					cmd->SetBindGroup(0, m_bindGroup.Get());
-
-					// Set viewport & scissor to match the render target.
-					auto *tex = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
-					auto w = static_cast<float>(tex->GetWidth());
-					auto h = static_cast<float>(tex->GetHeight());
-					cmd->SetViewport(0.0f, 0.0f, w, h, 0.0f, 1.0f);
-					cmd->SetScissor(0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
-
-					// Draw the triangle — 3 vertices, 1 instance, no vertex buffer.
-					cmd->Draw(3, 1, 0, 0);
+					cmd->Draw(6, 1, 0, 0); // 6 vertices (fullscreen quad), 1 instance
 				}
 
 				cmd->EndRenderPass();
 			});
 
-		// ----------------------------------------------------------------
-		// Pass 2: CopyToBackbuffer — copy the render texture to the swapchain.
-		// ----------------------------------------------------------------
 		struct CopyToBackbufferPassData
 		{
 			ResourceId renderTexture;
@@ -518,9 +590,8 @@ private:
 				auto *destinationTexture =
 					resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
 
-				cmd->CopyTexture(sourceTexture, 0, 0, 0, destinationTexture, 0, 0, 0,
-
-								 sourceTexture->GetWidth(), sourceTexture->GetHeight(), 1);
+				cmd->CopyTexture(sourceTexture, 0, 0, 0, destinationTexture, 0, 0, 0, sourceTexture->GetWidth(),
+								 sourceTexture->GetHeight(), 1);
 			});
 	}
 
@@ -549,6 +620,12 @@ private:
 	Hush::Graphics::BindGroupResource m_bindGroup;
 	Hush::Graphics::GraphicsPipelineResource m_pipeline;
 	Hush::Graphics::BufferResource m_uniformBuffer;
+
+	// Texture reference — kept alive so we can access the GPU texture for binding
+	Hush::Ref<Hush::TextureComponent> m_textureRef;
+
+	// Sampler — owned by SamplerResource wrapper for automatic lifetime management.
+	Hush::Graphics::SamplerResource m_sampler;
 
 	// Render graph bookkeeping
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{0};

@@ -106,12 +106,12 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 
 glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 {
-    int32_t width{};
-    int32_t height{};
+	int32_t width{};
+	int32_t height{};
 
-    SDL_GetWindowSize(this->m_windowPtr, &width, &height);
+	SDL_GetWindowSize(this->m_windowPtr, &width, &height);
 
-    return {width, height};
+	return {width, height};
 }
 
 void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)

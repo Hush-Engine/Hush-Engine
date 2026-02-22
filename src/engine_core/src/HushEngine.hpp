@@ -16,9 +16,16 @@
 namespace Hush
 {
 	struct DirectionalLight;
+	class VirtualFilesystem;
+	class ResourceManager;
 
 	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
+		/// Forward declaration of the internal implementation class, which is hidden from users of the engine.
+		/// This allows us to hide implementation details, reduce compile-time dependencies, and
+		/// having the freedom to change the internal data without affecting the ABI of this class.
+		struct HushEngineInternal;
+
 	public:
 		/// Initializes the HushEngine with all its properties
 		HushEngine();
@@ -61,11 +68,18 @@ namespace Hush
 			return m_windowRenderer.get();
 		}
 
+		VirtualFilesystem *GetVirtualFilesystem() noexcept;
+
+		ResourceManager *GetResourceManager() noexcept;
+
 	private:
 		void Init();
 
-		std::unique_ptr<IApplication> m_app;
-		std::unique_ptr<WindowRenderer> m_windowRenderer;
+		void AddDefaultSystems();
+
+		std::unique_ptr<IApplication> m_app = nullptr;
+		std::unique_ptr<WindowRenderer> m_windowRenderer = nullptr;
+		std::unique_ptr<HushEngineInternal> m_internal = nullptr;
 		Threading::Executors::ThreadPool m_threadPool;
 
 		DirectionalLight *m_defaultLight = nullptr;

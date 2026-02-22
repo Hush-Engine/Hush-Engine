@@ -8,6 +8,7 @@
 #include "GraphicsTypes.hpp"
 #include "IGraphicsBuffer.hpp"
 #include "IGraphicsTexture.hpp"
+#include "ISampler.hpp"
 #include "ICommandQueue.hpp"
 #include "ICommandList.hpp"
 #include "IFence.hpp"
@@ -52,7 +53,7 @@ namespace Hush::Graphics
 		/// @param descriptor Buffer creation parameters
 		/// @return Created buffer, or nullptr on failure
 		[[nodiscard]]
-		virtual std::shared_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) = 0;
+		virtual std::unique_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) = 0;
 
 		/// @brief Write data from the CPU into a GPU buffer.
 		///
@@ -75,6 +76,17 @@ namespace Hush::Graphics
 		/// @return Created texture, or nullptr on failure
 		[[nodiscard]]
 		virtual std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) = 0;
+
+		/// @brief Create a sampler object.
+		///
+		/// Samplers control how textures are sampled in shaders: filtering
+		/// modes, address (wrap) modes, LOD clamping, comparison function,
+		/// and anisotropy.  Samplers are immutable once created.
+		///
+		/// @param descriptor Sampler creation parameters.
+		/// @return Created sampler, or nullptr on failure.
+		[[nodiscard]]
+		virtual std::unique_ptr<ISampler> CreateSampler(const SamplerDescriptor &descriptor) = 0;
 
 		/// @brief Create a shader module from compiled bytecode or source text.
 		///

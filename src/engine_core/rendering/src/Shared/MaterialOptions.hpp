@@ -18,8 +18,7 @@ namespace Hush
 	enum class ECullMode : uint32_t
 	{
 		None = 0,
-		Front,
-		Back,
-		FrontAndBack = Front | Back
+		Front = 1,
+		Back = 2,
 	};
 } // namespace Hush

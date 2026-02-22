@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../RHI/IShaderModule.hpp"
+#include "Logger.hpp"
 #include <string>
 #include <webgpu/webgpu.hpp>
 
@@ -106,11 +107,14 @@ namespace Hush::Graphics
 			}
 
 			// WebGPU requires WGSL source text
-			const std::string &wgslSource = descriptor.bytecode.sourceText;
-			if (wgslSource.empty())
+			if (!std::holds_alternative<ShaderBytecode::TextContent>(descriptor.bytecode.content))
 			{
+				Hush::LogFormat(Hush::ELogLevel::Error,
+								"[WebGPUShaderModule] Shader bytecode does not contain WGSL source text.");
 				return;
 			}
+			const auto &content = std::get<ShaderBytecode::TextContent>(descriptor.bytecode.content);
+			const std::string &wgslSource = content.sourceText;
 
 			wgpu::ShaderSourceWGSL wgslSourceDesc{};
 			wgslSourceDesc.code = WGPUStringView{wgslSource.c_str(), wgslSource.size()};

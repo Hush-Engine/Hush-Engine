@@ -16,7 +16,6 @@ namespace Hush::Graphics
 		Vulkan,
 		D3D12,
 		Metal,
-		OpenGL,
 		WebGPU,
 	};
 
@@ -126,13 +125,142 @@ namespace Hush::Graphics
 	};
 	// NOLINTEND(readability-identifier-naming)
 
+	/// @brief Return the number of bytes per pixel for uncompressed formats.
+	///        Compressed / depth-stencil formats return a best-effort value
+	///        (block size divided by texel count is NOT attempted — callers
+	///        dealing with BC formats should use dedicated block-size helpers).
+	constexpr uint32_t GetBytesPerPixel(ETextureFormat format)
+	{
+		switch (format)
+		{
+		// 1 byte
+		case ETextureFormat::R8_UNORM:
+		case ETextureFormat::R8_SNORM:
+		case ETextureFormat::R8_UINT:
+		case ETextureFormat::R8_SINT:
+			return 1;
+
+		// 2 bytes
+		case ETextureFormat::R16_UNORM:
+		case ETextureFormat::R16_SNORM:
+		case ETextureFormat::R16_UINT:
+		case ETextureFormat::R16_SINT:
+		case ETextureFormat::R16_FLOAT:
+		case ETextureFormat::RG8_UNORM:
+		case ETextureFormat::RG8_SNORM:
+		case ETextureFormat::D16_UNORM:
+			return 2;
+
+		// 3 bytes
+		case ETextureFormat::RGB8_UNORM:
+		case ETextureFormat::RGB8_SRGB:
+			return 3;
+
+		// 4 bytes
+		case ETextureFormat::R32_UINT:
+		case ETextureFormat::R32_SINT:
+		case ETextureFormat::R32_FLOAT:
+		case ETextureFormat::RG16_FLOAT:
+		case ETextureFormat::RGBA8_UNORM:
+		case ETextureFormat::RGBA8_SRGB:
+		case ETextureFormat::BGRA8_UNORM:
+		case ETextureFormat::BGRA8_SRGB:
+		case ETextureFormat::D24_UNORM:
+		case ETextureFormat::D32_FLOAT:
+		case ETextureFormat::D24_UNORM_S8_UINT:
+			return 4;
+
+		// 8 bytes
+		case ETextureFormat::RG32_FLOAT:
+		case ETextureFormat::RGBA16_FLOAT:
+		case ETextureFormat::D32_FLOAT_S8_UINT:
+			return 8;
+
+		// 16 bytes
+		case ETextureFormat::RGBA32_FLOAT:
+			return 16;
+
+		// Block-compressed formats — return the block size in bytes.
+		// Callers must account for 4x4 block granularity themselves.
+		case ETextureFormat::BC1_UNORM:
+		case ETextureFormat::BC1_SRGB:
+		case ETextureFormat::BC4_UNORM:
+			return 8; // 8 bytes per 4x4 block
+
+		case ETextureFormat::BC3_UNORM:
+		case ETextureFormat::BC3_SRGB:
+		case ETextureFormat::BC5_UNORM:
+		case ETextureFormat::BC7_UNORM:
+		case ETextureFormat::BC7_SRGB:
+			return 16; // 16 bytes per 4x4 block
+
+		default:
+			return 4;
+		}
+	}
+
 	/// @brief Memory access flags
 	enum class EMemoryAccess
 	{
-		CPUNone,	  // GPU only
-		CPUWrite,	  // CPU can write, GPU can read
-		CPURead,	  // CPU can read, GPU can write
-		CPUReadWrite, // CPU can read/write
+		CPUNone = 0,					   // GPU only
+		CPUWrite = 1 << 0,				   // CPU can write, GPU can read
+		CPURead = 1 << 1,				   // CPU can read, GPU can write
+		CPUReadWrite = CPUWrite | CPURead, // CPU can read/write
+	};
+
+	inline EMemoryAccess operator|(EMemoryAccess a, EMemoryAccess b)
+	{
+		return static_cast<EMemoryAccess>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline EMemoryAccess operator&(EMemoryAccess a, EMemoryAccess b)
+	{
+		return static_cast<EMemoryAccess>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	inline EMemoryAccess &operator|=(EMemoryAccess &a, EMemoryAccess b)
+	{
+		a = a | b;
+		return a;
+	}
+
+	inline bool HasFlag(EMemoryAccess access, EMemoryAccess flag)
+	{
+		return (static_cast<uint32_t>(access) & static_cast<uint32_t>(flag)) != 0;
+	}
+
+	/// @brief Comparison function used for depth/stencil tests and comparison samplers.
+	///
+	/// When used with a sampler, Undefined means "no comparison" (regular filtering sampler).
+	/// For depth/stencil state, use one of the concrete comparison functions (Never..Always).
+	enum class ECompareFunction : uint32_t
+	{
+		/// @brief No comparison — used for regular filtering samplers.
+		Undefined = 0,
+
+		/// @brief Comparison never passes.
+		Never,
+
+		/// @brief Passes if reference < fetched value.
+		Less,
+
+		/// @brief Passes if reference == fetched value.
+		Equal,
+
+		/// @brief Passes if reference <= fetched value.
+		LessEqual,
+
+		/// @brief Passes if reference > fetched value.
+		Greater,
+
+		/// @brief Passes if reference != fetched value.
+		NotEqual,
+
+		/// @brief Passes if reference >= fetched value.
+		GreaterEqual,
+
+		/// @brief Comparison always passes.
+		Always,
 	};
 
 	/// @brief Queue type for command submission
@@ -316,5 +444,4 @@ namespace Hush::Graphics
 		uint32_t transferQueueSupportedStates =
 			static_cast<uint32_t>(EResourceState::CopySource) | static_cast<uint32_t>(EResourceState::CopyDestination);
 	};
-
 } // namespace Hush::Graphics

@@ -167,7 +167,7 @@ namespace Hush::Graphics
 
 	void WebGPUCopyCommandList::CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst,
 													uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t width,
-													uint32_t height, uint32_t depth)
+													uint32_t height, uint32_t depth, uint32_t rowPitch)
 	{
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(src && dst, "Source buffer and destination texture must be valid");
@@ -178,7 +178,7 @@ namespace Hush::Graphics
 		wgpu::TexelCopyBufferInfo source{};
 		source.buffer = srcBuffer->GetBuffer();
 		source.layout.offset = srcOffset;
-		source.layout.bytesPerRow = width * GetTextureBytesPerPixel(GetTextureFormat(dst));
+		source.layout.bytesPerRow = rowPitch;
 		source.layout.rowsPerImage = height;
 
 		wgpu::TexelCopyTextureInfo destination{};
@@ -346,7 +346,7 @@ namespace Hush::Graphics
 
 	void WebGPUComputeCommandList::CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst,
 													   uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t width,
-													   uint32_t height, uint32_t depth)
+													   uint32_t height, uint32_t depth, uint32_t rowPitch)
 	{
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(!m_inComputePass, "Cannot copy during compute pass");
@@ -358,7 +358,7 @@ namespace Hush::Graphics
 		wgpu::TexelCopyBufferInfo source{};
 		source.buffer = srcBuffer->GetBuffer();
 		source.layout.offset = srcOffset;
-		source.layout.bytesPerRow = width * GetTextureBytesPerPixel(GetTextureFormat(dst));
+		source.layout.bytesPerRow = rowPitch;
 		source.layout.rowsPerImage = height;
 
 		wgpu::TexelCopyTextureInfo destination{};
@@ -612,7 +612,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsCommandList::CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst,
 														uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t width,
-														uint32_t height, uint32_t depth)
+														uint32_t height, uint32_t depth, uint32_t rowPitch)
 	{
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(!m_inRenderPass, "Cannot copy during render pass");
@@ -625,7 +625,7 @@ namespace Hush::Graphics
 		wgpu::TexelCopyBufferInfo source{};
 		source.buffer = srcBuffer->GetBuffer();
 		source.layout.offset = srcOffset;
-		source.layout.bytesPerRow = width * GetTextureBytesPerPixel(GetTextureFormat(dst));
+		source.layout.bytesPerRow = rowPitch;
 		source.layout.rowsPerImage = height;
 
 		wgpu::TexelCopyTextureInfo destination{};
@@ -820,6 +820,7 @@ namespace Hush::Graphics
 
 		// Convert our descriptor to WebGPU descriptor
 		wgpu::RenderPassDescriptor renderPassDesc{};
+		renderPassDesc.setDefault();
 		if (!descriptor.debugLabel.empty())
 		{
 			renderPassDesc.label = WGPUStringView(descriptor.debugLabel.data(), descriptor.debugLabel.size());
@@ -831,6 +832,13 @@ namespace Hush::Graphics
 		{
 			const auto &colorAttach = descriptor.colorAttachments[i];
 			auto *texture = dynamic_cast<WebGPUTexture *>(colorAttach.texture);
+
+			// For non-3D texture views depthSlice must be WGPU_DEPTH_SLICE_UNDEFINED.
+			// Zero-initialisation leaves it at 0 which wgpu-native rejects as
+			// "Depth slice was provided but the color attachment's view is not 3D".
+			// wgpu-native's setDefault() does NOT initialise this field, so we
+			// set it explicitly.
+			colorAttachments[i].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
 			colorAttachments[i].view = texture->GetView();
 

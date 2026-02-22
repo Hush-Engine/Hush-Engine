@@ -3,6 +3,11 @@
 #undef HUSH_GENERATED_BODY
 #endif
 
+// RegisterClass might be defined by Windows, so undefine it to avoid conflicts with generated code.
+#ifdef RegisterClass
+#undef RegisterClass
+#endif
+
 #define HUSH_GENERATED_BODY                                                                                            \
 public:                                                                                                                \
 	static constexpr std::uint64_t TypeId()                                                                            \

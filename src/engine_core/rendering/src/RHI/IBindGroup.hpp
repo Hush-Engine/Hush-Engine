@@ -17,6 +17,7 @@ namespace Hush::Graphics
 	class IGraphicsBuffer;
 	class IGraphicsTexture;
 	class IBindGroupLayout;
+	class ISampler;
 
 	/// @brief Bitmask flags indicating which shader stages can access a binding.
 	enum class EShaderStageFlags : uint32_t
@@ -214,14 +215,9 @@ namespace Hush::Graphics
 		IGraphicsTexture *texture = nullptr;
 
 		// -- Sampler binding ------------------------------------------------
-		// Samplers are backend-specific.  For now we store an opaque pointer
-		// that backends can interpret.  A dedicated ISampler interface can be
-		// added later.
 
-		/// @brief Opaque sampler handle (for Sampler / ComparisonSampler entries).
-		/// For WebGPU: wgpu::Sampler*
-		/// For Vulkan: VkSampler*
-		void *sampler = nullptr;
+		/// @brief Sampler to bind (for Sampler / ComparisonSampler entries).
+		ISampler *sampler = nullptr;
 	};
 
 	/// @brief Descriptor for creating a bind group.

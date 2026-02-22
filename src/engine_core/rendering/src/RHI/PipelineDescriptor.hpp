@@ -287,18 +287,7 @@ namespace Hush::Graphics
 		EColorWriteMask writeMask = EColorWriteMask::All;
 	};
 
-	/// @brief Comparison function used for depth and stencil tests
-	enum class ECompareFunction : uint32_t
-	{
-		Never = 0,
-		Less,
-		Equal,
-		LessEqual,
-		Greater,
-		NotEqual,
-		GreaterEqual,
-		Always,
-	};
+	// ECompareFunction is defined in GraphicsTypes.hpp
 
 	/// @brief Stencil operation
 	enum class EStencilOperation : uint32_t

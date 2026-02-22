@@ -225,6 +225,8 @@ namespace Hush::Graphics
 	{
 		switch (func)
 		{
+		case ECompareFunction::Undefined:
+			return wgpu::CompareFunction::Undefined;
 		case ECompareFunction::Never:
 			return wgpu::CompareFunction::Never;
 		case ECompareFunction::Less:

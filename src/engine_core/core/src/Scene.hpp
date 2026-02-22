@@ -108,6 +108,7 @@ namespace Hush
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type
 		template <class T, class Func>
+			requires std::invocable<Func, Entity::EntityId, T *>
 		void AddComponentObserver(EComponentObserverType observerType, Func &&callback)
 		{
 			Entity::EntityId event = 0;
@@ -161,6 +162,7 @@ namespace Hush
 														delete reinterpret_cast<CallbackFunc_t *>(ctx);
 													}};
 			// TODO: Add this to a member vector so that we can delete it afterwards
+			[[maybe_unused]]
 			Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 		}
 

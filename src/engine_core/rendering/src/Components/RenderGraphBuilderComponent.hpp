@@ -1,6 +1,6 @@
 /*! \file RenderGraphBuilderComponent.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief RenderGraph builder component for resource declaration and pass setup
 */
 

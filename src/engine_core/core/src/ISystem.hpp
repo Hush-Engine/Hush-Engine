@@ -37,6 +37,9 @@ namespace Hush
 	/// constructor.
 	class ISystem
 	{
+		friend class Scene;
+		friend class HushEngine;
+
 	public:
 		static constexpr std::uint16_t MAX_ORDER = 255;
 
@@ -104,6 +107,11 @@ namespace Hush
 		}
 
 	private:
+		void SetScene(Scene *scene)
+		{
+			m_scene = scene;
+		}
+
 		std::uint16_t m_order = 0;
 		Scene *m_scene = nullptr;
 	};

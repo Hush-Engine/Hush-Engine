@@ -95,9 +95,10 @@ namespace Hush::Graphics
 								uint64_t size) = 0;
 
 		/// @brief Record a buffer-to-texture copy command
+		/// @param rowPitch Byte stride between consecutive rows in the source buffer (must be aligned to 256).
 		virtual void CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst, uint32_t dstX,
-										 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height,
-										 uint32_t depth) = 0;
+										 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height, uint32_t depth,
+										 uint32_t rowPitch) = 0;
 
 		/// @brief Record a texture-to-buffer copy command
 		virtual void CopyTextureToBuffer(IGraphicsTexture *src, uint32_t srcX, uint32_t srcY, uint32_t srcZ,

@@ -97,9 +97,10 @@ namespace Hush::RenderGraph
 		ResourceManager(ResourceManager &&) = delete;
 		ResourceManager &operator=(ResourceManager &&) = delete;
 
-		void AddResource(ResourceId id, Hush::RenderGraph::ResourceHandle handle)
+		void AddResource(std::string name, ResourceId id, Hush::RenderGraph::ResourceHandle handle)
 		{
 			m_resources.emplace(id, std::move(handle));
+			m_resourceNameToId.emplace(std::move(name), id);
 		}
 
 		[[nodiscard]]
@@ -111,6 +112,30 @@ namespace Hush::RenderGraph
 				return &it->second;
 			}
 			return nullptr;
+		}
+
+		[[nodiscard]]
+		Hush::RenderGraph::ResourceHandle *GetResourceHandle(std::string_view name) const
+		{
+			auto it = m_resourceNameToId.find(std::string(name));
+			if (it != m_resourceNameToId.end())
+			{
+				return GetResourceHandle(it->second);
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]]
+		ResourceId GetResourceId(std::string_view name) const
+		{
+			auto it = m_resourceNameToId.find(std::string(name));
+			if (it != m_resourceNameToId.end())
+			{
+				return it->second;
+			}
+
+			return ResourceId{0};
 		}
 
 		template <typename T>
@@ -161,10 +186,12 @@ namespace Hush::RenderGraph
 		void Clear()
 		{
 			m_resources.clear();
+			m_resourceNameToId.clear();
 		}
 
 	private:
 		mutable boost::unordered_flat_map<ResourceId, Hush::RenderGraph::ResourceHandle> m_resources;
+		mutable boost::unordered_flat_map<std::string, ResourceId> m_resourceNameToId;
 	};
 
 	/// Base class for all passes.
@@ -415,6 +442,11 @@ namespace Hush::RenderGraph
 		};
 
 	public:
+		/// @brief Sync token name for the resource upload system.
+		///       Passes that consume uploaded resources should Read this resource in their build callback to create a
+		///       dependency edge on the Transfer pass.
+		static constexpr std::string_view RESOURCE_UPLOAD_SYNC_TOKEN_NAME = "Hush__UploadSyncToken__";
+
 		/// Represents a dependency level — a group of passes that can execute in parallel.
 		///
 		/// Passes within a single dependency level share the same maximum
@@ -521,7 +553,7 @@ namespace Hush::RenderGraph
 				Hush::RenderGraph::ResourceHandle handle = Hush::RenderGraph::ResourceHandle(
 					desc, T{}, Hush::RenderGraph::ResourceHandle::EHandleType::Transient, id.id);
 
-				m_renderGraph.m_resourceManager.AddResource(id, std::move(handle));
+				m_renderGraph.m_resourceManager.AddResource(std::string(name), id, std::move(handle));
 				return id;
 			}
 
@@ -547,7 +579,7 @@ namespace Hush::RenderGraph
 					Hush::RenderGraph::ResourceHandle(typename T::Descriptor{}, std::forward<T>(externalResource),
 													  Hush::RenderGraph::ResourceHandle::EHandleType::External, id.id);
 
-				m_renderGraph.m_resourceManager.AddResource(id, std::move(handle));
+				m_renderGraph.m_resourceManager.AddResource(std::string(name), id, std::move(handle));
 
 				// Store the initial state for the executor to pick up later.
 				m_renderGraph.m_importedResourceInitialStates[id] = initialState;
@@ -557,6 +589,12 @@ namespace Hush::RenderGraph
 
 			/// Set the culling mode for this pass
 			void SetCullingMode(RenderPassNode::EPassCullingMode cullMode);
+
+			[[nodiscard]]
+			ResourceId GetResourceIdByName(std::string_view name) const
+			{
+				return m_renderGraph.m_resourceManager.GetResourceId(name);
+			}
 
 		private:
 			friend class RenderGraph;

@@ -31,26 +31,31 @@ namespace Hush::Graphics
 		{
 			return m_descriptor.width;
 		}
+
 		[[nodiscard]]
 		uint32_t GetHeight() const override
 		{
 			return m_descriptor.height;
 		}
+
 		[[nodiscard]]
 		uint32_t GetDepth() const override
 		{
 			return m_descriptor.depth;
 		}
+
 		[[nodiscard]]
 		ETextureFormat GetFormat() const override
 		{
 			return m_descriptor.format;
 		}
+
 		[[nodiscard]]
 		uint32_t GetMipLevels() const override
 		{
 			return m_descriptor.mipLevels;
 		}
+
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
 

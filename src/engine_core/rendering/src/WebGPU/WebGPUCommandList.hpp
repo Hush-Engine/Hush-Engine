@@ -43,8 +43,8 @@ namespace Hush::Graphics
 						uint64_t size) override;
 
 		void CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst, uint32_t dstX,
-								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height,
-								 uint32_t depth) override;
+								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height, uint32_t depth,
+								 uint32_t rowPitch) override;
 
 		void CopyTextureToBuffer(IGraphicsTexture *src, uint32_t srcX, uint32_t srcY, uint32_t srcZ,
 								 IGraphicsBuffer *dst, uint64_t dstOffset, uint32_t width, uint32_t height,
@@ -99,8 +99,8 @@ namespace Hush::Graphics
 						uint64_t size) override;
 
 		void CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst, uint32_t dstX,
-								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height,
-								 uint32_t depth) override;
+								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height, uint32_t depth,
+								 uint32_t rowPitch) override;
 
 		void CopyTextureToBuffer(IGraphicsTexture *src, uint32_t srcX, uint32_t srcY, uint32_t srcZ,
 								 IGraphicsBuffer *dst, uint64_t dstOffset, uint32_t width, uint32_t height,
@@ -166,8 +166,8 @@ namespace Hush::Graphics
 						uint64_t size) override;
 
 		void CopyBufferToTexture(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsTexture *dst, uint32_t dstX,
-								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height,
-								 uint32_t depth) override;
+								 uint32_t dstY, uint32_t dstZ, uint32_t width, uint32_t height, uint32_t depth,
+								 uint32_t rowPitch) override;
 
 		void CopyTextureToBuffer(IGraphicsTexture *src, uint32_t srcX, uint32_t srcY, uint32_t srcZ,
 								 IGraphicsBuffer *dst, uint64_t dstOffset, uint32_t width, uint32_t height,

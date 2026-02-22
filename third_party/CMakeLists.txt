@@ -3,6 +3,7 @@ add_subdirectory(imgui)
 add_subdirectory(stb)
 add_subdirectory(zadeh)
 
+set(WGPU_VERSION "v27.0.4.0")
 set(WEBGPU_LINK_TYPE "STATIC")
 add_subdirectory(WebGPU-distribution)
 # TODO: migrate to SDL3

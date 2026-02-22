@@ -12,6 +12,7 @@
 #include "IBindGroup.hpp"
 #include "IGraphicsBuffer.hpp"
 #include "IGraphicsTexture.hpp"
+#include "ISampler.hpp"
 #include "IShaderModule.hpp"
 #include "IPipeline.hpp"
 #include "PipelineDescriptor.hpp"
@@ -164,10 +165,6 @@ namespace Hush::Graphics
 		}
 	};
 
-	// =========================================================================
-	// Shader resources
-	// =========================================================================
-
 	/// @brief Shader module resource for RenderGraph
 	/// This is used during BuildContext to declare shader module creation parameters.
 	/// Owns the shader module lifetime so client code does not need to manage it.
@@ -303,10 +300,6 @@ namespace Hush::Graphics
 		}
 	};
 
-	// =========================================================================
-	// Bind group resources
-	// =========================================================================
-
 	/// @brief Bind group resource for RenderGraph
 	/// Owns the bind group lifetime so client code does not need to manage it.
 	struct BindGroupResource
@@ -367,6 +360,75 @@ namespace Hush::Graphics
 		}
 
 		void DestroyResource([[maybe_unused]] const BindGroupDescriptor &bindGroupDescriptor,
+							 [[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+	};
+
+	// =========================================================================
+	// Sampler resources
+	// =========================================================================
+
+	/// @brief Sampler resource for RenderGraph
+	/// Owns the sampler lifetime so client code does not need to manage it.
+	struct SamplerResource
+	{
+		using Descriptor = SamplerDescriptor;
+
+		/// @brief Runtime sampler handle
+		std::unique_ptr<ISampler> sampler;
+
+		/// @brief Resource descriptor
+		SamplerDescriptor descriptor;
+
+		/// @brief Get the underlying sampler (convenience accessor)
+		[[nodiscard]]
+		ISampler *Get() const
+		{
+			return sampler.get();
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return sampler != nullptr;
+		}
+
+		void CreateResource(const SamplerDescriptor &samplerDescriptor, IGraphicsDevice *device);
+
+		void DestroyResource(const SamplerDescriptor &samplerDescriptor, IGraphicsDevice *device);
+	};
+
+	/// @brief Import/external sampler resource for RenderGraph
+	/// Used when you want to reference an existing sampler created outside the graph
+	struct ImportedSamplerResource
+	{
+		using Descriptor = SamplerDescriptor;
+
+		/// @brief Imported sampler handle (non-owning)
+		ISampler *sampler = nullptr;
+
+		/// @brief Get the underlying sampler (convenience accessor)
+		[[nodiscard]]
+		ISampler *Get() const
+		{
+			return sampler;
+		}
+
+		/// @brief Check if the resource is valid
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return sampler != nullptr;
+		}
+
+		void CreateResource([[maybe_unused]] const SamplerDescriptor &samplerDescriptor,
+							[[maybe_unused]] IGraphicsDevice *device)
+		{
+		}
+
+		void DestroyResource([[maybe_unused]] const SamplerDescriptor &samplerDescriptor,
 							 [[maybe_unused]] IGraphicsDevice *device)
 		{
 		}
@@ -589,6 +651,31 @@ namespace Hush::Graphics
 			uint64_t dstOffset = 0;
 			uint64_t size = 0;
 		} region;
+	};
+
+	/// @brief Dummy resource type for render graph resources that don't correspond to actual GPU resources.
+	///
+	/// This can be used to specify dependencies between passes in the render graph without needing a real texture or
+	/// buffer (e.g. for synchronization or logical grouping).
+	///
+	/// For example, a pass that performs a compute operation without any actual GPU resources could use a DummyResource
+	/// as its output, and subsequent passes could declare dependencies on that output to ensure correct execution
+	/// order.
+	struct DummyResource
+	{
+		struct Descriptor
+		{
+			// No actual descriptor fields needed for a dummy resource
+		};
+		void CreateResource([[maybe_unused]] const Descriptor &descriptor, [[maybe_unused]] IGraphicsDevice *device)
+		{
+			// No actual resource to create
+		}
+
+		void DestroyResource([[maybe_unused]] const Descriptor &descriptor, [[maybe_unused]] IGraphicsDevice *device)
+		{
+			// No actual resource to destroy
+		}
 	};
 
 } // namespace Hush::Graphics

@@ -8,6 +8,7 @@
 #include "../RHI/IGraphicsDevice.hpp"
 #include "RHI/GraphicsTypes.hpp"
 #include "RHI/IGraphicsTexture.hpp"
+#include "RHI/ISampler.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "WebGPUCommandQueue.hpp"
 #include "WebGPUTexture.hpp"
@@ -47,12 +48,15 @@ namespace Hush::Graphics
 		}
 
 		[[nodiscard]]
-		std::shared_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) override;
+		std::unique_ptr<IGraphicsBuffer> CreateBuffer(const BufferDescriptor &descriptor) override;
 
 		void WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size) override;
 
 		[[nodiscard]]
 		std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) override;
+
+		[[nodiscard]]
+		std::unique_ptr<ISampler> CreateSampler(const SamplerDescriptor &descriptor) override;
 
 		[[nodiscard]]
 		std::unique_ptr<IShaderModule> CreateShaderModule(const ShaderModuleDescriptor &descriptor) override;
@@ -146,6 +150,8 @@ namespace Hush::Graphics
 		{
 			return m_surfaceFormat;
 		}
+
+		void PollEvents();
 
 	private:
 		void InitializeInstance();

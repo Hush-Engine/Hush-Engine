@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Components/TextureComponent.hpp"
 #include "IResourceManager.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Ref.hpp"
@@ -23,6 +24,16 @@ namespace Hush
 	class ResourceManager final : public IResourceManager
 	{
 	public:
+		enum class EError
+		{
+			None = 0,
+			FileNotFound,
+			InvalidData,
+			UnsupportedFormat,
+			LoadFailed,
+			UnknownError
+		};
+
 		ResourceManager() = default;
 		ResourceManager(const ResourceManager &) = delete;
 
@@ -44,16 +55,55 @@ namespace Hush
 
 		const RefCounted &GetRefCount(const HandleId &handle) override;
 
-		Ref<ImageTexture> LoadTexture(const std::string_view &path);
+		// Ref<ImageTexture> LoadTexture(const std::string_view &path);
 
-		Ref<ImageTexture> LoadTexture(const std::string_view &name, const std::byte *data, const size_t &size);
+		// Ref<ImageTexture> LoadTexture(const std::string_view &name, const std::byte *data, const size_t &size);
+
+		/// @brief Loads a texture from the given path. The path is relative to the virtual filesystem root.
+		///
+		/// If the texture has already been loaded, returns a reference to the existing texture.
+		/// Otherwise, loads the texture from the filesystem, stores it in the resource manager,
+		/// and returns a reference to the new texture.
+		///
+		/// The Ref<TextureComponent> returned by this function *does not* have the texture data uploaded to the GPU
+		/// yet. To do the actual GPU upload, the @ref ResourceUploadSystem must be run, which will process all pending
+		/// texture uploads and create the corresponding GPU resources. Until then, the TextureComponent will hold a
+		/// pointer to a "placeholder". This allows the caller to reference the texture immediately after loading, even
+		/// if the GPU upload is deferred to a later stage.
+		///
+		/// You can check if the texture has been uploaded to the GPU by checking if the TextureComponent's IsLoaded()
+		/// method returns true.
+		///
+		/// As part of this member function, another Ref<> will be created, but it will store the
+		///
+		/// @param path The path to the texture file, relative to the virtual filesystem root.
+		///
+		/// @return A reference to the loaded texture, or an error if the texture could not be loaded.
+		Result<Ref<TextureComponent>, EError> LoadTexture(std::string_view path,
+														  TextureComponent::ECpuUnloadStrategy unloadStrategy =
+															  TextureComponent::ECpuUnloadStrategy::UnloadAfterUpload);
+
+		/// @brief Loads a texture from the given raw data.
+		///
+		/// If a texture with the same name has already been loaded, returns a reference to the existing texture.
+		/// Otherwise, creates a new texture from the raw data, stores it in the resource manager, and returns a
+		/// reference to the new texture.
+		///
+		/// @param name The unique name for the texture. This is used to identify the texture in the resource manager.
+		/// @param data The raw texture data. It is expected to be in a format that the graphics device can consume
+		/// directly (e.g. RGBA8 pixel data).
+		///             The resource manager does not perform any decoding or format conversion on the data.
+		///
+		/// @return A reference to the loaded texture, or an error if the texture could not be created.
+		Result<Ref<TextureComponent>, EError> LoadTextureFromData(std::string_view name,
+																  std::span<const std::byte> data);
 
 		void FreePending() override;
 
 		Ref<Mesh> LoadMesh(const std::string_view &path);
 
 		template <class T, class... Args>
-		inline Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
+		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
 		{
 			uint64_t hash = Hashing::Fnv1a64(identifier);
 			const auto &iterator = this->m_loadedResources.find(hash);

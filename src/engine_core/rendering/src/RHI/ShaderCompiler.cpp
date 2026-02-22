@@ -449,8 +449,6 @@ namespace Hush::Graphics
 			return EShaderTarget::DXIL;
 		case EGraphicsAPI::Metal:
 			return EShaderTarget::SPIRV;
-		case EGraphicsAPI::OpenGL:
-			return EShaderTarget::SPIRV;
 		default:
 			return EShaderTarget::WGSL;
 		}
@@ -709,13 +707,15 @@ namespace Hush::Graphics
 		if (m_options.target == EShaderTarget::WGSL || m_options.target == EShaderTarget::HLSL)
 		{
 			// Text-based output
-			outStage.moduleDesc.bytecode.sourceText.assign(static_cast<const char *>(codeData), codeSize);
+			outStage.moduleDesc.bytecode.content =
+				ShaderBytecode::TextContent{std::string(static_cast<const char *>(codeData), codeSize)};
 		}
 		else
 		{
 			// Binary output (SPIR-V, DXIL)
 			const auto *bytePtr = static_cast<const uint8_t *>(codeData);
-			outStage.moduleDesc.bytecode.data.assign(bytePtr, bytePtr + codeSize);
+			outStage.moduleDesc.bytecode.content =
+				ShaderBytecode::BinaryContent{.data = std::vector<uint8_t>(bytePtr, bytePtr + codeSize)};
 		}
 
 		return true;

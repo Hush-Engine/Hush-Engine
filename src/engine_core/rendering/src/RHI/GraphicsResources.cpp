@@ -106,4 +106,19 @@ namespace Hush::Graphics
 	{
 		this->pipeline.reset();
 	}
+	// =========================================================================
+	// SamplerResource
+	// =========================================================================
+
+	void SamplerResource::CreateResource(const SamplerDescriptor &samplerDescriptor, IGraphicsDevice *device)
+	{
+		this->descriptor = samplerDescriptor;
+		this->sampler = device->CreateSampler(descriptor);
+	}
+
+	void SamplerResource::DestroyResource([[maybe_unused]] const SamplerDescriptor &samplerDescriptor,
+										  [[maybe_unused]] IGraphicsDevice *device)
+	{
+		this->sampler.reset();
+	}
 } // namespace Hush::Graphics

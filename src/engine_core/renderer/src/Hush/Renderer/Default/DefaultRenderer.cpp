@@ -3,9 +3,9 @@
 #include "RHI/RenderPass.hpp"
 #include "RHI/ICommandList.hpp"
 #include "RHI/IGraphicsDevice.hpp"
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
-#include "Shared/DirectionalLight.hpp"
 
 static const Hush::Graphics::DefaultRenderer::GeometryPassResources &AddGeometryPass(
 	Hush::WindowRenderer &windowRenderer, Hush::RenderGraph::RenderGraph &graph, Hush::Scene *scene)
@@ -17,7 +17,7 @@ static const Hush::Graphics::DefaultRenderer::GeometryPassResources &AddGeometry
 	const auto &gPass = graph.AddPass<GeometryPassResources>(
 		EPassType::Graphics, "GeometryPass",
 		[&windowRenderer](RenderGraph::BuildContext &ctx, GeometryPassResources &data) {
-		    const auto [width, height] = windowRenderer.GetWindowSize();
+			const auto [width, height] = windowRenderer.GetWindowSize();
 			// Create G-buffer textures
 			data.geometryBufferAlbedo =
 				ctx.Create<TextureResource>("GBuffer_Albedo", TextureDescriptor{
@@ -42,7 +42,7 @@ static const Hush::Graphics::DefaultRenderer::GeometryPassResources &AddGeometry
 															 });
 		},
 		[scene](GeometryPassResources &data, Hush::Graphics::ICommandList *cmdList,
-		   const Hush::RenderGraph::ResourceManager &resourceManager) {
+				const Hush::RenderGraph::ResourceManager &resourceManager) {
 			// Get the G-buffer textures
 			auto *albedoTexture =
 				resourceManager.GetResource<TextureResource>(data.geometryBufferAlbedo)->texture.get();
@@ -81,13 +81,49 @@ static const Hush::Graphics::DefaultRenderer::GeometryPassResources &AddGeometry
 			renderCmdList->BeginRenderPass(renderPassDesc);
 
 			auto meshQuery = scene->CreateQuery<const Hush::MeshReference, const Hush::WorldTransform>();
-			for (const auto &[meshRef, transform] : meshQuery)
-            {
+			meshQuery.Each([&](const Hush::MeshReference &meshRef, [[maybe_unused]]
+																   const Hush::WorldTransform &transform) {
+				const auto &meshHandle = meshRef.GetMesh();
+				if (meshHandle.IsNull())
+				{
+					return;
+				}
 
-            }
+				const Hush::Mesh *mesh = meshHandle.Get();
 
-            renderCmdList->EndRenderPass();
+				// Iterate over the mesh's surfaces. Each surface references a
+				// material (which may be a Material3D) and an index range.
+				for (const auto &surface : mesh->GetSurfaces())
+				{
+					// Try to obtain a GraphicsApiMaterialInstance from the surface's
+					// material. Material3D exposes this through GetInternalMaterial().
+					Hush::Graphics::GraphicsApiMaterialInstance *matInstance = nullptr;
+					if (surface.material != nullptr)
+					{
+						matInstance = surface.material->GetInternalMaterial();
+					}
 
+					if (matInstance != nullptr && matInstance->pipeline != nullptr)
+					{
+						// Bind the material's pipeline and bind group.  This is
+						// exactly what Material3D::Bind() does under the hood —
+						// here we use the raw pointers so we stay compatible with
+						// any IMaterial3D implementation, not just Material3D.
+						renderCmdList->BindPipeline(matInstance->pipeline);
+
+						if (matInstance->bindGroup != nullptr)
+						{
+							renderCmdList->SetBindGroup(0, matInstance->bindGroup);
+						}
+					}
+
+					// TODO: Bind vertex / index buffers from mesh->GetMeshBuffers()
+					// and issue the indexed draw call:
+					//   renderCmdList->DrawIndexed(surface.count, 1, surface.startIndex, 0, 0);
+				}
+			});
+
+			renderCmdList->EndRenderPass();
 		});
 
 	return gPass;
@@ -95,7 +131,8 @@ static const Hush::Graphics::DefaultRenderer::GeometryPassResources &AddGeometry
 
 static const Hush::Graphics::DefaultRenderer::LightingPassResources &AddLightingPass(
 	Hush::WindowRenderer &windowRenderer, Hush::RenderGraph::RenderGraph &graph,
-	const Hush::Graphics::DefaultRenderer::GeometryPassResources &geometryResources, [[maybe_unused]] Hush::Scene *scene)
+	const Hush::Graphics::DefaultRenderer::GeometryPassResources &geometryResources,
+	[[maybe_unused]] Hush::Scene *scene)
 {
 	using namespace Hush::Graphics;
 	using namespace Hush::RenderGraph;
@@ -123,16 +160,18 @@ static const Hush::Graphics::DefaultRenderer::LightingPassResources &AddLighting
 		[&geometryResources](LightingPassResources &data, Hush::Graphics::ICommandList *cmdList,
 							 const Hush::RenderGraph::ResourceManager &resourceManager) {
 			// Resolve G-buffer textures for reading
-			[[maybe_unused]] auto *albedoTexture =
+			[[maybe_unused]]
+			auto *albedoTexture =
 				resourceManager.GetResource<TextureResource>(geometryResources.geometryBufferAlbedo)->texture.get();
-			[[maybe_unused]] auto *normalTexture =
+			[[maybe_unused]]
+			auto *normalTexture =
 				resourceManager.GetResource<TextureResource>(geometryResources.geometryBufferNormal)->texture.get();
-			[[maybe_unused]] auto *depthTexture =
+			[[maybe_unused]]
+			auto *depthTexture =
 				resourceManager.GetResource<TextureResource>(geometryResources.geometryDepthBuffer)->texture.get();
 
 			// Resolve the lighting output target
-			auto *lightingTexture =
-				resourceManager.GetResource<TextureResource>(data.lightingBuffer)->texture.get();
+			auto *lightingTexture = resourceManager.GetResource<TextureResource>(data.lightingBuffer)->texture.get();
 
 			// Set up render pass targeting the lighting buffer
 			RenderPassDescriptor renderPassDesc{};
@@ -186,9 +225,7 @@ static const Hush::Graphics::DefaultRenderer::FinalPassResources &AddFinalPass(
 			// equivalent frame-update callback).
 			IGraphicsTexture *backbufferTexture = windowRenderer.GetGraphicsDevice()->GetCurrentFrameTexture();
 			data.backbuffer = ctx.Import<ImportedTextureResource>(
-				"Backbuffer",
-				ImportedTextureResource{.texture = backbufferTexture},
-				EResourceState::RenderTarget);
+				"Backbuffer", ImportedTextureResource{.texture = backbufferTexture}, EResourceState::RenderTarget);
 
 			// This pass must never be culled — it is the final presentation pass.
 			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
@@ -196,12 +233,12 @@ static const Hush::Graphics::DefaultRenderer::FinalPassResources &AddFinalPass(
 		[&lightingResources](FinalPassResources &data, Hush::Graphics::ICommandList *cmdList,
 							 const Hush::RenderGraph::ResourceManager &resourceManager) {
 			// Resolve the lighting result for reading
-			[[maybe_unused]] auto *lightingTexture =
+			[[maybe_unused]]
+			auto *lightingTexture =
 				resourceManager.GetResource<TextureResource>(lightingResources.lightingBuffer)->texture.get();
 
 			// Resolve the backbuffer for writing
-			auto *backbufferTexture =
-				resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
+			auto *backbufferTexture = resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
 
 			// Set up a render pass targeting the swapchain backbuffer to composite the
 			// final image. In a complete implementation this would be a full-screen blit

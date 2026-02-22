@@ -13,6 +13,7 @@
 #include "WebGPUShaderModule.hpp"
 #include "WebGPUPipeline.hpp"
 #include "WebGPUBindGroup.hpp"
+#include "WebGPUSampler.hpp"
 #include "Logger.hpp"
 #include "Assertions.hpp"
 #include <SDL2/SDL.h>
@@ -178,7 +179,7 @@ namespace Hush::Graphics
 		return m_capabilities;
 	}
 
-	std::shared_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
+	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
 	{
 		wgpu::BufferDescriptor desc{};
 		desc.size = descriptor.size;
@@ -187,10 +188,13 @@ namespace Hush::Graphics
 		// WebGPU requires CopyDst usage for queue.writeBuffer() to work.
 		// If the caller requested CPU-writable memory, ensure CopyDst is set
 		// so that WriteBuffer() calls succeed.
-		if (descriptor.memoryAccess == EMemoryAccess::CPUWrite ||
-			descriptor.memoryAccess == EMemoryAccess::CPUReadWrite)
+		if (HasFlag(descriptor.memoryAccess, EMemoryAccess::CPUWrite))
 		{
-			desc.usage = desc.usage | wgpu::BufferUsage::CopyDst;
+			desc.usage = desc.usage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::MapWrite;
+		}
+		else if (HasFlag(descriptor.memoryAccess, EMemoryAccess::CPURead))
+		{
+			desc.usage = desc.usage | wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
 		}
 
 		desc.mappedAtCreation = static_cast<WGPUBool>(false);
@@ -207,7 +211,7 @@ namespace Hush::Graphics
 			return nullptr;
 		}
 
-		return std::make_shared<WebGPUBuffer>(buffer, descriptor);
+		return std::make_unique<WebGPUBuffer>(buffer, m_instance, descriptor);
 	}
 
 	void WebGPUGraphicsDevice::WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size)
@@ -233,7 +237,7 @@ namespace Hush::Graphics
 		wgpu::TextureDescriptor desc{};
 		desc.size.width = descriptor.width;
 		desc.size.height = descriptor.height;
-		desc.size.depthOrArrayLayers = descriptor.depth;
+		desc.size.depthOrArrayLayers = descriptor.arrayLayers;
 		desc.format = ConvertTextureFormat(descriptor.format);
 		desc.usage = ConvertTextureUsage(descriptor.usage);
 		desc.dimension = wgpu::TextureDimension::_2D;
@@ -263,6 +267,17 @@ namespace Hush::Graphics
 		}
 
 		return nullptr;
+	}
+
+	std::unique_ptr<ISampler> WebGPUGraphicsDevice::CreateSampler(const SamplerDescriptor &descriptor)
+	{
+		auto sampler = std::make_unique<WebGPUSampler>(m_device, descriptor);
+		if (sampler->GetNativeHandle() == nullptr)
+		{
+			LogError("WebGPUGraphicsDevice: Failed to create sampler");
+			return nullptr;
+		}
+		return sampler;
 	}
 
 	std::unique_ptr<IShaderModule> WebGPUGraphicsDevice::CreateShaderModule(const ShaderModuleDescriptor &descriptor)
@@ -347,13 +362,19 @@ namespace Hush::Graphics
 	{
 		if (m_needsResize)
 		{
+			// Release stale frame texture/view from the previous frame before
+			// reconfiguring.  The old surface texture belongs to the old
+			// configuration and must not be referenced after configure().
+			m_currentFrameView = nullptr;
+			m_currentFrameTexture = WebGPUTexture();
+
 			auto *window = static_cast<SDL_Window *>(m_windowHandle);
 			int width = 0;
 			int height = 0;
 			SDL_GetWindowSize(window, &width, &height);
 			if (width > 0 && height > 0)
 			{
-				Resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+				ConfigureSurface(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 			}
 		}
 
@@ -410,9 +431,11 @@ namespace Hush::Graphics
 			return;
 		}
 
-		CreateSurface();
-
-		ConfigureSurface(width, height);
+		// Don't reconfigure immediately — the GPU may still be presenting the
+		// previous frame's surface texture.  Flag the resize so BeginFrame()
+		// handles it after the present has completed and the stale frame
+		// texture/view have been released.
+		m_needsResize = true;
 	}
 
 	void WebGPUGraphicsDevice::AddToDeletionQueue(std::function<void()> &&deleteFunc)
@@ -659,6 +682,13 @@ namespace Hush::Graphics
 		{
 			device->m_initialized = false;
 		}
+	}
+
+	void WebGPUGraphicsDevice::PollEvents()
+	{
+#ifdef WEBGPU_BACKEND_WGPU
+		m_device.poll(true, nullptr);
+#endif
 	}
 
 } // namespace Hush::Graphics

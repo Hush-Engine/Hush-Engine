@@ -2,20 +2,6 @@
 	\author Alan Ramirez Herrera
 	\date 2025-02-17
 	\brief Abstract interface for a compiled shader module (one stage)
-
-	An IShaderModule represents a single compiled shader stage (vertex,
-	fragment, compute, etc.) that can be used when constructing a pipeline.
-
-	The shader module is created by the graphics device from compiled shader
-	bytecode or source text (depending on the backend). The Slang-based
-	ShaderCompiler produces the appropriate intermediate representation for
-	each backend:
-	  - WGSL source string  for WebGPU
-	  - SPIR-V bytecode     for Vulkan
-	  - DXIL bytecode       for D3D12
-
-	Shader modules are immutable after creation and can be shared across
-	multiple pipelines that use the same stage.
 */
 #pragma once
 
@@ -23,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <variant>
 
 namespace Hush::Graphics
 {
@@ -32,7 +19,7 @@ namespace Hush::Graphics
 		Vertex = 0,
 		Fragment,
 		Compute,
-		// Future: Geometry, TessControl, TessEval, Mesh, Task, RayGen, etc.
+		// Future: Geometry, RayTracing?
 		Count
 	};
 
@@ -42,19 +29,39 @@ namespace Hush::Graphics
 	/// For WebGPU this contains WGSL source text.
 	struct ShaderBytecode
 	{
-		/// @brief Binary data (SPIR-V, DXIL, etc.)
-		std::vector<uint8_t> data;
+		/// Text representation of the shader content (e.g. WGSL source for WebGPU)
+		struct TextContent
+		{
+			std::string sourceText;
+		};
 
-		/// @brief Source text (WGSL, HLSL source, etc.)
-		/// When non-empty, `data` may be empty and vice-versa depending on the
-		/// target backend.
-		std::string sourceText;
+		/// Binary representation of the shader content (e.g. SPIR-V or DXIL bytecode for Vulkan/D3D12)
+		struct BinaryContent
+		{
+			std::vector<uint8_t> data;
+		};
+
+		/// @brief The shader content, which can be either binary or text depending on the backend.
+		std::variant<BinaryContent, TextContent, std::monostate> content;
 
 		/// @brief Returns true if this bytecode container has usable content.
 		[[nodiscard]]
 		bool IsValid() const
 		{
-			return !data.empty() || !sourceText.empty();
+			return std::visit(
+				[](const auto &value) {
+					using T = std::decay_t<decltype(value)>;
+					if constexpr (std::is_same_v<T, BinaryContent>)
+					{
+						return !value.data.empty();
+					}
+					else if constexpr (std::is_same_v<T, TextContent>)
+					{
+						return !value.sourceText.empty();
+					}
+					return false;
+				},
+				content);
 		}
 	};
 

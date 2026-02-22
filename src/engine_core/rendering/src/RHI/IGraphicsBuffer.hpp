@@ -9,6 +9,8 @@
 
 namespace Hush::Graphics
 {
+	class IGraphicsDevice;
+
 	/// @brief Abstract buffer interface
 	class IGraphicsBuffer
 	{
@@ -30,8 +32,10 @@ namespace Hush::Graphics
 		virtual EBufferUsage GetUsage() const = 0;
 
 		/// @brief Map buffer for CPU access (if supported)
+		///
+		/// @param device Non-owning pointer to the graphics device (may be needed for some APIs to perform the mapping)
 		/// @return Pointer to mapped memory, or nullptr if mapping failed
-		virtual void *Map() = 0;
+		virtual void *Map(IGraphicsDevice *device) = 0;
 
 		/// @brief Unmap buffer
 		virtual void Unmap() = 0;
