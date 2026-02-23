@@ -1,4 +1,5 @@
 #include "Components/TextureComponent.hpp"
+#include "Components/RenderGraphBuilderComponent.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
@@ -82,23 +83,14 @@ float4 fragmentMain(VertexOutput input) : SV_Target
 
 struct alignas(16) GpuUniforms
 {
-	float mvp[16];		// 64 bytes — identity matrix
-	float tintColor[4]; // 16 bytes — RGBA tint
+
+    glm::mat4 mvp;		// 64 bytes — identity matrix
+	glm::vec4 tintColor; // 16 bytes — RGBA tint (alternative using glm::vec4 for easier manipulation in C++)
 	float time;			// 4 bytes
 	float pad[3];		// 12 bytes padding // NOLINT(*-avoid-c-arrays)
 };
 
 static_assert(sizeof(GpuUniforms) == 96, "GpuUniforms must be 96 bytes for GPU uniform alignment");
-
-/// Helper: write an identity 4x4 matrix into a float[16] array (column-major).
-static void MakeIdentityMatrix(float *out, size_t count)
-{
-	std::memset(out, 0, sizeof(float) * count);
-	out[0] = 1.0f;
-	out[5] = 1.0f;
-	out[10] = 1.0f;
-	out[15] = 1.0f;
-}
 
 class ExampleApp final : public Hush::IApplication
 {
@@ -487,11 +479,8 @@ private:
 		}
 
 		GpuUniforms uniforms{};
-		MakeIdentityMatrix(static_cast<float *>(uniforms.mvp), 16);
-		uniforms.tintColor[0] = 1.0f;
-		uniforms.tintColor[1] = 1.0f;
-		uniforms.tintColor[2] = 1.0f;
-		uniforms.tintColor[3] = 1.0f;
+		uniforms.mvp = glm::mat4(1.0f); // Identity matrix for MVP
+		uniforms.tintColor = glm::vec4(1.0f);
 		uniforms.time = m_elapsedTime;
 
 		device->WriteBuffer(m_uniformBuffer.Get(), 0, &uniforms, sizeof(uniforms));
