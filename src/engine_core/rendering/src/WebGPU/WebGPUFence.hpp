@@ -1,6 +1,6 @@
 /*! \file WebGPUFence.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-17
 	\brief WebGPU implementation of IFence interface (CPU-emulated timeline fence)
 */
 #pragma once

@@ -1,6 +1,6 @@
 /*! \file RenderDevice.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-11-17
+	\date 2026-02-18
 	\brief RenderDevice — high-level orchestrator that owns the graphics device,
 		   render graph, and executor.
 */

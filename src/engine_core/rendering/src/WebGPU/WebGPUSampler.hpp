@@ -1,10 +1,7 @@
 /*! \file WebGPUSampler.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief WebGPU implementation of ISampler.
-
-	Wraps a wgpu::Sampler and translates the engine's backend-agnostic
-	SamplerDescriptor into WebGPU-native structures.
 */
 #pragma once
 

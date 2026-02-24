@@ -1,6 +1,6 @@
 /*! \file ResourceUploadSystem.cpp
 	\author Hush Engine
-	\date 2025-07-11
+	\date 2026-02-17
 	\brief ResourceUploadSystem implementation — uploads dirty mesh/texture
 		   resources to the GPU via a render-graph Transfer pass.
 */

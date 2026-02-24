@@ -1,6 +1,6 @@
 /*! \file WebGPUSampler.cpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief WebGPU implementation of ISampler.
 */
 

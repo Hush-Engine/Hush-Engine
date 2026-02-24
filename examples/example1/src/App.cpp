@@ -15,9 +15,6 @@
 #include "RenderGraph/RenderGraph.hpp"
 #include "ResourceManager.hpp"
 #include "Scene.hpp"
-#include "WindowRenderer.hpp"
-#include <cstring>
-#include <iostream>
 #include <memory>
 
 // NOLINTBEGIN(*-avoid-c-arrays)
@@ -191,8 +188,6 @@ private:
 			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] No graphics device available.");
 			return false;
 		}
-
-		// --- 1. Compile the shader with Slang --------------------------------
 
 		ShaderCompilerOptions compilerOpts{};
 		compilerOpts.target = ShaderCompiler::GetTargetForAPI(device->GetAPI());

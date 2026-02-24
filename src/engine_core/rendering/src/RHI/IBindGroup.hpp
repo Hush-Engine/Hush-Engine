@@ -1,6 +1,6 @@
 /*! \file IBindGroup.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief Bind group and bind group layout interfaces for GPU resource binding.
 */
 #pragma once

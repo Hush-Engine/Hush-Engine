@@ -1,6 +1,6 @@
 /*! \file RenderGraphSystem.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief Render graph system for managing render passes, resources, and
 		   executor lifecycle.
 */

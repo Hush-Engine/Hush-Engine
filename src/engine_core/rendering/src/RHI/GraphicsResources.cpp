@@ -1,6 +1,6 @@
 /*! \file GraphicsResources.cpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-18
 	\brief Graphics resource type implementations
 */
 
@@ -9,10 +9,6 @@
 
 namespace Hush::Graphics
 {
-	// =========================================================================
-	// TextureResource
-	// =========================================================================
-
 	void TextureResource::CreateResource(const TextureDescriptor &textureDescriptor, IGraphicsDevice *device)
 	{
 		this->descriptor = textureDescriptor;
@@ -24,10 +20,6 @@ namespace Hush::Graphics
 	{
 		this->texture.reset();
 	}
-
-	// =========================================================================
-	// BufferResource
-	// =========================================================================
 
 	void BufferResource::CreateResource(const BufferDescriptor &bufferDescriptor, IGraphicsDevice *device)
 	{
@@ -41,10 +33,6 @@ namespace Hush::Graphics
 		this->buffer.reset();
 	}
 
-	// =========================================================================
-	// ShaderResource
-	// =========================================================================
-
 	void ShaderResource::CreateResource(const ShaderModuleDescriptor &shaderDescriptor, IGraphicsDevice *device)
 	{
 		this->descriptor = shaderDescriptor;
@@ -56,10 +44,6 @@ namespace Hush::Graphics
 	{
 		this->shaderModule.reset();
 	}
-
-	// =========================================================================
-	// BindGroupLayoutResource
-	// =========================================================================
 
 	void BindGroupLayoutResource::CreateResource(const BindGroupLayoutDescriptor &layoutDescriptor,
 												 IGraphicsDevice *device)
@@ -74,10 +58,6 @@ namespace Hush::Graphics
 		this->layout.reset();
 	}
 
-	// =========================================================================
-	// BindGroupResource
-	// =========================================================================
-
 	void BindGroupResource::CreateResource(const BindGroupDescriptor &bindGroupDescriptor, IGraphicsDevice *device)
 	{
 		this->descriptor = bindGroupDescriptor;
@@ -89,10 +69,6 @@ namespace Hush::Graphics
 	{
 		this->bindGroup.reset();
 	}
-
-	// =========================================================================
-	// GraphicsPipelineResource
-	// =========================================================================
 
 	void GraphicsPipelineResource::CreateResource(const GraphicsPipelineDescriptor &pipelineDescriptor,
 												  IGraphicsDevice *device)
@@ -106,9 +82,6 @@ namespace Hush::Graphics
 	{
 		this->pipeline.reset();
 	}
-	// =========================================================================
-	// SamplerResource
-	// =========================================================================
 
 	void SamplerResource::CreateResource(const SamplerDescriptor &samplerDescriptor, IGraphicsDevice *device)
 	{

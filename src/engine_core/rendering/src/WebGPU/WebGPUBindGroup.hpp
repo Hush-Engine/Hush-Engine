@@ -1,6 +1,6 @@
 /*! \file WebGPUBindGroup.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief WebGPU implementations of IBindGroupLayout and IBindGroup.
 
 	These classes wrap wgpu::BindGroupLayout and wgpu::BindGroup respectively,

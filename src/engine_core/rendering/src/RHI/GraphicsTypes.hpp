@@ -1,6 +1,6 @@
 /*! \file GraphicsTypes.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-18
 	\brief Common types, enumerations, and structures for graphics abstraction
 */
 #pragma once

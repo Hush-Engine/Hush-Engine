@@ -1,6 +1,6 @@
 /*! \file GraphicsResources.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-18
 	\brief Graphics resource types for RenderGraph integration
 
 	This file defines concrete resource types that bridge the RHI and RenderGraph systems.

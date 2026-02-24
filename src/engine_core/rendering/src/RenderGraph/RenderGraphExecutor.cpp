@@ -1,6 +1,6 @@
 /*! \file RenderGraphExecutor.cpp
 	\author Alan Ramirez Herrera
-	\date 2025-11-17
+	\date 2026-02-18
 	\brief RenderGraph executor implementation — all GPU execution infrastructure.
 
 	This file implements the runtime execution of a compiled RenderGraph:

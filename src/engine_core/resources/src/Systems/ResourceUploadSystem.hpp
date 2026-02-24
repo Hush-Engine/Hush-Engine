@@ -1,45 +1,8 @@
 /*! \file ResourceUploadSystem.hpp
 	\author Hush Engine
-	\date 2025-07-11
+	\date 2026-02-17
 	\brief ECS system that uploads dirty mesh and texture resources to the GPU
 		   via a render-graph Transfer pass, avoiding CPU–GPU sync stalls.
-
-	Integration with the render graph
-	──────────────────────────────────
-	The system splits work into two phases:
-
-	1. **CPU staging (OnPreRender)** — iterates dirty entities, memcpy's their
-	   CPU data into the persistently-mapped staging buffer, and records
-	   *pending copy descriptors* (source offset + destination resource).
-	   No GPU calls are made here, so the CPU never waits on the GPU.
-
-	2. **GPU copy (render-graph Transfer pass)** — a Transfer pass registered
-	   by this system reads the staging buffer and issues CopyBuffer /
-	   CopyBufferToTexture commands on a copy command list.  The render graph
-	   handles fence synchronisation so that subsequent Graphics/Compute
-	   passes that depend on the uploaded resources do not start until the
-	   Transfer pass has completed.
-
-	Ordering guarantee
-	──────────────────
-	The RenderGraphSystem (order 0) builds and compiles the graph during its
-	OnPreRender().  This system (order 10) populates the pending-copy lists
-	in its own OnPreRender(), which runs in a later bucket.  Correctness is
-	guaranteed because the Transfer pass's *execute* callback — the code that
-	actually reads the pending-copy vectors — does not run until
-	RenderGraphSystem::OnRender(), which the Scene dispatches only after
-	**every** system's OnPreRender() has completed.  The build-phase callback
-	only touches the staging-buffer pointer (immutable after Init) and the
-	sync-token resource ID, so there is no data race between the two
-	OnPreRender() buckets.
-
-	Sync token
-	──────────
-	The Transfer pass writes a tiny transient buffer called the *upload sync
-	token*.  Any rendering pass that consumes uploaded resources should call
-	`ctx.Read(uploadSystem->GetUploadSyncResourceId())` in its build
-	callback.  This creates a write→read dependency edge in the graph, which
-	the executor turns into a cross-queue fence wait.
 */
 
 #pragma once
