@@ -72,11 +72,6 @@ namespace Hush::Graphics
 												 static_cast<uint32_t>(wgpu::MapMode::Write));
 		}
 
-		if (!success)
-		{
-			return nullptr;
-		}
-
 		auto mapBufferFuture = m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
 
 		WGPUFutureWaitInfo futureInfo = {};
@@ -101,6 +96,12 @@ namespace Hush::Graphics
 		auto *webGpuGraphicsDevice = dynamic_cast<WebGPUGraphicsDevice *>(device);
 		webGpuGraphicsDevice->PollEvents();
 #endif
+
+		if (!success)
+		{
+			Hush::LogError("WebGPU buffer mapping failed");
+			return nullptr;
+		}
 
 		m_mappedData = m_buffer.getMappedRange(0, m_descriptor.size);
 
