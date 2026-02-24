@@ -9,7 +9,7 @@ endif()
 
 add_subdirectory(engine_core)
 
-add_subdirectory(editor)
+# add_subdirectory(editor)
 
 hush_add_library(TARGET_NAME HushBindings
         LIB_TYPE OBJECT
