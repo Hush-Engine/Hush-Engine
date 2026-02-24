@@ -123,7 +123,8 @@ namespace Hush::Graphics
 		/// @param value The value to set.
 		/// @return Success if the property was found and written, or
 		///         EError::PropertyNotFound if the name does not exist.
-		template <typename T> requires std::is_trivially_copyable_v<T>
+		template <typename T>
+			requires std::is_trivially_copyable_v<T>
 		std::optional<EError> SetProperty(std::string_view name, const T &value)
 		{
 			auto it = m_propertyMap.find(std::string(name));
@@ -154,7 +155,8 @@ namespace Hush::Graphics
 		void FlushProperties(IGraphicsDevice *device);
 
 		/// @brief Convenience: set a property and immediately flush.
-		template <typename T> requires std::is_trivially_copyable_v<T>
+		template <typename T>
+			requires std::is_trivially_copyable_v<T>
 		std::optional<EError> SetPropertyAndFlush(IGraphicsDevice *device, std::string_view name, const T &value)
 		{
 			auto result = SetProperty(name, value);
