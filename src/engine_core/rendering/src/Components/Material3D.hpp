@@ -159,12 +159,12 @@ namespace Hush::Graphics
 		{
 			auto result = SetProperty(name, value);
 			if (result.has_value())
-            {
-                return result;
-            }
+			{
+				return result;
+			}
 
 			FlushProperties(device);
-            return {};
+			return {};
 		}
 
 		/// @brief Bind this material's pipeline and bind group on the given

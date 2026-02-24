@@ -32,7 +32,6 @@ namespace Hush::RenderGraph
 			a.DestroyResource(std::declval<const typename T::Descriptor &>(),
 							  static_cast<Graphics::IGraphicsDevice *>(nullptr))
 		} -> std::same_as<void>;
-
 	} && std::is_default_constructible_v<T> && std::is_move_constructible_v<T>;
 
 	class ResourceHandle
@@ -261,7 +260,7 @@ namespace Hush::RenderGraph
 			{
 				if constexpr (HAS_BEFORE_READ)
 				{
-				    resourceInstance.BeforeRead(flags, ctx);
+					resourceInstance.BeforeRead(flags, ctx);
 				}
 			}
 
@@ -269,7 +268,7 @@ namespace Hush::RenderGraph
 			{
 				if constexpr (HAS_BEFORE_WRITE)
 				{
-                    resourceInstance.BeforeWrite(flags, ctx);
+					resourceInstance.BeforeWrite(flags, ctx);
 				}
 			}
 

@@ -255,11 +255,12 @@ namespace Hush::Graphics
 		{
 			wgpu::TextureViewDescriptor viewDesc = {};
 			viewDesc.format = ConvertTextureFormat(descriptor.format);
-			viewDesc.dimension = wgpu::TextureViewDimension::_2D;
+			viewDesc.dimension =
+				(descriptor.arrayLayers > 1) ? wgpu::TextureViewDimension::_2DArray : wgpu::TextureViewDimension::_2D;
 			viewDesc.baseMipLevel = 0;
 			viewDesc.mipLevelCount = descriptor.mipLevels;
 			viewDesc.baseArrayLayer = 0;
-			viewDesc.arrayLayerCount = descriptor.depth;
+			viewDesc.arrayLayerCount = descriptor.arrayLayers;
 
 			wgpu::TextureView textureView = texture.createView(viewDesc);
 

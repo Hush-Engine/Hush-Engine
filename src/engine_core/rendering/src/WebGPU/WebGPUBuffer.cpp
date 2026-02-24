@@ -45,7 +45,7 @@ namespace Hush::Graphics
 								   [[maybe_unused]] WGPU_NULLABLE void *userdata1,
 								   [[maybe_unused]]
 								   WGPU_NULLABLE void *userdata2) {
-			bool* successPtr = static_cast<bool *>(userdata1);
+			bool *successPtr = static_cast<bool *>(userdata1);
 			*successPtr = (status == WGPUMapAsyncStatus::WGPUMapAsyncStatus_Success);
 			if (status == WGPUMapAsyncStatus::WGPUMapAsyncStatus_Success)
 			{
@@ -74,7 +74,7 @@ namespace Hush::Graphics
 
 		if (!success)
 		{
-		    return nullptr;
+			return nullptr;
 		}
 
 		auto mapBufferFuture = m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
