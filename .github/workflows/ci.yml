@@ -112,9 +112,6 @@ jobs:
       - name: Bootstrap VCPKG
         run: ./vcpkg/bootstrap-vcpkg.bat
 
-      - name: Setup ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
-
       - name: Configure hush
         run: ./hush-devtool.exe configure --preset windows-x64-${{ matrix.build-type }} -v
 
