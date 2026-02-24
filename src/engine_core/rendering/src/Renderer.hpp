@@ -27,15 +27,34 @@ namespace Hush
 {
 	class Scene;
 	struct DirectionalLight;
+
+	/// @brief Renderer type enumeration
+	/// Currently, Hush uses wgpu on desktop as its backend implementation. This means that
+	/// we rely on wgpu for every renderer (except Vulkan).
+	enum class ERenderingBackend
+	{
+		/// @brief Vulkan renderer
+		Vulkan,
+		/// @brief DirectX 12 renderer.
+		D3D12,
+		/// @brief Metal renderer.
+		Metal,
+		/// @brief WebGL renderer.
+		WebGL,
+		/// @brief WebGPU renderer.
+		WebGPU,
+	};
+
 	/// @brief A common interface for renderers, Hush supports many graphics APIs, and this is the interface
 	/// that allows us to standardize all of them...
 	/// All renderers MUST bind to SDL and ImGUI, the latter can be done through the IImGuiForwarder interface
 	class IRenderer
 	{
 	public:
-		IRenderer(void *windowContext)
+		IRenderer(void *windowContext, ERenderingBackend type)
 		{
-			(void)windowContext;
+			HUSH_UNUSED(windowContext);
+			HUSH_UNUSED(type);
 		}
 
 		IRenderer(const IRenderer &) = delete;

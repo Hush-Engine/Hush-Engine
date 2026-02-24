@@ -23,6 +23,11 @@
 #pragma warning(disable : 5030) // Attribute not recognized
 #endif
 
+// RegisterClass might be defined by Windows, so undefine it to avoid conflicts with generated code.
+#ifdef RegisterClass
+#undef RegisterClass
+#endif
+
 namespace Hush::Reflection
 {
 	class ReflectionDB

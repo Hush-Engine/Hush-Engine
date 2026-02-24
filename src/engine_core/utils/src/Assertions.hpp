@@ -69,4 +69,5 @@
 	}
 
 #define HUSH_STATIC_ASSERT(condition, ...) static_assert(condition, #__VA_ARGS__)
+
 // NOLINTEND

@@ -37,3 +37,9 @@ find_package(unofficial-spirv-reflect CONFIG REQUIRED)
 
 # RapidJSON
 find_package(RapidJSON CONFIG REQUIRED)
+
+# Boost unordered
+find_package(boost_unordered REQUIRED CONFIG)
+
+# Slang shader compiler
+find_package(slang CONFIG REQUIRED)

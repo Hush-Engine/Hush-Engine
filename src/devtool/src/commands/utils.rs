@@ -59,6 +59,7 @@ pub fn get_project_files(filter: Vec<&str>, only_modified: bool) -> anyhow::Resu
 pub fn get_diff_files(filter: Vec<&str>, branch: &str) -> anyhow::Result<Vec<String>> {
     let output = Command::new("git")
         .args(["diff", "--name-only", branch])
+        .args(["--diff-filter=d"])
         .args(filter)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

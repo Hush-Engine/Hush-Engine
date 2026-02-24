@@ -14,15 +14,22 @@
 #define HUSH_PLATFORM_WIN 1
 #define HUSH_PLATFORM_LINUX 0
 #define HUSH_PLATFORM_OSX 0
-
+#define HUSH_PLATFORM_EMSCRIPTEN 0
 #elif defined(__linux__) && !defined(__ANDROID__)
 #define HUSH_PLATFORM_LINUX 1
 #define HUSH_PLATFORM_WIN 0
 #define HUSH_PLATFORM_OSX 0
+#define HUSH_PLATFORM_EMSCRIPTEN 0
 #elif defined(__APPLE__) && defined(__MACH__)
 #define HUSH_PLATFORM_OSX 1
+#define HUSH_PLATFORM_EMSCRIPTEN 0
 #define HUSH_PLATFORM_LINUX 0
 #define HUSH_PLATFORM_WIN 0
+#elif defined(__EMSCRIPTEN__)
+#define HUSH_PLATFORM_EMSCRIPTEN 1
+#define HUSH_PLATFORM_LINUX 0
+#define HUSH_PLATFORM_WIN 0
+#define HUSH_PLATFORM_OSX 0
 #else
 #error "Platform not supported"
 #endif
@@ -43,6 +50,8 @@
 #error "Unknown compiler"
 #endif
 
+#define HUSH_UNUSED(x) (void)x
+
 namespace Hush
 {
 	/// @brief Enum representing the current platform
@@ -50,7 +59,8 @@ namespace Hush
 	{
 		Win64,
 		Linux,
-		OSX
+		OSX,
+		Emscripten
 	};
 
 	/// @brief Get the current platform
@@ -63,6 +73,8 @@ namespace Hush
 		return EPlatform::Linux;
 #elif HUSH_PLATFORM_OSX
 		return EPlatform::OSX;
+#elif HUSH_PLATFORM_EMSCRIPTEN
+		return EPlatform::Emscripten;
 #else
 #error "Platform not supported"
 #endif
