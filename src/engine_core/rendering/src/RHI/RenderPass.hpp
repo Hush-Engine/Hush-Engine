@@ -6,6 +6,7 @@
 #pragma once
 
 #include "IGraphicsTexture.hpp"
+#include "RHI/PipelineDescriptor.hpp"
 #include <array>
 #include <string_view>
 #include <optional>
@@ -96,7 +97,7 @@ namespace Hush::Graphics
 	struct RenderPassDescriptor
 	{
 		// Color attachments
-		std::array<RenderPassColorAttachment, 8> colorAttachments;
+		std::array<RenderPassColorAttachment, MAX_COLOR_TARGETS> colorAttachments;
 		uint32_t colorAttachmentCount = 0;
 
 		// Optional depth/stencil attachment
@@ -108,7 +109,7 @@ namespace Hush::Graphics
 		/// @brief Helper to add a color attachment
 		void AddColorAttachment(const RenderPassColorAttachment &attachment)
 		{
-			if (colorAttachmentCount < 8)
+			if (colorAttachmentCount < MAX_COLOR_TARGETS)
 			{
 				colorAttachments[colorAttachmentCount++] = attachment;
 			}

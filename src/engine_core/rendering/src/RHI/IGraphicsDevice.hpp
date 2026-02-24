@@ -185,11 +185,17 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		virtual ICommandQueue *GetGraphicsQueue() = 0;
 
-		/// @brief Get a compute queue (if supported)
+		/// @brief Get a compute queue.
+		///
+		/// On backends that don't expose multiple queues (e.g. WebGPU),
+		/// this will return the same queue as GetGraphicsQueue().
 		[[nodiscard]]
 		virtual ICommandQueue *GetComputeQueue() = 0;
 
-		/// @brief Get a transfer queue (if supported)
+		/// @brief Get a transfer queue.
+		///
+		/// On backends that don't expose multiple queues (e.g. WebGPU),
+		/// this will return the same queue as GetGraphicsQueue().
 		[[nodiscard]]
 		virtual ICommandQueue *GetTransferQueue() = 0;
 
