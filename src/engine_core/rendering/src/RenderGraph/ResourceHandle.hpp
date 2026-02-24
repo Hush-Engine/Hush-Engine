@@ -33,9 +33,7 @@ namespace Hush::RenderGraph
 							  static_cast<Graphics::IGraphicsDevice *>(nullptr))
 		} -> std::same_as<void>;
 
-		std::is_default_constructible_v<T>;
-		std::is_move_constructible_v<T>;
-	};
+	} && std::is_default_constructible_v<T> && std::is_move_constructible_v<T>;
 
 	class ResourceHandle
 	{
@@ -263,7 +261,7 @@ namespace Hush::RenderGraph
 			{
 				if constexpr (HAS_BEFORE_READ)
 				{
-					static_cast<T *>(this)->BeforeRead(flags, ctx);
+				    resourceInstance.BeforeRead(flags, ctx);
 				}
 			}
 
@@ -271,7 +269,7 @@ namespace Hush::RenderGraph
 			{
 				if constexpr (HAS_BEFORE_WRITE)
 				{
-					static_cast<T *>(this)->BeforeWrite(flags, ctx);
+                    resourceInstance.BeforeWrite(flags, ctx);
 				}
 			}
 

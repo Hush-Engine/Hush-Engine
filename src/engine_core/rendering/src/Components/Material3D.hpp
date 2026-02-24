@@ -4,7 +4,6 @@
 #include "RHI/GraphicsResources.hpp"
 #include "RHI/ICommandList.hpp"
 #include "RHI/MaterialInstance.hpp"
-#include "Result.hpp"
 #include <cstring>
 #include <string_view>
 #include <string>
@@ -69,45 +68,6 @@ namespace Hush::Graphics
 
 	/// @brief High-level material class that abstracts away the underlying
 	///        graphics API and shader details.
-	///
-	/// This class is designed to be used by game code and provides a simple
-	/// interface for:
-	///   - Creating the graphics pipeline, bind group layout, bind group,
-	///     and uniform buffer through the RHI
-	///   - Setting uniform properties by name
-	///   - Binding the material (pipeline + bind group) on a command list
-	///
-	/// Material3D does **not** compile shaders.  The caller is expected to
-	/// use ShaderCompiler independently and feed the compiled modules and
-	/// reflection data through Material3DDescriptor.
-	///
-	/// Typical usage:
-	/// @code
-	///   // 1. Compile outside the material
-	///   ShaderCompiler compiler;
-	///   compiler.Initialize(opts);
-	///   auto result = compiler.CompileFromSource(source, "mat.slang", entries);
-	///   ShaderResource vs, fs;
-	///   vs.CreateResource(result.FindStage(EShaderStage::Vertex)->moduleDesc, device);
-	///   fs.CreateResource(result.FindStage(EShaderStage::Fragment)->moduleDesc, device);
-	///
-	///   // 2. Create the material
-	///   Material3D mat;
-	///   Material3DDescriptor desc{};
-	///   desc.vertexShader       = vs.Get();
-	///   desc.fragmentShader     = fs.Get();
-	///   desc.compilationResult  = &result;
-	///   desc.colorTargetFormat  = ETextureFormat::BGRA8_UNORM;
-	///   desc.debugName          = "MyMaterial";
-	///   auto initResult = mat.Init(device, desc);
-	///   if (initResult.has_error()) { /* handle */ }
-	///
-	///   // 3. Per-frame
-	///   mat.SetProperty("tintColor", glm::vec4(1,0,0,1));
-	///   mat.FlushProperties(device);
-	///   mat.Bind(cmdList);
-	///   cmdList->Draw(vertexCount, 1, 0, 0);
-	/// @endcode
 	class Material3D
 	{
 	public:
@@ -131,10 +91,6 @@ namespace Hush::Graphics
 		Material3D &operator=(const Material3D &) = delete;
 		Material3D(Material3D &&) noexcept = default;
 		Material3D &operator=(Material3D &&) noexcept = default;
-
-		// -----------------------------------------------------------------
-		// Initialisation
-		// -----------------------------------------------------------------
 
 		/// @brief Create all GPU resources (pipeline, bind group layout,
 		///        uniform buffer, bind group) from pre-compiled shaders.
@@ -202,17 +158,14 @@ namespace Hush::Graphics
 		std::optional<EError> SetPropertyAndFlush(IGraphicsDevice *device, std::string_view name, const T &value)
 		{
 			auto result = SetProperty(name, value);
-			if (result.has_error())
-			{
-				return result;
-			}
-			FlushProperties(device);
-			return std::nullopt;
-		}
+			if (result.has_value())
+            {
+                return result;
+            }
 
-		// -----------------------------------------------------------------
-		// Rendering
-		// -----------------------------------------------------------------
+			FlushProperties(device);
+            return {};
+		}
 
 		/// @brief Bind this material's pipeline and bind group on the given
 		///        graphics command list.
@@ -259,18 +212,10 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		const GraphicsApiMaterialInstance *GetInternalMaterial() const noexcept;
 
-		// -----------------------------------------------------------------
-		// Name / debug
-		// -----------------------------------------------------------------
-
 		void SetName(std::string_view name);
 
 		[[nodiscard]]
 		const std::string &GetName() const noexcept;
-
-		// -----------------------------------------------------------------
-		// Resource accessors (advanced / debugging)
-		// -----------------------------------------------------------------
 
 		[[nodiscard]]
 		IGraphicsPipeline *GetPipeline() const noexcept;
@@ -325,8 +270,6 @@ namespace Hush::Graphics
 		GraphicsPipelineResource m_pipeline;
 		BufferResource m_uniformBuffer;
 
-		// -- Uniform staging ---------------------------------------------------
-
 		/// CPU-side copy of the uniform buffer data.
 		std::vector<uint8_t> m_uniformStagingBuffer;
 
@@ -335,8 +278,6 @@ namespace Hush::Graphics
 
 		/// Whether the staging buffer has been modified since the last flush.
 		bool m_propertiesDirty = false;
-
-		// -- Material state ----------------------------------------------------
 
 		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 		ECullMode m_cullMode = ECullMode::None;

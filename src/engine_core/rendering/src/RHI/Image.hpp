@@ -1,6 +1,6 @@
 /*! \file Image.hpp
 	\author Alan Ramirez Herrera
-	\date 2026-02-21
+	\date 2026-02-17
 	\brief Image component for managing image resources
 */
 

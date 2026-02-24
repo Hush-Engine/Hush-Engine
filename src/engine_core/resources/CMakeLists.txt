@@ -10,6 +10,7 @@ hush_add_library(
         # src/Loaders/VulkanLoader.cpp
         # src/Loaders/GltfLoadFunctions.cpp
         PUBLIC_HEADER_DIRS src
+        ENABLE_REFLECTION ON
 )
 add_library(Hush::Resources ALIAS HushResources)
 

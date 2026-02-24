@@ -1,6 +1,6 @@
 /*! \file RenderPass.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-17
 	\brief Render pass descriptor and related types for WebGPU-style render pass configuration
 */
 #pragma once

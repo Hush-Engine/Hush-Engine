@@ -1,6 +1,6 @@
 /*! \file RenderGraphExecutor.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-11-17
+	\date 2026-02-18
 	\brief RenderGraph executor — all GPU execution infrastructure.
 */
 #pragma once

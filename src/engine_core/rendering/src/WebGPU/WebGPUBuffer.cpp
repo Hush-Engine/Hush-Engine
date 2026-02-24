@@ -1,6 +1,6 @@
 /*! \file WebGPUBuffer.cpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-17
 	\brief WebGPU buffer implementation
 */
 #include "WebGPUBuffer.hpp"
@@ -36,12 +36,17 @@ namespace Hush::Graphics
 			return m_mappedData;
 		}
 
+		bool success = false;
 		wgpu::BufferMapCallbackInfo callbackInfo{};
 		callbackInfo.setDefault();
+
+		callbackInfo.userdata1 = &success;
 		callbackInfo.callback = [](WGPUMapAsyncStatus status, WGPUStringView message,
 								   [[maybe_unused]] WGPU_NULLABLE void *userdata1,
 								   [[maybe_unused]]
 								   WGPU_NULLABLE void *userdata2) {
+			bool* successPtr = static_cast<bool *>(userdata1);
+			*successPtr = (status == WGPUMapAsyncStatus::WGPUMapAsyncStatus_Success);
 			if (status == WGPUMapAsyncStatus::WGPUMapAsyncStatus_Success)
 			{
 				// Mapping succeeded, you can now access the buffer data
@@ -65,6 +70,11 @@ namespace Hush::Graphics
 		{
 			mapMode = static_cast<wgpu::MapMode>(static_cast<uint32_t>(mapMode) |
 												 static_cast<uint32_t>(wgpu::MapMode::Write));
+		}
+
+		if (!success)
+		{
+		    return nullptr;
 		}
 
 		auto mapBufferFuture = m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);

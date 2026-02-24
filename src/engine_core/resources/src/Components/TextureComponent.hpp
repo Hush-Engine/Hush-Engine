@@ -15,7 +15,7 @@
 #include <Hushgen.hpp>
 
 #if __has_include("TextureComponent.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
-#include "Texture.hushgen.hpp"
+#include "TextureComponent.hushgen.hpp"
 #endif
 
 #include "HushBindings.hpp"

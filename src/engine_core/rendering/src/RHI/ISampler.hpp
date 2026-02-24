@@ -1,6 +1,6 @@
 /*! \file ISampler.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-02-17
+	\date 2026-02-17
 	\brief Abstract sampler interface and descriptor types for graphics abstraction.
 */
 #pragma once

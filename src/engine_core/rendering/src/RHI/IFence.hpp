@@ -1,6 +1,6 @@
 /*! \file IFence.hpp
 	\author Alan Ramirez Herrera
-	\date 2025-01-17
+	\date 2026-02-17
 	\brief Fence interface for cross-queue GPU synchronization
 */
 #pragma once
