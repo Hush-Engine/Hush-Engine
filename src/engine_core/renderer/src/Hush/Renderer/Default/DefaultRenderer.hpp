@@ -30,5 +30,5 @@ namespace Hush::Graphics::DefaultRenderer
 		Hush::RenderGraph::ResourceId backbuffer{};
 	};
 
-	void AddDefaultRenderer(Hush::WindowRenderer &windowRenderer, Hush::Scene *scene);
+	// void AddDefaultRenderer(Hush::WindowRenderer &windowRenderer, Hush::Scene *scene);
 } // namespace Hush::Graphics::DefaultRenderer
