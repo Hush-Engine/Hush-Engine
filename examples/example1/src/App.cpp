@@ -1,6 +1,7 @@
 #include "Components/TextureComponent.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
 #include "HushEngine.hpp"
+#include "WindowRenderer.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "RHI/GraphicsResources.hpp"
@@ -84,10 +85,10 @@ float4 fragmentMain(VertexOutput input) : SV_Target
 struct alignas(16) GpuUniforms
 {
 
-    glm::mat4 mvp;		// 64 bytes — identity matrix
+	glm::mat4 mvp;		 // 64 bytes — identity matrix
 	glm::vec4 tintColor; // 16 bytes — RGBA tint (alternative using glm::vec4 for easier manipulation in C++)
-	float time;			// 4 bytes
-	float pad[3];		// 12 bytes padding // NOLINT(*-avoid-c-arrays)
+	float time;			 // 4 bytes
+	float pad[3];		 // 12 bytes padding // NOLINT(*-avoid-c-arrays)
 };
 
 static_assert(sizeof(GpuUniforms) == 96, "GpuUniforms must be 96 bytes for GPU uniform alignment");
@@ -225,8 +226,6 @@ private:
 			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}", compileResult.diagnostics);
 		}
 
-		// --- 2. Create shader modules ----------------------------------------
-
 		const auto *vsStage = compileResult.FindStage(EShaderStage::Vertex);
 		const auto *fsStage = compileResult.FindStage(EShaderStage::Fragment);
 
@@ -253,8 +252,6 @@ private:
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader modules created.");
 
-		// --- 3. Create uniform buffer ----------------------------------------
-
 		m_uniformBuffer.CreateResource(
 			BufferDescriptor{
 				.size = sizeof(GpuUniforms),
@@ -272,8 +269,6 @@ private:
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Uniform buffer created.");
 
-		// --- 4. Create sampler (native WebGPU) --------------------------------
-
 		if (!CreateNativeSampler(device))
 		{
 			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create sampler.");
@@ -281,8 +276,6 @@ private:
 		}
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Sampler created.");
-
-		// --- 5. Create bind group layout -------------------------------------
 
 		BindGroupLayoutDescriptor layoutDesc{};
 		layoutDesc.debugName = "ExampleApp_BindGroupLayout";
@@ -320,8 +313,6 @@ private:
 		}
 
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Bind group layout created.");
-
-		// --- 6. Create graphics pipeline -------------------------------------
 
 		GraphicsPipelineDescriptor pipelineDesc{};
 		pipelineDesc.debugName = "ExampleApp_TexturedTrianglePipeline";

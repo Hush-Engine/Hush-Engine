@@ -42,14 +42,17 @@ impl CliCommand for BuildCommand {
 
         let start = Instant::now();
 
-        let cmake_command = std::process::Command::new("cmake")
+        let mut cmake_command = std::process::Command::new("cmake");
+
+        cmake_command
             .arg("--build")
-            .arg(format!("build/{}", self.preset))
-            .arg(if let Some(target) = &self.target {
-                format!("--target={}", target)
-            } else {
-                String::new()
-            })
+            .arg(format!("build/{}", self.preset));
+
+        if let Some(target) = &self.target {
+            cmake_command.arg(format!("--target={target}"));
+        }
+
+        let cmake_command = cmake_command
             .stdout(stdout_output)
             .stderr(stderr_output)
             .stdin(Stdio::null())

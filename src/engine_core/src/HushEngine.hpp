@@ -8,7 +8,6 @@
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "HushBindings.hpp"
-#include "WindowRenderer.hpp"
 #include "executors/ThreadPool.hpp"
 
 #include <string_view>
@@ -18,6 +17,7 @@ namespace Hush
 	struct DirectionalLight;
 	class VirtualFilesystem;
 	class ResourceManager;
+	class WindowRenderer;
 
 	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
@@ -63,10 +63,7 @@ namespace Hush
 			return &m_threadPool;
 		}
 
-		Hush::WindowRenderer *GetWindowRenderer() noexcept
-		{
-			return m_windowRenderer.get();
-		}
+		Hush::WindowRenderer *GetWindowRenderer() noexcept;
 
 		VirtualFilesystem *GetVirtualFilesystem() noexcept;
 
@@ -78,7 +75,6 @@ namespace Hush
 		void AddDefaultSystems();
 
 		std::unique_ptr<IApplication> m_app = nullptr;
-		std::unique_ptr<WindowRenderer> m_windowRenderer = nullptr;
 		std::unique_ptr<HushEngineInternal> m_internal = nullptr;
 		Threading::Executors::ThreadPool m_threadPool;
 
@@ -86,16 +82,4 @@ namespace Hush
 		bool m_isApplicationRunning = false;
 		static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
 	};
-
-	/// Loads an application. The method to load an application depends on each platform and if shared library loading
-	/// is enabled.
-	///
-	/// If HUSH_STATIC_APP definition is set to true, Hush won't try to load an application hosted in a shared library.
-	/// This only applies on platforms that support shared libraries.
-	///
-	/// If a static application is bundled with the engine, it won't attempt to load a shared library.
-	///
-	/// @return A pointer to the loaded application.
-	std::unique_ptr<IApplication> LoadApplication(HushEngine *engine);
-
 } // namespace Hush

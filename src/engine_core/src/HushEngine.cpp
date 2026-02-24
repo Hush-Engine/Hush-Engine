@@ -8,6 +8,7 @@
 #include "VirtualFilesystem.hpp"
 #include "Systems/RenderGraphSystem.hpp"
 #include "Systems/ResourceUploadSystem.hpp"
+#include "WindowRenderer.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include <WindowManager.hpp>
 #include <cstdint>
@@ -22,6 +23,7 @@ struct Hush::HushEngine::HushEngineInternal
 
 	std::unique_ptr<Graphics::RenderGraphSystem> renderGraphSystem;
 	std::unique_ptr<Hush::Renderer::ResourceUploadSystem> resourceUploadSystem;
+	std::unique_ptr<WindowRenderer> windowRenderer = nullptr;
 };
 
 Hush::HushEngine::HushEngine()
@@ -46,11 +48,11 @@ void Hush::HushEngine::Run()
 	this->m_app = LoadApplication(this);
 
 	this->m_isApplicationRunning = true;
-	this->m_windowRenderer =
+	this->m_internal->windowRenderer =
 		std::make_unique<WindowRenderer>(this->m_app->GetAppName().data(), this->m_app->GetScene());
 
 	this->m_internal->renderGraphSystem = std::make_unique<Graphics::RenderGraphSystem>(
-		*this->m_app->GetScene(), &this->m_windowRenderer->GetRenderDevice());
+		*this->m_app->GetScene(), &this->m_internal->windowRenderer->GetRenderDevice());
 
 	this->m_internal->resourceUploadSystem = std::make_unique<Hush::Renderer::ResourceUploadSystem>(
 		*this->m_app->GetScene(), this->m_internal->renderGraphSystem->GetRenderDevice());
@@ -65,9 +67,9 @@ void Hush::HushEngine::Run()
 	while (this->m_isApplicationRunning)
 	{
 		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-		m_windowRenderer->HandleEvents(&this->m_isApplicationRunning);
+		this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
 		// TODO: Change this to the window renderer
-		if (!m_windowRenderer->IsActive())
+		if (!this->m_internal->windowRenderer->IsActive())
 		{
 			// Avoid taking all CPU usage
 			constexpr int32_t arbitrarySleepMs = 100;
@@ -118,6 +120,11 @@ void Hush::HushEngine::Init()
 	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
 }
 
+Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept
+{
+	return this->m_internal->windowRenderer.get();
+}
+
 Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
 {
 	return &this->m_internal->vfs;
@@ -132,28 +139,4 @@ void Hush::HushEngine::AddDefaultSystems()
 Hush::ResourceManager *Hush::HushEngine::GetResourceManager() noexcept
 {
 	return &this->m_internal->resourceManager;
-}
-
-extern "C" bool BundledAppExists_Internal_() HUSH_WEAK;
-
-extern "C" Hush::IApplication *BundledApp_Internal_(Hush::HushEngine *engine) HUSH_WEAK;
-
-std::unique_ptr<Hush::IApplication> Hush::LoadApplication(HushEngine *engine)
-{
-	// First, check if platform supports shared library app. If not, just attempt to load the bundled app.
-#if !HUSH_SUPPORTS_SHARED_APP
-	return BundledApp__Internal();
-#else
-	// Ok, we support apps as shared libraries, we then must check if a bundled application exists.
-	if (BundledAppExists_Internal_())
-	{
-		// It exists, just return it.
-		return std::unique_ptr<IApplication>(BundledApp_Internal_(engine));
-	}
-
-	// We can't find it, attempt to load it through a shared library.
-	// TODO: define file metadata????
-
-	return nullptr;
-#endif
 }

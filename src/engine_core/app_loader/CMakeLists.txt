@@ -6,6 +6,7 @@ hush_add_library(
         SRCS src/IApplication.cpp
              src/ApplicationLoader.cpp
         PUBLIC_HEADER_DIRS src
+        PRIVATE_HEADER_DIRS internal
 )
 
 add_library(Hush::AppLoader ALIAS HushAppLoader)
