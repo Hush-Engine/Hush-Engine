@@ -16,13 +16,18 @@
     "rapidjson",
     {
       "name": "sdl3",
-      "features": ["emscripten-pthreads"]
+      "features": ["emscripten-pthreads"],
+      "platform": "emscripten"
+    },
+    {
+      "name": "sdl3",
+      "platform": "!emscripten"
     },
     "spdlog",
     "boost-unordered",
     {
       "name": "shader-slang",
-      "platform": "(arm64 | x64) & (linux | osx | windows) & !uwp & !(static & staticcrt)"
+      "platform": "!emscripten"
     }
   ]
 }
