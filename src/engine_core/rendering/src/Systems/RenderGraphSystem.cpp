@@ -41,6 +41,7 @@ void Hush::Graphics::RenderGraphSystem::OnFixedUpdate([[maybe_unused]] float del
 
 void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
+    HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
 	m_renderDevice->BeginFrame();
 	m_frameActive = true;
 

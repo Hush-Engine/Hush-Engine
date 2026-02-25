@@ -11,6 +11,7 @@
 #include <Logger.hpp>
 #include <cassert>
 #include <coroutine>
+#include <exception>
 
 namespace Hush::Threading
 {

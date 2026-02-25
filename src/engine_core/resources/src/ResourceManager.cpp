@@ -91,7 +91,8 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	auto &filePtr = file.value();
 	const auto fileInfo = filePtr->GetFileInfo();
 
-	std::vector<std::byte> fileData(fileInfo.size);
+	std::vector<std::byte> fileData;
+	fileData.resize(fileInfo.size);
 	auto readResult = filePtr->Read(fileData);
 
 	if (readResult.has_error())

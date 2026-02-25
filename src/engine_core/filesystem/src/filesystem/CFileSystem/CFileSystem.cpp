@@ -6,15 +6,21 @@
 #include "CFileSystem.hpp"
 
 #include "CFile.hpp"
+#include "Assertions.hpp"
+#include "IFile.hpp"
+#include "StringUtils.hpp"
 
 #include <Logger.hpp>
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <system_error>
+#include <cerrno>
 #include <string_view>
-#include "Assertions.hpp"
-#include "IFile.hpp"
-#include "StringUtils.hpp"
+
+#if HUSH_PLATFORM_EMSCRIPTEN
+#include <sys/stat.h>
+#endif
 
 Hush::CFileSystem::CFileSystem(std::string_view root)
 	: m_root(root)
@@ -45,26 +51,58 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 
 	const auto realPathStr = realPath.generic_string();
 
+	#if HUSH_PLATFORM_WIN
 	if (const errno_t error = fopen_s(&file, realPathStr.c_str(), modeStr.data()); error != 0)
 	{
-		// TODO: cover all the errors.
 		LogFormat(ELogLevel::Debug, "Error opening file: {}", error);
 		return IFile::EError::FileDoesntExist;
 	}
+	#else
+	if (file = fopen(realPathStr.c_str(), modeStr.data()); file == nullptr)
+	{
+		LogFormat(ELogLevel::Debug, "Error opening file: {}", errno);
+		return IFile::EError::FileDoesntExist;
+	}
+	#endif
 
-	// Get file size
-	fseek(file, 0, SEEK_END);
-	const std::size_t size = ftell(file);
-
-	// Reset file
-	fseek(file, 0, SEEK_SET);
-
-	// Get last modified
+	// Get file size and last modified time.
+	// Prefer std::filesystem::file_size where available, but on Emscripten
+	// and in cases where filesystem fails, use stat() to avoid relying on
+	// fseek/ftell variants that can cause symbol/signature mismatches in WASM builds.
+	#if HUSH_PLATFORM_EMSCRIPTEN
 	struct stat result{};
 	if (stat(realPathStr.c_str(), &result) != 0)
 	{
+		// Close the FILE* before returning the error.
+		fclose(file);
 		return IFile::EError::OperationNotSupported;
 	}
+	std::size_t size = static_cast<std::size_t>(result.st_size);
+	#else
+	std::error_code ec;
+	std::size_t size = std::filesystem::file_size(realPath, ec);
+	struct stat result{};
+	if (ec)
+	{
+		// If filesystem query fails, fallback to stat() and log the reason.
+		LogFormat(ELogLevel::Debug, "Error getting file size via std::filesystem: {}", ec.message());
+		if (stat(realPathStr.c_str(), &result) != 0)
+		{
+			fclose(file);
+			return IFile::EError::OperationNotSupported;
+		}
+		size = static_cast<std::size_t>(result.st_size);
+	}
+	else
+	{
+		// We still need the last modified time; use stat() for that.
+		if (stat(realPathStr.c_str(), &result) != 0)
+		{
+			fclose(file);
+			return IFile::EError::OperationNotSupported;
+		}
+	}
+	#endif
 
 	FileInfo metadata{
 		.path = std::move(vfsPath),

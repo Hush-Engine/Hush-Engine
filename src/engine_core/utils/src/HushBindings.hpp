@@ -15,6 +15,14 @@
 #pragma warning(disable : 5030) // Attribute not recognized
 #endif
 
+#if defined(HUSH_COMPILER_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-attributes"
+#elif defined(HUSH_COMPILER_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
+
 namespace Hush::Export
 {
 	/// Export a class or struct as a handle. This will generate a typedef for the class or struct.

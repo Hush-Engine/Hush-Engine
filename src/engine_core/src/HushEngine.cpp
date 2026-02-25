@@ -26,9 +26,15 @@ struct Hush::HushEngine::HushEngineInternal
 	std::unique_ptr<WindowRenderer> windowRenderer = nullptr;
 };
 
+#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+static constexpr uint32_t NUM_THREADS = 4;
+#else
+static constexpr uint32_t NUM_THREADS = std::thread::hardware_concurrency();
+#endif
+
 Hush::HushEngine::HushEngine()
 	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
-		  {.numThreads = std::thread::hardware_concurrency(), .pinToCore = true}))
+		  {.numThreads = NUM_THREADS, .pinToCore = true}))
 {
 	m_internal = std::make_unique<HushEngineInternal>();
 	m_internal->resourceManager.Init(&m_internal->vfs);
@@ -39,11 +45,16 @@ Hush::HushEngine::~HushEngine()
 	this->Quit();
 }
 
-void Hush::HushEngine::Run()
+void Hush::HushEngine::Init()
 {
-	// Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
+    // Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
 	// mount additional directories or archives as needed)
+	#if HUSH_PLATFORM_EMSCRIPTEN
+    // On Emscripten, we need to mount the filesystem differently. The path to mount is /
+    this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "/");
+    #else
 	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+	#endif
 
 	this->m_app = LoadApplication(this);
 
@@ -60,37 +71,51 @@ void Hush::HushEngine::Run()
 	AddDefaultSystems();
 
 	// Initialize any static resources we need
-	this->Init();
+	this->m_app->Init();
 
-	std::chrono::steady_clock::duration elapsed;
+	// Scene *scene = this->m_app->GetScene();
+	// Entity entity = scene->CreateEntityWithName("Directional Light");
+	// WorldTransform &transform = entity.AddComponent<WorldTransform>();
+	// transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
+	// entity.AddComponent<LocalTransform>();
+	// this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
+}
 
-	while (this->m_isApplicationRunning)
+void Hush::HushEngine::Run()
+{
+	// while (this->m_isApplicationRunning)
+	// {
+	std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+	// this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
+	// TODO: Change this to the window renderer
+	if (!this->m_internal->windowRenderer->IsActive())
 	{
-		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-		this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
-		// TODO: Change this to the window renderer
-		if (!this->m_internal->windowRenderer->IsActive())
-		{
-			// Avoid taking all CPU usage
-			constexpr int32_t arbitrarySleepMs = 100;
-			std::this_thread::sleep_for(std::chrono::milliseconds(arbitrarySleepMs));
-			continue;
-		}
-
-		const float deltaTime = std::chrono::duration<float>(elapsed).count();
-
-		this->m_app->Update(deltaTime);
-
-		this->m_app->OnPreRender();
-
-		this->m_app->OnRender(deltaTime);
-
-		this->m_app->OnPostRender();
-
-		this->m_app->DisposeFrame();
-		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		elapsed = end - start;
+		// Avoid taking all CPU usage
+		constexpr int32_t arbitrarySleepMs = 100;
+		std::this_thread::sleep_for(std::chrono::milliseconds(arbitrarySleepMs));
+		return;
 	}
+
+	const float deltaTime = std::chrono::duration<float>(m_elapsed).count();
+
+	this->m_app->Update(deltaTime);
+
+	this->m_app->OnPreRender();
+
+	this->m_app->OnRender(deltaTime);
+
+	this->m_app->OnPostRender();
+
+
+	this->m_app->DisposeFrame();
+	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	m_elapsed = end - start;
+	// }
+}
+
+void Hush::HushEngine::HandleEvents(const SDL_Event &event)
+{
+    this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning, event);
 }
 
 void Hush::HushEngine::AddSystem(ISystem *system)
@@ -106,18 +131,6 @@ void Hush::HushEngine::Quit()
 Hush::Scene *Hush::HushEngine::GetScene()
 {
 	return this->m_app->GetScene();
-}
-
-void Hush::HushEngine::Init()
-{
-	this->m_app->Init();
-	// Add a default directional light
-	Scene *scene = this->m_app->GetScene();
-	Entity entity = scene->CreateEntityWithName("Directional Light");
-	WorldTransform &transform = entity.AddComponent<WorldTransform>();
-	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
-	entity.AddComponent<LocalTransform>();
-	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
 }
 
 Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept

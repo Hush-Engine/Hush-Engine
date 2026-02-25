@@ -23,6 +23,7 @@ namespace Hush::Threading::Executors
 	};
 
 	class WorkerThread;
+	class ThreadPool;
 
 	class TaskOperation
 	{

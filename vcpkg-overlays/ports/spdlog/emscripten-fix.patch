@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c7708eb..952470f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -184,6 +184,10 @@ else()
+     add_library(spdlog STATIC ${SPDLOG_SRCS} ${SPDLOG_ALL_HEADERS})
+ endif()
+ 
++if (EMSCRIPTEN)
++    target_compile_options(spdlog PRIVATE -pthread)
++endif()
++
+ add_library(spdlog::spdlog ALIAS spdlog)
+ 
+ set(SPDLOG_INCLUDES_LEVEL "")

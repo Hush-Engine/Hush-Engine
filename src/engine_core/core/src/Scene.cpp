@@ -26,15 +26,36 @@ Hush::Scene::~Scene()
 
 void Hush::Scene::Init()
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+    // On Emscripten, we run the init on the main thread to avoid synchronization issues with the main loop.
+    for (const std::vector<ISystem *> &systemBucket : m_systems)
+    {
+        for (ISystem *system : systemBucket)
+        {
+            system->Init();
+        }
+    }
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->Init(); }));
 	}
+	#endif
 }
 
 void Hush::Scene::Update(float delta)
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+    // On Emscripten, we run the update on the main thread to avoid synchronization issues with the main loop.
+    for (const std::vector<ISystem *> &systemBucket : m_systems)
+    {
+        for (ISystem *system : systemBucket)
+        {
+            system->OnUpdate(delta);
+        }
+    }
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
@@ -43,11 +64,22 @@ void Hush::Scene::Update(float delta)
 				system->OnUpdate(delta);
 			}));
 	}
+	#endif
 }
 
 void Hush::Scene::FixedUpdate(float delta)
 {
-	for (const std::vector<ISystem *> &systemBucket : m_systems)
+    #if HUSH_PLATFORM_EMSCRIPTEN
+        // On Emscripten, we run the fixed update on the main thread to avoid synchronization issues with the main loop.
+        for (const std::vector<ISystem *> &systemBucket : m_systems)
+        {
+            for (ISystem *system : systemBucket)
+            {
+                system->OnFixedUpdate(delta);
+            }
+        }
+    #else
+    for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
@@ -55,41 +87,88 @@ void Hush::Scene::FixedUpdate(float delta)
 				system->OnFixedUpdate(delta);
 			}));
 	}
+	#endif
 }
 
 void Hush::Scene::PreRender()
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+        // On Emscripten, we run the pre-render on the main thread to avoid synchronization issues with the main loop.
+        for (const std::vector<ISystem *> &systemBucket : m_systems)
+        {
+            for (ISystem *system : systemBucket)
+            {
+                system->OnPreRender();
+            }
+        }
+        return;
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
 	}
+	#endif
 }
+
 void Hush::Scene::Render()
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+        // On Emscripten, we run the render on the main thread to avoid synchronization issues with the main loop.
+        for (const std::vector<ISystem *> &systemBucket : m_systems)
+        {
+            for (ISystem *system : systemBucket)
+            {
+                system->OnRender();
+            }
+        }
+        return;
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
 	}
+	#endif
 }
 
 void Hush::Scene::PostRender()
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+    // On Emscripten, we run the post-render on the main thread to avoid synchronization issues with the main loop.
+    for (const std::vector<ISystem *> &systemBucket : m_systems)
+    {
+        for (ISystem *system : systemBucket)
+        {
+            system->OnPostRender();
+        }
+    }
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
 	}
+	#endif
 }
 
 void Hush::Scene::Shutdown()
 {
+    #if HUSH_PLATFORM_EMSCRIPTEN
+    for (const std::vector<ISystem *> &systemBucket : m_systems)
+    {
+        for (ISystem *system : systemBucket)
+        {
+            system->OnShutdown();
+        }
+    }
+    #else
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
 	}
+	#endif
 }
 
 void Hush::Scene::RemoveSystem(std::string_view name)

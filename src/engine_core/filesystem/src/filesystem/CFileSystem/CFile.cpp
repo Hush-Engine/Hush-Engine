@@ -7,31 +7,64 @@
 #include "CFile.hpp"
 
 #include <Logger.hpp>
+#include <algorithm>
 #include <cstdio>
 Hush::CFile::~CFile()
 {
 	Close();
 }
 
-Hush::IFile::Result<unsigned long long> Hush::CFile::Read(std::span<std::byte> data)
+Hush::CFile::Result<std::size_t> Hush::CFile::Read(std::span<std::byte> data)
 {
-	// if (this->m_file == nullptr) {
-	// 	this->m_file = fopen(const char *FileName, const char *Mode)
-	// }
-	if (const auto read = fread(data.data(), sizeof(std::byte), data.size(), m_file); read != data.size())
+	// Basic sanity checks
+	if (this->m_file == nullptr)
 	{
 		return EError::CannotRead;
 	}
 
-	return data.size();
+	// Nothing to read
+	if (data.size() == 0)
+	{
+		return static_cast<std::size_t>(0);
+	}
+
+	// Clamp the requested read size to the file size reported in metadata to avoid extremely large spans
+	// (this defends against corrupted metadata or misuse that results in huge span sizes and wasm OOB copies).
+	const std::size_t fileSize = GetFileInfo().size;
+	std::size_t toRead = data.size();
+	toRead = std::min(toRead, fileSize);
+
+	// If there's nothing to read after clamping, return 0
+	if (toRead == 0)
+	{
+		return static_cast<std::size_t>(0);
+	}
+
+	// Perform the read using byte count (1) to avoid element-size confusion.
+	const std::size_t read = fread(data.data(), 1, toRead, m_file);
+
+	// If fread returned less than requested, check for error vs EOF.
+	if (read < toRead)
+	{
+		if (ferror(m_file))
+		{
+			return EError::CannotRead;
+		}
+		// EOF reached — return number of bytes actually read (could be zero)
+		return read;
+	}
+
+	// Successfully read requested bytes
+	return read;
 }
-Hush::IFile::Result<std::span<std::byte>> Hush::CFile::Read(std::size_t size)
+
+Hush::CFile::Result<std::span<std::byte>> Hush::CFile::Read(std::size_t size)
 {
 	(void)size;
 	return EError::OperationNotSupported;
 }
 
-Hush::IFile::Result<void> Hush::CFile::Write(std::span<const std::byte> data)
+Hush::CFile::Result<void> Hush::CFile::Write(std::span<const std::byte> data)
 {
 	if (const auto written = fwrite(data.data(), sizeof(std::byte), data.size(), m_file); written != data.size())
 	{
@@ -41,7 +74,7 @@ Hush::IFile::Result<void> Hush::CFile::Write(std::span<const std::byte> data)
 	return Success();
 }
 
-Hush::IFile::Result<void> Hush::CFile::Seek(std::size_t position)
+Hush::CFile::Result<void> Hush::CFile::Seek(std::size_t position)
 {
 	if (fseek(m_file, static_cast<long>(position), SEEK_SET) != 0)
 	{

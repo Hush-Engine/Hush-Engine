@@ -15,7 +15,7 @@
 #include "../../resources/src/Ref.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <cstdint>
 #include <functional>
 #include <glm/ext/matrix_float4x4.hpp>

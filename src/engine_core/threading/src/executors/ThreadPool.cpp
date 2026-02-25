@@ -235,12 +235,11 @@ Hush::Threading::Executors::ThreadPool::ThreadPool(ThreadPoolOptions options)
 	: m_threadsBarrier(options.numThreads + 1) // +1 for the main thread to wait on
 {
 	// Get the number of cores. TODO: Use this to pin threads to cores if options.pinToCore is true.
-	const uint32_t numCores = std::thread::hardware_concurrency();
 
 	// Create worker threads
 	for (uint32_t i = 0; i < options.numThreads; i++)
 	{
-		int32_t threadAffinity = options.pinToCore && i < numCores ? static_cast<int32_t>(i) : -1;
+		int32_t threadAffinity = options.pinToCore ? static_cast<int32_t>(i) : -1;
 		m_threads.emplace_back(std::make_unique<WorkerThread>(*this, m_threadsBarrier, threadAffinity));
 	}
 

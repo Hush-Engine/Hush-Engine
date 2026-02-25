@@ -18,6 +18,10 @@ if (linux)
     target_link_libraries(HushThreading PUBLIC pthread)
 endif()
 
+if (EMSCRIPTEN)
+    target_link_libraries(HushThreading PUBLIC pthread)
+endif()
+
 add_test_target(
         TARGET_NAME HushThreadingTest
         ENGINE_TARGET HushThreading

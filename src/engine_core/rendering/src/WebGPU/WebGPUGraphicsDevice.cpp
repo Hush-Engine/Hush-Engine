@@ -16,11 +16,15 @@
 #include "WebGPUSampler.hpp"
 #include "Logger.hpp"
 #include "Assertions.hpp"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_video.h>
-#include <sdl2webgpu/sdl2webgpu.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
+#include <sdl3webgpu/sdl3webgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include <webgpu/webgpu.hpp>
+
+#if HUSH_PLATFORM_EMSCRIPTEN
+#include <emscripten/html5.h>
+#endif
 
 namespace Hush::Graphics
 {
@@ -40,6 +44,7 @@ namespace Hush::Graphics
 		int width = 0;
 		int height = 0;
 		SDL_GetWindowSize(window, &width, &height);
+		Hush::LogFormat(Hush::ELogLevel::Info, "Initial window size: {}x{}", width, height);
 		ConfigureSurface(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 		// Create command queue
@@ -361,6 +366,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::BeginFrame()
 	{
+	    m_instance.processEvents();
 		if (m_needsResize)
 		{
 			// Release stale frame texture/view from the previous frame before
@@ -409,13 +415,26 @@ namespace Hush::Graphics
 												  .sampleCount = 1,
 												  .format = ConvertToEngineTextureFormat(m_surfaceFormat),
 												  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
-												  .ownedByExternalSource = true,
+												  .debugName = "Current Frame Texture",
+												  .ownedByExternalSource = false,
 											  });
 	}
 
 	void WebGPUGraphicsDevice::EndFrame()
 	{
+	#if HUSH_PLATFORM_EMSCRIPTEN
+	    // On Emscripten with WebGPU, we need to call requestAnimationFrame to ensure the browser processes the present and updates the canvas.
+        // emscripten_request_animation_frame([](double, void*) {
+        //     // No-op callback; the present is handled by the browser after this callback returns.
+        //     return true;
+        // }, nullptr);
+
+        // m_surface.present();
+        m_currentFrameTexture = WebGPUTexture(); // Clear reference to the current frame texture to allow it to be released after present
+        emscripten_sleep(0); // Yield control back to the browser to allow it to process the present
+	#else
 		m_surface.present();
+	#endif
 		m_currentFrameView = nullptr;
 		FlushDeletionQueue();
 	}

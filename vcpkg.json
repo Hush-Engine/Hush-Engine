@@ -15,15 +15,14 @@
     "outcome",
     "rapidjson",
     {
-      "name": "sdl2",
-      "features": ["vulkan"]
+      "name": "sdl3",
+      "features": ["emscripten-pthreads"]
     },
     "spdlog",
-    "spirv-reflect",
-    "vk-bootstrap",
-    "volk",
-    "vulkan",
     "boost-unordered",
-    "shader-slang"
+    {
+      "name": "shader-slang",
+      "platform": "(arm64 | x64) & (linux | osx | windows) & !uwp & !(static & staticcrt)"
+    }
   ]
 }

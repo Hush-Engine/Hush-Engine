@@ -11,6 +11,7 @@
 #include "executors/ThreadPool.hpp"
 
 #include <string_view>
+#include <SDL3/SDL_events.h>
 
 namespace Hush
 {
@@ -43,11 +44,15 @@ namespace Hush
 
 		~HushEngine();
 
+		void Init();
+
 		/// Starts running the engine with UI components
 		void Run();
 
 		/// Disposes of the HushEngine
 		void Quit();
+
+		void HandleEvents(const SDL_Event &event);
 
 		[[hush::export]]
 		Scene *GetScene();
@@ -70,13 +75,14 @@ namespace Hush
 		ResourceManager *GetResourceManager() noexcept;
 
 	private:
-		void Init();
 
 		void AddDefaultSystems();
 
 		std::unique_ptr<IApplication> m_app = nullptr;
 		std::unique_ptr<HushEngineInternal> m_internal = nullptr;
 		Threading::Executors::ThreadPool m_threadPool;
+
+		std::chrono::steady_clock::duration m_elapsed;
 
 		DirectionalLight *m_defaultLight = nullptr;
 		bool m_isApplicationRunning = false;
