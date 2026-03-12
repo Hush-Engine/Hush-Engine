@@ -44,7 +44,7 @@ namespace Hush
 
 		~HushEngine();
 
-		void Init();
+		void Init(int argc, char **argv);
 
 		/// Starts running the engine with UI components
 		void Run();

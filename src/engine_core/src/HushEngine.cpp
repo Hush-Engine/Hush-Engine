@@ -45,7 +45,7 @@ Hush::HushEngine::~HushEngine()
 	this->Quit();
 }
 
-void Hush::HushEngine::Init()
+void Hush::HushEngine::Init([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
 {
     // Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
 	// mount additional directories or archives as needed)

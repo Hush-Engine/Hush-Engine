@@ -36,7 +36,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
         return SDL_APP_FAILURE;
     }
 
-    state.engine.Init();
+    state.engine.Init(argc, argv);
 
     return SDL_APP_CONTINUE;
 }
@@ -57,7 +57,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     return SDL_APP_CONTINUE;
 }
 
-void SDL_AppQuit(void *appstate, SDL_AppResult result)
+void SDL_AppQuit(void *appstate, [[maybe_unused]] SDL_AppResult result)
 {
     AppState& state = *static_cast<AppState*>(appstate);
     state.engine.Quit();

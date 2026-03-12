@@ -78,7 +78,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 
 	// Now create the window
 	uint32_t defaultFlag = SDL_WINDOW_RESIZABLE;
-	const int defaultWindowIndex = -1;
+	// const int defaultWindowIndex = -1;
 
 	this->m_windowPtr = SDL_CreateWindow(windowName, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
 	// this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,

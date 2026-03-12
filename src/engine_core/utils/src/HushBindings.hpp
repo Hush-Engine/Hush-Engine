@@ -13,6 +13,9 @@
 #ifdef HUSH_COMPILER_MSVC
 #pragma warning(push)
 #pragma warning(disable : 5030) // Attribute not recognized
+
+#pragma warning(push)
+#pragma warning(disable : 4068) // Unknown pragma
 #endif
 
 #if defined(HUSH_COMPILER_CLANG)
@@ -72,5 +75,9 @@ namespace Hush::Export
 		(void)name;
 	}
 } // namespace Hush::Export
+
+#ifdef HUSH_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 // NOLINTEND

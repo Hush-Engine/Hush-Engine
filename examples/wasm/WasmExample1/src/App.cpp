@@ -139,7 +139,7 @@ public:
 		GetScene()->PreRender();
 	}
 
-	void OnRender(float delta) override
+	void OnRender([[maybe_unused]] float delta) override
 	{
 		GetScene()->Render();
 	}
