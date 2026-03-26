@@ -12,11 +12,14 @@
 /// </summary>
 using MouseButton = uint8_t;
 
-enum class EMouseButton : MouseButton
+namespace Hush
 {
-	Left = 1U,
-	Middle = 2U,
-	Right = 3U,
-	X1 = 4U,
-	X2 = 5U
-};
+	enum class [[hush::export]] EMouseButton /*: MouseButton*/
+	{
+		Left = 1U,
+		Middle = 2U,
+		Right = 3U,
+		X1 = 4U,
+		X2 = 5U
+	};
+} // namespace Hush

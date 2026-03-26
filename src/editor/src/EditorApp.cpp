@@ -3,6 +3,7 @@
 // Created by Alan5 on 22/09/2024.
 //
 
+#include "Assertions.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
@@ -13,10 +14,18 @@
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
+#include "ScriptingHost.hpp"
 #include "systems/EditorCameraSystem.hpp"
 #include "systems/RenderingSystem.hpp"
-
+#include <cstdint>
 #include <memory>
+#include <vector>
+
+// This is temporary lol
+#if __has_include("../../bindings/HushBindings.cpp")
+#define HUSH_STATIC_BINDING
+#include "../../bindings/HushBindings.cpp"
+#endif
 
 class EditorApp final : public Hush::IApplication
 {
@@ -35,6 +44,18 @@ public:
 
 	void Init() override
 	{
+		this->m_scriptingHost.Initialize("C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll");
+		this->m_scriptingHost.GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		std::vector<Hush::ScriptingSystemInfo>& systems = this->m_scriptingHost.GetAvailableSystems();
+		Hush::ScriptingSystemInfo systemInfo = systems.at(0);
+		auto foundRes = this->m_scriptingHost.CreateSystem(systemInfo);
+		HUSH_RESULT_ASSERT(foundRes, "Unable to instantiate SmallSystem");
+
+		this->m_testSystem = foundRes.value();
+		
+		this->m_scriptingHost.GetCallSystemInitFn()(reinterpret_cast<void*>(this->m_testSystem));
+
+		// Make the giant System pool
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
@@ -52,6 +73,7 @@ public:
 	void Update(float delta) override
 	{
 		this->m_scene->Update(delta);
+		this->m_scriptingHost.GetCallSystemOnUpdateFn()(reinterpret_cast<void*>(this->m_testSystem), delta);
 	}
 
 	void FixedUpdate(float delta) override
@@ -96,6 +118,8 @@ private:
 	Hush::ResourceManager *m_resourceManager = nullptr;
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
+	Hush::ScriptingHost m_scriptingHost;
+	uintptr_t m_testSystem = 0;
 };
 
 extern "C" bool BundledAppExists_Internal_() // NOLINT(*-identifier-naming)

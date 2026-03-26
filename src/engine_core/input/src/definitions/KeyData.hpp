@@ -8,9 +8,12 @@
 #include "KeyCode.hpp"
 #include "KeyStates.hpp"
 
-struct KeyData
+namespace Hush
 {
-	EKeyCode code = EKeyCode::UNKNOWN;
-	EKeyState currentState = EKeyState::None;
-	EKeyState previousState = EKeyState::None;
-};
+	struct KeyData
+	{
+		EKeyCode code = EKeyCode::UNKNOWN;
+		EKeyState currentState = EKeyState::None;
+		EKeyState previousState = EKeyState::None;
+	};
+} // namespace Hush

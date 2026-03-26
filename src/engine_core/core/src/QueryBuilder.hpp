@@ -9,27 +9,51 @@
 #include "Query.hpp"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 
 namespace Hush
 {
 
+	class Scene;
+
 	namespace impl::QueryBuilderImpl
 	{
 		// Unsafe implementations... TODO: Maybe use std::span?
 
-		void WithRelationship(std::byte *queryDesc, uint8_t *termCountRef, const Entity &relationship);
+		[[hush::export]]
+		void WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef, const Entity &relationship);
 
-		void WithRelationship(std::byte *queryDesc, uint8_t *termCountRef, const Entity &relationship,
+		[[hush::export]]
+		void WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef, const Entity &relationship,
 							  const Entity &target);
 
-		void InitDescriptor(std::byte *queryDesc, std::span<Entity::EntityId> components);
+		[[hush::export]]
+		void WithTerm(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term);
 
-		void *InitQuery(void *world, const std::byte *queryDesc);
+		[[hush::export]]
+		void InitDescriptor(uint8_t *queryDesc, std::span<Entity::EntityId> components);
+
+		[[hush::export]]
+		RawQuery InitQuery(Scene* scene, const uint8_t *queryDesc);
 
 	} // namespace impl::QueryBuilderImpl
 
-	class Scene;
+
+	constexpr size_t DESC_ALIGN = 8;
+	constexpr size_t DESC_SIZE = 2440;
+
+	struct [[hush::export]] OpaqueQueryDescriptor
+	{
+	public:
+		// NOLINTBEGIN
+		[[hush::export]]
+		uint8_t *data() noexcept;
+		// NOLINTEND
+
+	private:
+		alignas(DESC_ALIGN) std::array<std::byte, DESC_SIZE> m_opaqueDesc{};
+	};
 
 	template <typename... Components>
 	class QueryBuilder
@@ -56,8 +80,8 @@ namespace Hush
 
 		Query<Components...> Build()
 		{
-			void *initializedQuery = impl::QueryBuilderImpl::InitQuery(this->m_world, this->m_opaqueDesc.data());
-			return Query<Components...>(RawQuery{this->m_scene, initializedQuery});
+			RawQuery initializedQuery = impl::QueryBuilderImpl::InitQuery(this->m_scene, this->m_opaqueDesc.data());
+			return Query<Components...>(initializedQuery);
 		}
 
 	private:
@@ -74,7 +98,7 @@ namespace Hush
 		static constexpr size_t DESC_ALIGN = 8;
 		static constexpr size_t DESC_SIZE = 2440;
 
-		alignas(DESC_ALIGN) std::array<std::byte, DESC_SIZE> m_opaqueDesc{};
+		OpaqueQueryDescriptor m_opaqueDesc{};
 		// We need the world apart from the scene to avoid including it as a full on header on this compilation unit
 		void *m_world = nullptr;
 		Scene *m_scene = nullptr;

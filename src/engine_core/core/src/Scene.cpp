@@ -374,6 +374,9 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	auto *world = static_cast<ecs_world_t *>(GetWorld());
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
+	// By default, all components should be able to be toggled on or off (for performance reasons)
+	ecs_add_id(world, componentId, EcsCanToggle);
+
 	return componentId;
 }
 

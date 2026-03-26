@@ -183,6 +183,7 @@ namespace Hush
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
+		[[hush::export]]
 		Entity EntityFromIdUnchecked(EntityId id);
 
 		[[nodiscard]] [[hush::export]]
@@ -221,6 +222,15 @@ namespace Hush
 			return this->m_registeredEntities;
 		}
 
+		HushEngine* GetEngine() {
+			return this->m_engine;
+		}
+
+		[[nodiscard]]
+		void *GetWorld() const
+		{
+			return m_world;
+		}
 	private:
 		friend class Entity;
 		friend class RawQuery;
@@ -240,11 +250,6 @@ namespace Hush
 		Entity::EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
 													  std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
 
-		[[nodiscard]]
-		void *GetWorld() const
-		{
-			return m_world;
-		}
 
 		/// Sort the systems based on their order and store them in the buckets
 		void SortSystems();
@@ -262,8 +267,11 @@ namespace Hush
 		/// Special vector to store the systems that come from the engine.
 		std::vector<ISystem *> m_engineSystems;
 
-		/// User systems
+		/// User systems (mostly to use with C++-side gameplay code)
 		std::vector<std::unique_ptr<ISystem>> m_userSystems;
+
+		/// User systems handled by the scripting host
+		std::vector<uintptr_t> m_scriptingSystems;
 
 		HushEngine *m_engine;
 

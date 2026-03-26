@@ -176,6 +176,14 @@ namespace Hush
 			return RemoveComponentRaw(entityId);
 		}
 
+		template <typename T>
+		void SetComponentActive(bool active)
+		{
+			const EntityId entityId = RegisterIfNeededSlow<std::remove_cvref_t<T>>();
+
+			SetComponentActiveRaw(entityId, active);
+		}
+
 		/// Register a component to the entity.
 		/// @tparam T Type to register.
 		template <typename T>
@@ -190,7 +198,7 @@ namespace Hush
 		/// Register a component.
 		/// @param desc Component description.
 		/// @return Id of the component.
-		[[hush::export]]
+		[[hush::export]] [[nodiscard]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
 		/// Add a component to the entity.
@@ -234,6 +242,9 @@ namespace Hush
 		[[hush::export]]
 		bool RemoveComponentRaw(EntityId componentId);
 
+		[[hush::export]]
+		void SetComponentActiveRaw(EntityId componentId, bool active);
+
 		/// Destroy an entity. This will remove all components from the entity and destroy it.
 		/// This consumes the entity, so it should not be used after this function is called.
 		/// @param entity Entity to destroy.
@@ -241,6 +252,7 @@ namespace Hush
 
 		void SetParent(const Entity &parent);
 
+		[[hush::export]]
 		void AddChild(const Entity &child);
 
 		[[nodiscard]]
@@ -252,10 +264,13 @@ namespace Hush
 		[[nodiscard]]
 		Entity GetChildAt(int32_t index) const;
 
-		[[nodiscard]]
+		[[nodiscard]] [[hush::export]]
 		int32_t GetChildCount() const;
 
 		void EachChild(std::function<void(Entity &)> func) const;
+
+		[[hush::export]]
+		void AddRelationship(const Entity &relationship, const Entity &target);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;

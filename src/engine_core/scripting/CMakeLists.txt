@@ -1,12 +1,12 @@
 # Scripting
 # TODO: enable in modules.
-#hush_add_library(
-#        TARGET_NAME HushCSharp
-#        LIB_TYPE OBJECT
-#        SRCS src/DotnetHost.cpp src/ScriptingManager.cpp
-#        PUBLIC_HEADER_DIRS src
-#)
-#
-#add_library(Hush::CSharp ALIAS HushCSharp)
-#
-#target_link_libraries(HushCSharp PUBLIC HushUtils HushLog coreclr)
+hush_add_library(
+        TARGET_NAME HushScripting
+        LIB_TYPE OBJECT
+        SRCS src/ScriptingHost.cpp
+        PUBLIC_HEADER_DIRS src
+)
+
+add_library(Hush::Scripting ALIAS HushScripting)
+
+target_link_libraries(HushScripting PUBLIC HushUtils HushLog)

@@ -1,9 +1,16 @@
 #include "QueryBuilder.hpp"
 #include "Assertions.hpp"
 #include "EcsTerms.hpp"
+#include "Query.hpp"
 #include <flecs.h>
+#include "Scene.hpp"
 
-void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte *queryDesc, uint8_t *termCountRef,
+uint8_t *Hush::OpaqueQueryDescriptor::data() noexcept
+{
+	return reinterpret_cast<uint8_t*>(this->m_opaqueDesc.data());
+}
+
+void Hush::impl::QueryBuilderImpl::WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef,
 													const Entity &relationship)
 {
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
@@ -13,7 +20,7 @@ void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte *queryDesc, uint8_
 	(*termCountRef)++;
 }
 
-void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte *queryDesc, uint8_t *termCountRef,
+void Hush::impl::QueryBuilderImpl::WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef,
 													const Entity &relationship, const Entity &target)
 {
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
@@ -24,7 +31,18 @@ void Hush::impl::QueryBuilderImpl::WithRelationship(std::byte *queryDesc, uint8_
 	(*termCountRef)++;
 }
 
-void Hush::impl::QueryBuilderImpl::InitDescriptor(std::byte *queryDesc, std::span<Entity::EntityId> components)
+void Hush::impl::QueryBuilderImpl::WithTerm(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term)
+{
+	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
+	auto *desc = reinterpret_cast<ecs_query_desc_t *>(queryDesc);
+
+	ecs_term_t builtTerm{.id = term};
+
+	desc->terms[*termCountRef] = builtTerm;
+	(*termCountRef)++;
+}
+
+void Hush::impl::QueryBuilderImpl::InitDescriptor(uint8_t *queryDesc, std::span<Entity::EntityId> components)
 {
 	auto *desc = reinterpret_cast<ecs_query_desc_t *>(queryDesc);
 
@@ -35,11 +53,12 @@ void Hush::impl::QueryBuilderImpl::InitDescriptor(std::byte *queryDesc, std::spa
 	}
 }
 
-void *Hush::impl::QueryBuilderImpl::InitQuery(void *world, const std::byte *queryDesc)
+Hush::RawQuery Hush::impl::QueryBuilderImpl::InitQuery(Scene* scene, const uint8_t *queryDesc)
 {
-	HUSH_ASSERT(world != nullptr, "Unable to build query for a null world!");
+	HUSH_ASSERT(scene != nullptr, "Unable to build query for a null scene!");
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
 	const auto *desc = reinterpret_cast<const ecs_query_desc_t *>(queryDesc);
-	auto *worldInterpreted = reinterpret_cast<ecs_world_t *>(world);
-	return ecs_query_init(worldInterpreted, desc);
+	auto *worldInterpreted = reinterpret_cast<ecs_world_t *>(scene->GetWorld());
+	void* queryData = ecs_query_init(worldInterpreted, desc);
+	return RawQuery {scene, queryData};
 }
