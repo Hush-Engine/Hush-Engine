@@ -29,6 +29,7 @@
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/backends/imgui_impl_wgpu.h>
 
+#include <algorithm>
 #include <memory>
 
 
@@ -371,6 +372,24 @@ private:
 				ImDrawData *drawData = ImGui::GetDrawData();
 				if (drawData != nullptr)
 				{
+					// Clamp DisplaySize to the actual backbuffer dimensions.
+					// During a window upsize the SDL2 backend may report the
+					// new (larger) window size while the surface texture was
+					// acquired at the old (smaller) size.  The ImGui WGPU
+					// backend computes scissor rects as:
+					//   fb = DisplaySize * FramebufferScale
+					// If fb exceeds the render target, wgpu rejects the
+					// scissor rect.  Adjust DisplaySize so the effective
+					// framebuffer size never exceeds the render target.
+					auto rtW = static_cast<float>(backbufferTexture->GetWidth());
+					auto rtH = static_cast<float>(backbufferTexture->GetHeight());
+					float scaleX = (drawData->FramebufferScale.x > 0.0f) ? drawData->FramebufferScale.x : 1.0f;
+					float scaleY = (drawData->FramebufferScale.y > 0.0f) ? drawData->FramebufferScale.y : 1.0f;
+					float maxDisplayW = rtW / scaleX;
+					float maxDisplayH = rtH / scaleY;
+					drawData->DisplaySize.x = std::min(drawData->DisplaySize.x, maxDisplayW);
+					drawData->DisplaySize.y = std::min(drawData->DisplaySize.y, maxDisplayH);
+
 					// Obtain the underlying WGPURenderPassEncoder from
 					// the engine's command list so the ImGui backend can
 					// record its draw commands into the active pass.
@@ -425,19 +444,12 @@ private:
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
-			// Move the unique_ptr out of the render graph resource so
-			// Reset()/Clear() won't destroy the GPU texture.  The ScenePanel
-			// still holds a raw view pointer into this texture — keeping it
-			// alive prevents the dangling-pointer crash in wgpu.
 			m_cachedSceneTexture = std::move(texRes->texture);
 		}
 	}
 
 	void UpdateScenePanelTexture()
 	{
-		// The resource manager lives on the render graph owned by the
-		// engine's RenderDevice.  After compilation + resource realization
-		// the transient texture has been created and is available.
 		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
 		if (windowRenderer == nullptr)
 		{
@@ -479,8 +491,6 @@ private:
 		// No texture available at all (first frame).
 		m_userInterface.SetSceneTextureView(nullptr, 0, 0);
 	}
-
-	// ─── Members ─────────────────────────────────────────────────────
 
 	Hush::HushEngine *m_engine = nullptr;
 	Hush::UI m_userInterface;
