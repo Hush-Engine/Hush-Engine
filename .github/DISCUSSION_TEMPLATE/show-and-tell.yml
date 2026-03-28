@@ -1,0 +1,28 @@
+title: "Show & Tell"
+labels: ["showcase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Show & Tell
+
+        We'd love to see what you've built with [Hush Engine](https://hushengine.com/)! Share your projects, experiments, demos, or anything else you're proud of with the community.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What did you build?
+      description: Tell us about your project or creation. What does it do? What features of Hush Engine did you use?
+      placeholder: Describe your project here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots, videos, or links
+      description: Share any visuals or links so the community can check out your work.
+      placeholder: |
+        Drag and drop images here, or paste links to videos and live demos.
+    validations:
+      required: false
