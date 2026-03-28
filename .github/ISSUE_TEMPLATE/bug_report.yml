@@ -7,7 +7,6 @@ assignees: []
 body:
   - type: markdown
     attributes:
-      label: Thanks for reporting
       value: |
         Thanks for taking the time to report a bug! Please fill out the sections below so we can
         reproduce and fix the issue as quickly as possible.
