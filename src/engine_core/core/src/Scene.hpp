@@ -225,15 +225,15 @@ namespace Hush
 
 		[[nodiscard]]
 		HushEngine *GetEngine()
-        {
-            return this->m_engine;
-        }
+		{
+			return this->m_engine;
+		}
 
-        [[nodiscard]]
-        HushEngine *GetEngine() const
-        {
-            return this->m_engine;
-        }
+		[[nodiscard]]
+		HushEngine *GetEngine() const
+		{
+			return this->m_engine;
+		}
 
 	private:
 		friend class Entity;

@@ -32,7 +32,6 @@
 #include <algorithm>
 #include <memory>
 
-
 class EditorApp final : public Hush::IApplication
 {
 public:
@@ -60,12 +59,8 @@ public:
 		auto windowSize = m_engine->GetWindowRenderer()->GetWindowSize();
 		m_sceneBufferSize = windowSize; // initial size until the panel reports its own
 		this->m_scene->CreateEntityWithName("EditorCamera")
-			.EmplaceComponent<Hush::EditorCamera>(
-				45.0f,
-				static_cast<float>(windowSize.x),
-				static_cast<float>(windowSize.y),
-				0.1f,
-				1000.0f);
+			.EmplaceComponent<Hush::EditorCamera>(45.0f, static_cast<float>(windowSize.x),
+												  static_cast<float>(windowSize.y), 0.1f, 1000.0f);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
@@ -103,9 +98,7 @@ public:
 		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("EditorRenderGraphBuilder");
 		auto &builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
 
-		builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) {
-			this->SetupRenderGraph(graph);
-		};
+		builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) { this->SetupRenderGraph(graph); };
 
 		builder.frameUpdateFunc = [this](Hush::RenderGraph::RenderGraph &graph) {
 			this->UpdatePerFrameResources(graph);
@@ -178,12 +171,9 @@ public:
 			// Update the editor camera's viewport so the projection
 			// matrix uses the correct aspect ratio.
 			glm::u32vec2 newSize = m_sceneBufferSize;
-			this->m_scene->CreateQuery<Hush::EditorCamera>().Each(
-				[&newSize](Hush::Entity &, Hush::EditorCamera &cam) {
-					cam.SetViewportSize(
-						static_cast<float>(newSize.x),
-						static_cast<float>(newSize.y));
-				});
+			this->m_scene->CreateQuery<Hush::EditorCamera>().Each([&newSize](Hush::Entity &, Hush::EditorCamera &cam) {
+				cam.SetViewportSize(static_cast<float>(newSize.x), static_cast<float>(newSize.y));
+			});
 
 			m_engine->GetWindowRenderer()->GetRenderDevice().Invalidate();
 		}
@@ -219,10 +209,9 @@ public:
 	}
 
 private:
-
-    // TODO: the scene renderer might need to be part of the core engine project
-    // // so we could use something like a reusable DeferredRenderer or Forward+, etc.
-    // instead of creating render passes from scratch in each app.
+	// TODO: the scene renderer might need to be part of the core engine project
+	// // so we could use something like a reusable DeferredRenderer or Forward+, etc.
+	// instead of creating render passes from scratch in each app.
 	void SetupRenderGraph(Hush::RenderGraph::RenderGraph &graph)
 	{
 		using namespace Hush::RenderGraph;
@@ -249,22 +238,19 @@ private:
 
 				// Ensure we wait for any resource uploads (textures, buffers)
 				// that were queued before this frame.
-				ctx.Read(ctx.GetResourceIdByName(
-					RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
+				ctx.Read(ctx.GetResourceIdByName(RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
 
 				data.renderTexture = ctx.Create<TextureResource>(
-					"EditorScenePass_RenderTexture",
-					TextureDescriptor{
-						.width = bufferSize.x,
-						.height = bufferSize.y,
-						.format = ETextureFormat::BGRA8_UNORM,
-						.usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
-					});
+					"EditorScenePass_RenderTexture", TextureDescriptor{
+														 .width = bufferSize.x,
+														 .height = bufferSize.y,
+														 .format = ETextureFormat::BGRA8_UNORM,
+														 .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
+													 });
 
 				// Never cull this pass — the editor always needs the scene
 				// texture even if nothing else reads it explicitly.
-				ctx.SetCullingMode(
-					RenderPassNode::EPassCullingMode::NeverCull);
+				ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
 			},
 
 			// EXECUTE
@@ -273,8 +259,7 @@ private:
 				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
 				if (cmd == nullptr)
 				{
-					Hush::LogFormat(Hush::ELogLevel::Error,
-									"[EditorScenePass] Failed to get graphics command list.");
+					Hush::LogFormat(Hush::ELogLevel::Error, "[EditorScenePass] Failed to get graphics command list.");
 					return;
 				}
 
@@ -304,33 +289,29 @@ private:
 		struct ImGuiPassData
 		{
 			ResourceId sceneTexture; // read-dep on the scene render texture
-			ResourceId backbuffer;   // write to swapchain backbuffer
+			ResourceId backbuffer;	 // write to swapchain backbuffer
 		};
 
 		const auto &imguiPassData = graph.AddPass<ImGuiPassData>(
 			EPassType::Graphics, "EditorImGuiPass",
 
 			// BUILD
-			[&scenePassData, device, this](RenderGraph::BuildContext &ctx,
-										   ImGuiPassData &data) {
+			[&scenePassData, device, this](RenderGraph::BuildContext &ctx, ImGuiPassData &data) {
 				// Read the scene texture — this creates a dependency so the
 				// ImGui pass is guaranteed to run after ScenePass.
 				data.sceneTexture = ctx.Read(scenePassData.renderTexture);
 
 				// Import the swapchain backbuffer as an external resource.
-				data.backbuffer =
-					ctx.Import<ImportedTextureResource>(
-						"EditorBackbuffer",
-						ImportedTextureResource{
-							.texture = device->GetCurrentFrameTexture(),
-						});
+				data.backbuffer = ctx.Import<ImportedTextureResource>("EditorBackbuffer",
+																	  ImportedTextureResource{
+																		  .texture = device->GetCurrentFrameTexture(),
+																	  });
 
 				m_backbufferResourceId = data.backbuffer;
 
 				// Never cull the ImGui pass — the editor UI must always be
 				// presented.
-				ctx.SetCullingMode(
-					RenderPassNode::EPassCullingMode::NeverCull);
+				ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
 			},
 
 			// EXECUTE
@@ -339,8 +320,7 @@ private:
 				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
 				if (cmd == nullptr)
 				{
-					Hush::LogFormat(Hush::ELogLevel::Error,
-									"[EditorImGuiPass] Failed to get graphics command list.");
+					Hush::LogFormat(Hush::ELogLevel::Error, "[EditorImGuiPass] Failed to get graphics command list.");
 					return;
 				}
 
@@ -348,8 +328,7 @@ private:
 					resourceManager.GetResource<ImportedTextureResource>(data.backbuffer)->texture;
 				if (backbufferTexture == nullptr)
 				{
-					Hush::LogFormat(Hush::ELogLevel::Error,
-									"[EditorImGuiPass] Backbuffer texture is null.");
+					Hush::LogFormat(Hush::ELogLevel::Error, "[EditorImGuiPass] Backbuffer texture is null.");
 					return;
 				}
 
@@ -360,8 +339,7 @@ private:
 				colorAttachment.texture = backbufferTexture;
 				colorAttachment.loadOp = ELoadOp::Clear;
 				colorAttachment.storeOp = EStoreOp::Store;
-				colorAttachment.clearValue =
-					ClearColorValue{0.06f, 0.06f, 0.08f, 1.0f};
+				colorAttachment.clearValue = ClearColorValue{0.06f, 0.06f, 0.08f, 1.0f};
 				renderPass.AddColorAttachment(colorAttachment);
 
 				cmd->BeginRenderPass(renderPass);
@@ -393,8 +371,7 @@ private:
 					// Obtain the underlying WGPURenderPassEncoder from
 					// the engine's command list so the ImGui backend can
 					// record its draw commands into the active pass.
-					auto *nativePass = static_cast<WGPURenderPassEncoder>(
-						cmd->GetNativeRenderPass());
+					auto *nativePass = static_cast<WGPURenderPassEncoder>(cmd->GetNativeRenderPass());
 					if (nativePass != nullptr)
 					{
 						ImGui_ImplWGPU_RenderDrawData(drawData, nativePass);
@@ -415,11 +392,10 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		graph.UpdateImport<ImportedTextureResource>(
-			m_backbufferResourceId,
-			ImportedTextureResource{
-				.texture = device->GetCurrentFrameTexture(),
-			});
+		graph.UpdateImport<ImportedTextureResource>(m_backbufferResourceId,
+													ImportedTextureResource{
+														.texture = device->GetCurrentFrameTexture(),
+													});
 	}
 
 	/// @brief Steal ownership of the current scene texture from the render
@@ -436,11 +412,9 @@ private:
 			return;
 		}
 
-		auto &resourceManager =
-			windowRenderer->GetRenderGraph().GetResourceManager();
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(
-			m_sceneTextureResourceId);
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -456,11 +430,9 @@ private:
 			return;
 		}
 
-		auto &resourceManager =
-			windowRenderer->GetRenderGraph().GetResourceManager();
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(
-			m_sceneTextureResourceId);
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -470,8 +442,7 @@ private:
 			Hush::Graphics::IGraphicsTexture *tex = texRes->texture.get();
 			void *nativeView = tex->GetNativeView();
 
-			m_userInterface.SetSceneTextureView(
-				nativeView, tex->GetWidth(), tex->GetHeight());
+			m_userInterface.SetSceneTextureView(nativeView, tex->GetWidth(), tex->GetHeight());
 			return;
 		}
 
@@ -481,10 +452,8 @@ private:
 		if (m_cachedSceneTexture != nullptr)
 		{
 			void *nativeView = m_cachedSceneTexture->GetNativeView();
-			m_userInterface.SetSceneTextureView(
-				nativeView,
-				m_cachedSceneTexture->GetWidth(),
-				m_cachedSceneTexture->GetHeight());
+			m_userInterface.SetSceneTextureView(nativeView, m_cachedSceneTexture->GetWidth(),
+												m_cachedSceneTexture->GetHeight());
 			return;
 		}
 

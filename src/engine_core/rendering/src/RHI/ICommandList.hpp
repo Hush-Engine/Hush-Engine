@@ -262,7 +262,10 @@ namespace Hush::Graphics
 		/// while a render pass is active.  Returns nullptr when no render pass is
 		/// currently open or on backends that don't expose this.
 		[[nodiscard]]
-		virtual void *GetNativeRenderPass() const { return nullptr; }
+		virtual void *GetNativeRenderPass() const
+		{
+			return nullptr;
+		}
 	};
 
 } // namespace Hush::Graphics
