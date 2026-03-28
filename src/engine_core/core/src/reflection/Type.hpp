@@ -23,6 +23,10 @@
 #pragma warning(disable : 5030) // Attribute not recognized
 #endif
 
+#ifdef RegisterClass
+#undef RegisterClass
+#endif
+
 namespace Hush::Reflection
 {
 	class ReflectionDB

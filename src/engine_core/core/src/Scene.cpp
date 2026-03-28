@@ -6,7 +6,10 @@
 
 #include "Scene.hpp"
 #include "ISystem.hpp"
+#include "Logger.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <flecs.h>
+#include <flecs/addons/flecs_c.h>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -191,6 +194,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 		void (*userCtxFree)(void *){};
 	};
 
+	// TODO: Arena
 	auto *componentInfo = new ComponentInfo();
 	componentInfo->size = desc.size;
 	componentInfo->alignment = desc.alignment;
@@ -200,10 +204,17 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentInfo->userCtxFree = desc.userCtxFree;
 
 	ecs_component_desc_t componentDesc = {};
+	ecs_entity_desc_t associatedEntityDesc = {};
+
+	associatedEntityDesc.name = desc.name;
+	
 	componentDesc.type.alignment = static_cast<ecs_size_t>(componentInfo->alignment);
 	componentDesc.type.size = static_cast<ecs_size_t>(componentInfo->size);
 	componentDesc.type.name = componentInfo->name.data();
 	componentDesc.type.hooks.binding_ctx = componentInfo;
+	
+	auto *world = static_cast<ecs_world_t *>(GetWorld());
+	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
 	componentDesc.type.hooks.binding_ctx_free = [](void *ctx) {
 		const auto *info = static_cast<ComponentInfo *>(ctx);
@@ -371,13 +382,20 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentDesc.type.hooks.flags = static_cast<std::uint32_t>(desc.opsFlags);
 
 	// Register the component
-	auto *world = static_cast<ecs_world_t *>(GetWorld());
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
 	// By default, all components should be able to be toggled on or off (for performance reasons)
 	ecs_add_id(world, componentId, EcsCanToggle);
 
+	LogFormat(ELogLevel::Info, "Registered component with name {} as ID: {}", desc.name, componentId);
+
 	return componentId;
+}
+
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const {
+	auto* world = static_cast<ecs_world_t*>(this->m_world);
+	Entity::EntityId result = ecs_lookup(world, tag.data());
+	return result;
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)

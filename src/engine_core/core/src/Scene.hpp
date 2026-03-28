@@ -189,6 +189,9 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
+		[[nodiscard]] [[hush::export]]
+		EntityId Lookup(std::string_view tag) const;
+
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
 		{

@@ -16,6 +16,15 @@
 #include <functional>
 #include <optional>
 #include <string_view>
+#include <Hushgen.hpp>
+
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+
+#if __has_include("Entity.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "Entity.hushgen.hpp"
+#endif
 
 namespace Hush
 {
@@ -44,8 +53,11 @@ namespace Hush
 		constexpr static EntityId INVALID_ENTITY_ID = 0;
 
 		/// @brief Component that holds the name of an entity
-		struct Name
+		struct [[hush::reflect]] Name
 		{
+			HUSH_GENERATED_BODY
+		public:
+			// NOLINTNEXTLINE
 			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> name{}; // Handle null terminator!!!
 
 			Name() = default;
@@ -305,7 +317,7 @@ namespace Hush
 		/// Check if a component is registered.
 		/// @param componentId Id of the component.
 		/// @return True if the component is registered, false otherwise.
-		bool IsComponentRegistered(EntityId componentId) const;
+		[[nodiscard]] bool IsComponentRegistered(EntityId componentId) const;
 
 		/// Register a C++ component. C++ components are special because they use a cache in the scene to
 		/// avoid registering the same component multiple times.

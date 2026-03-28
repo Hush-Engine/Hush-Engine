@@ -26,7 +26,6 @@ namespace Hush
 		{
 			return this->m_mesh;
 		}
-
 	private:
 		Ref<Mesh> m_mesh;
 	};

@@ -2,6 +2,7 @@
 
 #include "Types/Color.hpp"
 #include "Vector4Math.hpp"
+#include <string_view>
 
 namespace Hush
 {

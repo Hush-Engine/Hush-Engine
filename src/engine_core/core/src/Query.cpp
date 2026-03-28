@@ -5,9 +5,11 @@
 */
 
 #include "Query.hpp"
+#include "Logger.hpp"
 
 #include <Scene.hpp>
 #include <flecs.h>
+#include <utility>
 
 Hush::RawQuery::RawQuery(Scene *scene, void *query)
 	: m_query(query),
@@ -72,11 +74,14 @@ std::uint64_t Hush::RawQuery::QueryIterator::GetEntityAt(std::size_t index) cons
 	return queryIter->entities[index];
 }
 
+// NOLINTBEGIN
 Hush::RawQuery::QueryIterator::QueryIterator(QueryIterator &&rhs) noexcept
-	: m_iterData(std::move(rhs.m_iterData)),
-	  m_hasBeenDestroyed(std::exchange(rhs.m_hasBeenDestroyed, true))
 {
+	this->m_iterData = std::move(rhs.m_iterData);
+	this->m_hasBeenDestroyed = std::exchange(rhs.m_hasBeenDestroyed, true);
+	this->m_scene = rhs.m_scene;
 }
+// NOLINTEND
 
 Hush::RawQuery::QueryIterator &Hush::RawQuery::QueryIterator::operator=(QueryIterator &&rhs) noexcept
 {
@@ -96,6 +101,7 @@ Hush::RawQuery::QueryIterator::~QueryIterator()
 		return;
 	}
 
+	LogFormat(ELogLevel::Info, "Destroyed query iterator on: {}", (void*)this);
 	auto *queryIter = reinterpret_cast<ecs_iter_t *>(m_iterData.data());
 
 	ecs_iter_fini(queryIter);
@@ -127,6 +133,7 @@ Hush::RawQuery::~RawQuery() noexcept
 		return;
 	}
 
+	LogFormat(ELogLevel::Info, "Called raw query destructor on inner query {}!", (void*)this);
 	ecs_query_fini(query);
 }
 

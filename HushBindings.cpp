@@ -180,7 +180,10 @@ Hush__RawQuery__QueryIterator Hush__RawQuery__GetIterator(Hush__RawQuery *self)
 {
 	auto selfClass = reinterpret_cast<Hush::RawQuery*>(self);
 	auto result______ = selfClass->GetIterator();
-	return *reinterpret_cast<Hush__RawQuery__QueryIterator*>(&result______);
+	std::aligned_storage_t<sizeof(Hush__RawQuery__QueryIterator)> resultStorage_____;
+	auto *resultPtr = reinterpret_cast<decltype(result______)*>(&resultStorage_____);
+	new (resultPtr) decltype(result______)(std::move(result______));
+	return *reinterpret_cast<Hush__RawQuery__QueryIterator*>(resultPtr);
 }
 
 void Hush__impl__QueryBuilderImpl__WithRelationship(unsigned char * queryDesc, unsigned char * termCountRef, const Hush__Entity * relationship)
@@ -202,7 +205,10 @@ void Hush__impl__QueryBuilderImpl__InitDescriptor(unsigned char * queryDesc, uns
 Hush__RawQuery Hush__impl__QueryBuilderImpl__InitQuery(Hush__Scene * scene, const unsigned char * queryDesc)
 {
 	auto result______ = Hush::impl::QueryBuilderImpl::InitQuery(reinterpret_cast<Hush::Scene *>(scene), reinterpret_cast<const unsigned char *>(queryDesc));
-	return *reinterpret_cast<Hush__RawQuery*>(&result______);
+	std::aligned_storage_t<sizeof(Hush__RawQuery)> resultStorage_____;
+	auto *resultPtr = reinterpret_cast<decltype(result______)*>(&resultStorage_____);
+	new (resultPtr) decltype(result______)(std::move(result______));
+	return *reinterpret_cast<Hush__RawQuery*>(resultPtr);
 }
 
 unsigned char * Hush__OpaqueQueryDescriptor__data(Hush__OpaqueQueryDescriptor *self)
@@ -255,12 +261,23 @@ unsigned long long Hush__Scene__RegisterComponentRaw(Hush__Scene *self, const Hu
 	return *reinterpret_cast<unsigned long long*>(&result______);
 }
 
+unsigned long long Hush__Scene__Lookup(Hush__Scene *self, char *tagData, const size_t tagSize)
+{
+	auto selfClass = reinterpret_cast<Hush::Scene*>(self);
+	auto tagData__ = std::string_view(reinterpret_cast<char*>(tagData), tagSize);
+	auto result______ = selfClass->Lookup(tagData__);
+	return *reinterpret_cast<unsigned long long*>(&result______);
+}
+
 Hush__RawQuery Hush__Scene__CreateRawQuery(Hush__Scene *self, unsigned long long *componentsData, const size_t componentsSize, enum Hush__RawQuery__ECacheMode cacheMode)
 {
 	auto selfClass = reinterpret_cast<Hush::Scene*>(self);
 	auto componentsData__ = std::span<unsigned long long>(reinterpret_cast<unsigned long long*>(componentsData), componentsSize);
 	auto result______ = selfClass->CreateRawQuery(componentsData__, static_cast<enum Hush::RawQuery::ECacheMode>(cacheMode));
-	return *reinterpret_cast<Hush__RawQuery*>(&result______);
+	std::aligned_storage_t<sizeof(Hush__RawQuery)> resultStorage_____;
+	auto *resultPtr = reinterpret_cast<decltype(result______)*>(&resultStorage_____);
+	new (resultPtr) decltype(result______)(std::move(result______));
+	return *reinterpret_cast<Hush__RawQuery*>(resultPtr);
 }
 
 Hush__Scene * Hush__HushEngine__GetScene(Hush__HushEngine *self)
@@ -349,6 +366,7 @@ HushFuncPtrTable HUSH_FUNCPTR_TABLE = {
 	Hush__Scene__RegisterComponentId,
 	Hush__Scene__EntityFromIdUnchecked,
 	Hush__Scene__RegisterComponentRaw,
+	Hush__Scene__Lookup,
 	Hush__Scene__CreateRawQuery,
 	Hush__HushEngine__GetScene,
 	Hush__Transform__SetPosition,

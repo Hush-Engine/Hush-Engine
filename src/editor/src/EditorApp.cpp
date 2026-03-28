@@ -50,7 +50,6 @@ public:
 		Hush::ScriptingSystemInfo systemInfo = systems.at(0);
 		auto foundRes = this->m_scriptingHost.CreateSystem(systemInfo);
 		HUSH_RESULT_ASSERT(foundRes, "Unable to instantiate SmallSystem");
-
 		this->m_testSystem = foundRes.value();
 		
 		this->m_scriptingHost.GetCallSystemInitFn()(reinterpret_cast<void*>(this->m_testSystem));
@@ -73,7 +72,7 @@ public:
 	void Update(float delta) override
 	{
 		this->m_scene->Update(delta);
-		this->m_scriptingHost.GetCallSystemOnUpdateFn()(reinterpret_cast<void*>(this->m_testSystem), delta);
+		this->m_scriptingHost.GetCallSystemOnUpdateFn()(reinterpret_cast<void*>(this->m_testSystem), 0.16);
 	}
 
 	void FixedUpdate(float delta) override
