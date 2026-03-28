@@ -1,0 +1,26 @@
+# Automated changelog / release drafting workflow
+# Uses release-drafter to generate release notes from merged PRs.
+# PR labels (set by the Auto Labeler workflow) drive categorisation.
+
+name: Release Drafter
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: ["main"]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-release-draft:
+    name: Draft Release Notes
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

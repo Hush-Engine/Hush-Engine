@@ -1,0 +1,139 @@
+# =============================================================================
+# Release Drafter Configuration
+# Docs: https://github.com/release-drafter/release-drafter
+#
+# Automatically drafts GitHub Releases from merged pull requests.
+# PRs are categorized by their labels (applied via .github/labeler.yml).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Version Resolution
+# -----------------------------------------------------------------------------
+# Determines the next version bump based on PR labels.
+# Defaults to a patch bump if no version label is present.
+
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+
+version-resolver:
+  major:
+    labels:
+      - "major"
+  minor:
+    labels:
+      - "minor"
+  patch:
+    labels:
+      - "patch"
+  default: patch
+
+# -----------------------------------------------------------------------------
+# PR Categories
+# -----------------------------------------------------------------------------
+# Maps PR labels to sections in the release notes.
+# Order matters — a PR is placed in the first matching category.
+
+categories:
+  - title: "🚀 Features"
+    labels:
+      - "enhancement"
+      - "area:rendering"
+      - "area:rhi"
+      - "area:render-graph"
+      - "area:core"
+      - "area:input"
+      - "area:scripting"
+      - "area:editor"
+
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "bug"
+
+  - title: "🎨 Shaders"
+    labels:
+      - "area:shaders"
+
+  - title: "🔧 Devtool"
+    labels:
+      - "area:devtool"
+
+  - title: "🛠️ Build & CI"
+    labels:
+      - "area:build"
+      - "ci"
+
+  - title: "📦 Dependencies"
+    labels:
+      - "dependencies"
+
+  - title: "📝 Documentation"
+    labels:
+      - "area:docs"
+
+  - title: "📚 Examples"
+    labels:
+      - "area:examples"
+
+  - title: "🔄 Other Changes"
+    labels:
+      - "*"
+
+# -----------------------------------------------------------------------------
+# Exclusions
+# -----------------------------------------------------------------------------
+# PRs with these labels are excluded from the release notes entirely.
+
+exclude-labels:
+  - "skip-changelog"
+
+# -----------------------------------------------------------------------------
+# Autolabeler
+# -----------------------------------------------------------------------------
+# Additional label rules applied by release-drafter on PR events.
+
+autolabeler:
+  - label: "patch"
+    branch:
+      - '/^fix\/.+/'
+      - '/^hotfix\/.+/'
+      - '/^bugfix\/.+/'
+  - label: "minor"
+    branch:
+      - '/^feat\/.+/'
+      - '/^feature\/.+/'
+
+# -----------------------------------------------------------------------------
+# Release Notes Template
+# -----------------------------------------------------------------------------
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
+change-title-escapes: '\<*_&'
+no-changes-template: "No notable changes in this release."
+
+# -----------------------------------------------------------------------------
+# Replacers
+# -----------------------------------------------------------------------------
+# Clean up common prefixes from PR titles for tidier release notes.
+
+replacers:
+  - search: '/^feat(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^fix(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^chore(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^docs(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^ci(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^build(\(.+\))?:\s*/i'
+    replace: ""
+  - search: '/^refactor(\(.+\))?:\s*/i'
+    replace: ""

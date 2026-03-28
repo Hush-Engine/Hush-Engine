@@ -1,0 +1,35 @@
+title: "Ideas & Proposals"
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your idea with the Hush Engine community!
+        Please describe your proposal clearly so others can understand and discuss it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe your idea
+      description: A clear and concise description of the feature or change you'd like to propose.
+      placeholder: I'd like to propose...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use cases & motivation
+      description: Why is this idea valuable? What problems does it solve or what workflows does it improve?
+      placeholder: This would be useful because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered any alternative approaches or workarounds?
+      placeholder: I also considered...
+    validations:
+      required: false

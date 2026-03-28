@@ -1,0 +1,61 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Hush Engine.
+title: "[FEAT] "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the feature you'd like to see.
+      placeholder: I'd like Hush Engine to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature important? What problem does it solve?
+      placeholder: This would be useful because...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area of the engine does this relate to?
+      options:
+        - Rendering
+        - RHI
+        - Render Graph
+        - Core
+        - Input
+        - Scripting
+        - Editor
+        - Devtool
+        - Shaders
+        - Build System
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds
+      description: Are there any existing workarounds or alternative approaches you've considered?
+      placeholder: I've considered...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Any other context, mockups, references, or examples.
+    validations:
+      required: false
