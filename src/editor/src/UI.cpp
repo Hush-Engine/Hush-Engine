@@ -79,7 +79,7 @@ void Hush::UI::SetupImGuiStyle()
 	style.GrabRounding = 0.0f;
 	style.TabRounding = 0.0f;
 	style.TabBorderSize = 0.0f;
-	style.TabMinWidthForCloseButton = 0.0f;
+	style.TabCloseButtonMinWidthUnselected = 0.0f;
 	style.ColorButtonPosition = ImGuiDir_Right;
 	style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
 	style.SelectableTextAlign = ImVec2(0.0f, 0.0f);

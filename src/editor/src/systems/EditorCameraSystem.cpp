@@ -11,8 +11,10 @@ constexpr float CAM_PITCH_MAX = 89.5f * Hush::MathUtils::DEG_TO_RAD;
 
 void Hush::EditorCameraSystem::Init()
 {
-	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	this->m_editorCamera = renderer->GetEditorCamera();
+	// There should only ever be ONE EditorCamera component in the active scene
+	this->GetScene().CreateQuery<EditorCamera>().Each(
+		[this](Entity &entity, EditorCamera &camRef) { this->m_editorCamera = &camRef; });
+
 	// There should only ever be ONE EditorInfo component in the active scene
 	this->GetScene().CreateQuery<EditorInfo>().Each(
 		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
@@ -24,6 +26,11 @@ void Hush::EditorCameraSystem::OnShutdown()
 
 void Hush::EditorCameraSystem::OnUpdate(float delta)
 {
+	if (this->m_editorCamera == nullptr || this->m_editorInfo == nullptr)
+	{
+		return;
+	}
+
 	glm::mat4 viewMatrix = this->m_editorCamera->GetViewMatrix();
 	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 	glm::vec3 &positionRef = this->m_editorCamera->GetPosition();

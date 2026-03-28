@@ -223,6 +223,18 @@ namespace Hush
 			return this->m_registeredEntities;
 		}
 
+		[[nodiscard]]
+		HushEngine *GetEngine()
+        {
+            return this->m_engine;
+        }
+
+        [[nodiscard]]
+        HushEngine *GetEngine() const
+        {
+            return this->m_engine;
+        }
+
 	private:
 		friend class Entity;
 		friend class RawQuery;

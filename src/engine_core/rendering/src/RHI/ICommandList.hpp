@@ -255,6 +255,14 @@ namespace Hush::Graphics
 		///                      buffer bindings within the bind group.
 		virtual void SetBindGroup(uint32_t groupIndex, IBindGroup *bindGroup,
 								  std::span<const uint32_t> dynamicOffsets = {}) = 0;
+
+		/// @brief Get the native render pass encoder handle (API-specific).
+		///
+		/// Returns the underlying render pass encoder (e.g. WGPURenderPassEncoder)
+		/// while a render pass is active.  Returns nullptr when no render pass is
+		/// currently open or on backends that don't expose this.
+		[[nodiscard]]
+		virtual void *GetNativeRenderPass() const { return nullptr; }
 	};
 
 } // namespace Hush::Graphics

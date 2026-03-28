@@ -60,6 +60,9 @@ namespace Hush::Graphics
 		void *GetNativeHandle() const override;
 
 		[[nodiscard]]
+		void *GetNativeView() const override;
+
+		[[nodiscard]]
 		wgpu::Texture GetTexture() const
 		{
 			return m_texture;

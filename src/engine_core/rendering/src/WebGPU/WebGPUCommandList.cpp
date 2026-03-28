@@ -961,6 +961,15 @@ namespace Hush::Graphics
 		m_inRenderPass = false;
 	}
 
+	void *WebGPUGraphicsCommandList::GetNativeRenderPass() const
+	{
+		if (!m_inRenderPass)
+		{
+			return nullptr;
+		}
+		return static_cast<WGPURenderPassEncoder>(m_renderPass);
+	}
+
 	void WebGPUGraphicsCommandList::BindPipeline(IPipeline *pipeline)
 	{
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");

@@ -214,6 +214,9 @@ namespace Hush::Graphics
 						  std::span<const uint32_t> dynamicOffsets = {}) override;
 
 		[[nodiscard]]
+		void *GetNativeRenderPass() const override;
+
+		[[nodiscard]]
 		wgpu::CommandEncoder GetEncoder() const
 		{
 			return m_encoder;

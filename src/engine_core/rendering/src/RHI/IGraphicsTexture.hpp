@@ -44,6 +44,12 @@ namespace Hush::Graphics
 		/// @brief Get native handle (API-specific)
 		[[nodiscard]]
 		virtual void *GetNativeHandle() const = 0;
+
+		/// @brief Get native texture view handle (API-specific)
+		/// For WebGPU, this returns a WGPUTextureView.
+		/// For ImGui integration, the texture view is needed rather than the texture object.
+		[[nodiscard]]
+		virtual void *GetNativeView() const = 0;
 	};
 
 } // namespace Hush::Graphics
