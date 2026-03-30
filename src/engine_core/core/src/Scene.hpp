@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Assertions.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
@@ -102,7 +103,7 @@ namespace Hush
 		/// Creates an entity with a name
 		/// @param name Unique name of the entity
 		/// @return Entity
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
 
 		/// Registers a callback that gets called whenever a component receives the specified event
@@ -215,6 +216,8 @@ namespace Hush
 		/// @param system System to add
 		void AddEngineSystem(ISystem *system);
 
+		void AddScriptingSystem(uintptr_t system);
+
 		[[hush::export]]
 		RawQuery CreateRawQuery(std::span<Entity::EntityId> components,
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
@@ -225,7 +228,8 @@ namespace Hush
 			return this->m_registeredEntities;
 		}
 
-		HushEngine* GetEngine() {
+		HushEngine *GetEngine()
+		{
 			return this->m_engine;
 		}
 
@@ -234,6 +238,13 @@ namespace Hush
 		{
 			return m_world;
 		}
+
+		void SetScriptingInterface(ScriptingSystemInterface* scriptingInterface) {
+			HUSH_ASSERT(scriptingInterface != nullptr, "Scripting interface cannot be null!");
+			// TODO: Assert every function here
+			this->m_scriptingInterface = scriptingInterface;
+		}
+
 	private:
 		friend class Entity;
 		friend class RawQuery;
@@ -252,7 +263,6 @@ namespace Hush
 
 		Entity::EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
 													  std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
-
 
 		/// Sort the systems based on their order and store them in the buckets
 		void SortSystems();
@@ -282,5 +292,9 @@ namespace Hush
 		Threading::Executors::ThreadPool *m_threadPool;
 
 		void *m_world;
+
+		ScriptingSystemInterface* m_scriptingInterface;
+
+		bool m_isInitialized = false;
 	};
 } // namespace Hush

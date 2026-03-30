@@ -44,35 +44,34 @@ public:
 
 	void Init() override
 	{
-		this->m_scriptingHost.Initialize("C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll");
-		this->m_scriptingHost.GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		std::vector<Hush::ScriptingSystemInfo>& systems = this->m_scriptingHost.GetAvailableSystems();
-		Hush::ScriptingSystemInfo systemInfo = systems.at(0);
-		auto foundRes = this->m_scriptingHost.CreateSystem(systemInfo);
-		HUSH_RESULT_ASSERT(foundRes, "Unable to instantiate SmallSystem");
-		this->m_testSystem = foundRes.value();
-		
-		this->m_scriptingHost.GetCallSystemInitFn()(reinterpret_cast<void*>(this->m_testSystem));
-
 		// Make the giant System pool
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
+		
+		// Scriptingb
+		constexpr std::string_view scriptingProjDllPath = "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
+		this->m_scriptingHost->Initialize(scriptingProjDllPath);
+		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		
+		
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
 		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 		this->m_scene->Init();
-		this->m_userInterface.Init(this->m_scene.get());
+		this->m_userInterface.Init(this->m_scene.get(), this->m_scriptingHost);
 	}
 
 	void Update(float delta) override
 	{
 		this->m_scene->Update(delta);
-		this->m_scriptingHost.GetCallSystemOnUpdateFn()(reinterpret_cast<void*>(this->m_testSystem), 0.16);
 	}
 
 	void FixedUpdate(float delta) override
@@ -117,7 +116,7 @@ private:
 	Hush::ResourceManager *m_resourceManager = nullptr;
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
-	Hush::ScriptingHost m_scriptingHost;
+	Hush::ScriptingHost* m_scriptingHost = nullptr;
 	uintptr_t m_testSystem = 0;
 };
 

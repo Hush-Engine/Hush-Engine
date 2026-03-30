@@ -4,6 +4,7 @@
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
 #include "NotificationPanel.hpp"
+#include "ScriptingHost.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
 #include <cstring>
@@ -22,7 +23,7 @@ Hush::UI::UI()
 	s_instance = this;
 }
 
-void Hush::UI::Init(Scene *parentScene)
+void Hush::UI::Init(Scene *parentScene, ScriptingHost* scriptingHost)
 {
 	this->SetupImGuiStyle();
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);

@@ -6,6 +6,7 @@
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
+#include "ScriptingHost.hpp"
 #include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
@@ -29,18 +30,21 @@
 #include "ArrayUtils.hpp"
 #include "StringUtils.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "SystemSelection.hpp"
 
-constexpr std::array<std::string_view, 4> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "help"};
+constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "add-system", "help"};
 
 // NOLINTNEXTLINE
 #define CALC_CMD_HASH(idx) Hush::Hashing::Fnv1a(BUILT_IN_COMMANDS[idx].data(), BUILT_IN_COMMANDS[idx].size())
+
 
 enum class EBuiltinCommands : uint32_t
 {
 	AddEntity = CALC_CMD_HASH(0),
 	FindEntity = CALC_CMD_HASH(1),
 	AddComponent = CALC_CMD_HASH(2),
-	Help = CALC_CMD_HASH(3)
+	AddSystem = CALC_CMD_HASH(3),
+	Help = CALC_CMD_HASH(4)
 };
 
 void Hush::CommandPanel::Init(Scene *activeScene) noexcept
@@ -48,8 +52,11 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 
-	activeScene->CreateQuery<EditorInfo>().Each(
-		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each(
+		[this](Entity &entity, EditorInfo &infoRef, ScriptingHost &scriptingHostRef) {
+			this->m_editorInfo = &infoRef;
+			this->m_scriptingHost = &scriptingHostRef;
+		});
 }
 
 void Hush::CommandPanel::OnRender(float deltaTime)
@@ -67,6 +74,13 @@ void Hush::CommandPanel::OnRender(float deltaTime)
 	case EState::AddComponentMode:
 		this->AddComponentPopup();
 		break;
+	case EState::AddSystemMode: {
+		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedSystem);
+		if (!popupOpen) {
+			this->CloseCommandMode();
+		}
+		break;
+	}
 	case EState::None:
 	case EState::Editing:
 	case EState::ForceFocus:
@@ -140,10 +154,9 @@ void Hush::CommandPanel::CloseCommandMode()
 
 void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view &textCmd)
 {
-	Entity::EntityId entityToCreate = 0;
 	switch (static_cast<EBuiltinCommands>(command))
 	{
-	case EBuiltinCommands::AddEntity:
+	case EBuiltinCommands::AddEntity: {
 		if (textCmd.empty())
 		{
 			// Open the entity search panel or create a new one
@@ -156,16 +169,22 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 			break;
 		}
 		// Interpret the rest of the text command as the name of the entity to add
-		this->m_activeScene->EntityFromIdUnchecked(entityToCreate).AddComponent<WorldTransform>();
-		this->m_activeScene->EntityFromIdUnchecked(entityToCreate).AddComponent<LocalTransform>();
-		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(entityToCreate);
+		Entity createdEntity = this->m_activeScene->CreateEntityWithName(textCmd);
+		createdEntity.AddComponent<WorldTransform>();
+		createdEntity.AddComponent<LocalTransform>();
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(createdEntity.GetId());
 		break;
+	}
 	case EBuiltinCommands::FindEntity:
 		this->m_currState = EState::SearchMode;
 		this->m_keyboardFocusSet = true;
 		return;
 	case EBuiltinCommands::AddComponent:
 		this->m_currState = EState::AddComponentMode;
+		this->m_keyboardFocusSet = true;
+		return;
+	case EBuiltinCommands::AddSystem:
+		this->m_currState = EState::AddSystemMode;
 		this->m_keyboardFocusSet = true;
 		return;
 	case EBuiltinCommands::Help:

@@ -16,6 +16,8 @@
 namespace Hush
 {
 	class Transform;
+	class ScriptingHost;
+
 	class UI
 	{
 	public:
@@ -27,7 +29,7 @@ namespace Hush
 
 		UI();
 
-		void Init(Scene *parentScene);
+		void Init(Scene *parentScene, ScriptingHost* scriptingHost);
 
 		void DrawPanels(float deltaTime);
 
@@ -60,6 +62,8 @@ namespace Hush
 		static void DrawPlayButton();
 
 		void SetupImGuiStyle();
+
+		ScriptingHost* m_scriptingHostRef;
 
 		// NOLINTNEXTLINE
 		static inline UI *s_instance;

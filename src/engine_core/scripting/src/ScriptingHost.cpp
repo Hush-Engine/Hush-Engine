@@ -42,13 +42,13 @@ void Hush::ScriptingHost::Initialize(std::string_view dllPath) {
 	BIND_DLL_SCRIPTING_FUNCTION(GET_SYSTEM_COUNT_FN_NAME, this->m_getSystemCountFn);
 
 	BIND_DLL_SCRIPTING_FUNCTION(INSTANTIATE_SYSTEM_FN_NAME, this->m_instantiateSystemFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_INIT_FN_NAME, this->m_callSystemInitFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_UPDATE_FN_NAME, this->m_callSystemOnUpdateFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_FIXEDUPDATE_FN_NAME, this->m_callSystemOnFixedUpdateFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_SHUTDOWN_FN_NAME, this->m_callSystemOnShutdownFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_RENDER_FN_NAME, this->m_callSystemOnRenderFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_PRERENDER_FN_NAME, this->m_callSystemOnPreRenderFn);
-	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_POSTRENDER_FN_NAME, this->m_callSystemOnPostRenderFn);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_INIT_FN_NAME, this->m_scriptingInterface.initFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_UPDATE_FN_NAME, this->m_scriptingInterface.updateFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_FIXEDUPDATE_FN_NAME, this->m_scriptingInterface.fixedUpdateFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_SHUTDOWN_FN_NAME, this->m_scriptingInterface.shutdownFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_RENDER_FN_NAME, this->m_scriptingInterface.renderFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_PRERENDER_FN_NAME, this->m_scriptingInterface.preRenderFunction);
+	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_POSTRENDER_FN_NAME, this->m_scriptingInterface.postRenderFunction);
 
 }
 // NOLINTEND
@@ -71,6 +71,7 @@ void Hush::ScriptingHost::FetchSystemsIntoCache() {
 	ScriptingSystemInfo* systemsArr = this->m_availableSystems.data();
 	
 	this->m_getAvailableSystemsFn(&systemsArr, this->m_availableSystems.capacity());
+	this->m_libIsDirty = false;
 }
 
 

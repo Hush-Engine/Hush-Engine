@@ -2,6 +2,7 @@
 
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
+#include "ScriptingHost.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
 #include <cstdint>
@@ -20,8 +21,9 @@ namespace Hush
 			ForceFocus = 0b00000010,
 			SearchMode = 0b00000100,
 			AddComponentMode = 0b00001000,
+			AddSystemMode = 0b00010000,
 
-			IsPopupMode = SearchMode | AddComponentMode
+			IsPopupMode = SearchMode | AddComponentMode | AddSystemMode
 		};
 
 		void Init(Scene *activeScene) noexcept override;
@@ -64,6 +66,11 @@ namespace Hush
 		Scene *m_activeScene;
 
 		EditorInfo *m_editorInfo;
+
+		ScriptingHost* m_scriptingHost;
+
+		// For the system selection state
+		int32_t m_selectedSystem = -1;
 
 		bool m_keyboardFocusSet = false;
 

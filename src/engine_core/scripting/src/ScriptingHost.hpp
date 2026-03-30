@@ -4,6 +4,7 @@
 #include "Result.hpp"
 #include <string_view>
 #include <vector>
+#include <ISystem.hpp>
 
 // fwd declaration
 struct HushFuncPtrTable;
@@ -40,14 +41,6 @@ namespace Hush
 		using GetSystemCountFnPtr_t = uint64_t (*)();
 		using InstantiateSystemFnPtr_t = uint8_t *(*)(const ScriptingSystemInfo *systeminfo);
 
-		// System fn ptrs
-		using CallSystemInit_t = void (*)(void *systemHandle);
-		using CallSystemOnUpdate_t = void (*)(void *systemHandle, float delta);
-		using CallSystemOnFixedUpdate_t = void (*)(void *systemHandle, float delta);
-		using CallSystemOnShutdown_t = void (*)(void *systemHandle);
-		using CallSystemOnRender_t = void (*)(void *systemHandle);
-		using CallSystemOnPreRender_t = void (*)(void *systemHandle);
-		using CallSystemOnPostRender_t = void (*)(void *systemHandle);
 
 		static constexpr std::string_view FN_PTR_NOT_INITIALIZED_ERR = "Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
 
@@ -79,61 +72,10 @@ namespace Hush
 		}
 
 		[[nodiscard]]
-		InstantiateSystemFnPtr_t GetInstantiateSystemFn() const noexcept
-		{
-			HUSH_ASSERT(m_instantiateSystemFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_instantiateSystemFn;
+		ScriptingSystemInterface* GetScriptingSystemInterface() noexcept {
+			return &this->m_scriptingInterface;
 		}
-
-		[[nodiscard]]
-		CallSystemInit_t GetCallSystemInitFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemInitFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_callSystemInitFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnUpdate_t GetCallSystemOnUpdateFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnUpdateFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_callSystemOnUpdateFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnFixedUpdate_t GetCallSystemOnFixedUpdateFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnFixedUpdateFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_callSystemOnFixedUpdateFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnShutdown_t GetCallSystemOnShutdownFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnShutdownFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_callSystemOnShutdownFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnRender_t GetCallSystemOnRenderFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnRenderFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
-			return m_callSystemOnRenderFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnPreRender_t GetCallSystemOnPreRenderFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnPreRenderFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR.data());
-			return m_callSystemOnPreRenderFn;
-		}
-
-		[[nodiscard]]
-		CallSystemOnPostRender_t GetCallSystemOnPostRenderFn() const noexcept
-		{
-			HUSH_ASSERT(m_callSystemOnPostRenderFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR.data());
-			return m_callSystemOnPostRenderFn;
-		}
-
+		
 	private:
 		void FetchSystemsIntoCache();
 
@@ -147,12 +89,6 @@ namespace Hush
 		GetSystemCountFnPtr_t m_getSystemCountFn = nullptr;
 		InstantiateSystemFnPtr_t m_instantiateSystemFn = nullptr;
 
-		CallSystemInit_t m_callSystemInitFn = nullptr;
-		CallSystemOnUpdate_t m_callSystemOnUpdateFn = nullptr;
-		CallSystemOnFixedUpdate_t m_callSystemOnFixedUpdateFn = nullptr;
-		CallSystemOnShutdown_t m_callSystemOnShutdownFn = nullptr;
-		CallSystemOnRender_t m_callSystemOnRenderFn = nullptr;
-		CallSystemOnPreRender_t m_callSystemOnPreRenderFn = nullptr;
-		CallSystemOnPostRender_t m_callSystemOnPostRenderFn = nullptr;
+		ScriptingSystemInterface m_scriptingInterface;
 	};
 } // namespace Hush
