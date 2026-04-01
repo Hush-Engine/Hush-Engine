@@ -109,6 +109,7 @@ namespace Hush
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type
 		template <class T, class Func>
+			requires std::invocable<Func, Entity::EntityId, T *>
 		void AddComponentObserver(EComponentObserverType observerType, Func &&callback)
 		{
 			Entity::EntityId event = 0;
@@ -162,6 +163,7 @@ namespace Hush
 														delete reinterpret_cast<CallbackFunc_t *>(ctx);
 													}};
 			// TODO: Add this to a member vector so that we can delete it afterwards
+			[[maybe_unused]]
 			Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 		}
 
@@ -228,7 +230,14 @@ namespace Hush
 			return this->m_registeredEntities;
 		}
 
+		[[nodiscard]]
 		HushEngine *GetEngine()
+		{
+			return this->m_engine;
+		}
+
+		[[nodiscard]]
+		HushEngine *GetEngine() const
 		{
 			return this->m_engine;
 		}
@@ -239,7 +248,8 @@ namespace Hush
 			return m_world;
 		}
 
-		void SetScriptingInterface(ScriptingSystemInterface* scriptingInterface) {
+		void SetScriptingInterface(ScriptingSystemInterface *scriptingInterface)
+		{
 			HUSH_ASSERT(scriptingInterface != nullptr, "Scripting interface cannot be null!");
 			// TODO: Assert every function here
 			this->m_scriptingInterface = scriptingInterface;
@@ -293,7 +303,7 @@ namespace Hush
 
 		void *m_world;
 
-		ScriptingSystemInterface* m_scriptingInterface;
+		ScriptingSystemInterface *m_scriptingInterface;
 
 		bool m_isInitialized = false;
 	};

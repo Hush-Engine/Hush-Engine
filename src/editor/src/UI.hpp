@@ -7,8 +7,10 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "ScenePanel.hpp"
 #include "Scene.hpp"
 #include "imgui/imgui.h"
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 #include <typeindex>
@@ -32,6 +34,15 @@ namespace Hush
 		void Init(Scene *parentScene, ScriptingHost* scriptingHost);
 
 		void DrawPanels(float deltaTime);
+
+		/// @brief Forward the native scene texture view to the ScenePanel for display.
+		/// @param nativeTextureView Native texture view handle (e.g. WGPUTextureView cast to void*).
+		/// @param width Texture width in pixels.
+		/// @param height Texture height in pixels.
+		void SetSceneTextureView(void *nativeTextureView, uint32_t width, uint32_t height) const noexcept
+		{
+			GetPanel<ScenePanel>().SetSceneTextureView(nativeTextureView, width, height);
+		}
 
 		template <class T>
 		[[nodiscard]]

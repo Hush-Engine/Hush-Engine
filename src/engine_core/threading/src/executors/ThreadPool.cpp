@@ -24,6 +24,18 @@ static void SetCurrentThreadAffinity(std::uint32_t affinity)
 #endif
 }
 
+static void SetCurrentThreadName(const char *name)
+{
+#if HUSH_PLATFORM_WIN
+	// Windows 10 1607 and later support setting thread names via SetThreadDescription
+	HRESULT hr = SetThreadDescription(GetCurrentThread(), std::wstring(name, name + strlen(name)).c_str());
+	if (FAILED(hr))
+	{
+		Hush::LogFormat(Hush::ELogLevel::Warn, "Failed to set thread name: {}", name);
+	}
+#endif
+}
+
 namespace Hush::Threading::Executors
 {
 	static constexpr size_t WORKER_QUEUE_SIZE = 256;		  // Size of the worker queue
@@ -46,6 +58,11 @@ namespace Hush::Threading::Executors
 				if (threadAffinity >= 0)
 				{
 					SetCurrentThreadAffinity(threadAffinity);
+					SetCurrentThreadName(("WorkerThread-P" + std::to_string(threadAffinity)).c_str());
+				}
+				else
+				{
+					SetCurrentThreadName(("WorkerThread-" + std::to_string(threadId)).c_str());
 				}
 
 				// Wait until the thread is started

@@ -26,21 +26,18 @@
 #include <memory>
 #include <span>
 #include <string>
+#include "HushEngine.hpp"
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
 
 void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 {
-	activeScene->CreateQuery<ResourceManager, VirtualFilesystem>().Each(
-		[this](Entity &entt, ResourceManager &resourceManager, VirtualFilesystem &vfs) {
-			resourceManager.Init(&vfs);
-			this->m_resourceManager = &resourceManager;
-			this->m_filesystem = &vfs;
-		});
+	this->m_resourceManager = activeScene->GetEngine()->GetResourceManager();
+	this->m_filesystem = activeScene->GetEngine()->GetVirtualFilesystem();
 	this->m_scene = activeScene;
 	// this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
 	// this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
-	this->m_modelLoader.SetResourceManager(this->m_resourceManager);
+	// this->m_modelLoader.SetResourceManager(this->m_resourceManager);
 }
 
 void Hush::ContentPanel::OnRender(float deltaTime)
@@ -63,16 +60,16 @@ void Hush::ContentPanel::OnRender(float deltaTime)
 			if (CanBeDroppedToScene(*data))
 			{
 				IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-				auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
-				HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
-				// Use the Model Loader interface to get entities and then forward that to the renderer
-				LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-				// Very very bad code, we should change it before a PR
-				for (Entity &entt : result.value())
-				{
-					renderer->PushMesh(entt.GetComponent<WorldTransform>(),
-									   entt.GetComponent<MeshReference>()->GetMesh().Get());
-				}
+				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
+				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
+				// // Use the Model Loader interface to get entities and then forward that to the renderer
+				// LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
+				// // Very very bad code, we should change it before a PR
+				// for (Entity &entt : result.value())
+				// {
+				// 	renderer->PushMesh(entt.GetComponent<WorldTransform>(),
+				// 					   entt.GetComponent<MeshReference>()->GetMesh().Get());
+				// }
 			}
 		}
 	}
@@ -191,53 +188,53 @@ void Hush::ContentPanel::CreateInnerResources(const FileInfo &fileData, const Fi
 	default:
 		break;
 	case EFileExtension::GLB:
-		fastgltf::Expected<fastgltf::Asset> asset = GltfLoadFunctions::GetAssetFromFile(fileData.path);
-		HUSH_ASSERT(asset, "GLTF asset at {} not properly loaded, error: {}!", fileData.path.string(),
-					fastgltf::getErrorMessage(asset.error()));
-		size_t cntr = 0;
+		// fastgltf::Expected<fastgltf::Asset> asset = GltfLoadFunctions::GetAssetFromFile(fileData.path);
+		// HUSH_ASSERT(asset, "GLTF asset at {} not properly loaded, error: {}!", fileData.path.string(),
+		// 			fastgltf::getErrorMessage(asset.error()));
+		// size_t cntr = 0;
 		// TODO: Swap for regular for loop
-		for (const fastgltf::Image &image : asset->images)
+		// for (const fastgltf::Image &image : asset->images)
 		{
 			// Write the binary data to the png
 
-			fastgltf::MimeType mimeType = fastgltf::MimeType::None;
-			const std::span<const std::byte> imageBuffer =
-				GltfLoadFunctions::ExtractImageBuffer(image, asset.get(), &mimeType);
-			if (imageBuffer.empty())
-			{
-				continue;
-			}
-			std::filesystem::path parentDir = fileData.path.parent_path();
-			std::string textName;
-			if (image.name.empty())
-			{
-				// I know, I know
-				textName = fileData.path.stem()
-							   .string()
-							   .append("_")
-							   .append(std::to_string(cntr))
-							   .append(".")
-							   .append(magic_enum::enum_name(mimeType));
-			}
-			else
-			{
-				textName = image.name;
-			}
-			std::filesystem::path generatedFileName = parentDir / textName;
-			Result<std::unique_ptr<IFile>, IFile::EError> createFileRes =
-				this->m_filesystem->OpenFile(generatedFileName.string(), EFileOpenMode::Write);
-			HUSH_RESULT_ASSERT(createFileRes, "Failed to create inner resource for asset {}, on resource {}",
-							   fileData.path, image.name);
-			std::unique_ptr<IFile> &createdFile = createFileRes.value();
-			Result<void, IFile::EError> writeResult = createdFile->Write(imageBuffer);
-			HUSH_RESULT_ASSERT(writeResult, "Failed to write image buffer");
-			createdFile->Close();
+			// fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+			// const std::span<const std::byte> imageBuffer =
+			// 	GltfLoadFunctions::ExtractImageBuffer(image, asset.get(), &mimeType);
+			// if (imageBuffer.empty())
+			// {
+			// 	continue;
+			// }
+			// std::filesystem::path parentDir = fileData.path.parent_path();
+			// std::string textName;
+			// if (image.name.empty())
+			// {
+			// 	// I know, I know
+			// 	textName = fileData.path.stem()
+			// 				   .string()
+			// 				   .append("_")
+			// 				   .append(std::to_string(cntr))
+			// 				   .append(".")
+			// 				   .append(magic_enum::enum_name(mimeType));
+			// }
+			// else
+			// {
+			// 	textName = image.name;
+			// }
+			// std::filesystem::path generatedFileName = parentDir / textName;
+			// Result<std::unique_ptr<IFile>, IFile::EError> createFileRes =
+			// 	this->m_filesystem->OpenFile(generatedFileName.string(), EFileOpenMode::Write);
+			// HUSH_RESULT_ASSERT(createFileRes, "Failed to create inner resource for asset {}, on resource {}",
+			// 				   fileData.path, image.name);
+			// std::unique_ptr<IFile> &createdFile = createFileRes.value();
+			// Result<void, IFile::EError> writeResult = createdFile->Write(imageBuffer);
+			// HUSH_RESULT_ASSERT(writeResult, "Failed to write image buffer");
+			// createdFile->Close();
 
-			FileMetadata metadata = {.metadataVersion = FileMetadata::VERSION,
-									 .id = Hashing::Fnv1a(createdFile->GetFileInfo().path.string())};
+			// FileMetadata metadata = {.metadataVersion = FileMetadata::VERSION,
+			// 						 .id = Hashing::Fnv1a(createdFile->GetFileInfo().path.string())};
 			// this->MakeMetaFile(createdFile->GetFileInfo(), metadata);
 			// this->m_currentItems.emplace_back(createdFile->GetFileInfo());
-			cntr++;
+			// cntr++;
 		}
 		break;
 	}

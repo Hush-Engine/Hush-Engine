@@ -145,7 +145,7 @@ namespace Hush
 
 			bool isNew = false;
 
-			auto *component = EmplaceComponentRaw(componentId, isNew);
+			auto *component = EmplaceComponentRaw(componentId, sizeof(T), isNew);
 
 			if (!isNew)
 			{
@@ -244,9 +244,10 @@ namespace Hush
 		///
 		/// @param componentId Id of the component.
 		/// @param isNew Flag to indicate if the component is new. If it is new, user is in charge of constructing it.
+		/// @param componentSize Size of the component.
 		/// @return Pointer to the component.
 		[[nodiscard]] [[hush::export]]
-		void *EmplaceComponentRaw(EntityId componentId, bool &isNew);
+		void *EmplaceComponentRaw(EntityId componentId, size_t componentSize, bool &isNew);
 
 		/// Remove a component from the entity.
 		/// @param componentId Id of the component.

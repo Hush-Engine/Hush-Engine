@@ -1,11 +1,10 @@
 include(cmake/deps.cmake)
 include(../cmake/utils.cmake)
 
-add_compile_definitions(HUSH_VULKAN_IMPL)
-
 add_subdirectory(app_loader)
 add_subdirectory(input)
 add_subdirectory(log)
+add_subdirectory(renderer)
 add_subdirectory(rendering)
 add_subdirectory(utils)
 add_subdirectory(scripting)
@@ -27,6 +26,7 @@ target_link_libraries(HushLibs INTERFACE
         Hush::Filesystem $<TARGET_OBJECTS:HushFilesystem>
         Hush::Threading $<TARGET_OBJECTS:HushThreading>
         Hush::Core $<TARGET_OBJECTS:HushCore>
+        Hush::Renderer $<TARGET_OBJECTS:HushRenderer>
 )
 
 add_library(Hush::Libs ALIAS HushLibs)

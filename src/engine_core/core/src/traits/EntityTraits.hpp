@@ -55,14 +55,14 @@ namespace Hush::ComponentTraits
 		HasMoveAssignDtor = 1 << 7,
 
 		// Flags used to disable operations.
-		NoCtor = 1 << 8,
-		NoDtor = 1 << 9,
-		NoCopy = 1 << 10,
-		NoMove = 1 << 11,
-		NoCopyCtor = 1 << 12,
-		NoMoveCtor = 1 << 13,
-		NoMoveDtor = 1 << 14,
-		NoMoveAssignDtor = 1 << 15,
+		NoCtor = 1 << 10,
+		NoDtor = 1 << 12,
+		NoCopy = 1 << 13,
+		NoMove = 1 << 14,
+		NoCopyCtor = 1 << 15,
+		NoMoveCtor = 1 << 16,
+		NoMoveDtor = 1 << 17,
+		NoMoveAssignDtor = 1 << 18,
 	};
 
 	struct [[hush::export]] ComponentOps

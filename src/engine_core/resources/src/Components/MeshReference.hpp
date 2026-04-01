@@ -1,7 +1,10 @@
 #pragma once
 
+#include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
+
+#include <memory>
 
 namespace Hush
 {
@@ -26,8 +29,41 @@ namespace Hush
 		{
 			return this->m_mesh;
 		}
+
+		/// @brief Get the GPU vertex buffer for this mesh (may be nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuVertexBuffer() const
+		{
+			return m_gpuVertexBuffer.get();
+		}
+
+		/// @brief Set the GPU vertex buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuVertexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuVertexBuffer = std::move(buffer);
+		}
+
+		/// @brief Get the GPU index buffer for this mesh (may be nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuIndexBuffer() const
+		{
+			return m_gpuIndexBuffer.get();
+		}
+
+		/// @brief Set the GPU index buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuIndexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuIndexBuffer = std::move(buffer);
+		}
+
 	private:
 		Ref<Mesh> m_mesh;
+
+		/// @brief GPU vertex buffer, owned by this component and populated by ResourceUploadSystem.
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
+
+		/// @brief GPU index buffer, owned by this component and populated by ResourceUploadSystem.
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuIndexBuffer;
 	};
 
 	void Serialize(MeshReference *component, const char *entityName);

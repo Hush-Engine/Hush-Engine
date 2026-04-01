@@ -1,15 +1,11 @@
 {
   "version": 6,
-  "include": [
-    "default-presets.json"
-  ],
+  "include": ["default-presets.json"],
   "configurePresets": [
     {
       "name": "windows-x64-default",
       "hidden": true,
-      "inherits": [
-        "default"
-      ],
+      "inherits": ["default"],
       "architecture": {
         "value": "x64",
         "strategy": "external"
@@ -21,34 +17,34 @@
     },
     {
       "name": "windows-x64-debug",
-      "inherits": [
-        "windows-x64-default"
-      ],
+      "inherits": ["windows-x64-default"],
       "displayName": "Windows x64 Debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "VCPKG_BUILD_TYPE": "Debug"
+        "VCPKG_BUILD_TYPE": "Debug",
+        "WEBGPU_LINK_TYPE": "SHARED",
+        "DWEBGPU_BACKEND": "WGPU"
       }
     },
     {
       "name": "windows-x64-release",
-      "inherits": [
-        "windows-x64-default"
-      ],
+      "inherits": ["windows-x64-default"],
       "displayName": "Windows x64 Release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "VCPKG_BUILD_TYPE": "Release"
+        "VCPKG_BUILD_TYPE": "Release",
+        "WEBGPU_LINK_TYPE": "SHARED",
+        "DWEBGPU_BACKEND": "WGPU"
       }
     },
     {
       "name": "windows-x64-release-lto",
       "displayName": "Windows x64 Release with LTO",
-      "inherits": [
-          "windows-x64-release"
-      ],
+      "inherits": ["windows-x64-release"],
       "cacheVariables": {
-        "HUSH_ENABLE_LTO": "ON"
+        "HUSH_ENABLE_LTO": "ON",
+        "WEBGPU_LINK_TYPE": "STATIC",
+        "DWEBGPU_BACKEND": "WGPU"
       }
     }
   ],

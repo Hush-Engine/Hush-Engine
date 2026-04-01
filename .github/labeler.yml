@@ -1,0 +1,97 @@
+# Configuration for actions/labeler@v6
+# Docs: https://github.com/actions/labeler
+
+"area:rendering":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/rendering/**
+          - src/engine_core/renderer/**
+
+"area:rhi":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/rendering/src/RHI/**
+          - src/engine_core/rendering/src/WebGPU/**
+
+"area:render-graph":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/rendering/src/RenderGraph/**
+          - src/engine_core/rendering/src/Systems/RenderGraphSystem.*
+          - src/engine_core/rendering/src/Components/RenderGraphBuilderComponent.*
+
+"area:core":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/core/**
+
+"area:input":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/input/**
+
+"area:scripting":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/engine_core/scripting/**
+          - src/bindings/**
+          - src/engine_core/bindings/**
+
+"area:editor":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/editor/**
+
+"area:devtool":
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/devtool/**
+
+"area:shaders":
+  - changed-files:
+      - any-glob-to-any-file:
+          - res/**
+          - "**/*.slang"
+          - "**/*.glsl"
+          - "**/*.vert"
+          - "**/*.frag"
+          - "**/*.comp"
+          - "**/*.spv"
+          - "**/*.wgsl"
+          - "**/*.hlsl"
+
+"area:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - "**/*.md"
+          - Doxyfile.in
+
+"area:examples":
+  - changed-files:
+      - any-glob-to-any-file:
+          - examples/**
+
+"area:build":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/CMakeLists.txt"
+          - "**/*.cmake"
+          - cmake/**
+          - CMakePresets.json
+          - vcpkg.json
+          - vcpkg-configuration.json
+          - vcpkg/**
+
+"ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+
+"dependencies":
+  - changed-files:
+      - any-glob-to-any-file:
+          - third_party/**
+          - vcpkg.json
+          - vcpkg-configuration.json
+          - .gitmodules

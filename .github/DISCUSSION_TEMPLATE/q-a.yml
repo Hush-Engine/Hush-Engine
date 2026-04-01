@@ -1,0 +1,40 @@
+title: "Q&A"
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in Hush Engine!
+        Before posting, please search existing discussions to see if your question has already been answered.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: Describe your question clearly and concisely.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you already tried?
+      description: Share any steps you've taken, documentation you've read, or approaches you've attempted.
+      placeholder: I've tried...
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area of the engine does your question relate to?
+      options:
+        - General
+        - Rendering
+        - Core
+        - Scripting
+        - Editor
+        - Devtool
+        - Build System
+        - Other
+    validations:
+      required: true

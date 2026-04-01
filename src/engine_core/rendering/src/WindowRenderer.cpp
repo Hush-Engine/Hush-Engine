@@ -1,14 +1,69 @@
 #include "WindowRenderer.hpp"
 #include "InputManager.hpp"
+#include "Platform.hpp"
+#include "Renderer.hpp"
 #include "WindowManager.hpp"
 #include "Logger.hpp"
-#include "Vulkan/VulkanRenderer.hpp"
+// #include "Vulkan/VulkanRenderer.hpp"
 #include "definitions/KeyCode.hpp"
-#include <SDL_events.h>
-#include <SDL_keyboard.h>
-#include <SDL_video.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keyboard.h>
+#include <SDL2/SDL_video.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
 
-Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene *activeScene) noexcept
+// Graphics backend
+#if defined(HUSH_VULKAN_IMPL)
+// TODO:
+#elif defined(HUSH_WEBGPU_IMPL)
+#include "WebGPU/WebGPUGraphicsDevice.hpp"
+#endif
+
+static inline Hush::Graphics::EGraphicsAPI GetPreferredGraphicsAPI()
+{
+	constexpr Hush::EPlatform currentPlatform = Hush::GetCurrentPlatform();
+
+	switch (currentPlatform)
+	{
+	case Hush::EPlatform::Win64:
+		return Hush::Graphics::EGraphicsAPI::D3D12;
+	case Hush::EPlatform::Linux:
+		return Hush::Graphics::EGraphicsAPI::Vulkan;
+	case Hush::EPlatform::OSX:
+		return Hush::Graphics::EGraphicsAPI::Metal;
+	case Hush::EPlatform::Emscripten:
+		return Hush::Graphics::EGraphicsAPI::WebGPU;
+	default:
+		Hush::LogWarn("Unrecognized platform, defaulting to Vulkan graphics API");
+		return Hush::Graphics::EGraphicsAPI::Vulkan;
+	}
+}
+
+/// @brief Create a graphics device from a given API and window context.
+///
+static std::unique_ptr<Hush::Graphics::IGraphicsDevice> CreateGraphicsDevice(Hush::Graphics::EGraphicsAPI api,
+																			 void *windowHandle)
+{
+#if defined(HUSH_VULKAN)
+	if (api == Hush::Graphics::EGraphicsAPI::Vulkan)
+	{
+		// return std::make_unique<Hush::Graphics::VulkanRenderer>(windowHandle);
+	}
+#elif defined(HUSH_WEBGPU_IMPL)
+	if (api == Hush::Graphics::EGraphicsAPI::WebGPU)
+	{
+		return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
+	}
+#endif // HUSH_VULKAN
+
+#if defined(HUSH_WEBGPU_IMPL)
+	Hush::LogWarn("Preferred graphics API is not supported on this platform, falling back to WebGPU");
+	return std::make_unique<Hush::Graphics::WebGPUGraphicsDevice>(windowHandle);
+#else
+	return nullptr;
+#endif
+}
+
+Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Scene *activeScene) noexcept
 {
 	if (!InitSDLIfNotStarted())
 	{
@@ -44,17 +99,20 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, Scene *activeScene)
 		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
 	}
 
-	this->m_windowRenderer = std::make_unique<Hush::VulkanRenderer>(this->m_windowPtr);
-	this->m_windowRenderer->SetActiveScene(activeScene);
-	this->m_windowRenderer->CreateSwapChain(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-	this->m_windowRenderer->InitImGui();
-	this->m_windowRenderer->InitRendering();
+	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
+
+	this->m_renderDevice = std::make_unique<Hush::RenderGraph::RenderDevice>(this->m_windowRenderer.get());
 	this->m_isActive = true;
 }
 
-void Hush::WindowRenderer::GetWindowSize(int32_t *width, int32_t *height)
+glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 {
-	SDL_GetWindowSize(this->m_windowPtr, width, height);
+	int32_t width{};
+	int32_t height{};
+
+	SDL_GetWindowSize(this->m_windowPtr, &width, &height);
+
+	return {width, height};
 }
 
 void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
@@ -64,6 +122,8 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
 	SDL_PollEvent(&event);
+	// Forward event to ImGui
+	ImGui_ImplSDL2_ProcessEvent(&event);
 	// Forward event to the renderer
 	switch (event.type)
 	{
@@ -101,7 +161,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 	default:
 		break;
 	}
-	this->m_windowRenderer->HandleEvent(&event);
+	// this->m_windowRenderer->HandleEvent(&event);
 }
 
 Hush::WindowRenderer::~WindowRenderer()
@@ -113,7 +173,8 @@ Hush::WindowRenderer::~WindowRenderer()
 
 Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
 {
-	return this->m_windowRenderer.get();
+	return nullptr;
+	// return this->m_windowRenderer.get();
 }
 
 bool Hush::WindowRenderer::IsActive() const noexcept
@@ -142,6 +203,14 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 		break;
 	case SDL_WINDOWEVENT_RESTORED:
 		*isActive = true;
+		break;
+	case SDL_WINDOWEVENT_SIZE_CHANGED:
+		this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
+		// Mark the render graph as dirty so it is fully rebuilt next frame
+		// (transient resource dimensions depend on window size).  Unlike Reset(),
+		// Invalidate() does not clear graph data mid-frame — the slow path in
+		// RenderGraphSystem::OnPreRender() will handle the full Reset + rebuild.
+		this->m_renderDevice->Invalidate();
 		break;
 	}
 }

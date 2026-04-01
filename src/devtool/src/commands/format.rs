@@ -94,7 +94,7 @@ impl FormatCommand {
                 return Err(anyhow!(error_message));
             }
 
-            return Err(anyhow!("Error running clang-format: {}", e));
+            return Err(anyhow!("Error running clang-format: {e}"));
         }
 
         let output = status?;
