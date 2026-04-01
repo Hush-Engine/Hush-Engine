@@ -82,10 +82,10 @@ _Bool Hush__Entity__HasComponentRaw(Hush__Entity *self, unsigned long long compo
 	return *reinterpret_cast<_Bool*>(&result______);
 }
 
-void * Hush__Entity__EmplaceComponentRaw(Hush__Entity *self, unsigned long long componentId, bool * isNew)
+void * Hush__Entity__EmplaceComponentRaw(Hush__Entity *self, unsigned long long componentId, unsigned long long componentSize, bool * isNew)
 {
 	auto selfClass = reinterpret_cast<Hush::Entity*>(self);
-	auto result______ = selfClass->EmplaceComponentRaw(componentId, *reinterpret_cast<bool *>(isNew));
+	auto result______ = selfClass->EmplaceComponentRaw(componentId, componentSize, *reinterpret_cast<bool *>(isNew));
 	return reinterpret_cast<void *>(result______);
 }
 
