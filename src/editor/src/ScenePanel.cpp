@@ -6,7 +6,7 @@
 constexpr ImGuiWindowFlags SCENE_PANEL_FLAGS = ImGuiWindowFlags_NoScrollbar;
 
 /// Minimum panel dimension in pixels — avoids creating zero-sized textures.
-constexpr uint32_t MIN_PANEL_DIMENSION = 1;
+constexpr int32_t MIN_PANEL_DIMENSION = 1;
 
 void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 {
@@ -21,8 +21,10 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 
 	// ── Track the panel's content region size every frame ────────────
 	ImVec2 availSize = ImGui::GetContentRegionAvail();
-	auto newWidth = std::max(static_cast<uint32_t>(availSize.x), MIN_PANEL_DIMENSION);
-	auto newHeight = std::max(static_cast<uint32_t>(availSize.y), MIN_PANEL_DIMENSION);
+
+	// DO NOT CAST THIS TO AN UNSIGNED INTEGER BECAUSE IT WILL UNDERFLOW
+	auto newWidth = std::max(static_cast<int32_t>(availSize.x), MIN_PANEL_DIMENSION);
+	auto newHeight = std::max(static_cast<int32_t>(availSize.y), MIN_PANEL_DIMENSION);
 
 	if (newWidth != m_panelSize.x || newHeight != m_panelSize.y)
 	{

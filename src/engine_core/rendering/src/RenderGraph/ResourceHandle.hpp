@@ -239,9 +239,9 @@ namespace Hush::RenderGraph
 			ResourceModel &operator=(ResourceModel &&) = delete;
 
 			ResourceModel(const typename T::Descriptor &descriptor, T &&obj)
-				: descriptor(descriptor),
-				  resourceInstance(std::move(obj))
 			{
+				new (const_cast<typename T::Descriptor*>(&this->descriptor)) typename T::Descriptor(descriptor);
+				this->resourceInstance = std::move(obj);
 			}
 
 			~ResourceModel() override = default;
