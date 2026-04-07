@@ -243,7 +243,13 @@ namespace Hush
 		}
 
 		[[nodiscard]]
-		void *GetWorld() const
+		const void *GetWorld() const
+		{
+			return m_world;
+		}
+
+		[[nodiscard]]
+		void *GetWorld()
 		{
 			return m_world;
 		}

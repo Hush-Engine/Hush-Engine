@@ -23,7 +23,7 @@ Hush::UI::UI()
 	s_instance = this;
 }
 
-void Hush::UI::Init(Scene *parentScene, ScriptingHost* scriptingHost)
+void Hush::UI::Init(Scene *parentScene)
 {
 	this->SetupImGuiStyle();
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);

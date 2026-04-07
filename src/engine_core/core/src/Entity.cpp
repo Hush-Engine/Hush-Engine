@@ -12,8 +12,6 @@
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 
-#define TO_FLECS_WORLD_PTR(opaqueWorldPtr) static_cast<ecs_world_t *>(opaqueWorldPtr)
-
 Hush::Entity::EntityId Hush::Entity::RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const
 {
 	return m_ownerScene->RegisterComponentRaw(desc);
@@ -21,7 +19,7 @@ Hush::Entity::EntityId Hush::Entity::RegisterComponentRaw(const ComponentTraits:
 
 void *Hush::Entity::AddComponentRaw(const EntityId componentId)
 {
-	auto *world = TO_FLECS_WORLD_PTR(m_ownerScene->GetWorld());
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
 	ecs_add_id(world, m_entityId, componentId);
 
@@ -71,11 +69,12 @@ bool Hush::Entity::RemoveComponentRaw(EntityId componentId)
 	return false;
 }
 
-
-void Hush::Entity::SetComponentActiveRaw(EntityId componentId, bool active) {
-	auto* world = TO_FLECS_WORLD_PTR(this->m_ownerScene->GetWorld());
+void Hush::Entity::SetComponentActiveRaw(EntityId componentId, bool active)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
 	// TODO: Check if we can get rid of this if, it's probably safer to keep, but yk
-	if (!ecs_has_id(world, this->GetId(), componentId)) {
+	if (!ecs_has_id(world, this->GetId(), componentId))
+	{
 		return;
 	}
 	ecs_enable_id(world, this->GetId(), componentId, active);
@@ -140,11 +139,11 @@ int32_t Hush::Entity::GetChildCount() const
 	return it.count;
 }
 
-void Hush::Entity::AddRelationship(const Entity& relationship, const Entity& target) {
-	auto *world = TO_FLECS_WORLD_PTR(this->m_ownerScene->GetWorld());
-	
+void Hush::Entity::AddRelationship(const Entity &relationship, const Entity &target)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
+
 	ecs_add_pair(world, this->m_entityId, relationship.m_entityId, target.m_entityId);
-	
 }
 
 Hush::Entity::EntityId Hush::Entity::GetId() const

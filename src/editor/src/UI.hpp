@@ -31,7 +31,7 @@ namespace Hush
 
 		UI();
 
-		void Init(Scene *parentScene, ScriptingHost* scriptingHost);
+		void Init(Scene *parentScene);
 
 		void DrawPanels(float deltaTime);
 
@@ -73,8 +73,6 @@ namespace Hush
 		static void DrawPlayButton();
 
 		void SetupImGuiStyle();
-
-		ScriptingHost* m_scriptingHostRef;
 
 		// NOLINTNEXTLINE
 		static inline UI *s_instance;
