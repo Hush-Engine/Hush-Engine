@@ -9,6 +9,7 @@
 #include "EnumFlags.hpp"
 #include "Platform.hpp"
 #include "HushBindings.hpp"
+#include "reflection/TypeTraits.hpp"
 
 #include <Result.hpp>
 #include <cstdint>
@@ -379,13 +380,26 @@ namespace Hush::ComponentTraits
 		};
 	}
 
+	template <class T>
+	const char *GetTypeName()
+	{
+		if constexpr (ReflectedType<T>)
+		{
+			return T::TypeName().data();
+		}
+		else
+		{
+			return typeid(T).name();
+		}
+	}
+
 	template <typename T>
 	ComponentInfo GetComponentInfo()
 	{
 		auto componentInfo = ComponentInfo{
 			.size = sizeof(T),
 			.alignment = alignof(T),
-			.name = typeid(T).name(),
+			.name = GetTypeName<T>(),
 			.ops = {},
 			.opsFlags = EComponentOpsFlags::None,
 			.userCtx = nullptr,

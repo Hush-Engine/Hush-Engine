@@ -31,8 +31,12 @@ target_link_libraries(HushEngine PUBLIC coreclr
 
 add_library(Hush::Bindings ALIAS HushBindings)
 
-target_link_libraries(HushBindings PRIVATE
-        Hush::Engine)
+target_link_libraries(HushBindings PUBLIC
+        Hush::Threading
+        Hush::Engine
+        Hush::Input
+        Hush::Core
+)
 
 hush_add_executable(
         TARGET_NAME HushRuntime

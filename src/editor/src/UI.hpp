@@ -18,6 +18,8 @@
 namespace Hush
 {
 	class Transform;
+	class ScriptingHost;
+
 	class UI
 	{
 	public:

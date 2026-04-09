@@ -4,6 +4,7 @@
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
 #include "NotificationPanel.hpp"
+#include "ScriptingHost.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
 #include <cstring>

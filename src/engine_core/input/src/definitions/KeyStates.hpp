@@ -6,10 +6,13 @@
 
 #pragma once
 
-enum class EKeyState
+namespace Hush
 {
-	None = -1,
-	Pressed,
-	Held,
-	Released
-};
+	enum class [[hush::export]] EKeyState
+	{
+		None = -1,
+		Pressed,
+		Held,
+		Released
+	};
+} // namespace Hush
