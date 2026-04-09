@@ -144,8 +144,12 @@ public:
 		auto &scenePanel = m_userInterface.GetPanel<Hush::ScenePanel>();
 		if (scenePanel.ConsumeResized())
 		{
-			m_sceneBufferSize = scenePanel.GetPanelSize();
-			m_sceneBufferDirty = true;
+		    const auto newSize = scenePanel.GetPanelSize();
+			if (newSize.x > 0 && newSize.y > 0)
+			{
+    			m_sceneBufferSize = scenePanel.GetPanelSize();
+    			m_sceneBufferDirty = true;
+			}
 		}
 
 		// Execute the render graph.  The ImGui pass inside will call
@@ -461,11 +465,18 @@ private:
 		m_userInterface.SetSceneTextureView(nullptr, 0, 0);
 	}
 
-	Hush::HushEngine *m_engine = nullptr;
-	Hush::UI m_userInterface;
-	Hush::ResourceManager *m_resourceManager = nullptr;
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
+
+	/// Holds the previous scene texture alive across a render graph rebuild
+	/// so the ScenePanel's raw WGPUTextureView pointer doesn't dangle.
+	/// Released once the new texture is realized.
+	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedSceneTexture;
+
+	Hush::HushEngine *m_engine = nullptr;
+
+	Hush::UI m_userInterface;
+	Hush::ResourceManager *m_resourceManager = nullptr;
 
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.
@@ -480,11 +491,6 @@ private:
 
 	/// Resource ID of the imported swapchain backbuffer (updated each frame).
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{};
-
-	/// Holds the previous scene texture alive across a render graph rebuild
-	/// so the ScenePanel's raw WGPUTextureView pointer doesn't dangle.
-	/// Released once the new texture is realized.
-	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedSceneTexture;
 };
 
 extern "C" bool BundledAppExists_Internal_() // NOLINT(*-identifier-naming)

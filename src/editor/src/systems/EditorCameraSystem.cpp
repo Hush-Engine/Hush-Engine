@@ -13,11 +13,13 @@ void Hush::EditorCameraSystem::Init()
 {
 	// There should only ever be ONE EditorCamera component in the active scene
 	this->GetScene().CreateQuery<EditorCamera>().Each(
-		[this](Entity &entity, EditorCamera &camRef) { this->m_editorCamera = &camRef; });
+		[this](Entity &entity, [[maybe_unused]] EditorCamera &camRef) {
+		this->m_editorCameraEntity = std::move(entity);
+	});
 
 	// There should only ever be ONE EditorInfo component in the active scene
 	this->GetScene().CreateQuery<EditorInfo>().Each(
-		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+		[this](Entity &entity, [[maybe_unused]] EditorInfo &infoRef) { this->m_editorInfoEntity = std::move(entity); });
 }
 
 void Hush::EditorCameraSystem::OnShutdown()
@@ -26,6 +28,9 @@ void Hush::EditorCameraSystem::OnShutdown()
 
 void Hush::EditorCameraSystem::OnUpdate(float delta)
 {
+    // We need to retrieve the camera and editor info references every frame because the scene might have been reloaded, which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more complex event system just for this.
+    m_editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
+    m_editorInfo = m_editorInfoEntity.GetSingletonComponent<EditorInfo>();
 	if (this->m_editorCamera == nullptr || this->m_editorInfo == nullptr)
 	{
 		return;
@@ -99,7 +104,7 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 		float &yaw = this->m_editorCamera->GetYaw();
 		float &pitch = this->m_editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;
-		pitch = MathUtils::Clamp(pitch + mouseAcceleration.y * mouseLookSpeed * delta, CAM_PITCH_MIN, CAM_PITCH_MAX);
+		pitch = MathUtils::Clamp(pitch + (mouseAcceleration.y * mouseLookSpeed * delta), CAM_PITCH_MIN, CAM_PITCH_MAX);
 	}
 }
 

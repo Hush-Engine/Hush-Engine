@@ -230,7 +230,7 @@ namespace Hush
 		}
 
 		[[nodiscard]]
-		HushEngine *GetEngine() const
+		const HushEngine *GetEngine() const
 		{
 			return this->m_engine;
 		}

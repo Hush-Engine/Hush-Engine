@@ -70,6 +70,7 @@ namespace Hush
 		~Entity() noexcept = default;
 
 		Entity(const Entity &) = delete;
+
 		Entity &operator=(const Entity &) = delete;
 
 		Entity(Entity &&other) noexcept
@@ -89,6 +90,10 @@ namespace Hush
 			return *this;
 		}
 
+		/// Get a null entity. A null entity is an entity that does not exist in the scene. It can be used to represent an invalid entity.
+		///
+		/// @return A null entity.
+		[[nodiscard]]
 		static Entity Null()
 		{
 			return Entity{nullptr, 0};
