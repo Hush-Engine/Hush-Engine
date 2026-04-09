@@ -10,7 +10,7 @@
 
 // TODO: Populate the map in the stack with all enums
 // NOLINTNEXTLINE
-std::unordered_map<EKeyCode, KeyData> Hush::InputManager::S_KEY_DATA_BY_CODE = {};
+std::unordered_map<Hush::EKeyCode, Hush::KeyData> Hush::InputManager::S_KEY_DATA_BY_CODE = {};
 // NOLINTNEXTLINE
 Hush::MouseData Hush::InputManager::S_MOUSE_DATA = {};
 

@@ -7,8 +7,9 @@
 
 void Hush::RenderingSystem::Init()
 {
+	// TODO: Check why we can't do Cache::All
 	this->m_renderableTargetsQuery =
-		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::All);
+		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::Auto);
 }
 
 void Hush::RenderingSystem::OnShutdown()

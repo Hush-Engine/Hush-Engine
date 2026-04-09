@@ -16,6 +16,15 @@
 #include <functional>
 #include <optional>
 #include <string_view>
+#include <Hushgen.hpp>
+
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+
+#if __has_include("Entity.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "Entity.hushgen.hpp"
+#endif
 
 namespace Hush
 {
@@ -44,8 +53,11 @@ namespace Hush
 		constexpr static EntityId INVALID_ENTITY_ID = 0;
 
 		/// @brief Component that holds the name of an entity
-		struct Name
+		struct [[hush::reflect]] Name
 		{
+			HUSH_GENERATED_BODY
+		public:
+			// NOLINTNEXTLINE
 			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> name{}; // Handle null terminator!!!
 
 			Name() = default;
@@ -181,6 +193,14 @@ namespace Hush
 			return RemoveComponentRaw(entityId);
 		}
 
+		template <typename T>
+		void SetComponentActive(bool active)
+		{
+			const EntityId entityId = RegisterIfNeededSlow<std::remove_cvref_t<T>>();
+
+			SetComponentActiveRaw(entityId, active);
+		}
+
 		/// Register a component to the entity.
 		/// @tparam T Type to register.
 		template <typename T>
@@ -195,7 +215,7 @@ namespace Hush
 		/// Register a component.
 		/// @param desc Component description.
 		/// @return Id of the component.
-		[[hush::export]]
+		[[hush::export]] [[nodiscard]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
 		/// Add a component to the entity.
@@ -240,6 +260,9 @@ namespace Hush
 		[[hush::export]]
 		bool RemoveComponentRaw(EntityId componentId);
 
+		[[hush::export]]
+		void SetComponentActiveRaw(EntityId componentId, bool active);
+
 		/// Destroy an entity. This will remove all components from the entity and destroy it.
 		/// This consumes the entity, so it should not be used after this function is called.
 		/// @param entity Entity to destroy.
@@ -247,6 +270,7 @@ namespace Hush
 
 		void SetParent(const Entity &parent);
 
+		[[hush::export]]
 		void AddChild(const Entity &child);
 
 		[[nodiscard]]
@@ -258,10 +282,13 @@ namespace Hush
 		[[nodiscard]]
 		Entity GetChildAt(int32_t index) const;
 
-		[[nodiscard]]
+		[[nodiscard]] [[hush::export]]
 		int32_t GetChildCount() const;
 
 		void EachChild(std::function<void(Entity &)> func) const;
+
+		[[hush::export]]
+		void AddRelationship(const Entity &relationship, const Entity &target);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;
@@ -296,6 +323,7 @@ namespace Hush
 		/// Check if a component is registered.
 		/// @param componentId Id of the component.
 		/// @return True if the component is registered, false otherwise.
+		[[nodiscard]]
 		bool IsComponentRegistered(EntityId componentId) const;
 
 		/// Register a C++ component. C++ components are special because they use a cache in the scene to

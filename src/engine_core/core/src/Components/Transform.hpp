@@ -27,7 +27,8 @@ namespace Hush
 
 		Transform(const glm::vec3 &position, const glm::vec3 &scale = Vector3Math::ONE, const glm::quat &rotation = {});
 
-		void SetPosition(const glm::vec3 &position) noexcept;
+		[[hush::export]]
+		void SetPosition(glm::vec3 position) noexcept;
 
 		[[nodiscard]]
 		const glm::vec3 *GetPosition() const noexcept;

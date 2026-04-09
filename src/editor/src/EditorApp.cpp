@@ -2,6 +2,7 @@
 // Created by Alan5 on 22/09/2024.
 //
 
+#include "Assertions.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
@@ -13,6 +14,7 @@
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
+#include "ScriptingHost.hpp"
 #include "systems/EditorCameraSystem.hpp"
 #include "systems/RenderingSystem.hpp"
 
@@ -31,6 +33,12 @@
 
 #include <algorithm>
 #include <memory>
+
+// This is temporary lol
+#if __has_include("../../bindings/HushBindings.cpp")
+#define HUSH_STATIC_BINDING
+#include "../../bindings/HushBindings.cpp"
+#endif
 
 class EditorApp final : public Hush::IApplication
 {
@@ -55,6 +63,7 @@ public:
 
 	void Init() override
 	{
+		// Make the giant System pool
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		auto windowSize = m_engine->GetWindowRenderer()->GetWindowSize();
 		m_sceneBufferSize = windowSize; // initial size until the panel reports its own
@@ -65,7 +74,21 @@ public:
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+
 		entt.AddComponent<Hush::EditorInfo>();
+		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
+
+		// Scriptingb
+		constexpr std::string_view scriptingProjDllPath =
+			"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
+		this->m_scriptingHost->Initialize(scriptingProjDllPath);
+		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+
+		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
+		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
+		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
 		this->m_resourceManager = m_engine->GetResourceManager();
 		// this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
@@ -105,7 +128,7 @@ public:
 		};
 
 		this->m_scene->Init();
-		this->m_userInterface.Init(this->m_scene.get());
+		this->m_userInterface.Init(this->m_scene.get(), this->m_scriptingHost);
 	}
 
 	void Update(float delta) override
@@ -467,6 +490,8 @@ private:
 
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
+	Hush::ScriptingHost *m_scriptingHost = nullptr;
+	uintptr_t m_testSystem = 0;
 
 	/// Holds the previous scene texture alive across a render graph rebuild
 	/// so the ScenePanel's raw WGPUTextureView pointer doesn't dangle.

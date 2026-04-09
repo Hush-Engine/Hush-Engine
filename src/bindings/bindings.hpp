@@ -16,5 +16,6 @@
 #include "HushEngine.hpp"
 #include "Scene.hpp"
 #include "Components/Transform.hpp"
+#include "InputManager.hpp"
 
 // NOLINTEND

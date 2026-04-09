@@ -6,7 +6,10 @@
 
 #include "Scene.hpp"
 #include "ISystem.hpp"
+#include "Logger.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <flecs.h>
+#include <flecs/addons/flecs_c.h>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -31,6 +34,14 @@ void Hush::Scene::Init()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->Init(); }));
 	}
+
+	// TODO: Group user systems into buckets
+	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
+	Threading::Wait(
+		Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
+							   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+
+	this->m_isInitialized = true;
 }
 
 void Hush::Scene::Update(float delta)
@@ -42,6 +53,13 @@ void Hush::Scene::Update(float delta)
 				// Call the update method for each system
 				system->OnUpdate(delta);
 			}));
+	}
+
+	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		updateFunc(reinterpret_cast<void *>(system), delta);
 	}
 }
 
@@ -55,6 +73,14 @@ void Hush::Scene::FixedUpdate(float delta)
 				system->OnFixedUpdate(delta);
 			}));
 	}
+
+	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
+		this->m_scriptingInterface->fixedUpdateFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		fixedUpdateFunc(reinterpret_cast<void *>(system), delta);
+	}
 }
 
 void Hush::Scene::PreRender()
@@ -64,6 +90,13 @@ void Hush::Scene::PreRender()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
 	}
+
+	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		preRenderFunc(reinterpret_cast<void *>(system));
+	}
 }
 void Hush::Scene::Render()
 {
@@ -71,6 +104,13 @@ void Hush::Scene::Render()
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
+	}
+
+	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		renderFunc(reinterpret_cast<void *>(system));
 	}
 }
 
@@ -81,6 +121,13 @@ void Hush::Scene::PostRender()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
 	}
+
+	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		postRender(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::Shutdown()
@@ -89,6 +136,13 @@ void Hush::Scene::Shutdown()
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
+	}
+
+	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		shutdownFunc(reinterpret_cast<void *>(system));
 	}
 }
 
@@ -191,6 +245,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 		void (*userCtxFree)(void *){};
 	};
 
+	// TODO: Arena
 	auto *componentInfo = new ComponentInfo();
 	componentInfo->size = desc.size;
 	componentInfo->alignment = desc.alignment;
@@ -200,10 +255,17 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentInfo->userCtxFree = desc.userCtxFree;
 
 	ecs_component_desc_t componentDesc = {};
+	ecs_entity_desc_t associatedEntityDesc = {};
+
+	associatedEntityDesc.name = desc.name;
+
 	componentDesc.type.alignment = static_cast<ecs_size_t>(componentInfo->alignment);
 	componentDesc.type.size = static_cast<ecs_size_t>(componentInfo->size);
 	componentDesc.type.name = componentInfo->name.data();
 	componentDesc.type.hooks.binding_ctx = componentInfo;
+
+	auto *world = static_cast<ecs_world_t *>(GetWorld());
+	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
 	componentDesc.type.hooks.binding_ctx_free = [](void *ctx) {
 		const auto *info = static_cast<ComponentInfo *>(ctx);
@@ -371,10 +433,21 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentDesc.type.hooks.flags = static_cast<std::uint32_t>(desc.opsFlags);
 
 	// Register the component
-	auto *world = static_cast<ecs_world_t *>(GetWorld());
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
+	// By default, all components should be able to be toggled on or off (for performance reasons)
+	ecs_add_id(world, componentId, EcsCanToggle);
+
+	LogFormat(ELogLevel::Info, "Registered component with name {} as ID: {}", desc.name, componentId);
+
 	return componentId;
+}
+
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	Entity::EntityId result = ecs_lookup(world, tag.data());
+	return result;
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)
@@ -423,6 +496,16 @@ void Hush::Scene::AddEngineSystem(ISystem *system)
 {
 	m_engineSystems.push_back(system);
 	SortSystems();
+}
+
+void Hush::Scene::AddScriptingSystem(uintptr_t system)
+{
+	this->m_scriptingSystems.push_back(system);
+	// If the system is added in the middle of a frame, we should always call init
+	if (this->m_isInitialized)
+	{
+		this->m_scriptingInterface->initFunction(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::SortSystems()
