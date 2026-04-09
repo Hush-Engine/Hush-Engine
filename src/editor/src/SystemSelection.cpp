@@ -93,7 +93,7 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 	{
 		for (size_t col = 0; col < cols; ++col)
 		{
-			size_t idx = col * rows + row; // column-major fill (left-to-right, top-to-bottom)
+			size_t idx = (col * rows) + row; // column-major fill (left-to-right, top-to-bottom)
 			if (idx >= itemCount)
 			{
 				break;
@@ -105,7 +105,7 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 			}
 
 			ImGui::PushID(items[idx].registryIndex);
-			bool selected = idx == *(selectedSystemIndex);
+			bool selected = *selectedSystemIndex >= 0 && idx == static_cast<size_t>(*selectedSystemIndex);
 			ImGui::Selectable(items[idx].name, &selected, 0, ImVec2(colW, rowH));
 			if (selected)
 			{

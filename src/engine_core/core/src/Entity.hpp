@@ -102,7 +102,8 @@ namespace Hush
 			return *this;
 		}
 
-		/// Get a null entity. A null entity is an entity that does not exist in the scene. It can be used to represent an invalid entity.
+		/// Get a null entity. A null entity is an entity that does not exist in the scene. It can be used to represent
+		/// an invalid entity.
 		///
 		/// @return A null entity.
 		[[nodiscard]]

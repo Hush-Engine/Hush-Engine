@@ -75,7 +75,7 @@ void Hush::ScriptingHost::FetchSystemsIntoCache()
 		"Function pointer to get available systems is not initialized, forgot to call ScriptingHost::Initialize?");
 	ScriptingSystemInfo *systemsArr = this->m_availableSystems.data();
 
-	this->m_getAvailableSystemsFn(&systemsArr, this->m_availableSystems.capacity());
+	this->m_getAvailableSystemsFn(&systemsArr, this->m_availableSystems.size());
 	this->m_libIsDirty = false;
 }
 

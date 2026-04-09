@@ -141,6 +141,8 @@ int32_t Hush::Entity::GetChildCount() const
 
 void Hush::Entity::AddRelationship(const Entity &relationship, const Entity &target)
 {
+	HUSH_ASSERT(this->m_ownerScene == relationship.m_ownerScene, "Relationship entity must belong to the same scene");
+	HUSH_ASSERT(this->m_ownerScene == target.m_ownerScene, "Target entity must belong to the same scene");
 	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
 
 	ecs_add_pair(world, this->m_entityId, relationship.m_entityId, target.m_entityId);

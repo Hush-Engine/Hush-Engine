@@ -264,7 +264,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentDesc.type.name = componentInfo->name.data();
 	componentDesc.type.hooks.binding_ctx = componentInfo;
 
-	auto *world = static_cast<ecs_world_t *>(GetWorld());
+	auto *world = static_cast<ecs_world_t *>(const_cast<void *>(GetWorld()));
 	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
 	componentDesc.type.hooks.binding_ctx_free = [](void *ctx) {

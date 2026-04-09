@@ -128,7 +128,7 @@ public:
 		};
 
 		this->m_scene->Init();
-		this->m_userInterface.Init(this->m_scene.get(), this->m_scriptingHost);
+		this->m_userInterface.Init(this->m_scene.get());
 	}
 
 	void Update(float delta) override
@@ -167,11 +167,11 @@ public:
 		auto &scenePanel = m_userInterface.GetPanel<Hush::ScenePanel>();
 		if (scenePanel.ConsumeResized())
 		{
-		    const auto newSize = scenePanel.GetPanelSize();
+			const auto newSize = scenePanel.GetPanelSize();
 			if (newSize.x > 0 && newSize.y > 0)
 			{
-    			m_sceneBufferSize = scenePanel.GetPanelSize();
-    			m_sceneBufferDirty = true;
+				m_sceneBufferSize = scenePanel.GetPanelSize();
+				m_sceneBufferDirty = true;
 			}
 		}
 
