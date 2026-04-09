@@ -9,12 +9,9 @@ endif()
 
 add_subdirectory(engine_core)
 
-add_subdirectory(editor)
+add_subdirectory(bindings)
 
-hush_add_library(TARGET_NAME HushBindings
-        LIB_TYPE OBJECT
-        SRCS bindings/bindings.cpp
-)
+add_subdirectory(editor)
 
 hush_add_library(
         TARGET_NAME HushEngine
@@ -27,15 +24,6 @@ add_library(Hush::Engine ALIAS HushEngine)
 
 target_link_libraries(HushEngine PUBLIC coreclr
         Hush::Libs
-)
-
-add_library(Hush::Bindings ALIAS HushBindings)
-
-target_link_libraries(HushBindings PUBLIC
-        Hush::Threading
-        Hush::Engine
-        Hush::Input
-        Hush::Core
 )
 
 hush_add_executable(
