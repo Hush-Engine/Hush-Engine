@@ -115,7 +115,8 @@ public:
 		wgpuInitInfo.Device = static_cast<WGPUDevice>(gfxDevice->GetNativeHandle());
 		wgpuInitInfo.NumFramesInFlight = 3;
 		// TODO: we need to change this once we support other backends.
-		// This also involves changing the ImGui_ImplWGPU_RenderDrawData call in the ImGui pass to use the correct texture format for the backend.
+		// This also involves changing the ImGui_ImplWGPU_RenderDrawData call in the ImGui pass to use the correct
+		// texture format for the backend.
 		wgpuInitInfo.RenderTargetFormat = wgpuDevice->GetSurfaceFormat();
 		wgpuInitInfo.DepthStencilFormat = WGPUTextureFormat_Undefined;
 		ImGui_ImplWGPU_Init(&wgpuInitInfo);
