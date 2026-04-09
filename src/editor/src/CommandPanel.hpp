@@ -67,7 +67,7 @@ namespace Hush
 
 		EditorInfo *m_editorInfo;
 
-		ScriptingHost* m_scriptingHost;
+		ScriptingHost *m_scriptingHost;
 
 		// For the system selection state
 		int32_t m_selectedSystem = -1;

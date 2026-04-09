@@ -13,8 +13,10 @@ namespace Hush
 {
 	class Scene;
 
-	/// @brief Interface used by the scripting system, all scripting languages should be called through these function pointers, the editor/game app is responsible for filling this struct and communicating it back to the scene
-	struct ScriptingSystemInterface {
+	/// @brief Interface used by the scripting system, all scripting languages should be called through these function
+	/// pointers, the editor/game app is responsible for filling this struct and communicating it back to the scene
+	struct ScriptingSystemInterface
+	{
 		using CallSystemInit_t = void (*)(void *systemHandle);
 		using CallSystemOnUpdate_t = void (*)(void *systemHandle, float delta);
 		using CallSystemOnFixedUpdate_t = void (*)(void *systemHandle, float delta);
@@ -22,12 +24,11 @@ namespace Hush
 		using CallSystemOnRender_t = void (*)(void *systemHandle);
 		using CallSystemOnPreRender_t = void (*)(void *systemHandle);
 		using CallSystemOnPostRender_t = void (*)(void *systemHandle);
-		
 
 		CallSystemInit_t initFunction;
 		CallSystemOnUpdate_t updateFunction;
 		CallSystemOnFixedUpdate_t fixedUpdateFunction;
-		
+
 		CallSystemOnShutdown_t shutdownFunction;
 		CallSystemOnRender_t renderFunction;
 		CallSystemOnPreRender_t preRenderFunction;

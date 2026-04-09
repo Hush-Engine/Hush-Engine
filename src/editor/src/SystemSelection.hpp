@@ -2,15 +2,16 @@
 
 #include <cstdint>
 
-namespace Hush {
+namespace Hush
+{
 	class ScriptingHost;
 	struct ScriptingSystemInfo;
 	class Scene;
+} // namespace Hush
+
+namespace Hush::SystemSelection
+{
+
+	bool RenderSystemListWindow(Scene *scene, ScriptingHost *scriptingHost, int32_t *selectedSystemIndex);
+
 }
-
-namespace Hush::SystemSelection {
-	
-	bool RenderSystemListWindow(Scene* scene, ScriptingHost* scriptingHost, int32_t* selectedSystemIndex);
-
-}
-

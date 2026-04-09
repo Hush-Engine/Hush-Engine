@@ -13,7 +13,7 @@ namespace Hush
 {
 
 	class HushEngine;
-	
+
 	struct ScriptingSystemInfo
 	{
 		static constexpr int32_t MAX_SYS_NAME = 64;
@@ -23,7 +23,6 @@ namespace Hush
 		int32_t registryIndex;
 	};
 
-	
 	class ScriptingHost
 	{
 	public:
@@ -33,16 +32,16 @@ namespace Hush
 			SystemNotFound
 		};
 		// Lifetime
-		using StartScriptingConnection_t = void(*)(HushFuncPtrTable* table, HushEngine* engine);
-		using DisposeScriptingConnection_t = void(*)();
+		using StartScriptingConnection_t = void (*)(HushFuncPtrTable *table, HushEngine *engine);
+		using DisposeScriptingConnection_t = void (*)();
 
 		// System data
 		using GetAvailableSystemsFnPtr_t = bool (*)(ScriptingSystemInfo **outSystemInfoArr, uint64_t systemsCount);
 		using GetSystemCountFnPtr_t = uint64_t (*)();
 		using InstantiateSystemFnPtr_t = uint8_t *(*)(const ScriptingSystemInfo *systeminfo);
 
-
-		static constexpr std::string_view FN_PTR_NOT_INITIALIZED_ERR = "Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
+		static constexpr std::string_view FN_PTR_NOT_INITIALIZED_ERR =
+			"Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
 
 		// We need to load an arbitrary DLL and communicate with it through C calls
 		void Initialize(std::string_view dllPath);
@@ -52,11 +51,12 @@ namespace Hush
 		Result<uintptr_t, EError> CreateSystem(const ScriptingSystemInfo &systemInfo);
 
 		[[nodiscard]]
-		StartScriptingConnection_t GetStartScriptingConnectionFn() const noexcept {
+		StartScriptingConnection_t GetStartScriptingConnectionFn() const noexcept
+		{
 			HUSH_ASSERT(this->m_startScriptingConnectionFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
 			return this->m_startScriptingConnectionFn;
 		}
-		
+
 		[[nodiscard]]
 		GetAvailableSystemsFnPtr_t GetAvailableSystemsFn() const noexcept
 		{
@@ -72,10 +72,11 @@ namespace Hush
 		}
 
 		[[nodiscard]]
-		ScriptingSystemInterface* GetScriptingSystemInterface() noexcept {
+		ScriptingSystemInterface *GetScriptingSystemInterface() noexcept
+		{
 			return &this->m_scriptingInterface;
 		}
-		
+
 	private:
 		void FetchSystemsIntoCache();
 
@@ -84,7 +85,7 @@ namespace Hush
 
 		StartScriptingConnection_t m_startScriptingConnectionFn = nullptr;
 		DisposeScriptingConnection_t m_disposeScriptingConnectionFn = nullptr;
-		
+
 		GetAvailableSystemsFnPtr_t m_getAvailableSystemsFn = nullptr;
 		GetSystemCountFnPtr_t m_getSystemCountFn = nullptr;
 		InstantiateSystemFnPtr_t m_instantiateSystemFn = nullptr;

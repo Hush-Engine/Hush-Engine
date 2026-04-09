@@ -32,11 +32,11 @@
 #include "Shared/DirectionalLight.hpp"
 #include "SystemSelection.hpp"
 
-constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component", "add-system", "help"};
+constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component",
+															   "add-system", "help"};
 
 // NOLINTNEXTLINE
 #define CALC_CMD_HASH(idx) Hush::Hashing::Fnv1a(BUILT_IN_COMMANDS[idx].data(), BUILT_IN_COMMANDS[idx].size())
-
 
 enum class EBuiltinCommands : uint32_t
 {
@@ -75,8 +75,10 @@ void Hush::CommandPanel::OnRender(float deltaTime)
 		this->AddComponentPopup();
 		break;
 	case EState::AddSystemMode: {
-		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedSystem);
-		if (!popupOpen) {
+		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost,
+																 &this->m_selectedSystem);
+		if (!popupOpen)
+		{
 			this->CloseCommandMode();
 		}
 		break;

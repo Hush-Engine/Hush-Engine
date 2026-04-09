@@ -240,7 +240,7 @@ namespace Hush::RenderGraph
 
 			ResourceModel(const typename T::Descriptor &descriptor, T &&obj)
 			{
-				new (const_cast<typename T::Descriptor*>(&this->descriptor)) typename T::Descriptor(descriptor);
+				new (const_cast<typename T::Descriptor *>(&this->descriptor)) typename T::Descriptor(descriptor);
 				this->resourceInstance = std::move(obj);
 			}
 

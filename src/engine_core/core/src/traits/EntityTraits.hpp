@@ -380,16 +380,19 @@ namespace Hush::ComponentTraits
 		};
 	}
 
-	template<class T>
-	const char* GetTypeName() {
-		if constexpr (ReflectedType<T>) {
+	template <class T>
+	const char *GetTypeName()
+	{
+		if constexpr (ReflectedType<T>)
+		{
 			return T::TypeName().data();
 		}
-		else {
+		else
+		{
 			return typeid(T).name();
 		}
 	}
-	
+
 	template <typename T>
 	ComponentInfo GetComponentInfo()
 	{

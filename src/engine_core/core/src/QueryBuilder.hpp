@@ -35,10 +35,9 @@ namespace Hush
 		void InitDescriptor(uint8_t *queryDesc, std::span<Entity::EntityId> components);
 
 		[[hush::export]]
-		RawQuery InitQuery(Scene* scene, const uint8_t *queryDesc);
+		RawQuery InitQuery(Scene *scene, const uint8_t *queryDesc);
 
 	} // namespace impl::QueryBuilderImpl
-
 
 	constexpr size_t DESC_ALIGN = 8;
 	constexpr size_t DESC_SIZE = 2440;

@@ -37,9 +37,9 @@ void Hush::Scene::Init()
 
 	// TODO: Group user systems into buckets
 	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
-	Threading::Wait(Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(), [initFunc](uintptr_t system) {
-		initFunc(reinterpret_cast<void*>(system));
-	}));
+	Threading::Wait(
+		Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
+							   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
 
 	this->m_isInitialized = true;
 }
@@ -57,10 +57,10 @@ void Hush::Scene::Update(float delta)
 
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		updateFunc(reinterpret_cast<void*>(system), delta);
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		updateFunc(reinterpret_cast<void *>(system), delta);
 	}
-	
 }
 
 void Hush::Scene::FixedUpdate(float delta)
@@ -73,11 +73,13 @@ void Hush::Scene::FixedUpdate(float delta)
 				system->OnFixedUpdate(delta);
 			}));
 	}
-	
-	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc = this->m_scriptingInterface->fixedUpdateFunction;
+
+	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
+		this->m_scriptingInterface->fixedUpdateFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		fixedUpdateFunc(reinterpret_cast<void*>(system), delta);
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		fixedUpdateFunc(reinterpret_cast<void *>(system), delta);
 	}
 }
 
@@ -88,13 +90,13 @@ void Hush::Scene::PreRender()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
 	}
-	
+
 	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		preRenderFunc(reinterpret_cast<void*>(system));
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		preRenderFunc(reinterpret_cast<void *>(system));
 	}
-	
 }
 void Hush::Scene::Render()
 {
@@ -103,11 +105,12 @@ void Hush::Scene::Render()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
 	}
-	
+
 	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		renderFunc(reinterpret_cast<void*>(system));
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		renderFunc(reinterpret_cast<void *>(system));
 	}
 }
 
@@ -118,11 +121,12 @@ void Hush::Scene::PostRender()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
 	}
-	
+
 	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		postRender(reinterpret_cast<void*>(system));
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		postRender(reinterpret_cast<void *>(system));
 	}
 }
 
@@ -133,11 +137,12 @@ void Hush::Scene::Shutdown()
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
 	}
-	
+
 	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
 	// TODO: Sort in threading
-	for (uintptr_t system : this->m_scriptingSystems) {
-		shutdownFunc(reinterpret_cast<void*>(system));
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		shutdownFunc(reinterpret_cast<void *>(system));
 	}
 }
 
@@ -253,12 +258,12 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	ecs_entity_desc_t associatedEntityDesc = {};
 
 	associatedEntityDesc.name = desc.name;
-	
+
 	componentDesc.type.alignment = static_cast<ecs_size_t>(componentInfo->alignment);
 	componentDesc.type.size = static_cast<ecs_size_t>(componentInfo->size);
 	componentDesc.type.name = componentInfo->name.data();
 	componentDesc.type.hooks.binding_ctx = componentInfo;
-	
+
 	auto *world = static_cast<ecs_world_t *>(GetWorld());
 	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
@@ -438,8 +443,9 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	return componentId;
 }
 
-Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const {
-	auto* world = static_cast<ecs_world_t*>(this->m_world);
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	Entity::EntityId result = ecs_lookup(world, tag.data());
 	return result;
 }
@@ -492,11 +498,13 @@ void Hush::Scene::AddEngineSystem(ISystem *system)
 	SortSystems();
 }
 
-void Hush::Scene::AddScriptingSystem(uintptr_t system) {
+void Hush::Scene::AddScriptingSystem(uintptr_t system)
+{
 	this->m_scriptingSystems.push_back(system);
 	// If the system is added in the middle of a frame, we should always call init
-	if (this->m_isInitialized) {
-		this->m_scriptingInterface->initFunction(reinterpret_cast<void*>(system));
+	if (this->m_isInitialized)
+	{
+		this->m_scriptingInterface->initFunction(reinterpret_cast<void *>(system));
 	}
 }
 

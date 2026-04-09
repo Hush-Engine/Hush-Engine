@@ -77,14 +77,14 @@ public:
 
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
-		
+
 		// Scriptingb
-		constexpr std::string_view scriptingProjDllPath = "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		constexpr std::string_view scriptingProjDllPath =
+			"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 		this->m_scriptingHost->Initialize(scriptingProjDllPath);
 		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		
-		
+
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
 		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
@@ -489,7 +489,7 @@ private:
 	Hush::ResourceManager *m_resourceManager = nullptr;
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
-	Hush::ScriptingHost* m_scriptingHost = nullptr;
+	Hush::ScriptingHost *m_scriptingHost = nullptr;
 	uintptr_t m_testSystem = 0;
 
 	/// Current desired size for the scene render texture (matches the

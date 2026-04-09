@@ -7,7 +7,7 @@
 
 uint8_t *Hush::OpaqueQueryDescriptor::data() noexcept
 {
-	return reinterpret_cast<uint8_t*>(this->m_opaqueDesc.data());
+	return reinterpret_cast<uint8_t *>(this->m_opaqueDesc.data());
 }
 
 void Hush::impl::QueryBuilderImpl::WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef,
@@ -53,12 +53,12 @@ void Hush::impl::QueryBuilderImpl::InitDescriptor(uint8_t *queryDesc, std::span<
 	}
 }
 
-Hush::RawQuery Hush::impl::QueryBuilderImpl::InitQuery(Scene* scene, const uint8_t *queryDesc)
+Hush::RawQuery Hush::impl::QueryBuilderImpl::InitQuery(Scene *scene, const uint8_t *queryDesc)
 {
 	HUSH_ASSERT(scene != nullptr, "Unable to build query for a null scene!");
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
 	const auto *desc = reinterpret_cast<const ecs_query_desc_t *>(queryDesc);
 	auto *worldInterpreted = reinterpret_cast<ecs_world_t *>(scene->GetWorld());
-	void* queryData = ecs_query_init(worldInterpreted, desc);
-	return RawQuery {scene, queryData};
+	void *queryData = ecs_query_init(worldInterpreted, desc);
+	return RawQuery{scene, queryData};
 }

@@ -318,7 +318,8 @@ namespace Hush
 		/// Check if a component is registered.
 		/// @param componentId Id of the component.
 		/// @return True if the component is registered, false otherwise.
-		[[nodiscard]] bool IsComponentRegistered(EntityId componentId) const;
+		[[nodiscard]]
+		bool IsComponentRegistered(EntityId componentId) const;
 
 		/// Register a C++ component. C++ components are special because they use a cache in the scene to
 		/// avoid registering the same component multiple times.
