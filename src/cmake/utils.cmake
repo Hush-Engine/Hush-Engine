@@ -14,9 +14,15 @@ function (download_hush_file)
 
     set(OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DOWNLOAD_FILENAME}")
 
-    if (EXISTS ${OUTPUT_PATH})
-        message(STATUS "File ${DOWNLOAD_FILENAME} already exists, skipping download.")
-        return()
+    if (EXISTS "${OUTPUT_PATH}")
+        file(SHA256 "${OUTPUT_PATH}" ACTUAL_HASH)
+        if (ACTUAL_HASH STREQUAL DOWNLOAD_EXPECTED_HASH)
+            message(STATUS "File ${DOWNLOAD_FILENAME} already exists and matches the expected hash, skipping download.")
+            return()
+        endif ()
+
+        message(STATUS "File ${DOWNLOAD_FILENAME} exists but has a different hash, re-downloading.")
+        file(REMOVE "${OUTPUT_PATH}")
     endif ()
 
     message(STATUS "Downloading ${DOWNLOAD_FILENAME} from ${DOWNLOAD_URL}...")
