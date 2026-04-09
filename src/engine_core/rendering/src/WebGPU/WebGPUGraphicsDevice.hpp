@@ -153,6 +153,8 @@ namespace Hush::Graphics
 
 		void PollEvents();
 
+		ETextureFormat GetPreferredSwapchainFormat() const override;
+
 	private:
 		void InitializeInstance();
 		void InitializeAdapter();

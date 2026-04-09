@@ -11,6 +11,7 @@
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
+#include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
@@ -109,10 +110,13 @@ public:
 
 		// Renderer backend (WebGPU / wgpu-native)
 		Hush::Graphics::IGraphicsDevice *gfxDevice = windowRenderer->GetGraphicsDevice();
+		auto *wgpuDevice = dynamic_cast<Hush::Graphics::WebGPUGraphicsDevice *>(gfxDevice);
 		ImGui_ImplWGPU_InitInfo wgpuInitInfo{};
 		wgpuInitInfo.Device = static_cast<WGPUDevice>(gfxDevice->GetNativeHandle());
 		wgpuInitInfo.NumFramesInFlight = 3;
-		wgpuInitInfo.RenderTargetFormat = WGPUTextureFormat_BGRA8Unorm;
+		// TODO: we need to change this once we support other backends.
+		// This also involves changing the ImGui_ImplWGPU_RenderDrawData call in the ImGui pass to use the correct texture format for the backend.
+		wgpuInitInfo.RenderTargetFormat = wgpuDevice->GetSurfaceFormat();
 		wgpuInitInfo.DepthStencilFormat = WGPUTextureFormat_Undefined;
 		ImGui_ImplWGPU_Init(&wgpuInitInfo);
 
