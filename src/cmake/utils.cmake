@@ -3,24 +3,65 @@
 # 2024-09-22
 # CMake utils
 
-if (MSVC)
-    # Check if the file exists
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/hush-reflection.exe")
-        set(EXPECTED_SHA256 "ba891ae7ef960d06d0637489a0dc5b32d8cf6295df6b94fc228858ac82efcb50")
-        file(
-                DOWNLOAD "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.1.0/hush-reflection.exe"
-                "${CMAKE_BINARY_DIR}/hush-reflection.exe"
-                STATUS download_status
-                EXPECTED_HASH SHA256=${EXPECTED_SHA256}
-        )
-        if (NOT download_status EQUAL 0)
-            message(FATAL_ERROR "Failed to download hush-reflection.exe: ${download_status}")
+# Function to download a file to the CMAKE_BINARY_DIR if it doesn't exist.
+# This is a helper to download hush-reflection and hush-export binaries.
+# Args:
+#  - URL: URL to download the file from
+#  - FILENAME: Name of the file to save as
+#  - EXPECTED_HASH: Expected SHA256 hash of the file
+function (download_hush_file)
+    cmake_parse_arguments(DOWNLOAD "" "URL;FILENAME;EXPECTED_HASH" "" ${ARGN})
+
+    set(OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DOWNLOAD_FILENAME}")
+
+    if (EXISTS "${OUTPUT_PATH}")
+        file(SHA256 "${OUTPUT_PATH}" ACTUAL_HASH)
+        if (ACTUAL_HASH STREQUAL DOWNLOAD_EXPECTED_HASH)
+            message(STATUS "File ${DOWNLOAD_FILENAME} already exists and matches the expected hash, skipping download.")
+            return()
         endif ()
-    else ()
-        message(STATUS "hush-reflection.exe already exists, skipping download.")
+
+        message(STATUS "File ${DOWNLOAD_FILENAME} exists but has a different hash, re-downloading.")
+        file(REMOVE "${OUTPUT_PATH}")
     endif ()
 
+    message(STATUS "Downloading ${DOWNLOAD_FILENAME} from ${DOWNLOAD_URL}...")
+
+    file(
+      DOWNLOAD ${DOWNLOAD_URL}
+      "${CMAKE_BINARY_DIR}/${DOWNLOAD_FILENAME}"
+      STATUS download_status
+      EXPECTED_HASH SHA256=${DOWNLOAD_EXPECTED_HASH}
+    )
+
+    if (NOT download_status EQUAL 0)
+        message(FATAL_ERROR "Failed to download ${DOWNLOAD_FILENAME} from ${DOWNLOAD_URL}. Status: ${download_status}")
+    endif ()
+
+    message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
+endfunction()
+
+if (MSVC)
+    set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.1/hush-reflection.exe")
+    set (HUSH_REFLECTION_HASH "aa27b31c69f3bbd090a5d32added5f86b231b9f5f4b841ad6ad256c39f14def0")
+
+    download_hush_file(
+            URL ${HUSH_REFLECTION_URL}
+            FILENAME "hush-reflection.exe"
+            EXPECTED_HASH ${HUSH_REFLECTION_HASH}
+    )
+
+    set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.1/hush-export.exe")
+    set (HUSH_EXPORT_HASH "12445f91d2bfdecf22d4975e7010dcda7a5c36abe77f28ff6838ec1aca3c3231")
+
+    download_hush_file(
+            URL ${HUSH_EXPORT_URL}
+            FILENAME "hush-export.exe"
+            EXPECTED_HASH ${HUSH_EXPORT_HASH}
+    )
+
     set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+    set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
 endif ()
 
 
@@ -100,7 +141,7 @@ macro(hush_add_library)
     cmake_parse_arguments(LIB "" "TARGET_NAME;LIB_TYPE" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
     add_library(${LIB_TARGET_NAME} ${LIB_LIB_TYPE} ${LIB_SRCS})
     target_include_directories(${LIB_TARGET_NAME} PUBLIC ${LIB_PUBLIC_HEADER_DIRS})
-    target_include_directories(${LIB_TARGET_NAME} PRIVATE ${LIB_PRIVATE_HEADER_DIRS})
+    target_include_directories(${LIB_TARGET_NAME} PRIVATE ${LIB_PRIVATE_HEADER_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
     set_all_warnings(${LIB_TARGET_NAME})
 
     if (${HUSH_ENABLE_LTO})

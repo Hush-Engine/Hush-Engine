@@ -12,8 +12,10 @@ file(GLOB IMGUIZMO_BASE_SRC "${GUIZMO_BASE_INCLUDE_PATH}/*.h" "${GUIZMO_BASE_INC
 set(IMGUI_SOURCES
  ${BASE_INCLUDE_PATH}/backends/imgui_impl_sdl2.cpp
  ${BASE_INCLUDE_PATH}/backends/imgui_impl_sdl2.h
- ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.cpp
- ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.h
+ # ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.cpp
+ # ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.h
+ ${BASE_INCLUDE_PATH}/backends/imgui_impl_wgpu.cpp
+ ${BASE_INCLUDE_PATH}/backends/imgui_impl_wgpu.h
  ${IMGUI_BASE_SRC}
 )
 
@@ -28,9 +30,11 @@ add_library(imgui STATIC ${IMGUI_SOURCES})
 add_library(imguizmo STATIC ${IMGUIZMO_SOURCES})
 
 message("Linking dependencies...")
-target_link_libraries(imgui PUBLIC SDL2::SDL2)
+target_link_libraries(imgui PUBLIC SDL2::SDL2 webgpu)
 
-target_include_directories(imgui PUBLIC include)
+target_compile_definitions(imgui PUBLIC IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+
+target_include_directories(imgui PUBLIC include include/imgui)
 target_include_directories(imguizmo PUBLIC include)
 
 message("*****ImGui End*****")

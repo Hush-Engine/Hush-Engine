@@ -7,8 +7,9 @@
 
 void Hush::RenderingSystem::Init()
 {
+	// TODO: Check why we can't do Cache::All
 	this->m_renderableTargetsQuery =
-		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::All);
+		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::Auto);
 }
 
 void Hush::RenderingSystem::OnShutdown()
@@ -31,7 +32,6 @@ void Hush::RenderingSystem::OnPreRender()
 {
 	// TODO: Update camera view matrix and everything else in the scene data here
 	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	renderer->ClearDrawContext();
 	this->m_renderableTargetsQuery.Each([&renderer](Entity &_, const MeshReference &mesh, const WorldTransform &xform) {
 		renderer->PushMesh(&xform, mesh.GetMesh().Get());
 	});

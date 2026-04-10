@@ -692,4 +692,9 @@ namespace Hush::Graphics
 #endif
 	}
 
+	ETextureFormat WebGPUGraphicsDevice::GetPreferredSwapchainFormat() const
+	{
+		return ConvertToEngineTextureFormat(m_surfaceFormat);
+	}
+
 } // namespace Hush::Graphics

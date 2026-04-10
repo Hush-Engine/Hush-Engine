@@ -10,6 +10,8 @@ namespace Hush
 
 		EditorCamera(float degFov, float width, float height, float nearP, float farP);
 
+		~EditorCamera() override = default;
+
 		[[nodiscard]]
 		glm::mat4 GetViewMatrix() const noexcept;
 

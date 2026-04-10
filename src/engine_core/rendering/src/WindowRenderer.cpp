@@ -9,6 +9,7 @@
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_video.h>
+#include <imgui/backends/imgui_impl_sdl2.h>
 
 // Graphics backend
 #if defined(HUSH_VULKAN_IMPL)
@@ -121,6 +122,8 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
 	SDL_PollEvent(&event);
+	// Forward event to ImGui
+	ImGui_ImplSDL2_ProcessEvent(&event);
 	// Forward event to the renderer
 	switch (event.type)
 	{

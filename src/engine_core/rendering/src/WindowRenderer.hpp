@@ -13,6 +13,7 @@
 
 #include <SDL2/SDL.h>
 #include <InputManager.hpp>
+#include <functional>
 #include <memory>
 
 #include "RHI/IGraphicsDevice.hpp"
@@ -67,6 +68,13 @@ namespace Hush
 		Hush::Graphics::IGraphicsDevice *GetGraphicsDevice() noexcept
 		{
 			return this->m_windowRenderer.get();
+		}
+
+		/// @brief Returns the raw SDL window pointer for use by subsystems (e.g. ImGui).
+		[[nodiscard]]
+		SDL_Window *GetSDLWindow() noexcept
+		{
+			return this->m_windowPtr;
 		}
 
 	private:

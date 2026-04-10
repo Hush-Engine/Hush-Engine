@@ -41,6 +41,20 @@ namespace Hush
 		[[nodiscard]]
 		float GetFarPlane() const noexcept;
 
+		/// @brief Update the viewport dimensions (e.g. when the scene panel resizes).
+		/// This affects the aspect ratio used by GetProjectionMatrix().
+		void SetViewportSize(float width, float height) noexcept
+		{
+			m_viewportSize = {width, height};
+		}
+
+		/// @brief Returns the current viewport size.
+		[[nodiscard]]
+		glm::vec2 GetViewportSize() const noexcept
+		{
+			return m_viewportSize;
+		}
+
 	protected:
 		// NOLINTNEXTLINE
 		float m_exposure = 0.8f; // Aribtrary value (inspired from the Hazel Engine)

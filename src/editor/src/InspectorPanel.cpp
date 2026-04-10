@@ -6,11 +6,9 @@
 #include "HushEngine.hpp"
 #include "InputManager.hpp"
 #include "Mat4Math.hpp"
-#include "Renderer.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
-#include "Vulkan/GltfMetallicRoughness.hpp"
-#include "WindowManager.hpp"
+// #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "components/EditorInfo.hpp"
 #include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
@@ -45,48 +43,48 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
-{
+// void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
+// {
 
-	ImGui::Text("Material: %s", component->GetName().c_str());
+// 	ImGui::Text("Material: %s", component->GetName().c_str());
 
-	// ECullMode cullMode = component->GetCullMode();
-	// Check which instance of the material is
-	// TODO: Do this with the reflection API instead of dynamic casting
-	auto *pbrMaterial = dynamic_cast<GLTFMetallicRoughness *>(component);
-	if (pbrMaterial == nullptr)
-	{
-		return;
-	}
-	const float range = 10.0F;
+// 	// ECullMode cullMode = component->GetCullMode();
+// 	// Check which instance of the material is
+// 	// TODO: Do this with the reflection API instead of dynamic casting
+// 	auto *pbrMaterial = dynamic_cast<GLTFMetallicRoughness *>(component);
+// 	if (pbrMaterial == nullptr)
+// 	{
+// 		return;
+// 	}
+// 	const float range = 10.0F;
 
-	// Albedo color
-	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
-	ImGui::ColorEdit4(ConcatCStr("Albedo##", component->GetName()).c_str(), reinterpret_cast<float *>(&albedo));
+// 	// Albedo color
+// 	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
+// 	ImGui::ColorEdit4(ConcatCStr("Albedo##", component->GetName()).c_str(), reinterpret_cast<float *>(&albedo));
 
-	glm::vec3 &emission = pbrMaterial->GetEmissionColor();
-	ImGui::ColorEdit3(ConcatCStr("Emission##", component->GetName()).c_str(), reinterpret_cast<float *>(&emission));
+// 	glm::vec3 &emission = pbrMaterial->GetEmissionColor();
+// 	ImGui::ColorEdit3(ConcatCStr("Emission##", component->GetName()).c_str(), reinterpret_cast<float *>(&emission));
 
-	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
+// 	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
 
-	float emissionFactor = pbrMaterial->EmissionFactor();
-	ImGui::InputFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor);
+// 	float emissionFactor = pbrMaterial->EmissionFactor();
+// 	ImGui::InputFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor);
 
-	pbrMaterial->SetEmissionFactor(emissionFactor);
+// 	pbrMaterial->SetEmissionFactor(emissionFactor);
 
-	float roughness = pbrMaterial->GetRoughnessFactor();
+// 	float roughness = pbrMaterial->GetRoughnessFactor();
 
-	ImGui::SliderFloat(ConcatCStr("Roughness Factor##", component->GetName()).c_str(), &roughness, 0.F, 1.0F);
-	pbrMaterial->SetRoughnessFactor(roughness);
+// 	ImGui::SliderFloat(ConcatCStr("Roughness Factor##", component->GetName()).c_str(), &roughness, 0.F, 1.0F);
+// 	pbrMaterial->SetRoughnessFactor(roughness);
 
-	float metallic = pbrMaterial->GetMetallicFactor();
-	ImGui::SliderFloat(ConcatCStr("Metallic Factor##", component->GetName()).c_str(), &metallic, -1.0F, 1.0F);
-	pbrMaterial->SetMetallicFactor(metallic);
+// 	float metallic = pbrMaterial->GetMetallicFactor();
+// 	ImGui::SliderFloat(ConcatCStr("Metallic Factor##", component->GetName()).c_str(), &metallic, -1.0F, 1.0F);
+// 	pbrMaterial->SetMetallicFactor(metallic);
 
-	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
-	ImGui::SliderFloat(ConcatCStr("Alpha Threshold##", component->GetName()).c_str(), &alphaThreshold, 0.0F, 1.0F);
-	pbrMaterial->SetAlphaThreshold(alphaThreshold);
-}
+// 	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
+// 	ImGui::SliderFloat(ConcatCStr("Alpha Threshold##", component->GetName()).c_str(), &alphaThreshold, 0.0F, 1.0F);
+// 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
+// }
 
 void Hush::Serialize(MeshReference *component, const char *entityName)
 {
@@ -99,16 +97,16 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
 	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
-	// Iterate over the surfaces and  serialize their materials as submeshes
-	for (size_t i = 0; i < surfaces.size(); i++)
-	{
-		const GeoSurface &surface = surfaces[i];
-		if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
-									ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			Serialize(surface.material.get(), std::to_string(i).c_str());
-		}
-	}
+	// // Iterate over the surfaces and  serialize their materials as submeshes
+	// for (size_t i = 0; i < surfaces.size(); i++)
+	// {
+	// 	const GeoSurface &surface = surfaces[i];
+	// 	if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
+	// 								ImGuiTreeNodeFlags_DefaultOpen))
+	// 	{
+	// 		Serialize(surface.material.get(), std::to_string(i).c_str());
+	// 	}
+	// }
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
@@ -157,6 +155,9 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 
 	activeScene->CreateQuery<EditorInfo>().Each(
 		[this](Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+
+	activeScene->CreateQuery<EditorCamera>().Each(
+		[this](Entity &entity, EditorCamera &camRef) { this->m_editorCamera = &camRef; });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -217,8 +218,11 @@ void Hush::InspectorPanel::RenderGizmo()
 		}
 	}
 
-	const IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	const EditorCamera &cam = renderer->GetEditorCamera();
+	if (this->m_editorCamera == nullptr)
+	{
+		return;
+	}
+	const EditorCamera &cam = *this->m_editorCamera;
 	// Start with translation Gizmo
 	ImGuiIO &io = ImGui::GetIO();
 	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);

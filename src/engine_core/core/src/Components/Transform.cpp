@@ -12,7 +12,7 @@ Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, co
 	this->m_transform = Mat4Math::ComposeTRS(position, rotation, scale);
 }
 
-void Hush::Transform::SetPosition(const glm::vec3 &position) noexcept
+void Hush::Transform::SetPosition(glm::vec3 position) noexcept
 {
 	this->m_transform[Mat4Math::TRANSLATION_COLUMN] = glm::vec4(position, 1.0F);
 }

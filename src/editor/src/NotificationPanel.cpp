@@ -51,9 +51,7 @@ void Hush::NotificationPanel::OnRender(float deltaTime)
 
 		// TODO: include delta
 		notification.remainingTime -= deltaTime;
-		int32_t renderTargetWidth;
-		int32_t renderTargetHeight;
-		WindowManager::GetMainWindow()->GetWindowSize(&renderTargetWidth, &renderTargetHeight);
+		const auto renderTargetSize = WindowManager::GetMainWindow()->GetWindowSize();
 		constexpr ImVec2 maxDimensions = {400, 100}; // Some way to make height auto grow??
 		constexpr float padding = 8.f;
 		float wrapWidth =
@@ -73,8 +71,8 @@ void Hush::NotificationPanel::OnRender(float deltaTime)
 		constexpr float verticalGap = 4.f;
 		constexpr float startYOffset = 20;
 		const ImVec2 toastPos =
-			ImVec2(renderTargetWidth - maxDimensions.x,
-				   renderTargetHeight - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
+			ImVec2(renderTargetSize.x - maxDimensions.x,
+				   renderTargetSize.y - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
 		ImGui::SetNextWindowPos(toastPos);
 		ImGui::SetNextWindowSize(toastSize);
 		std::string notificationName = name.data();

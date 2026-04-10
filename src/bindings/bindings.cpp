@@ -6,8 +6,8 @@
 // NOLINTBEGIN
 #include "bindings.hpp"
 
-#if __has_include("HushBindings.cpp")
-#include "HushBindings.cpp"
+#if __has_include("./HushBindings.cpp")
+#include "./HushBindings.cpp"
 #endif
 
 // NOLINTEND
