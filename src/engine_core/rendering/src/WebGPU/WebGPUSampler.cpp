@@ -6,12 +6,14 @@
 
 #include "WebGPUSampler.hpp"
 #include "WebGPUPipeline.hpp"
+#include "Profiling.hpp"
 
 namespace Hush::Graphics
 {
 	WebGPUSampler::WebGPUSampler(wgpu::Device device, const SamplerDescriptor &descriptor)
 		: m_descriptor(descriptor)
 	{
+		ZoneScoped;
 		if (device == nullptr)
 		{
 			return;

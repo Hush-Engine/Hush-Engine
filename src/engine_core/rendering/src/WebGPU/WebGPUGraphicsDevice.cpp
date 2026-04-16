@@ -21,6 +21,7 @@
 #include <sdl2webgpu/sdl2webgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include <webgpu/webgpu.hpp>
+#include "Profiling.hpp"
 
 namespace Hush::Graphics
 {
@@ -28,6 +29,7 @@ namespace Hush::Graphics
 	WebGPUGraphicsDevice::WebGPUGraphicsDevice(void *windowHandle)
 		: m_windowHandle(windowHandle)
 	{
+		ZoneScoped;
 		LogTrace("Initializing WebGPU Graphics Device");
 
 		InitializeInstance();
@@ -181,6 +183,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
 	{
+		ZoneScoped;
 		wgpu::BufferDescriptor desc{};
 		desc.size = descriptor.size;
 		desc.usage = ConvertBufferUsage(descriptor.usage);
@@ -234,6 +237,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IGraphicsTexture> WebGPUGraphicsDevice::CreateTexture(const TextureDescriptor &descriptor)
 	{
+		ZoneScoped;
 		wgpu::TextureDescriptor desc{};
 		desc.size.width = descriptor.width;
 		desc.size.height = descriptor.height;
@@ -283,6 +287,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IShaderModule> WebGPUGraphicsDevice::CreateShaderModule(const ShaderModuleDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto module = std::make_unique<WebGPUShaderModule>(m_device, descriptor);
 		if (!module->IsValid())
 		{
@@ -295,6 +300,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IGraphicsPipeline> WebGPUGraphicsDevice::CreateGraphicsPipeline(
 		const GraphicsPipelineDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto pipeline = std::make_unique<WebGPUGraphicsPipeline>(m_device, descriptor);
 		if (!pipeline->IsValid())
 		{
@@ -307,6 +313,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IComputePipeline> WebGPUGraphicsDevice::CreateComputePipeline(
 		const ComputePipelineDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto pipeline = std::make_unique<WebGPUComputePipeline>(m_device, descriptor);
 		if (!pipeline->IsValid())
 		{
@@ -361,6 +368,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::BeginFrame()
 	{
+		ZoneScoped;
 		if (m_needsResize)
 		{
 			// Release stale frame texture/view from the previous frame before
@@ -415,6 +423,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::EndFrame()
 	{
+		ZoneScoped;
 		m_surface.present();
 		m_currentFrameView = nullptr;
 		FlushDeletionQueue();

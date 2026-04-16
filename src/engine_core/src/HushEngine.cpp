@@ -11,8 +11,10 @@
 #include "WindowRenderer.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include <WindowManager.hpp>
+#include <algorithm>
 #include <cstdint>
 #include <glm/ext/vector_float3.hpp>
+#include "Profiling.hpp"
 #include <glm/trigonometric.hpp>
 #include <imgui/imgui.h>
 
@@ -39,13 +41,25 @@ Hush::HushEngine::~HushEngine()
 	this->Quit();
 }
 
-void Hush::HushEngine::Run()
+void Hush::HushEngine::Run(std::span<const char *> args)
 {
 	// Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
 	// mount additional directories or archives as needed)
 	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
 
 	this->m_app = LoadApplication(this);
+
+	// Check for --wait-profiler flag
+	if (std::ranges::find_if(args, [](const char *arg) { return std::string_view(arg) == "--wait-profiler"; }) !=
+		args.end())
+	{
+		LogInfo("Waiting for Tracy profiler to connect...");
+		while (!TracyIsConnected)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		LogInfo("Tracy profiler connected!");
+	}
 
 	this->m_isApplicationRunning = true;
 	this->m_internal->windowRenderer =
@@ -66,8 +80,14 @@ void Hush::HushEngine::Run()
 
 	while (this->m_isApplicationRunning)
 	{
+		ZoneScoped;
 		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-		this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
+
+		{
+			ZoneScopedN("HandleEvents");
+			this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
+		}
+
 		// TODO: Change this to the window renderer
 		if (!this->m_internal->windowRenderer->IsActive())
 		{
@@ -79,17 +99,34 @@ void Hush::HushEngine::Run()
 
 		const float deltaTime = std::chrono::duration<float>(elapsed).count();
 
-		this->m_app->Update(deltaTime);
+		{
+			ZoneScopedN("Update");
+			this->m_app->Update(deltaTime);
+		}
 
-		this->m_app->OnPreRender();
+		{
+			ZoneScopedN("PreRender");
+			this->m_app->OnPreRender();
+		}
 
-		this->m_app->OnRender(deltaTime);
+		{
+			ZoneScopedN("Render");
+			this->m_app->OnRender(deltaTime);
+		}
 
-		this->m_app->OnPostRender();
+		{
+			ZoneScopedN("PostRender");
+			this->m_app->OnPostRender();
+		}
 
-		this->m_app->DisposeFrame();
+		{
+			ZoneScopedN("DisposeFrame");
+			this->m_app->DisposeFrame();
+		}
+
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		elapsed = end - start;
+		FrameMark;
 	}
 }
 

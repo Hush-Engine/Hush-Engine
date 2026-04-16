@@ -13,6 +13,7 @@
 
 #include "RenderGraphExecutor.hpp"
 #include <Assertions.hpp>
+#include <Profiling.hpp>
 #include <algorithm>
 
 using namespace Hush::RenderGraph;
@@ -33,6 +34,7 @@ void RenderGraphExecutor::ResetFrameState()
 
 void RenderGraphExecutor::RealizeResources(RenderGraph &graph)
 {
+	ZoneScoped;
 	graph.GetResourceManager().ForEachResource([&](ResourceId /*id*/, ResourceHandle &handle) {
 		if (!handle.IsRealized())
 		{
@@ -178,6 +180,7 @@ DependencyLevelExecutionContext RenderGraphExecutor::BuildExecutionContext(Rende
 																		   const ResourceManager &resourceManager,
 																		   uint32_t queueCount)
 {
+	ZoneScoped;
 	DependencyLevelExecutionContext execCtx;
 	execCtx.queuePlans.resize(queueCount);
 
@@ -484,6 +487,7 @@ void RenderGraphExecutor::BuildBatchesForIndependentQueue(QueueExecutionPlan &pl
 
 void RenderGraphExecutor::Execute(RenderGraph &graph)
 {
+	ZoneScoped;
 	HUSH_ASSERT(graph.IsCompiled(), "Cannot execute a dirty render graph! Call Compile() first.");
 	HUSH_ASSERT(m_device != nullptr, "Graphics device cannot be null!");
 

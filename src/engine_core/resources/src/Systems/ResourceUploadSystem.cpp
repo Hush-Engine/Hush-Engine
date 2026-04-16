@@ -7,6 +7,7 @@
 
 #include "ResourceUploadSystem.hpp"
 #include "Assertions.hpp"
+#include "Profiling.hpp"
 #include "Components/GpuUploadComponent.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
@@ -97,8 +98,13 @@ void Hush::Renderer::ResourceUploadSystem::OnFixedUpdate([[maybe_unused]] float 
 
 void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 {
+	ZoneScoped;
+
 	void *mapped = nullptr;
-	mapped = m_stagingBuffer->Map(m_renderDevice->GetGraphicsDevice());
+	{
+		ZoneScopedN("MapStagingBuffer");
+		mapped = m_stagingBuffer->Map(m_renderDevice->GetGraphicsDevice());
+	}
 	HUSH_ASSERT(mapped != nullptr, "Failed to map the staging buffer for CPU writes!");
 
 	// First half → meshes
@@ -120,8 +126,14 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 
 	// CPU-only staging: memcpy dirty data into the mapped buffer and
 	// record pending copy descriptors.  No GPU calls happen here.
-	StageDirtyMeshes();
-	StageDirtyTextures();
+	{
+		ZoneScopedN("StageDirtyMeshes");
+		StageDirtyMeshes();
+	}
+	{
+		ZoneScopedN("StageDirtyTextures");
+		StageDirtyTextures();
+	}
 
 	m_bytesUploadedLastFrame = m_meshStaging.offset + m_textureStaging.offset;
 }

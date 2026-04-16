@@ -11,6 +11,7 @@
 #include "../RHI/IBindGroup.hpp"
 #include "WebGPUShaderModule.hpp"
 #include "WebGPUBindGroup.hpp"
+#include "Profiling.hpp"
 #include <string>
 #include <vector>
 #include <webgpu/webgpu.hpp>
@@ -472,6 +473,7 @@ namespace Hush::Graphics
 		/// @brief Build and create the wgpu::RenderPipeline from the descriptor.
 		void CreatePipeline(wgpu::Device device, const GraphicsPipelineDescriptor &descriptor)
 		{
+			ZoneScoped;
 			if (device == nullptr)
 			{
 				return;
@@ -797,6 +799,7 @@ namespace Hush::Graphics
 		/// @brief Build and create the wgpu::ComputePipeline from the descriptor.
 		void CreatePipeline(wgpu::Device device, const ComputePipelineDescriptor &descriptor)
 		{
+			ZoneScoped;
 			if (device == nullptr)
 			{
 				return;
