@@ -1,5 +1,6 @@
 #include "EditorCameraSystem.hpp"
 #include "MathUtils.hpp"
+#include "Profiling.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
 #include "WindowManager.hpp"
@@ -28,6 +29,7 @@ void Hush::EditorCameraSystem::OnShutdown()
 
 void Hush::EditorCameraSystem::OnUpdate(float delta)
 {
+	ZoneScoped;
 	// We need to retrieve the camera and editor info references every frame because the scene might have been reloaded,
 	// which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more
 	// complex event system just for this.

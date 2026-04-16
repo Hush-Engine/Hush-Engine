@@ -24,6 +24,10 @@
     "volk",
     "vulkan",
     "boost-unordered",
-    "shader-slang"
+    "shader-slang",
+    {
+      "name": "tracy",
+      "features": ["on-demand", "fibers"]
+    }
   ]
 }

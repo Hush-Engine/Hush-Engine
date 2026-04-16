@@ -6,6 +6,7 @@
 #include "RenderGraphSystem.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
 #include "Logger.hpp"
+#include "Profiling.hpp"
 #include "Scene.hpp"
 
 Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderGraph::RenderDevice *renderDevice)
@@ -41,7 +42,12 @@ void Hush::Graphics::RenderGraphSystem::OnFixedUpdate([[maybe_unused]] float del
 
 void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
-	m_renderDevice->BeginFrame();
+	ZoneScoped;
+
+	{
+		ZoneScopedN("BeginFrame");
+		m_renderDevice->BeginFrame();
+	}
 	m_frameActive = true;
 
 	auto &renderGraph = m_renderDevice->GetRenderGraph();
@@ -66,6 +72,7 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// --------------------------------------------------------------
 		// FAST PATH — graph topology is unchanged, skip recompilation.
 		// --------------------------------------------------------------
+		ZoneScopedN("RenderGraph::FastPath");
 
 		// Reset only the executor's per-frame state (fence counters,
 		// resource state tracker). Graph passes and compilation are kept.
@@ -81,6 +88,8 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// Clear the previous frame's render graph (passes, resources,
 		// compilation state) and reset the executor's per-frame state.
 		// Fence objects themselves are kept alive and reused across frames.
+		ZoneScopedN("RenderGraph::FullRebuild");
+
 		m_renderDevice->Reset();
 
 		// Iterate every RenderGraphBuilderComponent entity and invoke its
@@ -103,6 +112,7 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 
 void Hush::Graphics::RenderGraphSystem::OnRender()
 {
+	ZoneScoped;
 	if (!m_renderDevice->IsCompiled())
 	{
 		Hush::LogWarn("RenderGraphSystem::OnRender — graph is not compiled, "

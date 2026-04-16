@@ -15,6 +15,10 @@ hush_add_library(
 add_library(Hush::Utils ALIAS HushUtils)
 
 target_link_libraries(HushUtils PUBLIC HushLog outcome::hl)
+if (HUSH_ENABLE_PROFILING)
+    target_link_libraries(HushUtils PUBLIC Tracy::TracyClient)
+    target_compile_definitions(HushUtils PUBLIC HUSH_ENABLE_PROFILING)
+endif()
 
 if (UNIX)
     target_link_libraries(HushUtils PRIVATE dl)

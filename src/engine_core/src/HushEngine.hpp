@@ -10,6 +10,7 @@
 #include "HushBindings.hpp"
 #include "executors/ThreadPool.hpp"
 
+#include <span>
 #include <string_view>
 
 namespace Hush
@@ -44,7 +45,8 @@ namespace Hush
 		~HushEngine();
 
 		/// Starts running the engine with UI components
-		void Run();
+		/// @param args Command-line arguments passed from main()
+		void Run(std::span<const char *> args = {});
 
 		/// Disposes of the HushEngine
 		void Quit();

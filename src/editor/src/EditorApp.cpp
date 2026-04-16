@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <memory>
+#include "Profiling.hpp"
 
 // This is temporary lol
 #if __has_include("../../bindings/HushBindings.cpp")
@@ -80,11 +81,11 @@ public:
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		// Scriptingb
-		constexpr std::string_view scriptingProjDllPath =
-			"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		// constexpr std::string_view scriptingProjDllPath =
+		// 	"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-		this->m_scriptingHost->Initialize(scriptingProjDllPath);
-		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
+		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
 
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
@@ -148,6 +149,7 @@ public:
 
 	void OnRender(float delta) override
 	{
+		ZoneScopedN("EditorApp::OnRender");
 		// Update the scene panel texture BEFORE building ImGui draw data.
 		// The texture was realized during the previous frame's OnPreRender
 		// (graph compile + resource realization).
@@ -192,6 +194,7 @@ public:
 
 	void OnPreRender() override
 	{
+		ZoneScopedN("EditorApp::OnPreRender");
 		// If the scene panel was resized last frame, invalidate the render
 		// graph BEFORE Scene::PreRender() so the RenderGraphSystem takes
 		// the slow path (Reset + rebuild + compile).  The new texture is

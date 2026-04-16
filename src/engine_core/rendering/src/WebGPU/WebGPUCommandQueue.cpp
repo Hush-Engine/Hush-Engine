@@ -7,6 +7,7 @@
 #include "WebGPUCommandList.hpp"
 #include "WebGPUFence.hpp"
 #include "Logger.hpp"
+#include "Profiling.hpp"
 
 namespace Hush::Graphics
 {
@@ -19,6 +20,7 @@ namespace Hush::Graphics
 
 	void WebGPUCommandQueue::Submit(std::span<ICommandList *> commandLists)
 	{
+		ZoneScoped;
 		if (commandLists.empty())
 		{
 			return;
@@ -54,6 +56,7 @@ namespace Hush::Graphics
 
 	void WebGPUCommandQueue::SubmitBatched(const SubmitInfo &submitInfo)
 	{
+		ZoneScoped;
 		// WebGPU has a single queue, so cross-queue GPU waits don't apply.
 		// We honour the contract by performing CPU-side waits on the emulated
 		// fence values so that the render graph executor's ordering invariants

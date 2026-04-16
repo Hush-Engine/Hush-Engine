@@ -7,6 +7,7 @@
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "webgpu/webgpu-raii.hpp"
 #include "Logger.hpp"
+#include "Profiling.hpp"
 #include <webgpu.h>
 #include <webgpu/webgpu.hpp>
 
@@ -31,6 +32,7 @@ namespace Hush::Graphics
 
 	void *WebGPUBuffer::Map(Graphics::IGraphicsDevice *device)
 	{
+		ZoneScoped;
 		if (m_mappedData != nullptr)
 		{
 			return m_mappedData;

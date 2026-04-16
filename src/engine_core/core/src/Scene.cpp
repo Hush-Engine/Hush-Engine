@@ -10,6 +10,7 @@
 #include "utils/ParallelUtils.hpp"
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
+#include "Profiling.hpp"
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -29,6 +30,7 @@ Hush::Scene::~Scene()
 
 void Hush::Scene::Init()
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
@@ -46,6 +48,7 @@ void Hush::Scene::Init()
 
 void Hush::Scene::Update(float delta)
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
@@ -65,6 +68,7 @@ void Hush::Scene::Update(float delta)
 
 void Hush::Scene::FixedUpdate(float delta)
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
@@ -85,6 +89,7 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
@@ -100,6 +105,7 @@ void Hush::Scene::PreRender()
 }
 void Hush::Scene::Render()
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
@@ -116,6 +122,7 @@ void Hush::Scene::Render()
 
 void Hush::Scene::PostRender()
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
@@ -132,6 +139,7 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
+	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
