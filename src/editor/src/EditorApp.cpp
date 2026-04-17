@@ -82,11 +82,11 @@ public:
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		// Scripting
-		constexpr std::string_view scriptingProjDllPath =
-			"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		// constexpr std::string_view scriptingProjDllPath =
+		// 	"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-		this->m_scriptingHost->Initialize(scriptingProjDllPath);
-		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
+		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
 
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
