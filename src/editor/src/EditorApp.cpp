@@ -16,6 +16,7 @@
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include "ScriptingHost.hpp"
+#include "imguizmo/ImGuizmo.h"
 #include "systems/EditorCameraSystem.hpp"
 #include "systems/RenderingSystem.hpp"
 
@@ -80,7 +81,7 @@ public:
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
-		// Scriptingb
+		// Scripting
 		// constexpr std::string_view scriptingProjDllPath =
 		// 	"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
@@ -159,6 +160,7 @@ public:
 		ImGui_ImplWGPU_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 
 		// Build the ImGui draw lists.  This must happen BEFORE
 		// Scene::Render() so that the draw data is consumed in the same
