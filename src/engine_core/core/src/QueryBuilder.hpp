@@ -35,6 +35,12 @@ namespace Hush
 		void InitDescriptor(uint8_t *queryDesc, std::span<Entity::EntityId> components);
 
 		[[hush::export]]
+		void Without(uint8_t* queryDesc, uint8_t* termCountRef, Entity::EntityId term);
+
+		[[hush::export]]
+		void WithOptional(uint8_t* queryDesc, uint8_t* termCountRef, Entity::EntityId term);
+
+		[[hush::export]]
 		RawQuery InitQuery(Scene *scene, const uint8_t *queryDesc);
 
 	} // namespace impl::QueryBuilderImpl

@@ -53,6 +53,27 @@ void Hush::impl::QueryBuilderImpl::InitDescriptor(uint8_t *queryDesc, std::span<
 	}
 }
 
+void Hush::impl::QueryBuilderImpl::Without(uint8_t* queryDesc, uint8_t* termCountRef, Entity::EntityId term) {
+	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
+	auto *desc = reinterpret_cast<ecs_query_desc_t *>(queryDesc);
+
+	ecs_term_t builtTerm { .id = term, .oper = EcsNot };
+
+	desc->terms[*termCountRef] = builtTerm;
+	(*termCountRef)++;
+}
+
+void Hush::impl::QueryBuilderImpl::WithOptional(uint8_t* queryDesc, uint8_t* termCountRef, Entity::EntityId term) {
+	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
+	auto *desc = reinterpret_cast<ecs_query_desc_t *>(queryDesc);
+
+	ecs_term_t builtTerm { .id = term, .oper = EcsOptional };
+
+	desc->terms[*termCountRef] = builtTerm;
+	(*termCountRef)++;
+}
+
+
 Hush::RawQuery Hush::impl::QueryBuilderImpl::InitQuery(Scene *scene, const uint8_t *queryDesc)
 {
 	HUSH_ASSERT(scene != nullptr, "Unable to build query for a null scene!");
