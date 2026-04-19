@@ -300,6 +300,9 @@ namespace Hush
 			return this->m_entityId != INVALID_ENTITY_ID;
 		}
 
+		[[nodiscard]] [[hush::export]]
+		bool IsAlive() const;
+
 	private:
 		friend class Scene;
 		friend class Query<>;
