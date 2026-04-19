@@ -42,8 +42,8 @@ function (download_hush_file)
 endfunction()
 
 if (MSVC)
-    set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.1/hush-reflection.exe")
-    set (HUSH_REFLECTION_HASH "aa27b31c69f3bbd090a5d32added5f86b231b9f5f4b841ad6ad256c39f14def0")
+    set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
+    set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
 
     download_hush_file(
             URL ${HUSH_REFLECTION_URL}
@@ -51,8 +51,8 @@ if (MSVC)
             EXPECTED_HASH ${HUSH_REFLECTION_HASH}
     )
 
-    set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.1/hush-export.exe")
-    set (HUSH_EXPORT_HASH "12445f91d2bfdecf22d4975e7010dcda7a5c36abe77f28ff6838ec1aca3c3231")
+    set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-export.exe")
+    set (HUSH_EXPORT_HASH "435bd8cdf7cb104cfd61bea167633ab7ccfe67a8f2bd7fe7c8e8370d019acc34")
 
     download_hush_file(
             URL ${HUSH_EXPORT_URL}
