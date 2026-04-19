@@ -153,8 +153,10 @@ Hush::Entity::EntityId Hush::Entity::GetId() const
 	return m_entityId;
 }
 
-bool Hush::Entity::IsAlive() const {
-	return ecs_is_alive(static_cast<ecs_world_t*>(this->GetSceneWorld()), this->m_entityId);
+bool Hush::Entity::IsAlive() const
+{
+	auto *world = static_cast<ecs_world_t *>(this->GetSceneWorld());
+	return world != nullptr && ecs_is_alive(world, this->m_entityId);
 }
 
 void *Hush::Entity::GetSceneWorld() const

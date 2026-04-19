@@ -192,49 +192,33 @@ Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 Hush::Entity Hush::Scene::CreateEntityWithKey(std::string_view key)
 {
 	auto *world = static_cast<ecs_world_t *>(m_world);
-	ecs_entity_desc_t desc = {
-		.name = key.data()
-	};
+	ecs_entity_desc_t desc = {.name = key.data()};
 	const Entity::EntityId entityId = ecs_entity_init(world, &desc);
 	Entity result{this, entityId};
 	return result;
 }
 
-void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize, EComponentObserverType observerType,
-										  ObserverCallback_t callback)
+void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
+										  EComponentObserverType observerType, ObserverCallback_t callback)
 {
-	Entity::EntityId event = 0;
-	switch (observerType)
-	{
-	case EComponentObserverType::Add:
-		event = EcsOnAdd;
-		break;
-	case EComponentObserverType::Remove:
-		event = EcsOnRemove;
-		break;
-	case EComponentObserverType::Set:
-		event = EcsOnSet;
-		break;
-	default:
-		// TODO: Error here
-		LogFormat(ELogLevel::Error, "Component observer {} not recognized!", static_cast<int32_t>(observerType));
-		return;
-	}
+	HUSH_ASSERT(callback != nullptr, "Cannot add a component observer with a null callback!");
+	Entity::EntityId event = this->ObserverTypeToEntityId(observerType);
 
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	ecs_term_t queryTerm = {.id = componentId, .inout = EcsIn};
 	ecs_query_desc_t query = {.terms = {queryTerm}};
 
 	// TODO: Replace heap for arena allocator
-	struct CallbackContext {
+	struct CallbackContext
+	{
 		ObserverCallback_t function;
 		size_t componentByteSize;
 	};
 
-	auto* context = new CallbackContext();
+	auto *context = new CallbackContext();
 	context->function = callback;
 	context->componentByteSize = componentSize;
-	
+
 	ecs_observer_desc_t observerDesc = {
 		.query = query,
 		.events = {event},
@@ -246,16 +230,13 @@ void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t c
 				}
 				Entity::EntityId eventEntity = it->entities[0];
 
-				auto* callbackCtx = reinterpret_cast<CallbackContext*>(it->callback_ctx);
-				void* componentInstance = ecs_field_w_size(it, callbackCtx->componentByteSize, 0);
+				auto *callbackCtx = reinterpret_cast<CallbackContext *>(it->callback_ctx);
+				void *componentInstance = ecs_field_w_size(it, callbackCtx->componentByteSize, 0);
 
 				callbackCtx->function(eventEntity, componentInstance);
 			},
 		.callback_ctx = context,
-		.callback_ctx_free = [](void* ctx) {
-			delete static_cast<CallbackContext*>(ctx);
-		}
-	};
+		.callback_ctx_free = [](void *ctx) { delete static_cast<CallbackContext *>(ctx); }};
 
 	[[maybe_unused]]
 	Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
