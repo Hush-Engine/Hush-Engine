@@ -35,15 +35,23 @@ void Hush::Scene::Init()
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->Init();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->Init(); }));
+#endif
 	}
 
 	// TODO: Group user systems into buckets
 	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
-	Threading::Wait(
-		Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
-							   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		initFunc(reinterpret_cast<void *>(system));
+	}
 
 	this->m_isInitialized = true;
 }
@@ -55,11 +63,18 @@ void Hush::Scene::Update(float delta)
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnUpdate(delta);
+		}
+#else
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
 				// Call the update method for each system
 				system->OnUpdate(delta);
 			}));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
@@ -77,11 +92,18 @@ void Hush::Scene::FixedUpdate(float delta)
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnFixedUpdate(delta);
+		}
+#else
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
 				// Call the fixed update method for each system
 				system->OnFixedUpdate(delta);
 			}));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
@@ -100,8 +122,15 @@ void Hush::Scene::PreRender()
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnPreRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
@@ -119,8 +148,15 @@ void Hush::Scene::Render()
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
@@ -138,8 +174,15 @@ void Hush::Scene::PostRender()
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnPostRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
@@ -157,8 +200,15 @@ void Hush::Scene::Shutdown()
 #endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnShutdown();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
+#endif
 	}
 
 	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
