@@ -3,25 +3,68 @@
 # 2024-09-22
 # CMake utils
 
-# if (MSVC)
-# Check if the file exists
-if (NOT EXISTS "${CMAKE_BINARY_DIR}/hush-reflection.exe")
-    set(EXPECTED_SHA256 "ba891ae7ef960d06d0637489a0dc5b32d8cf6295df6b94fc228858ac82efcb50")
-    file(
-                DOWNLOAD "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.1.0/hush-reflection.exe"
-                "${CMAKE_BINARY_DIR}/hush-reflection.exe"
-                STATUS download_status
-                EXPECTED_HASH SHA256=${EXPECTED_SHA256}
-        )
-    if (NOT download_status EQUAL 0)
-        message(FATAL_ERROR "Failed to download hush-reflection.exe: ${download_status}")
+# Function to download a file to the CMAKE_BINARY_DIR if it doesn't exist.
+# This is a helper to download hush-reflection and hush-export binaries.
+# Args:
+#  - URL: URL to download the file from
+#  - FILENAME: Name of the file to save as
+#  - EXPECTED_HASH: Expected SHA256 hash of the file
+function (download_hush_file)
+    cmake_parse_arguments(DOWNLOAD "" "URL;FILENAME;EXPECTED_HASH" "" ${ARGN})
+
+    set(OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DOWNLOAD_FILENAME}")
+
+    if (EXISTS "${OUTPUT_PATH}")
+        file(SHA256 "${OUTPUT_PATH}" ACTUAL_HASH)
+        if (ACTUAL_HASH STREQUAL DOWNLOAD_EXPECTED_HASH)
+            message(STATUS "File ${DOWNLOAD_FILENAME} already exists and matches the expected hash, skipping download.")
+            return()
+        endif ()
+
+        message(STATUS "File ${DOWNLOAD_FILENAME} exists but has a different hash, re-downloading.")
+        file(REMOVE "${OUTPUT_PATH}")
     endif ()
-else ()
-    message(STATUS "hush-reflection.exe already exists, skipping download.")
+
+    message(STATUS "Downloading ${DOWNLOAD_FILENAME} from ${DOWNLOAD_URL}...")
+
+    file(
+      DOWNLOAD ${DOWNLOAD_URL}
+      "${CMAKE_BINARY_DIR}/${DOWNLOAD_FILENAME}"
+      STATUS download_status
+      EXPECTED_HASH SHA256=${DOWNLOAD_EXPECTED_HASH}
+    )
+
+    if (NOT download_status EQUAL 0)
+        message(FATAL_ERROR "Failed to download ${DOWNLOAD_FILENAME} from ${DOWNLOAD_URL}. Status: ${download_status}")
+    endif ()
+
+    message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
+endfunction()
+
+if (MSVC)
+    set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
+    set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
+
+    download_hush_file(
+            URL ${HUSH_REFLECTION_URL}
+            FILENAME "hush-reflection.exe"
+            EXPECTED_HASH ${HUSH_REFLECTION_HASH}
+    )
+
+    set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-export.exe")
+    set (HUSH_EXPORT_HASH "435bd8cdf7cb104cfd61bea167633ab7ccfe67a8f2bd7fe7c8e8370d019acc34")
+
+    download_hush_file(
+            URL ${HUSH_EXPORT_URL}
+            FILENAME "hush-export.exe"
+            EXPECTED_HASH ${HUSH_EXPORT_HASH}
+    )
+
+    set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+    set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
 endif ()
 
 set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
-# endif ()
 
 
 # Set all warnings for the target
@@ -100,7 +143,7 @@ macro(hush_add_library)
     cmake_parse_arguments(LIB "" "TARGET_NAME;LIB_TYPE" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
     add_library(${LIB_TARGET_NAME} ${LIB_LIB_TYPE} ${LIB_SRCS})
     target_include_directories(${LIB_TARGET_NAME} PUBLIC ${LIB_PUBLIC_HEADER_DIRS})
-    target_include_directories(${LIB_TARGET_NAME} PRIVATE ${LIB_PRIVATE_HEADER_DIRS})
+    target_include_directories(${LIB_TARGET_NAME} PRIVATE ${LIB_PRIVATE_HEADER_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
     set_all_warnings(${LIB_TARGET_NAME})
 
     if (${HUSH_ENABLE_LTO})
@@ -189,7 +232,7 @@ macro(add_test_target)
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
 
-        catch_discover_tests(${TEST_TARGET_NAME})
+        catch_discover_tests(${TEST_TARGET_NAME} DISCOVERY_MODE PRE_TEST)
 
         if (${HUSH_ENABLE_LTO})
             set_property(TARGET ${TEST_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

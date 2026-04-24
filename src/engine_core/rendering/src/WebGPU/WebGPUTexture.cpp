@@ -56,3 +56,8 @@ void *Hush::Graphics::WebGPUTexture::GetNativeHandle() const
 {
 	return static_cast<void *>(static_cast<WGPUTexture>(m_texture));
 }
+
+void *Hush::Graphics::WebGPUTexture::GetNativeView() const
+{
+	return static_cast<void *>(static_cast<WGPUTextureView>(m_view));
+}

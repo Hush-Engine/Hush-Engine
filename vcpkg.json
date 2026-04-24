@@ -3,15 +3,11 @@
   "version": "0.1.0",
   "dependencies": [
     "catch2",
-    "catch2",
-    "fastgltf",
     "fastgltf",
     "flecs",
     "fmt",
     "glm",
-    "glm",
     "magic-enum",
-    "outcome",
     "outcome",
     "rapidjson",
     {
@@ -27,6 +23,11 @@
     "boost-unordered",
     {
       "name": "shader-slang",
+      "platform": "!emscripten"
+    },
+    {
+      "name": "tracy",
+      "features": ["on-demand", "fibers"],
       "platform": "!emscripten"
     }
   ]

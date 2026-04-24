@@ -10,10 +10,11 @@
 #include "definitions/MouseData.hpp"
 #include <glm/vec2.hpp>
 #include <unordered_map>
+#include <HushBindings.hpp>
 namespace Hush
 {
 
-	enum class ECursorLockMode
+	enum class [[hush::export]] ECursorLockMode
 	{
 		Free = 0,
 		Locked = 1
@@ -23,20 +24,26 @@ namespace Hush
 	{
 	public:
 		/// @brief Evaluates to true whilst the key is pressed down
+		[[hush::export]]
 		static bool IsKeyDown(EKeyCode key);
 
 		/// @brief Evaluates to true the frame the key is identified as EKeyState::Pressed
+		[[hush::export]]
 		static bool IsKeyDownThisFrame(EKeyCode key);
 
 		/// @brief Evaluates to true the frame the key is identified as EKeyState::Release
+		[[hush::export]]
 		static bool IsKeyUp(EKeyCode key);
 
 		/// @brief Evaluates to true as long as the key is identified asEKeyState::Held
+		[[hush::export]]
 		static bool IsKeyHeld(EKeyCode key);
 
 		/// @brief Evaluates to true for as long as the mouse button is pressed
+		[[hush::export]]
 		static bool GetMouseButtonPressed(EMouseButton button);
 
+		[[hush::export]]
 		static bool FetchCharThisFrame(char *outChar);
 
 		/// @brief Gets the vector of the mouse's position in pixels
@@ -63,6 +70,7 @@ namespace Hush
 
 		static void SendCharEvent(char pressedChar);
 
+		[[hush::export]]
 		static void SetCursorLock(ECursorLockMode lockMode);
 
 	private:

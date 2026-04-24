@@ -9,6 +9,7 @@
 #include "WebGPUPipeline.hpp"
 #include "WebGPUBindGroup.hpp"
 #include "Assertions.hpp"
+#include "Profiling.hpp"
 #include <webgpu/webgpu.hpp>
 
 namespace Hush::Graphics
@@ -100,6 +101,7 @@ namespace Hush::Graphics
 
 	void WebGPUCopyCommandList::Reset()
 	{
+		ZoneScoped;
 		if (m_isRecording && m_encoder != nullptr)
 		{
 			m_encoder.release();
@@ -115,6 +117,7 @@ namespace Hush::Graphics
 
 	void WebGPUCopyCommandList::Close()
 	{
+		ZoneScoped;
 		if (!m_isRecording)
 		{
 			return;
@@ -156,6 +159,7 @@ namespace Hush::Graphics
 	void WebGPUCopyCommandList::CopyBuffer(IGraphicsBuffer *src, uint64_t srcOffset, IGraphicsBuffer *dst,
 										   uint64_t dstOffset, uint64_t size)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(src && dst, "Source and destination buffers must be valid");
 
@@ -169,6 +173,7 @@ namespace Hush::Graphics
 													uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t width,
 													uint32_t height, uint32_t depth, uint32_t rowPitch)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(src && dst, "Source buffer and destination texture must be valid");
 
@@ -196,6 +201,7 @@ namespace Hush::Graphics
 													IGraphicsBuffer *dst, uint64_t dstOffset, uint32_t width,
 													uint32_t height, uint32_t depth)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(src && dst, "Source texture and destination buffer must be valid");
 
@@ -223,6 +229,7 @@ namespace Hush::Graphics
 											IGraphicsTexture *dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ,
 											uint32_t width, uint32_t height, uint32_t depth)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(src && dst, "Source and destination textures must be valid");
 
@@ -266,6 +273,7 @@ namespace Hush::Graphics
 
 	void WebGPUComputeCommandList::Reset()
 	{
+		ZoneScoped;
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
@@ -287,6 +295,7 @@ namespace Hush::Graphics
 
 	void WebGPUComputeCommandList::Close()
 	{
+		ZoneScoped;
 		if (!m_isRecording)
 		{
 			return;
@@ -430,6 +439,7 @@ namespace Hush::Graphics
 
 	void WebGPUComputeCommandList::Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 
 		// Begin compute pass if not already in one
@@ -446,6 +456,7 @@ namespace Hush::Graphics
 
 	void WebGPUComputeCommandList::DispatchIndirect(IGraphicsBuffer *indirectArgsBuffer, uint64_t offset)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(indirectArgsBuffer, "Indirect args buffer must be valid");
 
@@ -519,6 +530,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsCommandList::Reset()
 	{
+		ZoneScoped;
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
@@ -546,6 +558,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsCommandList::Close()
 	{
+		ZoneScoped;
 		if (!m_isRecording)
 		{
 			return;
@@ -814,6 +827,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsCommandList::BeginRenderPass(const RenderPassDescriptor &descriptor)
 	{
+		ZoneScoped;
 		HUSH_ASSERT(m_isRecording, "Command list must be recording");
 		HUSH_ASSERT(!m_inRenderPass, "Already in a render pass");
 		HUSH_ASSERT(!m_inComputePass, "Cannot begin render pass during compute pass");
@@ -959,6 +973,15 @@ namespace Hush::Graphics
 
 		m_renderPass.end();
 		m_inRenderPass = false;
+	}
+
+	void *WebGPUGraphicsCommandList::GetNativeRenderPass() const
+	{
+		if (!m_inRenderPass)
+		{
+			return nullptr;
+		}
+		return static_cast<WGPURenderPassEncoder>(m_renderPass);
 	}
 
 	void WebGPUGraphicsCommandList::BindPipeline(IPipeline *pipeline)

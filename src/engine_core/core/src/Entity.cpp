@@ -69,6 +69,17 @@ bool Hush::Entity::RemoveComponentRaw(EntityId componentId)
 	return false;
 }
 
+void Hush::Entity::SetComponentActiveRaw(EntityId componentId, bool active)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
+	// TODO: Check if we can get rid of this if, it's probably safer to keep, but yk
+	if (!ecs_has_id(world, this->GetId(), componentId))
+	{
+		return;
+	}
+	ecs_enable_id(world, this->GetId(), componentId, active);
+}
+
 void Hush::Entity::Destroy(Entity &&entity)
 {
 	Scene *scene = entity.m_ownerScene;
@@ -126,6 +137,15 @@ int32_t Hush::Entity::GetChildCount() const
 	ecs_iter_t it = ecs_each_id(world, ecs_pair(EcsTerms::CHILD_OF, this->m_entityId));
 	ecs_children_next(&it);
 	return it.count;
+}
+
+void Hush::Entity::AddRelationship(const Entity &relationship, const Entity &target)
+{
+	HUSH_ASSERT(this->m_ownerScene == relationship.m_ownerScene, "Relationship entity must belong to the same scene");
+	HUSH_ASSERT(this->m_ownerScene == target.m_ownerScene, "Target entity must belong to the same scene");
+	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
+
+	ecs_add_pair(world, this->m_entityId, relationship.m_entityId, target.m_entityId);
 }
 
 Hush::Entity::EntityId Hush::Entity::GetId() const

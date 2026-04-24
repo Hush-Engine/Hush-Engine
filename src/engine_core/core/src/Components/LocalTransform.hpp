@@ -4,7 +4,7 @@
 
 namespace Hush
 {
-	struct LocalTransform : public Transform
+	struct [[hush::export]] LocalTransform : public Transform
 	{
 		using Transform::Transform;
 	};

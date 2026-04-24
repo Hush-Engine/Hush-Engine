@@ -7,6 +7,7 @@
 #include "ThreadPool.hpp"
 #include "threadpool/StealingQueue.hpp"
 #include <Platform.hpp>
+#include <Profiling.hpp>
 #include <random>
 #include <semaphore>
 
@@ -50,20 +51,29 @@ namespace Hush::Threading::Executors
 		WorkerThread(ThreadPool &threadpool, std::barrier<> &startBarrier, int32_t threadAffinity)
 			: m_threadPool(threadpool)
 		{
+			// Build thread/fiber names before launching so they're available via the 'this' pointer.
+			// Stored as members because Tracy requires name strings to remain valid for the
+			// lifetime of the program.
+			if (threadAffinity >= 0)
+			{
+				m_threadName = "WorkerThread-P" + std::to_string(threadAffinity);
+			}
+
 			// Create the worker thread
 			m_thread = std::jthread([this, &startBarrier, threadAffinity](std::stop_token stopToken) {
-				const auto threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
-				Hush::LogFormat(ELogLevel::Debug, "Worker thread started with ID: {}", threadId);
+				if (m_threadName.empty())
+				{
+					const auto threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+					m_threadName = "WorkerThread-" + std::to_string(threadId);
+				}
+				Hush::LogFormat(ELogLevel::Debug, "Worker thread started: {}", m_threadName);
 				G_CURRENT_WORKER_THREAD = this;
 				if (threadAffinity >= 0)
 				{
 					SetCurrentThreadAffinity(threadAffinity);
-					SetCurrentThreadName(("WorkerThread-P" + std::to_string(threadAffinity)).c_str());
 				}
-				else
-				{
-					SetCurrentThreadName(("WorkerThread-" + std::to_string(threadId)).c_str());
-				}
+				SetCurrentThreadName(m_threadName.c_str());
+				tracy::SetThreadName(m_threadName.c_str());
 
 				// Wait until the thread is started
 				startBarrier.arrive_and_wait();
@@ -124,7 +134,6 @@ namespace Hush::Threading::Executors
 					TaskOperation *task = *taskResult;
 					if (task != nullptr)
 					{
-						// We have a task, so we can execute it
 						task->m_awaitingCoroutine.resume();
 					}
 					continue;
@@ -155,7 +164,6 @@ namespace Hush::Threading::Executors
 						auto [task, count] = result.value();
 						if (task != nullptr)
 						{
-							// We have a task, so we can execute it
 							task->m_awaitingCoroutine.resume();
 						}
 
@@ -206,6 +214,7 @@ namespace Hush::Threading::Executors
 
 		std::vector<Stealer<TaskOperation *, WORKER_QUEUE_SIZE>> m_stealers;
 		std::jthread m_thread;
+		std::string m_threadName;
 		Worker<TaskOperation *, WORKER_QUEUE_SIZE> m_workerQueue;
 		ThreadPool &m_threadPool;
 		std::uint32_t m_previousStealIndex{};

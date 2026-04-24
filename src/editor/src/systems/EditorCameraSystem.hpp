@@ -2,6 +2,7 @@
 #include "ISystem.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "../components/EditorInfo.hpp"
+#include "Entity.hpp"
 
 namespace Hush
 {
@@ -46,6 +47,10 @@ namespace Hush
 
 	private:
 		float ApplyAccelerationCurve(float blend);
+
+		Hush::Entity m_editorCameraEntity = Hush::Entity::Null();
+
+		Hush::Entity m_editorInfoEntity = Hush::Entity::Null();
 
 		EditorCamera *m_editorCamera{};
 

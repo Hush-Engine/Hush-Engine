@@ -3,6 +3,7 @@
 
 add_executable(HushEditor
         src/ContentPanel.cpp
+        src/SystemSelection.cpp
         src/EditorApp.cpp
         src/HierarchyPanel.cpp
         src/NotificationPanel.cpp

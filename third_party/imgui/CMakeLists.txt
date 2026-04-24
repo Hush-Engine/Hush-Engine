@@ -15,6 +15,8 @@ set(IMGUI_SOURCES
  ${BASE_INCLUDE_PATH}/backends/imgui_impl_sdl3.h
  # ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.cpp
  # ${BASE_INCLUDE_PATH}/backends/imgui_impl_vulkan.h
+ ${BASE_INCLUDE_PATH}/backends/imgui_impl_wgpu.cpp
+ ${BASE_INCLUDE_PATH}/backends/imgui_impl_wgpu.h
  ${IMGUI_BASE_SRC}
 )
 
@@ -31,7 +33,7 @@ add_library(imguizmo STATIC ${IMGUIZMO_SOURCES})
 target_compile_definitions(imgui PUBLIC SDL_ENABLE_OLD_NAMES)
 
 message("Linking dependencies...")
-target_link_libraries(imgui PUBLIC SDL3::SDL3)
+target_link_libraries(imgui PUBLIC SDL3::SDL3 webgpu)
 
 target_include_directories(imgui PUBLIC include include/imgui)
 target_include_directories(imguizmo PUBLIC include)

@@ -8,6 +8,7 @@
 #include "WebGPUBuffer.hpp"
 #include "WebGPUSampler.hpp"
 #include "WebGPUTexture.hpp"
+#include "Profiling.hpp"
 #include <vector>
 
 namespace Hush::Graphics
@@ -16,6 +17,7 @@ namespace Hush::Graphics
 		: m_entryCount(static_cast<uint32_t>(descriptor.entries.size())),
 		  m_debugName(descriptor.debugName)
 	{
+		ZoneScoped;
 		if (device == nullptr)
 		{
 			return;
@@ -105,6 +107,7 @@ namespace Hush::Graphics
 		: m_layout(descriptor.layout),
 		  m_debugName(descriptor.debugName)
 	{
+		ZoneScoped;
 		if (device == nullptr || descriptor.layout == nullptr)
 		{
 			return;

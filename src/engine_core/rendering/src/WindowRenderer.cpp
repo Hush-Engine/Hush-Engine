@@ -9,6 +9,7 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_video.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
 
 // Graphics backend
 #if defined(HUSH_VULKAN_IMPL)
@@ -121,7 +122,8 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 	KeyCode code = 0;
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
-	// SDL_PollEvent(&event);
+	// Forward event to ImGui
+	ImGui_ImplSDL3_ProcessEvent(&event);
 	// Forward event to the renderer
 	switch (event.type)
 	{
@@ -154,7 +156,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		InputManager::SendWheelEvent(event.wheel.mouse_x, event.wheel.mouse_y);
 		break;
 	default:
-	    if (event.type >= SDL_EVENT_WINDOW_FIRST || event.type <= SDL_EVENT_WINDOW_LAST)
+	    if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
         {
             CheckWindowState(event.window, &this->m_isActive);
         }
@@ -166,8 +168,9 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 Hush::WindowRenderer::~WindowRenderer()
 {
 	SDL_DestroyWindow(this->m_windowPtr);
-	SDL_DestroyRenderer(this->m_rendererPtr);
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	SDL_Quit();
+#endif
 }
 
 Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
@@ -187,10 +190,14 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 	{
 		return true;
 	}
-	bool rc = SDL_Init(0);
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	SDL_StartTextInput(m_windowPtr);
-	// SDL_SetMainReady();
 	return rc;
+#else
+	SDL_StartTextInput(m_windowPtr);
+	return true;
+#endif
 }
 
 void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, bool *isActive) noexcept

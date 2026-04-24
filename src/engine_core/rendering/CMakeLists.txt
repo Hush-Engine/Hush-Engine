@@ -18,9 +18,9 @@ hush_add_library(
              # src/Shared/ShaderMaterial.cpp
              # src/Shared/Mesh.cpp
 
-             # src/Shared/Camera.cpp
+             src/Shared/Camera.cpp
              # src/Shared/ImageTexture.cpp
-             # src/Shared/EditorCamera.cpp
+             src/Shared/EditorCamera.cpp
              # src/Shared/DefaultImages.cpp
 
              # RenderGraph

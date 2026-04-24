@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Assertions.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
@@ -102,7 +103,7 @@ namespace Hush
 		/// Creates an entity with a name
 		/// @param name Unique name of the entity
 		/// @return Entity
-		[[hush::export]]
+		[[nodiscard]] [[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
 
 		/// Registers a callback that gets called whenever a component receives the specified event
@@ -185,10 +186,14 @@ namespace Hush
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
+		[[hush::export]]
 		Entity EntityFromIdUnchecked(EntityId id);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
+
+		[[nodiscard]] [[hush::export]]
+		EntityId Lookup(std::string_view tag) const;
 
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
@@ -213,6 +218,8 @@ namespace Hush
 		/// @param system System to add
 		void AddEngineSystem(ISystem *system);
 
+		void AddScriptingSystem(uintptr_t system);
+
 		[[hush::export]]
 		RawQuery CreateRawQuery(std::span<Entity::EntityId> components,
 								RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default);
@@ -221,6 +228,37 @@ namespace Hush
 		const std::unordered_map<std::string, Entity::EntityId> &GetAllEntities()
 		{
 			return this->m_registeredEntities;
+		}
+
+		[[nodiscard]]
+		HushEngine *GetEngine()
+		{
+			return this->m_engine;
+		}
+
+		[[nodiscard]]
+		const HushEngine *GetEngine() const
+		{
+			return this->m_engine;
+		}
+
+		[[nodiscard]]
+		const void *GetWorld() const
+		{
+			return m_world;
+		}
+
+		[[nodiscard]]
+		void *GetWorld()
+		{
+			return m_world;
+		}
+
+		void SetScriptingInterface(ScriptingSystemInterface *scriptingInterface)
+		{
+			HUSH_ASSERT(scriptingInterface != nullptr, "Scripting interface cannot be null!");
+			// TODO: Assert every function here
+			this->m_scriptingInterface = scriptingInterface;
 		}
 
 	private:
@@ -242,12 +280,6 @@ namespace Hush
 		Entity::EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
 													  std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
 
-		[[nodiscard]]
-		void *GetWorld() const
-		{
-			return m_world;
-		}
-
 		/// Sort the systems based on their order and store them in the buckets
 		void SortSystems();
 
@@ -264,8 +296,11 @@ namespace Hush
 		/// Special vector to store the systems that come from the engine.
 		std::vector<ISystem *> m_engineSystems;
 
-		/// User systems
+		/// User systems (mostly to use with C++-side gameplay code)
 		std::vector<std::unique_ptr<ISystem>> m_userSystems;
+
+		/// User systems handled by the scripting host
+		std::vector<uintptr_t> m_scriptingSystems;
 
 		HushEngine *m_engine;
 
@@ -273,5 +308,9 @@ namespace Hush
 		Threading::Executors::ThreadPool *m_threadPool;
 
 		void *m_world;
+
+		ScriptingSystemInterface *m_scriptingInterface;
+
+		bool m_isInitialized = false;
 	};
 } // namespace Hush

@@ -10,12 +10,12 @@
 #include "HushBindings.hpp"
 #include "executors/ThreadPool.hpp"
 
+#include <span>
 #include <string_view>
 #include <SDL3/SDL_events.h>
 
 namespace Hush
 {
-	struct DirectionalLight;
 	class VirtualFilesystem;
 	class ResourceManager;
 	class WindowRenderer;
@@ -47,7 +47,8 @@ namespace Hush
 		void Init(int argc, char **argv);
 
 		/// Starts running the engine with UI components
-		void Run();
+		/// @param args Command-line arguments passed from main()
+		void Run(std::span<const char *> args = {});
 
 		/// Disposes of the HushEngine
 		void Quit();
@@ -84,7 +85,6 @@ namespace Hush
 
 		std::chrono::steady_clock::duration m_elapsed;
 
-		DirectionalLight *m_defaultLight = nullptr;
 		bool m_isApplicationRunning = false;
 		static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
 	};

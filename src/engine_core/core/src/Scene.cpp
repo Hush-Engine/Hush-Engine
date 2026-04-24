@@ -6,7 +6,11 @@
 
 #include "Scene.hpp"
 #include "ISystem.hpp"
+#include "Logger.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <flecs.h>
+#include <flecs/addons/flecs_c.h>
+#include "Profiling.hpp"
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -26,36 +30,29 @@ Hush::Scene::~Scene()
 
 void Hush::Scene::Init()
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-    // On Emscripten, we run the init on the main thread to avoid synchronization issues with the main loop.
-    for (const std::vector<ISystem *> &systemBucket : m_systems)
-    {
-        for (ISystem *system : systemBucket)
-        {
-            system->Init();
-        }
-    }
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->Init(); }));
 	}
-	#endif
+
+	// TODO: Group user systems into buckets
+	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
+	Threading::Wait(
+		Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
+							   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+
+	this->m_isInitialized = true;
 }
 
 void Hush::Scene::Update(float delta)
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-    // On Emscripten, we run the update on the main thread to avoid synchronization issues with the main loop.
-    for (const std::vector<ISystem *> &systemBucket : m_systems)
-    {
-        for (ISystem *system : systemBucket)
-        {
-            system->OnUpdate(delta);
-        }
-    }
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
@@ -64,22 +61,21 @@ void Hush::Scene::Update(float delta)
 				system->OnUpdate(delta);
 			}));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		updateFunc(reinterpret_cast<void *>(system), delta);
+	}
 }
 
 void Hush::Scene::FixedUpdate(float delta)
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-        // On Emscripten, we run the fixed update on the main thread to avoid synchronization issues with the main loop.
-        for (const std::vector<ISystem *> &systemBucket : m_systems)
-        {
-            for (ISystem *system : systemBucket)
-            {
-                system->OnFixedUpdate(delta);
-            }
-        }
-    #else
-    for (const std::vector<ISystem *> &systemBucket : m_systems)
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
+	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
@@ -87,88 +83,90 @@ void Hush::Scene::FixedUpdate(float delta)
 				system->OnFixedUpdate(delta);
 			}));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
+		this->m_scriptingInterface->fixedUpdateFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		fixedUpdateFunc(reinterpret_cast<void *>(system), delta);
+	}
 }
 
 void Hush::Scene::PreRender()
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-        // On Emscripten, we run the pre-render on the main thread to avoid synchronization issues with the main loop.
-        for (const std::vector<ISystem *> &systemBucket : m_systems)
-        {
-            for (ISystem *system : systemBucket)
-            {
-                system->OnPreRender();
-            }
-        }
-        return;
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		preRenderFunc(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::Render()
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-        // On Emscripten, we run the render on the main thread to avoid synchronization issues with the main loop.
-        for (const std::vector<ISystem *> &systemBucket : m_systems)
-        {
-            for (ISystem *system : systemBucket)
-            {
-                system->OnRender();
-            }
-        }
-        return;
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		renderFunc(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::PostRender()
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-    // On Emscripten, we run the post-render on the main thread to avoid synchronization issues with the main loop.
-    for (const std::vector<ISystem *> &systemBucket : m_systems)
-    {
-        for (ISystem *system : systemBucket)
-        {
-            system->OnPostRender();
-        }
-    }
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		postRender(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::Shutdown()
 {
-    #if HUSH_PLATFORM_EMSCRIPTEN
-    for (const std::vector<ISystem *> &systemBucket : m_systems)
-    {
-        for (ISystem *system : systemBucket)
-        {
-            system->OnShutdown();
-        }
-    }
-    #else
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
 	}
-	#endif
+
+	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
+	// TODO: Sort in threading
+	for (uintptr_t system : this->m_scriptingSystems)
+	{
+		shutdownFunc(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::RemoveSystem(std::string_view name)
@@ -270,6 +268,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 		void (*userCtxFree)(void *){};
 	};
 
+	// TODO: Arena
 	auto *componentInfo = new ComponentInfo();
 	componentInfo->size = desc.size;
 	componentInfo->alignment = desc.alignment;
@@ -279,10 +278,17 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentInfo->userCtxFree = desc.userCtxFree;
 
 	ecs_component_desc_t componentDesc = {};
+	ecs_entity_desc_t associatedEntityDesc = {};
+
+	associatedEntityDesc.name = desc.name;
+
 	componentDesc.type.alignment = static_cast<ecs_size_t>(componentInfo->alignment);
 	componentDesc.type.size = static_cast<ecs_size_t>(componentInfo->size);
 	componentDesc.type.name = componentInfo->name.data();
 	componentDesc.type.hooks.binding_ctx = componentInfo;
+
+	auto *world = static_cast<ecs_world_t *>(const_cast<void *>(GetWorld()));
+	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
 	componentDesc.type.hooks.binding_ctx_free = [](void *ctx) {
 		const auto *info = static_cast<ComponentInfo *>(ctx);
@@ -373,7 +379,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	if (desc.ops.copyCtor != nullptr)
 	{
 		componentDesc.type.hooks.copy_ctor = [](void *dst, const void *src, int32_t count,
-												const ecs_type_info_t *type_info) {
+											const ecs_type_info_t *type_info) {
 			const auto *info = static_cast<ComponentInfo *>(type_info->hooks.binding_ctx);
 
 			ComponentTraits::ComponentInfo componentDesc = {
@@ -450,10 +456,21 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentDesc.type.hooks.flags = static_cast<std::uint32_t>(desc.opsFlags);
 
 	// Register the component
-	auto *world = static_cast<ecs_world_t *>(GetWorld());
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
+	// By default, all components should be able to be toggled on or off (for performance reasons)
+	ecs_add_id(world, componentId, EcsCanToggle);
+
+	LogFormat(ELogLevel::Info, "Registered component with name {} as ID: {}", desc.name, componentId);
+
 	return componentId;
+}
+
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	Entity::EntityId result = ecs_lookup(world, tag.data());
+	return result;
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)
@@ -502,6 +519,16 @@ void Hush::Scene::AddEngineSystem(ISystem *system)
 {
 	m_engineSystems.push_back(system);
 	SortSystems();
+}
+
+void Hush::Scene::AddScriptingSystem(uintptr_t system)
+{
+	this->m_scriptingSystems.push_back(system);
+	// If the system is added in the middle of a frame, we should always call init
+	if (this->m_isInitialized)
+	{
+		this->m_scriptingInterface->initFunction(reinterpret_cast<void *>(system));
+	}
 }
 
 void Hush::Scene::SortSystems()

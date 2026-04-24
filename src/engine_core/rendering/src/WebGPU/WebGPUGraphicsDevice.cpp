@@ -21,6 +21,7 @@
 #include <sdl3webgpu/sdl3webgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include <webgpu/webgpu.hpp>
+#include "Profiling.hpp"
 
 #if HUSH_PLATFORM_EMSCRIPTEN
 #include <emscripten/html5.h>
@@ -32,6 +33,7 @@ namespace Hush::Graphics
 	WebGPUGraphicsDevice::WebGPUGraphicsDevice(void *windowHandle)
 		: m_windowHandle(windowHandle)
 	{
+		ZoneScoped;
 		LogTrace("Initializing WebGPU Graphics Device");
 
 		InitializeInstance();
@@ -186,6 +188,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
 	{
+		ZoneScoped;
 		wgpu::BufferDescriptor desc{};
 		desc.size = descriptor.size;
 		desc.usage = ConvertBufferUsage(descriptor.usage);
@@ -239,6 +242,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IGraphicsTexture> WebGPUGraphicsDevice::CreateTexture(const TextureDescriptor &descriptor)
 	{
+		ZoneScoped;
 		wgpu::TextureDescriptor desc{};
 		desc.size.width = descriptor.width;
 		desc.size.height = descriptor.height;
@@ -288,6 +292,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IShaderModule> WebGPUGraphicsDevice::CreateShaderModule(const ShaderModuleDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto module = std::make_unique<WebGPUShaderModule>(m_device, descriptor);
 		if (!module->IsValid())
 		{
@@ -300,6 +305,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IGraphicsPipeline> WebGPUGraphicsDevice::CreateGraphicsPipeline(
 		const GraphicsPipelineDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto pipeline = std::make_unique<WebGPUGraphicsPipeline>(m_device, descriptor);
 		if (!pipeline->IsValid())
 		{
@@ -312,6 +318,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IComputePipeline> WebGPUGraphicsDevice::CreateComputePipeline(
 		const ComputePipelineDescriptor &descriptor)
 	{
+		ZoneScoped;
 		auto pipeline = std::make_unique<WebGPUComputePipeline>(m_device, descriptor);
 		if (!pipeline->IsValid())
 		{
@@ -366,7 +373,10 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::BeginFrame()
 	{
-	    m_instance.processEvents();
+		m_instance.processEvents();
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+		ZoneScoped;
+#endif
 		if (m_needsResize)
 		{
 			// Release stale frame texture/view from the previous frame before
@@ -416,22 +426,18 @@ namespace Hush::Graphics
 												  .format = ConvertToEngineTextureFormat(m_surfaceFormat),
 												  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
 												  .debugName = "Current Frame Texture",
-												  .ownedByExternalSource = false,
+														  .ownedByExternalSource = true,
 											  });
 	}
 
 	void WebGPUGraphicsDevice::EndFrame()
 	{
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+		ZoneScoped;
+#endif
 	#if HUSH_PLATFORM_EMSCRIPTEN
-	    // On Emscripten with WebGPU, we need to call requestAnimationFrame to ensure the browser processes the present and updates the canvas.
-        // emscripten_request_animation_frame([](double, void*) {
-        //     // No-op callback; the present is handled by the browser after this callback returns.
-        //     return true;
-        // }, nullptr);
-
-        // m_surface.present();
-        m_currentFrameTexture = WebGPUTexture(); // Clear reference to the current frame texture to allow it to be released after present
-        emscripten_sleep(0); // Yield control back to the browser to allow it to process the present
+		m_currentFrameTexture = WebGPUTexture();
+		emscripten_sleep(0);
 	#else
 		m_surface.present();
 	#endif
@@ -709,6 +715,11 @@ namespace Hush::Graphics
 #ifdef WEBGPU_BACKEND_WGPU
 		m_device.poll(true, nullptr);
 #endif
+	}
+
+	ETextureFormat WebGPUGraphicsDevice::GetPreferredSwapchainFormat() const
+	{
+		return ConvertToEngineTextureFormat(m_surfaceFormat);
 	}
 
 } // namespace Hush::Graphics

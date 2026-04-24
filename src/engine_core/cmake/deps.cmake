@@ -35,4 +35,9 @@ find_package(boost_unordered REQUIRED CONFIG)
 # Slang shader compiler
 if(NOT EMSCRIPTEN)
     find_package(slang CONFIG REQUIRED)
+
+    # Tracy profiler
+    if (HUSH_ENABLE_PROFILING)
+        find_package(Tracy CONFIG REQUIRED)
+    endif()
 endif()

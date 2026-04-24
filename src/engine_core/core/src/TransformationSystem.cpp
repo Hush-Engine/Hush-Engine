@@ -2,6 +2,7 @@
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Mat4Math.hpp"
+#include "Profiling.hpp"
 #include "Scene.hpp"
 
 void Hush::TransformationSystem::Init()
@@ -15,6 +16,7 @@ void Hush::TransformationSystem::OnShutdown()
 
 void Hush::TransformationSystem::OnUpdate(float delta)
 {
+	ZoneScoped;
 	(void)delta;
 	this->m_transformableEntitiesQuery.Each([](Entity &entity, WorldTransform &worldXform, LocalTransform &localXform) {
 		// Get the parents xform and multiply that by the local xform... that now becomes the global xform

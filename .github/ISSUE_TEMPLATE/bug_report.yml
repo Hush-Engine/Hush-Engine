@@ -1,0 +1,127 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Hush Engine.
+title: "[BUG] "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below so we can
+        reproduce and fix the issue as quickly as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: The minimal steps needed to reproduce the behavior.
+      placeholder: |
+        1. Clone the repo and build with preset '...'
+        2. Run example '...'
+        3. Perform action '...'
+        4. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+      placeholder: Describe what you expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened instead.
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area of the engine is affected?
+      options:
+        - Rendering
+        - RHI
+        - Render Graph
+        - Core
+        - Input
+        - Scripting
+        - Editor
+        - Devtool
+        - Shaders
+        - Build System
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: The OS and version you are running on.
+      placeholder: "e.g. Windows 11 23H2"
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      description: Your GPU model.
+      placeholder: "e.g. NVIDIA RTX 4070"
+    validations:
+      required: true
+
+  - type: input
+    id: gpu-driver-version
+    attributes:
+      label: GPU Driver Version
+      description: The version of your GPU driver.
+      placeholder: "e.g. 560.94"
+    validations:
+      required: true
+
+  - type: input
+    id: hush-version
+    attributes:
+      label: Hush Engine Version / Commit
+      description: The version tag or commit SHA you are using.
+      placeholder: "e.g. v0.1.0 or abc1234"
+    validations:
+      required: true
+
+  - type: textarea
+    id: log-output
+    attributes:
+      label: Log Output
+      description: Paste any relevant log output, error messages, or stack traces.
+      render: text
+      placeholder: Paste log output here...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or files that might help diagnose the issue.
+      placeholder: Add any additional context here...
+    validations:
+      required: false

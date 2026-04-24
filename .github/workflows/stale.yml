@@ -1,0 +1,107 @@
+# ============================================================================
+# Stale Issues & Pull Requests Bot
+# ============================================================================
+# Automatically marks issues and PRs as stale after a period of inactivity,
+# and closes them if no further activity occurs. This helps keep the backlog
+# clean and focused on actively maintained work.
+#
+# Schedule: Runs daily at midnight UTC
+# Manual:   Can also be triggered manually via workflow_dispatch
+# ============================================================================
+
+name: 'Stale Issues & PRs'
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  # Allow manual triggering from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark stale issues and PRs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          # ------------------------------------------------------------------
+          # General Settings
+          # ------------------------------------------------------------------
+
+          # Maximum number of operations (label, comment, close) per run.
+          # Keeps API usage reasonable for large repositories.
+          operations-per-run: 50
+
+          # Process oldest items first so nothing languishes indefinitely.
+          ascending: true
+
+          # ------------------------------------------------------------------
+          # Issue Configuration
+          # ------------------------------------------------------------------
+
+          # Mark issues as stale after 60 days of inactivity.
+          days-before-stale: 60
+
+          # Close stale issues after 14 additional days with no response.
+          days-before-close: 14
+
+          # Label applied to stale issues.
+          stale-issue-label: 'stale'
+
+          # Message posted when an issue is marked as stale.
+          stale-issue-message: >
+            👋 Hi there! This issue has been automatically marked as **stale**
+            because it hasn't had any activity in the last 60 days. Is this
+            still relevant? If so, please leave a comment or update the issue
+            to keep it open. Otherwise, it will be automatically closed in
+            **14 days**. Thank you for your contributions to Hush Engine!
+
+          # Message posted when a stale issue is closed.
+          close-issue-message: >
+            🔒 This issue has been automatically closed due to inactivity.
+            If you believe this is still relevant, feel free to reopen it or
+            create a new issue — we're happy to revisit. Thanks!
+
+          # Issues with any of these labels will never be marked as stale.
+          exempt-issue-labels: 'pinned,security,good first issue,help wanted,in-progress'
+
+          # ------------------------------------------------------------------
+          # Pull Request Configuration
+          # ------------------------------------------------------------------
+
+          # Mark PRs as stale after 45 days of inactivity.
+          days-before-pr-stale: 45
+
+          # Close stale PRs after 14 additional days with no activity.
+          days-before-pr-close: 14
+
+          # Label applied to stale pull requests.
+          stale-pr-label: 'stale'
+
+          # Message posted when a PR is marked as stale.
+          stale-pr-message: >
+            👋 Hi there! This pull request has been automatically marked as
+            **stale** because it hasn't had any activity in the last 45 days.
+            If this PR is still a work in progress, please leave a comment or
+            push an update to keep it open. Otherwise, it will be automatically
+            closed in **14 days**. Thank you for your contributions to
+            Hush Engine!
+
+          # Message posted when a stale PR is closed.
+          close-pr-message: >
+            🔒 This pull request has been automatically closed due to
+            inactivity. If you'd like to continue working on this, feel free
+            to reopen it — we appreciate the effort! Thanks!
+
+          # PRs with any of these labels will never be marked as stale.
+          exempt-pr-labels: 'pinned,security,in-progress,do-not-close'
+
+          # Draft PRs are works-in-progress and should not be marked as stale.
+          exempt-draft-pr: true

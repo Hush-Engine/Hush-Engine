@@ -7,6 +7,7 @@
 
 #include "../RHI/IShaderModule.hpp"
 #include "Logger.hpp"
+#include "Profiling.hpp"
 #include <string>
 #include <webgpu/webgpu.hpp>
 
@@ -101,6 +102,7 @@ namespace Hush::Graphics
 		/// @brief Create the wgpu::ShaderModule from the descriptor's WGSL source.
 		void CreateModule(const ShaderModuleDescriptor &descriptor)
 		{
+			ZoneScoped;
 			if (m_device == nullptr)
 			{
 				return;

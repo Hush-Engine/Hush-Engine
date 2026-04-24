@@ -298,6 +298,9 @@ namespace Hush::Graphics
 		/// @brief Get native device handle (API-specific)
 		[[nodiscard]]
 		virtual void *GetNativeHandle() const = 0;
+
+		[[nodiscard]]
+		virtual ETextureFormat GetPreferredSwapchainFormat() const = 0;
 	};
 
 } // namespace Hush::Graphics
