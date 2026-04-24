@@ -28,7 +28,7 @@
 #include <string>
 #include "HushEngine.hpp"
 
-constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
+constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiWindowFlags_NoFocusOnAppearing;
 
 void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 {

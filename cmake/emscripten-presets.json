@@ -12,7 +12,9 @@
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "CMAKE_SYSTEM_NAME": "Emscripten",
         "CMAKE_CXX_FLAGS": "-fexceptions -Wno-unknown-attributes -pthread",
-        "CMAKE_LINKER_FLAGS": "-pthread"
+        "CMAKE_LINKER_FLAGS": "-pthread",
+        "HUSH_ENABLE_PROFILING": "OFF",
+        "HUSH_ENABLE_TESTS": "OFF"
       }
     },
     {

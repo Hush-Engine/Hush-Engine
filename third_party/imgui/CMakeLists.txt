@@ -30,6 +30,12 @@ message("ImGui base sources")
 add_library(imgui STATIC ${IMGUI_SOURCES})
 add_library(imguizmo STATIC ${IMGUIZMO_SOURCES})
 
+if (EMSCRIPTEN)
+  target_compile_definitions(imgui PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+else ()
+  target_compile_definitions(imgui PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+endif ()
+
 target_compile_definitions(imgui PUBLIC SDL_ENABLE_OLD_NAMES)
 
 message("Linking dependencies...")

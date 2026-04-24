@@ -123,7 +123,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
 	// Forward event to ImGui
-	ImGui_ImplSDL3_ProcessEvent(&event);
+	// ImGui_ImplSDL3_ProcessEvent(&event);
 	// Forward event to the renderer
 	switch (event.type)
 	{

@@ -69,7 +69,7 @@ TEST_CASE("Threadpool parallel task execution", "[threadpool]")
 	std::vector<Task<void>> tasks;
 	tasks.reserve(NUM_TASKS);
 
-	auto taskFunc = [](std::set<uint64_t> &threadIds, std::mutex &mutex) -> Task<void> {
+	auto taskFunc = [](std::set<size_t> &threadIds, std::mutex &mutex) -> Task<void> {
 		const auto currentThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
 
 		std::unique_lock<std::mutex> lock(mutex);

@@ -9,8 +9,8 @@
 #include "Logger.hpp"
 #ifndef HUSH_PLATFORM_EMSCRIPTEN
 #include "Profiling.hpp"
-#endif
 #include <webgpu.h>
+#endif
 #include <webgpu/webgpu.hpp>
 
 namespace Hush::Graphics

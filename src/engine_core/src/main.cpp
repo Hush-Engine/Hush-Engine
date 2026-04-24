@@ -1,8 +1,6 @@
 #include "HushEngine.hpp"
 #include "Scene.hpp"
 
-#if HUSH_PLATFORM_EMSCRIPTEN
-
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_init.h>
@@ -58,15 +56,3 @@ void SDL_AppQuit(void *appstate, [[maybe_unused]] SDL_AppResult result)
 }
 
 }
-
-#else // Desktop
-
-int main(int argc, const char *argv[])
-{
-	Hush::HushEngine engine;
-	engine.Run({argv, static_cast<size_t>(argc)});
-	engine.Quit();
-	return 0;
-}
-
-#endif

@@ -22,8 +22,6 @@
 #include "UI.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <memory>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 #include "imguizmo/ImGuizmo.h"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;

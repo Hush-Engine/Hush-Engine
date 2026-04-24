@@ -5,6 +5,8 @@
 */
 #include "filesystem/CFileSystem/CFile.hpp"
 
+#include <Platform.hpp>
+
 #include <Logger.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem/helper.hpp>

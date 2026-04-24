@@ -47,8 +47,7 @@ namespace Hush
 		void Init(int argc, char **argv);
 
 		/// Starts running the engine with UI components
-		/// @param args Command-line arguments passed from main()
-		void Run(std::span<const char *> args = {});
+		void Run();
 
 		/// Disposes of the HushEngine
 		void Quit();

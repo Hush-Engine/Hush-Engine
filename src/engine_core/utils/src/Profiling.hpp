@@ -123,7 +123,7 @@
 // NOLINTNEXTLINE
 namespace tracy
 {
-	void SetThreadName([[maybe_unused]] const char *name)
+	inline void SetThreadName([[maybe_unused]] const char *name)
 	{
 	}
 } // namespace tracy

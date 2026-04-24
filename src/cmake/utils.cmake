@@ -41,7 +41,7 @@ function (download_hush_file)
     message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
 endfunction()
 
-if (MSVC)
+if (CMAKE_HOST_WIN32)
     set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
     set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
 

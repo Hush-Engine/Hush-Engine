@@ -163,7 +163,7 @@ struct SerializableStruct
 			return error;
 		}
 
-		return serializer.Serialize<std::string>("d", d);
+		return serializer.Serialize<std::string_view>("d", d);
 	}
 };
 

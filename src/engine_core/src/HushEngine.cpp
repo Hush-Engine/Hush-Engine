@@ -55,7 +55,7 @@ void Hush::HushEngine::Init(int argc, char **argv)
 	this->m_app = LoadApplication(this);
 
 	// Check for --wait-profiler flag
-	std::span<const char *> args(argv, static_cast<size_t>(argc));
+	std::span<char *> args(argv, static_cast<size_t>(argc));
 	if (std::ranges::find_if(args, [](const char *arg) { return std::string_view(arg) == "--wait-profiler"; }) !=
 		args.end())
 	{
@@ -82,26 +82,6 @@ void Hush::HushEngine::Init(int argc, char **argv)
 	AddDefaultSystems();
 
 	this->m_app->Init();
-}
-
-void Hush::HushEngine::Run(std::span<const char *> args)
-{
-	std::vector<char *> argv;
-	for (const char *arg : args)
-	{
-		argv.push_back(const_cast<char *>(arg));
-	}
-	Init(static_cast<int>(argv.size()), argv.data());
-
-	while (this->m_isApplicationRunning)
-	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			HandleEvents(event);
-		}
-		Run();
-	}
 }
 
 void Hush::HushEngine::Run()
