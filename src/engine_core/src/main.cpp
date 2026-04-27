@@ -7,52 +7,52 @@
 
 namespace
 {
-    struct AppState
-    {
-        Hush::HushEngine engine;
-    };
-}
+	struct AppState
+	{
+		Hush::HushEngine engine;
+	};
+} // namespace
 
-extern "C" {
-
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
+extern "C"
 {
-    *appstate = new AppState;
-    AppState& state = *static_cast<AppState*>(*appstate);
 
-    if(!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-    {
-        Hush::LogFormat(Hush::ELogLevel::Error, "SDL_InitSubSystem failed: {}", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
+	SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
+	{
+		*appstate = new AppState;
+		AppState &state = *static_cast<AppState *>(*appstate);
 
-    state.engine.Init(argc, argv);
+		if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+		{
+			Hush::LogFormat(Hush::ELogLevel::Error, "SDL_InitSubSystem failed: {}", SDL_GetError());
+			return SDL_APP_FAILURE;
+		}
 
-    return SDL_APP_CONTINUE;
-}
+		state.engine.Init(argc, argv);
 
-SDL_AppResult SDL_AppIterate(void *appstate)
-{
-    AppState& state = *static_cast<AppState*>(appstate);
-    state.engine.Run();
+		return SDL_APP_CONTINUE;
+	}
 
-    return SDL_APP_CONTINUE;
-}
+	SDL_AppResult SDL_AppIterate(void *appstate)
+	{
+		AppState &state = *static_cast<AppState *>(appstate);
+		state.engine.Run();
 
-SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
-{
-    AppState& state = *static_cast<AppState*>(appstate);
-    state.engine.HandleEvents(*event);
+		return SDL_APP_CONTINUE;
+	}
 
-    return SDL_APP_CONTINUE;
-}
+	SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
+	{
+		AppState &state = *static_cast<AppState *>(appstate);
+		state.engine.HandleEvents(*event);
 
-void SDL_AppQuit(void *appstate, [[maybe_unused]] SDL_AppResult result)
-{
-    AppState& state = *static_cast<AppState*>(appstate);
-    state.engine.Quit();
+		return SDL_APP_CONTINUE;
+	}
 
-    delete &state;
-}
+	void SDL_AppQuit(void *appstate, [[maybe_unused]] SDL_AppResult result)
+	{
+		AppState &state = *static_cast<AppState *>(appstate);
+		state.engine.Quit();
 
+		delete &state;
+	}
 }

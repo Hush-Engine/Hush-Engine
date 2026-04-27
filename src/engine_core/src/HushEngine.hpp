@@ -75,7 +75,6 @@ namespace Hush
 		ResourceManager *GetResourceManager() noexcept;
 
 	private:
-
 		void AddDefaultSystems();
 
 		std::unique_ptr<IApplication> m_app = nullptr;

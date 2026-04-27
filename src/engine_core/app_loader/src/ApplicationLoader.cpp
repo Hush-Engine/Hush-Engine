@@ -24,7 +24,7 @@ std::unique_ptr<Hush::IApplication> Hush::LoadApplication(HushEngine *engine)
 	// Ok, we support apps as shared libraries, we then must check if a bundled application exists.
 	if (BundledAppExists_Internal_())
 	{
-	Hush::LogInfo("Bundled application found, loading...");
+		Hush::LogInfo("Bundled application found, loading...");
 		// It exists, just return it.
 		return std::unique_ptr<IApplication>(BundledApp_Internal_(engine));
 	}

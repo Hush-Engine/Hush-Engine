@@ -91,14 +91,14 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 	}
 	// this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
-// 	if (this->m_rendererPtr == nullptr)
-// 	{
-// 		Hush::ELogLevel severity = ELogLevel::Error;
-// #ifdef HUSH_VULKAN_IMPL
-// 		severity = ELogLevel::Warn;
-// #endif // HUSH_VULKAN_IMPL
-// 		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
-// 	}
+	// 	if (this->m_rendererPtr == nullptr)
+	// 	{
+	// 		Hush::ELogLevel severity = ELogLevel::Error;
+	// #ifdef HUSH_VULKAN_IMPL
+	// 		severity = ELogLevel::Warn;
+	// #endif // HUSH_VULKAN_IMPL
+	// 		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
+	// 	}
 
 	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
 
@@ -116,7 +116,7 @@ glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 	return {width, height};
 }
 
-void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Event& event)
+void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Event &event)
 {
 	// SDL_Event event;
 	KeyCode code = 0;
@@ -153,17 +153,19 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Released);
 		break;
 	case SDL_EVENT_MOUSE_MOTION:
-		InputManager::SendMouseMovementEvent(static_cast<int32_t>(event.motion.x), static_cast<int32_t>(event.motion.y), static_cast<int32_t>(event.motion.xrel), static_cast<int32_t>(event.motion.yrel));
+		InputManager::SendMouseMovementEvent(static_cast<int32_t>(event.motion.x), static_cast<int32_t>(event.motion.y),
+											 static_cast<int32_t>(event.motion.xrel),
+											 static_cast<int32_t>(event.motion.yrel));
 		break;
 	case SDL_EVENT_MOUSE_WHEEL:
 		// Send 0 as acceleration bc it will be calculated manually
 		InputManager::SendWheelEvent(event.wheel.mouse_x, event.wheel.mouse_y);
 		break;
 	default:
-	    if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
-        {
-            CheckWindowState(event.window, &this->m_isActive);
-        }
+		if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
+		{
+			CheckWindowState(event.window, &this->m_isActive);
+		}
 		break;
 	}
 	// this->m_windowRenderer->HandleEvent(&event);
@@ -215,7 +217,7 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 		*isActive = true;
 		break;
 	case SDL_EVENT_WINDOW_RESIZED:
-	    Hush::LogInfo("Window resized");
+		Hush::LogInfo("Window resized");
 		this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
 		// Mark the render graph as dirty so it is fully rebuilt next frame
 		// (transient resource dimensions depend on window size).  Unlike Reset(),

@@ -16,7 +16,7 @@
 static Hush::CFile OpenFile(const std::string &path, const Hush::EFileOpenMode mode)
 {
 	FILE *file = nullptr;
-	#if HUSH_PLATFORM_WIN
+#if HUSH_PLATFORM_WIN
 	if (mode == Hush::EFileOpenMode::Read)
 	{
 		fopen_s(&file, path.c_str(), "r");
@@ -25,16 +25,16 @@ static Hush::CFile OpenFile(const std::string &path, const Hush::EFileOpenMode m
 	{
 		fopen_s(&file, path.c_str(), "w");
 	}
-	#else
+#else
 	if (mode == Hush::EFileOpenMode::Read)
-    {
-        file = fopen(path.c_str(), "r");
-    }
-    else
-    {
-        file = fopen(path.c_str(), "w");
-    }
-	#endif
+	{
+		file = fopen(path.c_str(), "r");
+	}
+	else
+	{
+		file = fopen(path.c_str(), "w");
+	}
+#endif
 
 	// Get file size
 	fseek(file, 0, SEEK_END);

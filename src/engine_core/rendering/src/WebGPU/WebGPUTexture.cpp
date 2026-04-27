@@ -28,11 +28,11 @@ Hush::Graphics::WebGPUTexture &Hush::Graphics::WebGPUTexture::operator=(WebGPUTe
 {
 	if (this != &rhs)
 	{
-	    if (m_texture != nullptr && !m_descriptor.ownedByExternalSource)
-        {
-            m_view.release();
-            m_texture.destroy();
-        }
+		if (m_texture != nullptr && !m_descriptor.ownedByExternalSource)
+		{
+			m_view.release();
+			m_texture.destroy();
+		}
 		m_texture = std::move(rhs.m_texture);
 		m_view = std::move(rhs.m_view);
 		m_descriptor = rhs.m_descriptor;
@@ -47,7 +47,7 @@ Hush::Graphics::WebGPUTexture::~WebGPUTexture()
 {
 	if (m_texture != nullptr && !m_descriptor.ownedByExternalSource)
 	{
-	    m_view.release();
+		m_view.release();
 		m_texture.destroy();
 	}
 }

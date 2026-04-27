@@ -82,7 +82,7 @@ namespace Hush::Graphics
 // However, in the web, mapAsync is truly async, so we need to wait for the callback to be invoked before we can access
 // the mapped data.
 #if !defined(WEBGPU_BACKEND_WGPU) && !defined(WEBGPU_BACKEND_EMDAWNWEBGPU)
-        auto mapBufferFuture = m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
+		auto mapBufferFuture = m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
 
 		WGPUFutureWaitInfo futureInfo = {};
 		futureInfo.future = mapBufferFuture;
@@ -96,22 +96,22 @@ namespace Hush::Graphics
 		}
 
 #elif defined(WEBGPU_BACKEND_WGPU)
-        m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
+		m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
 		// On WGPU-native, we need to poll events to ensure the mapAsync callback is processed.
 		[[maybe_unused]]
 		auto *webGpuGraphicsDevice = dynamic_cast<WebGPUGraphicsDevice *>(device);
 		webGpuGraphicsDevice->PollEvents();
 #elif defined(HUSH_PLATFORM_EMSCRIPTEN)
-        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
-        m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
-        while (!success)
-        {
-            emscripten_sleep(5); // Sleep for 10 ms before checking again
-            m_instance.processEvents(); // Process any pending WebGPU events, including the mapAsync callback
-        }
+		callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
+		m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
+		while (!success)
+		{
+			emscripten_sleep(5);		// Sleep for 10 ms before checking again
+			m_instance.processEvents(); // Process any pending WebGPU events, including the mapAsync callback
+		}
 #endif
 
-        HUSH_ASSERT(success, "WebGPU buffer mapping failed: callback was not invoked with success status.");
+		HUSH_ASSERT(success, "WebGPU buffer mapping failed: callback was not invoked with success status.");
 
 		if (!success)
 		{

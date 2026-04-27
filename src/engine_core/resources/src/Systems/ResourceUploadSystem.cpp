@@ -38,7 +38,7 @@ Hush::Renderer::ResourceUploadSystem::ResourceUploadSystem(Hush::Scene &scene, R
 {
 	HUSH_ASSERT(m_renderDevice != nullptr, "ResourceUploadSystem requires a valid RenderDevice!");
 	HUSH_ASSERT(m_graphicsDevice != nullptr, "ResourceUploadSystem requires a valid IGraphicsDevice!");
-	
+
 	SetOrder(RENDER_GRAPH_SYSTEM_ORDER);
 }
 
@@ -102,8 +102,8 @@ void Hush::Renderer::ResourceUploadSystem::OnFixedUpdate([[maybe_unused]] float 
 
 void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 {
-    ZoneScoped;
-   
+	ZoneScoped;
+
 	// Staging-buffer mapping must happen before the frame's BeginFrame().
 	// On Emscripten/Chromium, WebGPUBuffer::Map yields to the browser via
 	// emscripten_sleep, and any task yield between
@@ -118,24 +118,24 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 		mapped = m_stagingBuffer->Map(m_renderDevice->GetGraphicsDevice());
 	}
 	HUSH_ASSERT(mapped != nullptr, "Failed to map the staging buffer for CPU writes!");
-   
+
 	// First half → meshes
 	m_meshStaging.cpuPtr = mapped;
 	m_meshStaging.offset = 0;
 	m_meshStaging.capacity = m_halfQuota;
-   
+
 	// Second half → textures
 	m_textureStaging.cpuPtr = static_cast<char *>(mapped) + m_halfQuota;
 	m_textureStaging.offset = 0;
 	m_textureStaging.capacity = m_halfQuota;
-   
+
 	// Reset per-frame bookkeeping.
 	m_bytesUploadedLastFrame = 0;
 	m_meshStaging.Reset();
 	m_textureStaging.Reset();
 	m_pendingBufferCopies.clear();
 	m_pendingTextureCopies.clear();
-   
+
 	// CPU-only staging: memcpy dirty data into the mapped buffer and
 	// record pending copy descriptors.  No GPU calls happen here.
 	{
@@ -146,7 +146,7 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 		ZoneScopedN("StageDirtyTextures");
 		StageDirtyTextures();
 	}
-   
+
 	m_bytesUploadedLastFrame = m_meshStaging.offset + m_textureStaging.offset;
 }
 

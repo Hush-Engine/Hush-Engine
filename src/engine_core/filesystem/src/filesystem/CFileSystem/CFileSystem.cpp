@@ -51,25 +51,25 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 
 	const auto realPathStr = realPath.generic_string();
 
-	#if HUSH_PLATFORM_WIN
+#if HUSH_PLATFORM_WIN
 	if (const errno_t error = fopen_s(&file, realPathStr.c_str(), modeStr.data()); error != 0)
 	{
 		LogFormat(ELogLevel::Debug, "Error opening file: {}", error);
 		return IFile::EError::FileDoesntExist;
 	}
-	#else
+#else
 	if (file = fopen(realPathStr.c_str(), modeStr.data()); file == nullptr)
 	{
 		LogFormat(ELogLevel::Debug, "Error opening file: {}", errno);
 		return IFile::EError::FileDoesntExist;
 	}
-	#endif
+#endif
 
-	// Get file size and last modified time.
-	// Prefer std::filesystem::file_size where available, but on Emscripten
-	// and in cases where filesystem fails, use stat() to avoid relying on
-	// fseek/ftell variants that can cause symbol/signature mismatches in WASM builds.
-	#if HUSH_PLATFORM_EMSCRIPTEN
+// Get file size and last modified time.
+// Prefer std::filesystem::file_size where available, but on Emscripten
+// and in cases where filesystem fails, use stat() to avoid relying on
+// fseek/ftell variants that can cause symbol/signature mismatches in WASM builds.
+#if HUSH_PLATFORM_EMSCRIPTEN
 	struct stat result{};
 	if (stat(realPathStr.c_str(), &result) != 0)
 	{
@@ -78,7 +78,7 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 		return IFile::EError::OperationNotSupported;
 	}
 	std::size_t size = static_cast<std::size_t>(result.st_size);
-	#else
+#else
 	std::error_code ec;
 	std::size_t size = std::filesystem::file_size(realPath, ec);
 	struct stat result{};
@@ -102,7 +102,7 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::CFileSyste
 			return IFile::EError::OperationNotSupported;
 		}
 	}
-	#endif
+#endif
 
 	FileInfo metadata{
 		.path = std::move(vfsPath),

@@ -31,8 +31,7 @@ static constexpr uint32_t NUM_THREADS = std::thread::hardware_concurrency();
 #endif
 
 Hush::HushEngine::HushEngine()
-	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
-		  {.numThreads = NUM_THREADS, .pinToCore = true}))
+	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create({.numThreads = NUM_THREADS, .pinToCore = true}))
 {
 	m_internal = std::make_unique<HushEngineInternal>();
 	m_internal->resourceManager.Init(&m_internal->vfs);
@@ -144,7 +143,7 @@ void Hush::HushEngine::Run()
 
 void Hush::HushEngine::HandleEvents(const SDL_Event &event)
 {
-    this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning, event);
+	this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning, event);
 }
 
 void Hush::HushEngine::AddSystem(ISystem *system)
@@ -174,7 +173,7 @@ Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
 
 void Hush::HushEngine::AddDefaultSystems()
 {
-    this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
+	this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
 	this->m_app->GetScene()->AddEngineSystem(this->m_internal->renderGraphSystem.get());
 }
 

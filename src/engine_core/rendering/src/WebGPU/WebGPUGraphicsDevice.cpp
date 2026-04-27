@@ -426,7 +426,7 @@ namespace Hush::Graphics
 												  .format = ConvertToEngineTextureFormat(m_surfaceFormat),
 												  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
 												  .debugName = "Current Frame Texture",
-														  .ownedByExternalSource = true,
+												  .ownedByExternalSource = true,
 											  });
 	}
 
@@ -435,12 +435,12 @@ namespace Hush::Graphics
 #ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
 #endif
-	#if HUSH_PLATFORM_EMSCRIPTEN
+#if HUSH_PLATFORM_EMSCRIPTEN
 		m_currentFrameTexture = WebGPUTexture();
 		emscripten_sleep(0);
-	#else
+#else
 		m_surface.present();
-	#endif
+#endif
 		m_currentFrameView = nullptr;
 		FlushDeletionQueue();
 	}

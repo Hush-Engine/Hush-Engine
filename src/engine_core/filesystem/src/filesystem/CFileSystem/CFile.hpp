@@ -14,7 +14,7 @@ namespace Hush
 	class CFile final : public IFile
 	{
 	public:
-	    using IFile::Result;
+		using IFile::Result;
 		CFile(FILE *file, FileInfo &&fileMetadata)
 			: m_file(file),
 			  m_metadata(std::move(fileMetadata))

@@ -429,7 +429,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	if (desc.ops.copyCtor != nullptr)
 	{
 		componentDesc.type.hooks.copy_ctor = [](void *dst, const void *src, int32_t count,
-											const ecs_type_info_t *type_info) {
+												const ecs_type_info_t *type_info) {
 			const auto *info = static_cast<ComponentInfo *>(type_info->hooks.binding_ctx);
 
 			ComponentTraits::ComponentInfo componentDesc = {

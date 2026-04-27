@@ -40,7 +40,7 @@ namespace Hush
 
 		WindowRenderer &operator=(WindowRenderer &&) = delete;
 
-		void HandleEvents(bool *applicationRunning, const SDL_Event& event);
+		void HandleEvents(bool *applicationRunning, const SDL_Event &event);
 
 		~WindowRenderer();
 

@@ -16,7 +16,7 @@ Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderG
 	  m_renderDevice(renderDevice)
 {
 	HUSH_ASSERT(m_renderDevice != nullptr, "RenderGraphSystem requires a valid RenderDevice!");
-	
+
 	SetOrder(RENDER_GRAPH_SYSTEM_ORDER);
 }
 
@@ -46,7 +46,7 @@ void Hush::Graphics::RenderGraphSystem::OnFixedUpdate([[maybe_unused]] float del
 
 void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
-    ZoneScoped;
+	ZoneScoped;
 
 	HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
 	m_renderDevice->BeginFrame();
