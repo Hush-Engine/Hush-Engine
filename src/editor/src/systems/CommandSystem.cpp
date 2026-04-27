@@ -11,14 +11,14 @@ void Hush::CommandSystem::OnShutdown()
 
 /// OnRender() is called when the system should render.
 /// @param delta Time since last frame
-void Hush::CommandSystem::OnUpdate(float delta)
+void Hush::CommandSystem::OnUpdate([[maybe_unused]] float delta)
 {
 }
 
 /// OnFixedUpdate() is called when the system should update its state.
 /// @param delta Time since last fixed frame
 
-void Hush::CommandSystem::OnFixedUpdate(float delta)
+void Hush::CommandSystem::OnFixedUpdate([[maybe_unused]] float delta)
 {
 }
 

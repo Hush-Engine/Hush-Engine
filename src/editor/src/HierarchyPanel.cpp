@@ -1,3 +1,4 @@
+
 #include "HierarchyPanel.hpp"
 #include <cstdint>
 #include <functional>
@@ -16,7 +17,7 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }
 
-void Hush::HierarchyPanel::OnRender(float deltaTime)
+void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
@@ -24,7 +25,7 @@ void Hush::HierarchyPanel::OnRender(float deltaTime)
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
 	// Maybe draw them in separate systems?
 	this->m_inspectableEntitiesQuery.Each(
-		[&inspectorPanel, this](Entity &entity, WorldTransform &_, LocalTransform &localxForm, Entity::Name &name) {
+		[&inspectorPanel, this](Entity &entity, [[maybe_unused]] WorldTransform &_, [[maybe_unused]] LocalTransform &localxForm, Entity::Name &name) {
 			if (entity.GetParent().IsValid())
 			{
 				// We skip rendering the entity because the parent would have already rendered itj

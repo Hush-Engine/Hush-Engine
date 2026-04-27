@@ -18,7 +18,7 @@ constexpr ImGuiWindowFlags_ TOAST_FLAGS = ImGuiWindowFlags_NoScrollbar;
 void Hush::NotificationPanel::OnRender(float deltaTime)
 {
 	// Get all entries in the queue and fade them out
-	size_t currentToastIndex = -1;
+	int32_t currentToastIndex = -1;
 	this->m_toastQuery.Each([&currentToastIndex, this, deltaTime](Entity &entity, ToastNotification &notification) {
 		currentToastIndex++; // Increase this first for early return
 		if (notification.remainingTime <= 0.f)
@@ -66,10 +66,10 @@ void Hush::NotificationPanel::OnRender(float deltaTime)
 		toastWindowHeight = MathUtils::Clamp(toastWindowHeight, minHeight, maxHeight);
 
 		ImVec2 toastSize = {maxDimensions.x, toastWindowHeight};
-		constexpr float maxPercentageHeightScreen = 0.85f;
+		// constexpr float maxPercentageHeightScreen = 0.85f;
 		// We need something different, the next toast notification will be at the currToastIndex * the max height
 		constexpr float verticalGap = 4.f;
-		constexpr float startYOffset = 20;
+		// constexpr float startYOffset = 20;
 		const ImVec2 toastPos =
 			ImVec2(renderTargetSize.x - maxDimensions.x,
 				   renderTargetSize.y - minHeight - (currentToastIndex * (toastSize.y + verticalGap)));
