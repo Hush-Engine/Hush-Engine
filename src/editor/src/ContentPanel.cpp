@@ -59,7 +59,8 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
-				[[maybe_unused]] IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+				[[maybe_unused]]
+				IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
 				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
 				// // Use the Model Loader interface to get entities and then forward that to the renderer

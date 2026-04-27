@@ -94,7 +94,7 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 	ImGui::Text("Name: %s", component->GetMesh()->GetName().c_str());
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
-	
+
 	[[maybe_unused]]
 	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
 	// // Iterate over the surfaces and  serialize their materials as submeshes
@@ -153,11 +153,13 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
 
-	activeScene->CreateQuery<EditorInfo>().Each(
-		[this]([[maybe_unused]] Entity &entity, EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
+													   Entity &entity,
+													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
 
-	activeScene->CreateQuery<EditorCamera>().Each(
-		[this]([[maybe_unused]] Entity &entity, EditorCamera &camRef) { this->m_editorCamera = &camRef; });
+	activeScene->CreateQuery<EditorCamera>().Each([this]([[maybe_unused]]
+														 Entity &entity,
+														 EditorCamera &camRef) { this->m_editorCamera = &camRef; });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)

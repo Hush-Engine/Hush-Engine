@@ -24,22 +24,24 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
 	// Maybe draw them in separate systems?
-	this->m_inspectableEntitiesQuery.Each(
-		[&inspectorPanel, this](Entity &entity, [[maybe_unused]] WorldTransform &_, [[maybe_unused]] LocalTransform &localxForm, Entity::Name &name) {
-			if (entity.GetParent().IsValid())
-			{
-				// We skip rendering the entity because the parent would have already rendered itj
-				return;
-			}
-			// bool selected = inspectorPanel.GetInspectTarget().has_value() &&
-			// 				inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
-			auto narrowedId = static_cast<int32_t>(entity.GetId());
-			ImGui::PushID(narrowedId);
+	this->m_inspectableEntitiesQuery.Each([&inspectorPanel, this](Entity &entity, [[maybe_unused]] WorldTransform &_,
+																  [[maybe_unused]]
+																  LocalTransform &localxForm,
+																  Entity::Name &name) {
+		if (entity.GetParent().IsValid())
+		{
+			// We skip rendering the entity because the parent would have already rendered itj
+			return;
+		}
+		// bool selected = inspectorPanel.GetInspectTarget().has_value() &&
+		// 				inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
+		auto narrowedId = static_cast<int32_t>(entity.GetId());
+		ImGui::PushID(narrowedId);
 
-			this->GenerateEntitySelectableTree(entity, name, &inspectorPanel);
+		this->GenerateEntitySelectableTree(entity, name, &inspectorPanel);
 
-			ImGui::PopID();
-		});
+		ImGui::PopID();
+	});
 
 	ImGui::End();
 }

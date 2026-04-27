@@ -36,7 +36,8 @@ constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "fi
 															   "add-system", "help"};
 
 // NOLINTNEXTLINE
-#define CALC_CMD_HASH(idx) Hush::Hashing::Fnv1a(BUILT_IN_COMMANDS[idx].data(), static_cast<uint32_t>(BUILT_IN_COMMANDS[idx].size()))
+#define CALC_CMD_HASH(idx)                                                                                             \
+	Hush::Hashing::Fnv1a(BUILT_IN_COMMANDS[idx].data(), static_cast<uint32_t>(BUILT_IN_COMMANDS[idx].size()))
 
 enum class EBuiltinCommands : uint32_t
 {
@@ -52,11 +53,13 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 
-	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each(
-		[this]([[maybe_unused]] Entity &entity, EditorInfo &infoRef, ScriptingHost &scriptingHostRef) {
-			this->m_editorInfo = &infoRef;
-			this->m_scriptingHost = &scriptingHostRef;
-		});
+	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each([this]([[maybe_unused]]
+																	  Entity &entity,
+																	  EditorInfo &infoRef,
+																	  ScriptingHost &scriptingHostRef) {
+		this->m_editorInfo = &infoRef;
+		this->m_scriptingHost = &scriptingHostRef;
+	});
 }
 
 void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
@@ -231,7 +234,8 @@ void Hush::CommandPanel::UpdateCommandList()
 	{
 		this->m_currState = EState::ForceFocus;
 		int32_t nextIdx = this->m_selectedCommandIdx + 1;
-		this->m_selectedCommandIdx = MathUtils::CircleBack(nextIdx, 0, static_cast<uint32_t>(BUILT_IN_COMMANDS.size() - 1));
+		this->m_selectedCommandIdx =
+			MathUtils::CircleBack(nextIdx, 0, static_cast<uint32_t>(BUILT_IN_COMMANDS.size() - 1));
 	}
 	constexpr float panelHeightOffset = 2.0f;
 	constexpr float backgroundAlpha = 0.5f;
@@ -298,7 +302,8 @@ void Hush::CommandPanel::UpdateCommandList()
 						cmdText = StringUtils::SubstrView(this->m_panelText, offset, (int32_t)this->m_panelText.size());
 					}
 					std::string pureCommand = this->m_panelText.substr(1, offset - 2);
-					uint32_t commandHash = Hashing::Fnv1a(pureCommand.data(), static_cast<uint32_t>(pureCommand.size()));
+					uint32_t commandHash =
+						Hashing::Fnv1a(pureCommand.data(), static_cast<uint32_t>(pureCommand.size()));
 					this->SubmitCommand(commandHash, cmdText);
 				}
 
@@ -379,7 +384,9 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	std::vector<std::string> entityNames;
 	std::string_view searchEntityName(static_cast<char *>(this->m_searchInputText));
 	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name, [[maybe_unused]] WorldTransform &transform) {
+	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name,
+													   [[maybe_unused]]
+													   WorldTransform &transform) {
 		std::string_view currEntityName = name.name.data();
 		if (searchEntityName.empty())
 		{
