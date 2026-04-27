@@ -104,10 +104,9 @@ namespace Hush::Graphics
 #elif defined(HUSH_PLATFORM_EMSCRIPTEN)
         callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
         m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
-        // On Emscripten with WebGPU, we can use emscripten_sleep to yield control back to the browser until the callback is invoked.
         while (!success)
         {
-            emscripten_sleep(10); // Sleep for 10 ms before checking again
+            emscripten_sleep(5); // Sleep for 10 ms before checking again
             m_instance.processEvents(); // Process any pending WebGPU events, including the mapAsync callback
         }
 #endif

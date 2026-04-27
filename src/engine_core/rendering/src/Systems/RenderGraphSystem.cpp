@@ -9,11 +9,15 @@
 #include "Profiling.hpp"
 #include "Scene.hpp"
 
+static constexpr uint16_t RENDER_GRAPH_SYSTEM_ORDER = 5;
+
 Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderGraph::RenderDevice *renderDevice)
 	: ISystem(scene),
 	  m_renderDevice(renderDevice)
 {
 	HUSH_ASSERT(m_renderDevice != nullptr, "RenderGraphSystem requires a valid RenderDevice!");
+	
+	SetOrder(RENDER_GRAPH_SYSTEM_ORDER);
 }
 
 void Hush::Graphics::RenderGraphSystem::Init()
@@ -42,17 +46,10 @@ void Hush::Graphics::RenderGraphSystem::OnFixedUpdate([[maybe_unused]] float del
 
 void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
-	HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
-	ZoneScoped;
+    ZoneScoped;
 
-	{
-		ZoneScopedN("BeginFrame");
-		m_renderDevice->BeginFrame();
-	}
-#else
+	HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
 	m_renderDevice->BeginFrame();
-#endif
 	m_frameActive = true;
 
 	auto &renderGraph = m_renderDevice->GetRenderGraph();

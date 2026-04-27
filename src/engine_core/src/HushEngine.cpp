@@ -174,8 +174,8 @@ Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
 
 void Hush::HushEngine::AddDefaultSystems()
 {
+    this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
 	this->m_app->GetScene()->AddEngineSystem(this->m_internal->renderGraphSystem.get());
-	this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
 }
 
 Hush::ResourceManager *Hush::HushEngine::GetResourceManager() noexcept
