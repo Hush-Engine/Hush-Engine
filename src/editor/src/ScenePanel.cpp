@@ -23,8 +23,10 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 	ImVec2 availSize = ImGui::GetContentRegionAvail();
 
 	// DO NOT CAST THIS TO AN UNSIGNED INTEGER BECAUSE IT WILL UNDERFLOW
-	auto newWidth = std::max(static_cast<uint32_t>(availSize.x), MIN_PANEL_DIMENSION);
-	auto newHeight = std::max(static_cast<uint32_t>(availSize.y), MIN_PANEL_DIMENSION);
+	const float clampedWidth = std::max(availSize.x, static_cast<float>(MIN_PANEL_DIMENSION));
+	const float clampedHeight = std::max(availSize.y, static_cast<float>(MIN_PANEL_DIMENSION));
+	auto newWidth = static_cast<uint32_t>(clampedWidth);
+	auto newHeight = static_cast<uint32_t>(clampedHeight);
 
 	if (newWidth != m_panelSize.x || newHeight != m_panelSize.y)
 	{

@@ -28,10 +28,10 @@ endif()
 
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" SPDLOG_BUILD_SHARED)
 
-set(ADITIONAL_OPTIONS "")
+set(ADDITIONAL_OPTIONS "")
 if (EMSCRIPTEN)
     # With emscripten, we need to link with pthread to use the thread pool in spdlog.
-    set(ADITIONAL_OPTIONS "CMAKE_CXX_FLAGS=-pthread")
+    list(APPEND ADDITIONAL_OPTIONS "-DCMAKE_CXX_FLAGS=-pthread")
 endif()
 
 vcpkg_cmake_configure(
@@ -42,7 +42,7 @@ vcpkg_cmake_configure(
         -DSPDLOG_BUILD_SHARED=${SPDLOG_BUILD_SHARED}
         -DSPDLOG_WCHAR_FILENAMES=${SPDLOG_WCHAR_FILENAMES}
         -DSPDLOG_BUILD_EXAMPLE=OFF
-        ${ADITIONAL_OPTIONS}
+        ${ADDITIONAL_OPTIONS}
 )
 
 vcpkg_cmake_install()

@@ -7,12 +7,11 @@
       "inherits": ["default"],
       "cacheVariables": {
         "HUSH_RENDERER_IMPL": "HUSH_WEBGPU_IMPL",
-        "DWEBGPU_BACKEND": "WGPU",
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "CMAKE_SYSTEM_NAME": "Emscripten",
         "CMAKE_CXX_FLAGS": "-fexceptions -Wno-unknown-attributes -pthread",
-        "CMAKE_LINKER_FLAGS": "-pthread",
+        "CMAKE_EXE_LINKER_FLAGS": "-pthread -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1",
         "HUSH_ENABLE_PROFILING": "OFF",
         "HUSH_ENABLE_TESTS": "OFF"
       }

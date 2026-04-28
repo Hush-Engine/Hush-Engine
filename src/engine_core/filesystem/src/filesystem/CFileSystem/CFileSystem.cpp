@@ -18,9 +18,7 @@
 #include <cerrno>
 #include <string_view>
 
-#if HUSH_PLATFORM_EMSCRIPTEN
 #include <sys/stat.h>
-#endif
 
 Hush::CFileSystem::CFileSystem(std::string_view root)
 	: m_root(root)

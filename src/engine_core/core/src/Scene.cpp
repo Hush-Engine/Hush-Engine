@@ -30,9 +30,8 @@ Hush::Scene::~Scene()
 
 void Hush::Scene::Init()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -58,9 +57,8 @@ void Hush::Scene::Init()
 
 void Hush::Scene::Update(float delta)
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -87,9 +85,8 @@ void Hush::Scene::Update(float delta)
 
 void Hush::Scene::FixedUpdate(float delta)
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -117,9 +114,8 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -143,9 +139,8 @@ void Hush::Scene::PreRender()
 
 void Hush::Scene::Render()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -169,9 +164,8 @@ void Hush::Scene::Render()
 
 void Hush::Scene::PostRender()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -195,9 +189,8 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
-#endif
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
