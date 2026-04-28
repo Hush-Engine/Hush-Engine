@@ -2,7 +2,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 8b773fb..e66d356 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -55,6 +55,10 @@ macro(add_flecs_target TARGET CONFIG)
+@@ -55,6 +55,11 @@ macro(add_flecs_target TARGET CONFIG)
      if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
          target_link_libraries(${TARGET} pthread)
      endif()
