@@ -1,25 +1,25 @@
 
 # Editor
 
-add_executable(HushEditor
-        src/ContentPanel.cpp
-        src/SystemSelection.cpp
-        src/EditorApp.cpp
-        src/HierarchyPanel.cpp
-        src/NotificationPanel.cpp
-        src/InspectorPanel.cpp
-        src/ScenePanel.cpp
-        src/StatsPanel.cpp
-        src/CommandPanel.cpp
-        src/TitleBarMenuPanel.cpp
-        src/systems/CommandSystem.cpp
-        src/systems/EditorCameraSystem.cpp
-        src/systems/RenderingSystem.cpp
-        src/UI.cpp
-        src/DebugTooltip.cpp
-        src/EditorApp.cpp
+hush_add_executable(
+        TARGET_NAME HushEditor
+        SRCS src/ContentPanel.cpp
+             src/SystemSelection.cpp
+             src/EditorApp.cpp
+             src/HierarchyPanel.cpp
+             src/NotificationPanel.cpp
+             src/InspectorPanel.cpp
+             src/ScenePanel.cpp
+             src/StatsPanel.cpp
+             src/CommandPanel.cpp
+             src/TitleBarMenuPanel.cpp
+             src/systems/CommandSystem.cpp
+             src/systems/EditorCameraSystem.cpp
+             src/systems/RenderingSystem.cpp
+             src/UI.cpp
+             src/DebugTooltip.cpp
+        PUBLIC_HEADER_DIRS src
 )
-
 
 # Allow HUSH_DEFAULT_PROJECT_ROOT to be passed as a CLI argument:
 #   cmake -DHUSH_DEFAULT_PROJECT_ROOT=/path/to/project ..

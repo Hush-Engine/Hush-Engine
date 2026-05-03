@@ -33,6 +33,19 @@ namespace Hush::Networking
 		const char *cmd = StringUtils::CompileTimeConcat("xdg-open ", url).data();
 		return system(cmd);
 	}
+#elif HUSH_PLATFORM_EMSCRIPTEN
+#include <emscripten/emscripten.h>
+	template <uint32_t N>
+	constexpr auto SystemOpenURL(const char (&url)[N])
+	{
+		EM_ASM_(
+			{
+				const url = UTF8ToString($0);
+				window.open(url, '_blank');
+			},
+			url);
+		return 0; // No meaningful return value for Emscripten
+	}
 #else
 #error "Unknown compiler"
 #endif

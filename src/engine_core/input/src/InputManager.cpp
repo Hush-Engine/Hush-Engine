@@ -4,7 +4,7 @@
 #include "definitions/KeyCode.hpp"
 #include "definitions/KeyStates.hpp"
 #include <magic_enum/magic_enum.hpp>
-#include <SDL2/SDL_mouse.h>
+#include <SDL3/SDL_mouse.h>
 
 #define IS_CURRENTLY_PRESSED(key) (key == EKeyState::Pressed || key == EKeyState::Held)
 

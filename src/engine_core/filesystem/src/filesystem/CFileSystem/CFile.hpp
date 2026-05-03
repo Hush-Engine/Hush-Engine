@@ -14,6 +14,7 @@ namespace Hush
 	class CFile final : public IFile
 	{
 	public:
+		using IFile::Result;
 		CFile(FILE *file, FileInfo &&fileMetadata)
 			: m_file(file),
 			  m_metadata(std::move(fileMetadata))
@@ -24,19 +25,19 @@ namespace Hush
 
 		/// @copydoc IFile::Read(std::span<std::byte>)
 		[[nodiscard]]
-		Result<std::size_t> Read(std::span<std::byte> data) override;
+		CFile::Result<std::size_t> Read(std::span<std::byte> data) override;
 
 		/// @copydoc IFile::Read(std::size_t)
 		[[nodiscard]]
-		Result<std::span<std::byte>> Read(std::size_t size) override;
+		CFile::Result<std::span<std::byte>> Read(std::size_t size) override;
 
 		/// @copydoc IFile::Write(std::span<const std::byte>)
 		[[nodiscard]]
-		Result<void> Write(std::span<const std::byte> data) override;
+		CFile::Result<void> Write(std::span<const std::byte> data) override;
 
 		/// @copydoc IFile::Seek(std::size_t)
 		[[nodiscard]]
-		Result<void> Seek(std::size_t position) override;
+		CFile::Result<void> Seek(std::size_t position) override;
 
 		void Close() override;
 

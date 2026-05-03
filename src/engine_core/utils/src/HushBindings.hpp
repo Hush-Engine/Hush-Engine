@@ -13,6 +13,17 @@
 #ifdef HUSH_COMPILER_MSVC
 #pragma warning(push)
 #pragma warning(disable : 5030) // Attribute not recognized
+
+#pragma warning(push)
+#pragma warning(disable : 4068) // Unknown pragma
+#endif
+
+#if defined(HUSH_COMPILER_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-attributes"
+#elif defined(HUSH_COMPILER_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
 #endif
 
 namespace Hush::Export
@@ -64,5 +75,9 @@ namespace Hush::Export
 		(void)name;
 	}
 } // namespace Hush::Export
+
+#ifdef HUSH_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 // NOLINTEND

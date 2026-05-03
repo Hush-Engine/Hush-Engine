@@ -5,6 +5,7 @@
 [submodule "imgui"]
 	path = third_party/imgui/include/imgui
 	url = https://github.com/Hush-Engine/imgui.git
+	branch = docking
 [submodule "third_party/WebGPU-distribution"]
 	path = third_party/WebGPU-distribution
 	url = https://github.com/Hush-Engine/WebGPU-distribution.git

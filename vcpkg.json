@@ -3,31 +3,32 @@
   "version": "0.1.0",
   "dependencies": [
     "catch2",
-    "catch2",
-    "fastgltf",
     "fastgltf",
     "flecs",
     "fmt",
     "glm",
-    "glm",
     "magic-enum",
-    "outcome",
     "outcome",
     "rapidjson",
     {
-      "name": "sdl2",
-      "features": ["vulkan"]
+      "name": "sdl3",
+      "features": ["emscripten-pthreads"],
+      "platform": "emscripten"
+    },
+    {
+      "name": "sdl3",
+      "platform": "!emscripten"
     },
     "spdlog",
-    "spirv-reflect",
-    "vk-bootstrap",
-    "volk",
-    "vulkan",
     "boost-unordered",
-    "shader-slang",
+    {
+      "name": "shader-slang",
+      "platform": "!emscripten"
+    },
     {
       "name": "tracy",
-      "features": ["on-demand", "fibers"]
+      "features": ["on-demand", "fibers"],
+      "platform": "!emscripten"
     }
   ]
 }

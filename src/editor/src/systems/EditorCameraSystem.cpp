@@ -127,7 +127,7 @@ float Hush::EditorCameraSystem::ApplyAccelerationCurve(float blend)
 }
 // NOLINTEND
 
-void Hush::EditorCameraSystem::OnFixedUpdate(float delta)
+void Hush::EditorCameraSystem::OnFixedUpdate([[maybe_unused]] float delta)
 {
 }
 

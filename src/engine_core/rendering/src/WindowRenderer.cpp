@@ -6,10 +6,10 @@
 #include "Logger.hpp"
 // #include "Vulkan/VulkanRenderer.hpp"
 #include "definitions/KeyCode.hpp"
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_keyboard.h>
-#include <SDL2/SDL_video.h>
-#include <imgui/backends/imgui_impl_sdl2.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_video.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
 
 // Graphics backend
 #if defined(HUSH_VULKAN_IMPL)
@@ -78,26 +78,27 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 	}
 
 	// Now create the window
-	uint32_t defaultFlag = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
-	const int defaultWindowIndex = -1;
+	uint32_t defaultFlag = SDL_WINDOW_RESIZABLE;
+	// const int defaultWindowIndex = -1;
 
-	this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-										 DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+	this->m_windowPtr = SDL_CreateWindow(windowName, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+	// this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	// 									 DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
 	if (this->m_windowPtr == nullptr)
 	{
 		Hush::LogError("SDL window creation failed!");
 		return;
 	}
-	this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
+	// this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
-	if (this->m_rendererPtr == nullptr)
-	{
-		Hush::ELogLevel severity = ELogLevel::Error;
-#ifdef HUSH_VULKAN_IMPL
-		severity = ELogLevel::Warn;
-#endif // HUSH_VULKAN_IMPL
-		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
-	}
+	// 	if (this->m_rendererPtr == nullptr)
+	// 	{
+	// 		Hush::ELogLevel severity = ELogLevel::Error;
+	// #ifdef HUSH_VULKAN_IMPL
+	// 		severity = ELogLevel::Warn;
+	// #endif // HUSH_VULKAN_IMPL
+	// 		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
+	// 	}
 
 	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
 
@@ -115,50 +116,56 @@ glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 	return {width, height};
 }
 
-void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
+void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Event &event)
 {
-	SDL_Event event;
+	// SDL_Event event;
 	KeyCode code = 0;
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
-	SDL_PollEvent(&event);
 	// Forward event to ImGui
-	ImGui_ImplSDL2_ProcessEvent(&event);
+	// TODO: this shouldn't be here, but this will be done later.
+	if (ImGui::GetCurrentContext() != nullptr)
+	{
+		ImGui_ImplSDL3_ProcessEvent(&event);
+	}
 	// Forward event to the renderer
 	switch (event.type)
 	{
-	case SDL_QUIT:
+	case SDL_EVENT_QUIT:
 		*applicationRunning = false;
 		break;
-	case SDL_KEYDOWN:
-		code = SDL_GetScancodeFromKey(event.key.keysym.sym);
+	case SDL_EVENT_KEY_DOWN:
+		code = SDL_GetScancodeFromKey(event.key.key, nullptr);
 		InputManager::SendKeyEvent(code, EKeyState::Pressed);
 		break;
-	case SDL_KEYUP:
-		code = SDL_GetScancodeFromKey(event.key.keysym.sym);
+	case SDL_EVENT_KEY_UP:
+		code = SDL_GetScancodeFromKey(event.key.key, nullptr);
 		InputManager::SendKeyEvent(code, EKeyState::Released);
 		break;
-	case SDL_TEXTINPUT:
+	case SDL_EVENT_TEXT_INPUT:
 		// HACK: directly handle this
 		InputManager::SendCharEvent(event.text.text[0]);
 		break;
-	case SDL_MOUSEBUTTONDOWN:
+	case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Pressed);
 		break;
-	case SDL_MOUSEBUTTONUP:
+	case SDL_EVENT_MOUSE_BUTTON_UP:
 		InputManager::SendMouseButtonEvent(event.button.button, EKeyState::Released);
 		break;
-	case SDL_MOUSEMOTION:
-		InputManager::SendMouseMovementEvent(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
+	case SDL_EVENT_MOUSE_MOTION:
+		InputManager::SendMouseMovementEvent(static_cast<int32_t>(event.motion.x), static_cast<int32_t>(event.motion.y),
+											 static_cast<int32_t>(event.motion.xrel),
+											 static_cast<int32_t>(event.motion.yrel));
 		break;
-	case SDL_MOUSEWHEEL:
+	case SDL_EVENT_MOUSE_WHEEL:
 		// Send 0 as acceleration bc it will be calculated manually
-		InputManager::SendWheelEvent(event.wheel.preciseX, event.wheel.preciseY);
-		break;
-	case SDL_WINDOWEVENT:
-		CheckWindowState(event.window, &this->m_isActive);
+		InputManager::SendWheelEvent(event.wheel.mouse_x, event.wheel.mouse_y);
 		break;
 	default:
+		if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
+		{
+			CheckWindowState(event.window, &this->m_isActive);
+		}
 		break;
 	}
 	// this->m_windowRenderer->HandleEvent(&event);
@@ -167,8 +174,9 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning)
 Hush::WindowRenderer::~WindowRenderer()
 {
 	SDL_DestroyWindow(this->m_windowPtr);
-	SDL_DestroyRenderer(this->m_rendererPtr);
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	SDL_Quit();
+#endif
 }
 
 Hush::IRenderer *Hush::WindowRenderer::GetInternalRenderer() noexcept
@@ -184,27 +192,32 @@ bool Hush::WindowRenderer::IsActive() const noexcept
 
 bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 {
-	if (SDL_WasInit(SDL_INIT_EVERYTHING) != 0)
+	if (SDL_WasInit(0) != 0)
 	{
 		return true;
 	}
-	int rc = SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_StartTextInput();
-	SDL_SetMainReady();
-	return rc == 0;
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+	SDL_StartTextInput(m_windowPtr);
+	return rc;
+#else
+	SDL_StartTextInput(m_windowPtr);
+	return true;
+#endif
 }
 
 void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, bool *isActive) noexcept
 {
-	switch (windowEvent.event)
+	switch (windowEvent.type)
 	{
-	case SDL_WINDOWEVENT_MINIMIZED:
+	case SDL_EVENT_WINDOW_MINIMIZED:
 		*isActive = false;
 		break;
-	case SDL_WINDOWEVENT_RESTORED:
+	case SDL_EVENT_WINDOW_RESTORED:
 		*isActive = true;
 		break;
-	case SDL_WINDOWEVENT_SIZE_CHANGED:
+	case SDL_EVENT_WINDOW_RESIZED:
+		Hush::LogInfo("Window resized");
 		this->m_windowRenderer->Resize(windowEvent.data1, windowEvent.data2);
 		// Mark the render graph as dirty so it is fully rebuilt next frame
 		// (transient resource dimensions depend on window size).  Unlike Reset(),

@@ -1,10 +1,7 @@
 #include "HushEngine.hpp"
 #include "ApplicationLoader.hpp"
-#include "Components/LocalTransform.hpp"
-#include "Components/WorldTransform.hpp"
 #include "Logger.hpp"
 #include "ResourceManager.hpp"
-#include "Shared/DirectionalLight.hpp"
 #include "VirtualFilesystem.hpp"
 #include "Systems/RenderGraphSystem.hpp"
 #include "Systems/ResourceUploadSystem.hpp"
@@ -13,10 +10,9 @@
 #include <WindowManager.hpp>
 #include <algorithm>
 #include <cstdint>
-#include <glm/ext/vector_float3.hpp>
 #include "Profiling.hpp"
-#include <glm/trigonometric.hpp>
 #include <imgui/imgui.h>
+#include <vector>
 
 struct Hush::HushEngine::HushEngineInternal
 {
@@ -28,9 +24,14 @@ struct Hush::HushEngine::HushEngineInternal
 	std::unique_ptr<WindowRenderer> windowRenderer = nullptr;
 };
 
+#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+static constexpr uint32_t NUM_THREADS = 4;
+#else
+static constexpr uint32_t NUM_THREADS = std::thread::hardware_concurrency();
+#endif
+
 Hush::HushEngine::HushEngine()
-	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create(
-		  {.numThreads = std::thread::hardware_concurrency(), .pinToCore = true}))
+	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create({.numThreads = NUM_THREADS, .pinToCore = true}))
 {
 	m_internal = std::make_unique<HushEngineInternal>();
 	m_internal->resourceManager.Init(&m_internal->vfs);
@@ -41,24 +42,30 @@ Hush::HushEngine::~HushEngine()
 	this->Quit();
 }
 
-void Hush::HushEngine::Run(std::span<const char *> args)
+void Hush::HushEngine::Init(int argc, char **argv)
 {
-	// Load the VFS with the default data directory (this is where the engine looks for assets by default, but users can
-	// mount additional directories or archives as needed)
+	// Load the VFS with the default data directory
+#if HUSH_PLATFORM_EMSCRIPTEN
+	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "/");
+#else
 	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+#endif
 
 	this->m_app = LoadApplication(this);
 
 	// Check for --wait-profiler flag
+	std::span<char *> args(argv, static_cast<size_t>(argc));
 	if (std::ranges::find_if(args, [](const char *arg) { return std::string_view(arg) == "--wait-profiler"; }) !=
 		args.end())
 	{
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 		LogInfo("Waiting for Tracy profiler to connect...");
 		while (!TracyIsConnected)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		LogInfo("Tracy profiler connected!");
+#endif
 	}
 
 	this->m_isApplicationRunning = true;
@@ -73,61 +80,70 @@ void Hush::HushEngine::Run(std::span<const char *> args)
 
 	AddDefaultSystems();
 
-	// Initialize any static resources we need
-	this->Init();
+	this->m_app->Init();
+}
 
-	std::chrono::steady_clock::duration elapsed;
+void Hush::HushEngine::Run()
+{
+	std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-	while (this->m_isApplicationRunning)
+	if (!this->m_internal->windowRenderer->IsActive())
 	{
-		ZoneScoped;
-		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
-		{
-			ZoneScopedN("HandleEvents");
-			this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning);
-		}
-
-		// TODO: Change this to the window renderer
-		if (!this->m_internal->windowRenderer->IsActive())
-		{
-			// Avoid taking all CPU usage
-			constexpr int32_t arbitrarySleepMs = 100;
-			std::this_thread::sleep_for(std::chrono::milliseconds(arbitrarySleepMs));
-			continue;
-		}
-
-		const float deltaTime = std::chrono::duration<float>(elapsed).count();
-
-		{
-			ZoneScopedN("Update");
-			this->m_app->Update(deltaTime);
-		}
-
-		{
-			ZoneScopedN("PreRender");
-			this->m_app->OnPreRender();
-		}
-
-		{
-			ZoneScopedN("Render");
-			this->m_app->OnRender(deltaTime);
-		}
-
-		{
-			ZoneScopedN("PostRender");
-			this->m_app->OnPostRender();
-		}
-
-		{
-			ZoneScopedN("DisposeFrame");
-			this->m_app->DisposeFrame();
-		}
-
-		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		elapsed = end - start;
-		FrameMark;
+		// Avoid taking all CPU usage
+		constexpr int32_t arbitrarySleepMs = 100;
+		std::this_thread::sleep_for(std::chrono::milliseconds(arbitrarySleepMs));
+		return;
 	}
+
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	ZoneScoped;
+#endif
+
+	const float deltaTime = std::chrono::duration<float>(m_elapsed).count();
+
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	{
+		ZoneScopedN("Update");
+		this->m_app->Update(deltaTime);
+	}
+
+	{
+		ZoneScopedN("PreRender");
+		this->m_app->OnPreRender();
+	}
+
+	{
+		ZoneScopedN("Render");
+		this->m_app->OnRender(deltaTime);
+	}
+
+	{
+		ZoneScopedN("PostRender");
+		this->m_app->OnPostRender();
+	}
+
+	{
+		ZoneScopedN("DisposeFrame");
+		this->m_app->DisposeFrame();
+	}
+#else
+	this->m_app->Update(deltaTime);
+	this->m_app->OnPreRender();
+	this->m_app->OnRender(deltaTime);
+	this->m_app->OnPostRender();
+	this->m_app->DisposeFrame();
+#endif
+
+	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	m_elapsed = end - start;
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
+	FrameMark;
+#endif
+}
+
+void Hush::HushEngine::HandleEvents(const SDL_Event &event)
+{
+	this->m_internal->windowRenderer->HandleEvents(&this->m_isApplicationRunning, event);
 }
 
 void Hush::HushEngine::AddSystem(ISystem *system)
@@ -145,18 +161,6 @@ Hush::Scene *Hush::HushEngine::GetScene()
 	return this->m_app->GetScene();
 }
 
-void Hush::HushEngine::Init()
-{
-	this->m_app->Init();
-	// Add a default directional light
-	Scene *scene = this->m_app->GetScene();
-	Entity entity = scene->CreateEntityWithName("Directional Light");
-	WorldTransform &transform = entity.AddComponent<WorldTransform>();
-	transform.SetEulerAngles(glm::radians(glm::vec3(-45.0F, 0.0F, 0.0F)));
-	entity.AddComponent<LocalTransform>();
-	this->m_defaultLight = &entity.AddComponent<DirectionalLight>();
-}
-
 Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept
 {
 	return this->m_internal->windowRenderer.get();
@@ -169,8 +173,8 @@ Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
 
 void Hush::HushEngine::AddDefaultSystems()
 {
-	this->m_app->GetScene()->AddEngineSystem(this->m_internal->renderGraphSystem.get());
 	this->m_app->GetScene()->AddEngineSystem(this->m_internal->resourceUploadSystem.get());
+	this->m_app->GetScene()->AddEngineSystem(this->m_internal->renderGraphSystem.get());
 }
 
 Hush::ResourceManager *Hush::HushEngine::GetResourceManager() noexcept

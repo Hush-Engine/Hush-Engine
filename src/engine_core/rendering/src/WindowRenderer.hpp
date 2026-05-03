@@ -7,11 +7,11 @@
 #pragma once
 
 // Let's tell SDL we got main covered
-#include <SDL2/SDL_video.h>
+#include <SDL3/SDL_video.h>
 #include <cstdint>
 #define SDL_MAIN_HANDLED
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <InputManager.hpp>
 #include <functional>
 #include <memory>
@@ -40,7 +40,7 @@ namespace Hush
 
 		WindowRenderer &operator=(WindowRenderer &&) = delete;
 
-		void HandleEvents(bool *applicationRunning);
+		void HandleEvents(bool *applicationRunning, const SDL_Event &event);
 
 		~WindowRenderer();
 

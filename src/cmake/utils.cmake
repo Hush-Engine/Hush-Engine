@@ -41,7 +41,7 @@ function (download_hush_file)
     message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
 endfunction()
 
-if (MSVC)
+if (CMAKE_HOST_WIN32)
     set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
     set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
 
@@ -64,10 +64,12 @@ if (MSVC)
     set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
 endif ()
 
+set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+
 
 # Set all warnings for the target
 macro(set_all_warnings target)
-    if (UNIX)
+    if (UNIX AND NOT EMSCRIPTEN)
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
     elseif (WIN32)
         target_compile_options(${target} PRIVATE /W4 /WX)
@@ -150,6 +152,10 @@ macro(hush_add_library)
     target_link_options(${LIB_TARGET_NAME} PRIVATE ${HUSH_CPU_FLAGS})
     target_compile_definitions(${LIB_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 
+    if (EMSCRIPTEN)
+        target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
+    endif ()
+
     if (${LIB_ENABLE_REFLECTION})
         enable_reflection(
                 TARGET_NAME ${LIB_TARGET_NAME}
@@ -166,8 +172,9 @@ endmacro()
 # PUBLIC_HEADER_DIRS: Public header directories for the library
 # PRIVATE_HEADER_DIRS: Private header directories for the library
 # ENABLE_REFLECTION: Whether to enable reflection for the executable
+# RESOURCES: Resources to copy to the output directory after build. This is needed in wasm
 macro(hush_add_executable)
-    cmake_parse_arguments(EXE "" "TARGET_NAME" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
+    cmake_parse_arguments(EXE "" "TARGET_NAME" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION;RESOURCES" ${ARGN})
     add_executable(${EXE_TARGET_NAME} ${EXE_SRCS})
     target_include_directories(${EXE_TARGET_NAME} PRIVATE ${EXE_PUBLIC_HEADER_DIRS} ${EXE_PRIVATE_HEADER_DIRS})
     set_all_warnings(${EXE_TARGET_NAME})
@@ -183,6 +190,31 @@ macro(hush_add_executable)
                 PUBLIC_HEADER_DIRS ${EXE_PUBLIC_HEADER_DIRS}
                 PRIVATE_HEADER_DIRS ${EXE_PRIVATE_HEADER_DIRS}
         )
+    endif ()
+
+    if (EMSCRIPTEN)
+        # RESOURCES is a list, but we need to expand it to --embed-file {file1} --embed-file {file2} ...
+        set(EMBED_FILES "")
+        foreach (resource IN LISTS EXE_RESOURCES)
+            set(EMBED_FILES "${EMBED_FILES}" "--embed-file" "${CMAKE_CURRENT_SOURCE_DIR}/${resource}@${resource}")
+        endforeach ()
+
+        set_target_properties(${EXE_TARGET_NAME} PROPERTIES SUFFIX ".html")
+        target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
+        target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
+        target_link_options(${EXE_TARGET_NAME} PRIVATE
+            # "-sPROXY_TO_PTHREAD"
+            "-sPTHREAD_POOL_SIZE=16"
+            "-sALLOW_MEMORY_GROWTH=1"
+            "-sSTACK_SIZE=1mb"
+            "-sEXPORTED_RUNTIME_METHODS=cwrap"
+            "-sMODULARIZE=1"
+            "-sASYNCIFY=1"
+            "-sOFFSCREENCANVAS_SUPPORT"
+
+            ${EMBED_FILES}
+        )
+
     endif ()
 endmacro()
 

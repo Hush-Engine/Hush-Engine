@@ -33,10 +33,16 @@ hush_add_library(
 
              # RHI
              src/RHI/GraphicsResources.cpp
-             src/RHI/ShaderCompiler.cpp
 
         PUBLIC_HEADER_DIRS src
 )
+
+if (NOT EMSCRIPTEN)
+    target_sources(HushRendering
+    PRIVATE
+        src/RHI/ShaderCompiler.cpp
+)
+endif()
 
 if ("HUSH_WEBGPU_IMPL" IN_LIST HUSH_RENDERER_IMPL)
     target_sources(HushRendering
@@ -53,7 +59,7 @@ if ("HUSH_WEBGPU_IMPL" IN_LIST HUSH_RENDERER_IMPL)
 
     target_link_libraries(HushRendering PUBLIC
             webgpu
-            sdl2webgpu
+            sdl3webgpu
     )
 
     target_compile_definitions(HushRendering PUBLIC HUSH_WEBGPU_IMPL)
@@ -62,7 +68,7 @@ endif()
 add_library(Hush::Rendering ALIAS HushRendering)
 
 target_link_libraries(HushRendering PUBLIC
-        SDL2::SDL2
+        SDL3::SDL3
         imgui
         imguizmo
         stb
@@ -72,7 +78,14 @@ target_link_libraries(HushRendering PUBLIC
         Hush::Core
         HushUtils
         HushInput
-        webgpu
         Boost::unordered
-        slang::slang
 )
+
+target_compile_definitions(HushRendering PUBLIC SDL_ENABLE_OLD_NAMES)
+
+if(NOT EMSCRIPTEN)
+    target_link_libraries(HushRendering PUBLIC
+        slang::slang
+    )
+    target_compile_definitions(HushRendering PUBLIC HUSH_HAS_SLANG)
+endif()

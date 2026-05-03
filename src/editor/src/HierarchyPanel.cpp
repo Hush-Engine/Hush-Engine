@@ -1,3 +1,4 @@
+
 #include "HierarchyPanel.hpp"
 #include <cstdint>
 #include <functional>
@@ -16,29 +17,31 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }
 
-void Hush::HierarchyPanel::OnRender(float deltaTime)
+void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
 	auto &inspectorPanel = UI::Get().GetPanel<InspectorPanel>();
 	// Maybe draw them in separate systems?
-	this->m_inspectableEntitiesQuery.Each(
-		[&inspectorPanel, this](Entity &entity, WorldTransform &_, LocalTransform &localxForm, Entity::Name &name) {
-			if (entity.GetParent().IsValid())
-			{
-				// We skip rendering the entity because the parent would have already rendered itj
-				return;
-			}
-			// bool selected = inspectorPanel.GetInspectTarget().has_value() &&
-			// 				inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
-			auto narrowedId = static_cast<int32_t>(entity.GetId());
-			ImGui::PushID(narrowedId);
+	this->m_inspectableEntitiesQuery.Each([&inspectorPanel, this](Entity &entity, [[maybe_unused]] WorldTransform &_,
+																  [[maybe_unused]]
+																  LocalTransform &localxForm,
+																  Entity::Name &name) {
+		if (entity.GetParent().IsValid())
+		{
+			// We skip rendering the entity because the parent would have already rendered itj
+			return;
+		}
+		// bool selected = inspectorPanel.GetInspectTarget().has_value() &&
+		// 				inspectorPanel.GetInspectTarget()->GetId() == entity.GetId();
+		auto narrowedId = static_cast<int32_t>(entity.GetId());
+		ImGui::PushID(narrowedId);
 
-			this->GenerateEntitySelectableTree(entity, name, &inspectorPanel);
+		this->GenerateEntitySelectableTree(entity, name, &inspectorPanel);
 
-			ImGui::PopID();
-		});
+		ImGui::PopID();
+	});
 
 	ImGui::End();
 }
