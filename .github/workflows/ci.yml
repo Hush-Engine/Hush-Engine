@@ -123,9 +123,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-      SCCACHE_GHA_ENABLED: "true"
-      CMAKE_C_COMPILER_LAUNCHER: "sccache"
-      CMAKE_CXX_COMPILER_LAUNCHER: "sccache"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,8 +133,6 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v2.0.9
         with:
@@ -181,9 +176,6 @@ jobs:
     runs-on: windows-latest
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-      SCCACHE_GHA_ENABLED: "true"
-      CMAKE_C_COMPILER_LAUNCHER: "sccache"
-      CMAKE_CXX_COMPILER_LAUNCHER: "sccache"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -194,8 +186,6 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
       - name: Setup Emscripten SDK
         uses: emscripten-core/setup-emsdk@v16
         with:
