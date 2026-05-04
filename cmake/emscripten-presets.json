@@ -13,7 +13,8 @@
         "CMAKE_CXX_FLAGS": "-fexceptions -Wno-unknown-attributes -pthread",
         "CMAKE_EXE_LINKER_FLAGS": "-pthread -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1",
         "HUSH_ENABLE_PROFILING": "OFF",
-        "HUSH_ENABLE_TESTS": "OFF"
+        "HUSH_ENABLE_TESTS": "ON",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "node;--experimental-wasm-threads"
       }
     },
     {

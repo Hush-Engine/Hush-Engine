@@ -1,4 +1,4 @@
-name: CI devtool
+name: CI
 
 on:
   push:
@@ -6,13 +6,62 @@ on:
   pull_request:
     branches: ["main", "dev"]
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      devtool: ${{ steps.filter.outputs.devtool }}
+      engine: ${{ steps.filter.outputs.engine }}
+      wasm: ${{ steps.filter.outputs.wasm }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            devtool:
+              - 'src/devtool/**'
+              - '.cargo/**'
+            engine:
+              - 'src/engine_core/**'
+              - 'src/cmake/**'
+              - 'cmake/**'
+              - 'CMakeLists.txt'
+              - 'CMakePresets.json'
+              - 'vcpkg.json'
+              - 'vcpkg-configuration.json'
+              - 'vcpkg-overlays/**'
+              - 'third_party/**'
+            wasm:
+              - 'examples/wasm/**'
+              - 'cmake/emscripten-presets.json'
+              - 'src/engine_core/**'
+              - 'src/cmake/**'
+              - 'cmake/**'
+              - 'CMakeLists.txt'
+              - 'CMakePresets.json'
+              - 'vcpkg.json'
+              - 'vcpkg-configuration.json'
+              - 'vcpkg-overlays/**'
+              - 'third_party/**'
+
   format-devtool:
     name: Format devtool
     runs-on: windows-latest
-
+    needs: detect-changes
+    if: fromJSON(needs.detect-changes.outputs.devtool)
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/devtool
       - name: Format
         working-directory: src/devtool
         run: cargo fmt --check
@@ -20,13 +69,16 @@ jobs:
   build-devtool:
     name: Build and Upload devtool
     needs: format-devtool
+    if: always() && !failure() && !cancelled()
     strategy:
       matrix:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/devtool
       - name: Build release
         run: cargo build --release
         working-directory: src/devtool
@@ -34,90 +86,136 @@ jobs:
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          # Name must be hush-devtool-<os>-{dev|main}
           name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
           path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-
       - name: Upload artifact
         if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          # Name must be hush-devtool-<os>-<hash>
           name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
           path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
 
   test-devtool:
     name: Test devtool
     runs-on: ubuntu-latest
-    needs: build-devtool
-
+    needs: detect-changes
+    if: fromJSON(needs.detect-changes.outputs.devtool)
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/devtool
       - name: Test
         working-directory: src/devtool
         run: cargo test
 
   build-hush-windows:
     name: Build hush engine
-    needs: build-devtool
+    needs: [detect-changes, build-devtool]
+    if: fromJSON(needs.detect-changes.outputs.engine)
     strategy:
       matrix:
         build-type: [debug, release]
         os: [windows-latest]
-
     runs-on: ${{ matrix.os }}
-
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-
+      SCCACHE_GHA_ENABLED: "true"
+      CMAKE_C_COMPILER_LAUNCHER: "sccache"
+      CMAKE_CXX_COMPILER_LAUNCHER: "sccache"
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Export GitHub Actions cache environment variables
+      - name: Export GitHub Actions cache env vars
         uses: actions/github-script@v7
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
       - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v2.0.6
+        uses: KyleMayes/install-llvm-action@v2.0.9
         with:
           version: "19"
-
       - name: Get devtool
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
         uses: actions/download-artifact@v4
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
-
       - name: Get devtool
         if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
         uses: actions/download-artifact@v4
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
-
-      # Rename the devtool to hush-devtool{.exe}
       - name: Rename devtool
         run: mv hush${{ matrix.os == 'windows-latest' && '.exe' || '' }} hush-devtool${{ matrix.os == 'windows-latest' && '.exe' || '' }}
         shell: bash
-
       - name: Configure MSVC
-        uses: TheMrMilchmann/setup-msvc-dev@v3
+        uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
-
       - name: Bootstrap VCPKG
         run: ./vcpkg/bootstrap-vcpkg.bat
-
       - name: Configure hush
         run: ./hush-devtool.exe configure --preset windows-x64-${{ matrix.build-type }} -v
-
-      # Diff with the target branch if it's a PR
       - name: Format hush
         run: ./hush-devtool.exe format --check -v --print-files --all-files
-
       - name: Build hush
         run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v
+      - name: Test hush
+        if: matrix.build-type == 'debug'
+        run: ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
+
+  build-hush-wasm:
+    name: Build hush engine (Wasm)
+    needs: [detect-changes, build-devtool]
+    if: fromJSON(needs.detect-changes.outputs.wasm)
+    strategy:
+      matrix:
+        build-type: [debug, release]
+    runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      SCCACHE_GHA_ENABLED: "true"
+      CMAKE_C_COMPILER_LAUNCHER: "sccache"
+      CMAKE_CXX_COMPILER_LAUNCHER: "sccache"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Export GitHub Actions cache env vars
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
+      - name: Setup Emscripten SDK
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+      - name: Get devtool
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/download-artifact@v4
+        with:
+          name: hush-devtool-windows-latest-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+      - name: Get devtool
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
+        uses: actions/download-artifact@v4
+        with:
+          name: hush-devtool-windows-latest-${{ github.sha }}
+      - name: Rename devtool
+        run: mv hush.exe hush-devtool.exe
+        shell: bash
+      - name: Bootstrap VCPKG
+        run: ./vcpkg/bootstrap-vcpkg.bat
+      - name: Configure hush (Wasm)
+        run: ./hush-devtool.exe configure --preset wasm-x64-${{ matrix.build-type }} -v
+      - name: Build hush (Wasm)
+        run: ./hush-devtool.exe build --preset wasm-x64-${{ matrix.build-type }} -v
+      - name: Test hush (Wasm)
+        if: matrix.build-type == 'debug'
+        run: ./hush-devtool.exe test --preset wasm-x64-debug -v
