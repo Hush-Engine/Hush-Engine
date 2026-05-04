@@ -88,6 +88,8 @@ function(hush_minject_target tgt)
         return()
     endif()
 
+    download_minject()
+
     add_custom_command(TARGET ${tgt} POST_BUILD
       COMMAND ${HUSH_MINJECT_BIN}
               --inplace --force
