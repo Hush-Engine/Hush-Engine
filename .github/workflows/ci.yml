@@ -29,6 +29,7 @@ jobs:
             devtool:
               - 'src/devtool/**'
               - '.cargo/**'
+              - '.github/workflows/**'
             engine:
               - 'src/engine_core/**'
               - 'src/cmake/**'
@@ -39,6 +40,7 @@ jobs:
               - 'vcpkg-configuration.json'
               - 'vcpkg-overlays/**'
               - 'third_party/**'
+              - '.github/workflows/**'
             wasm:
               - 'examples/wasm/**'
               - 'cmake/emscripten-presets.json'
@@ -51,6 +53,7 @@ jobs:
               - 'vcpkg-configuration.json'
               - 'vcpkg-overlays/**'
               - 'third_party/**'
+              - '.github/workflows/**'
 
   format-devtool:
     name: Format devtool
