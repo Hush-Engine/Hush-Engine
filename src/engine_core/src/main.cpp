@@ -1,6 +1,10 @@
 #include "HushEngine.hpp"
+#include "Logger.hpp"
 #include "Scene.hpp"
 
+#if defined(HUSH_USE_MIMALLOC)
+#include <mimalloc.h>
+#endif
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_init.h>
@@ -15,9 +19,15 @@ namespace
 
 extern "C"
 {
-
 	SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
 	{
+#if defined(HUSH_USE_MIMALLOC) && HUSH_PLATFORM_WIN
+		const int miV = mi_version();
+		const bool redirected = mi_is_redirected();
+		Hush::LogFormat(redirected ? Hush::ELogLevel::Info : Hush::ELogLevel::Warn,
+						"mimalloc {}.{}.{} active (redirect={})", miV / 1000, (miV / 100) % 10, miV % 100,
+						redirected ? "ok" : "FAILED - third-party DLLs use CRT malloc");
+#endif
 		*appstate = new AppState;
 		AppState &state = *static_cast<AppState *>(*appstate);
 

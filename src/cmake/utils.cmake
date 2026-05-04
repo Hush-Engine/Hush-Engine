@@ -41,6 +41,67 @@ function (download_hush_file)
     message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
 endfunction()
 
+function(download_minject)
+    set(_MI_VERSION "v3.2.8")
+    set(_MI_URL_BASE "https://github.com/microsoft/mimalloc/raw/${_MI_VERSION}/bin")
+
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+        set(_MI_FILE "minject-arm64.exe")
+        set(_MI_HASH "")
+    elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(_MI_FILE "minject32.exe")
+        set(_MI_HASH "")
+    else()
+        set(_MI_FILE "minject.exe")
+        set(_MI_HASH "951882964a3660d83cce7211888fed7f955ba7a44b81bf7b6482ec0ec9fb6672")
+    endif()
+
+    if (NOT _MI_HASH)
+        message(FATAL_ERROR "minject SHA256 not populated for this architecture (${CMAKE_SYSTEM_PROCESSOR}). Add it in cmake/utils.cmake.")
+    endif()
+
+    download_hush_file(
+        URL "${_MI_URL_BASE}/${_MI_FILE}"
+        FILENAME ${_MI_FILE}
+        EXPECTED_HASH ${_MI_HASH}
+    )
+
+    set(HUSH_MINJECT_BIN "${CMAKE_BINARY_DIR}/${_MI_FILE}" CACHE INTERNAL "Path to minject.exe")
+endfunction()
+
+function(hush_deploy_runtime_dlls tgt)
+    if (NOT WIN32)
+        return()
+    endif()
+    add_custom_command(TARGET ${tgt} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${tgt}>
+                $<TARGET_FILE_DIR:${tgt}>
+        COMMAND_EXPAND_LISTS
+        COMMENT "Deploying runtime DLLs next to ${tgt}"
+        VERBATIM
+    )
+endfunction()
+
+function(hush_minject_target tgt)
+    if (NOT WIN32)
+        return()
+    endif()
+
+    download_minject()
+
+    add_custom_command(TARGET ${tgt} POST_BUILD
+      COMMAND ${HUSH_MINJECT_BIN}
+              --inplace --force
+              "$<$<CONFIG:Debug>:--postfix=-debug>"
+              $<TARGET_FILE:${tgt}>
+      COMMENT "minject: patch ${tgt} so mimalloc.dll loads first"
+      COMMAND_EXPAND_LISTS
+      VERBATIM
+    )
+endfunction()
+
+
 if (CMAKE_HOST_WIN32)
     set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
     set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")

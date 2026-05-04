@@ -29,6 +29,11 @@
       "name": "tracy",
       "features": ["on-demand", "fibers"],
       "platform": "!emscripten"
+    },
+    {
+      "name": "mimalloc",
+      "features": ["override"],
+      "platform": "!emscripten"
     }
   ]
 }
