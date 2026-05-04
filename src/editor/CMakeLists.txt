@@ -43,3 +43,9 @@ target_compile_definitions(HushEditor PRIVATE
 )
 
 target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)
+
+hush_deploy_runtime_dlls(HushEditor)
+
+if (HUSH_ENABLE_MIMALLOC)
+    hush_minject_target(HushEditor)
+endif()

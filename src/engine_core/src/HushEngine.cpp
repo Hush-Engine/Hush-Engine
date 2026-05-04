@@ -12,6 +12,18 @@
 #include <cstdint>
 #include "Profiling.hpp"
 #include <imgui/imgui.h>
+#include "Platform.hpp"
+
+#if defined(HUSH_USE_MIMALLOC)
+#include <mimalloc.h>
+extern "C" void HushForceLinkAllocatorOverrides() noexcept;
+#elif defined(HUSH_ENABLE_PROFILING) && HUSH_PLATFORM_WIN
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+#endif
 #include <vector>
 
 struct Hush::HushEngine::HushEngineInternal
@@ -33,6 +45,9 @@ static constexpr uint32_t NUM_THREADS = std::thread::hardware_concurrency();
 Hush::HushEngine::HushEngine()
 	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create({.numThreads = NUM_THREADS, .pinToCore = true}))
 {
+#if defined(HUSH_USE_MIMALLOC)
+	HushForceLinkAllocatorOverrides();
+#endif
 	m_internal = std::make_unique<HushEngineInternal>();
 	m_internal->resourceManager.Init(&m_internal->vfs);
 }
@@ -101,38 +116,11 @@ void Hush::HushEngine::Run()
 
 	const float deltaTime = std::chrono::duration<float>(m_elapsed).count();
 
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
-	{
-		ZoneScopedN("Update");
-		this->m_app->Update(deltaTime);
-	}
-
-	{
-		ZoneScopedN("PreRender");
-		this->m_app->OnPreRender();
-	}
-
-	{
-		ZoneScopedN("Render");
-		this->m_app->OnRender(deltaTime);
-	}
-
-	{
-		ZoneScopedN("PostRender");
-		this->m_app->OnPostRender();
-	}
-
-	{
-		ZoneScopedN("DisposeFrame");
-		this->m_app->DisposeFrame();
-	}
-#else
 	this->m_app->Update(deltaTime);
 	this->m_app->OnPreRender();
 	this->m_app->OnRender(deltaTime);
 	this->m_app->OnPostRender();
 	this->m_app->DisposeFrame();
-#endif
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	m_elapsed = end - start;

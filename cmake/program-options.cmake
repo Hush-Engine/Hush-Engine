@@ -4,6 +4,7 @@ option(HUSH_ENABLE_LTO "Enable Link-Time Optimization" OFF)
 option(HUSH_ENABLE_TESTS "Enable tests" ON)
 option(HUSH_ENABLE_DOCS "Enable documentation" ON)
 option(HUSH_ENABLE_PROFILING "Enable Tracy profiler instrumentation" ON)
+option(HUSH_ENABLE_MIMALLOC "Use mimalloc as the process-wide allocator" ON)
 
 if (HUSH_ENABLE_LTO)
     include(CheckIPOSupported)
