@@ -14,7 +14,7 @@
         "CMAKE_EXE_LINKER_FLAGS": "-pthread -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1",
         "HUSH_ENABLE_PROFILING": "OFF",
         "HUSH_ENABLE_TESTS": "ON",
-        "CMAKE_CROSSCOMPILING_EMULATOR": "node;--experimental-wasm-threads"
+        "CMAKE_CROSSCOMPILING_EMULATOR": "node"
       }
     },
     {
