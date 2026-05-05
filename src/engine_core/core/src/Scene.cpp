@@ -14,10 +14,13 @@
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
+std::atomic<std::uint64_t> Hush::Scene::s_nextSceneId{1};
+
 Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
 	: m_engine(engine),
+	  m_threadPool(threadPool),
 	  m_world(ecs_init()),
-	  m_threadPool(threadPool)
+	  m_sceneId(s_nextSceneId.fetch_add(1, std::memory_order_relaxed))
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);

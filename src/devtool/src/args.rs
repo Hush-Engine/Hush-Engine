@@ -4,6 +4,7 @@ use crate::commands::configure::ConfigureCommand;
 use crate::commands::format::FormatCommand;
 use crate::commands::new_file::NewFileCommand;
 use crate::commands::shadercomp::ShaderCompileCommand;
+use crate::commands::test::TestCommand;
 use crate::commands::tidy::TidyCommand;
 use clap::{Parser, Subcommand};
 use std::process::ExitCode;
@@ -24,6 +25,8 @@ pub enum Cmd {
     NewFile(NewFileCommand),
     Format(FormatCommand),
     Tidy(TidyCommand),
+    /// Run CTest for a preset
+    Test(TestCommand),
 }
 
 impl DevtoolCliOptions {
@@ -34,6 +37,7 @@ impl DevtoolCliOptions {
             Cmd::NewFile(new_file) => new_file.run(),
             Cmd::Format(format) => format.run(),
             Cmd::Tidy(tidy) => tidy.run(),
+            Cmd::Test(test) => test.run(),
             Cmd::CompileShaders(shader_compile_command) => shader_compile_command.run(),
         }
     }

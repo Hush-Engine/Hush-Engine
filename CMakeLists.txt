@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.26)
 
 project(Hush)
 
-if (EMSCRIPTEN)
-    add_compile_options(-pthread)
-    add_link_options(-pthread)
-endif()
+# if (EMSCRIPTEN)
+#     add_compile_options(-pthread)
+#     add_link_options(-pthread)
+# endif()
 
 include(cmake/program-options.cmake)
 

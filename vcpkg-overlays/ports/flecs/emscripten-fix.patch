@@ -8,8 +8,8 @@ index 8b773fb..e66d356 100644
      endif()
 +    
 +    if (EMSCRIPTEN)
-+        target_compile_options(${TARGET} PRIVATE -pthread)
-+        target_link_options(${TARGET} PRIVATE -pthread)
++        # target_compile_options(${TARGET} PRIVATE -pthread)
++        # target_link_options(${TARGET} PRIVATE -pthread)
 +    endif()
  
      if(FLECS_PIC)

@@ -174,3 +174,8 @@ std::optional<Hush::Entity::EntityId> Hush::Entity::InternalCachedComponentId(co
 {
 	return m_ownerScene->GetRegisteredComponentId(name);
 }
+
+std::uint64_t Hush::Entity::GetSceneUniqueId() const
+{
+	return m_ownerScene->GetUniqueId();
+}

@@ -213,9 +213,9 @@ macro(hush_add_library)
     target_link_options(${LIB_TARGET_NAME} PRIVATE ${HUSH_CPU_FLAGS})
     target_compile_definitions(${LIB_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 
-    if (EMSCRIPTEN)
-        target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
-    endif ()
+    # if (EMSCRIPTEN)
+    #     target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
+    # endif ()
 
     if (${LIB_ENABLE_REFLECTION})
         enable_reflection(
@@ -261,11 +261,11 @@ macro(hush_add_executable)
         endforeach ()
 
         set_target_properties(${EXE_TARGET_NAME} PROPERTIES SUFFIX ".html")
-        target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
-        target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
+        # target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
+        # target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
         target_link_options(${EXE_TARGET_NAME} PRIVATE
             # "-sPROXY_TO_PTHREAD"
-            "-sPTHREAD_POOL_SIZE=16"
+            # "-sPTHREAD_POOL_SIZE=16"
             "-sALLOW_MEMORY_GROWTH=1"
             "-sSTACK_SIZE=1mb"
             "-sEXPORTED_RUNTIME_METHODS=cwrap"
@@ -289,11 +289,20 @@ macro(add_test_target)
     if (HUSH_ENABLE_TESTS)
         cmake_parse_arguments(TEST "" "TARGET_NAME;ENGINE_TARGET" "SRCS;HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
         add_executable(${TEST_TARGET_NAME} ${TEST_SRCS})
+        set_target_properties(${TEST_TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug/>bin"
+        )
         target_include_directories(${TEST_TARGET_NAME} PRIVATE ${TEST_HEADER_DIRS})
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
 
-        catch_discover_tests(${TEST_TARGET_NAME} DISCOVERY_MODE PRE_TEST)
+        catch_discover_tests(${TEST_TARGET_NAME}
+            DISCOVERY_MODE PRE_TEST
+            DL_PATHS
+                "$<TARGET_FILE_DIR:${TEST_TARGET_NAME}>"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+        )
 
         if (${HUSH_ENABLE_LTO})
             set_property(TARGET ${TEST_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

@@ -16,6 +16,7 @@
 #include "executors/ThreadPool.hpp"
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -254,6 +255,13 @@ namespace Hush
 			return m_world;
 		}
 
+		/// Globally unique, monotonically increasing identifier assigned at construction.
+		[[nodiscard]]
+		std::uint64_t GetUniqueId() const noexcept
+		{
+			return m_sceneId;
+		}
+
 		void SetScriptingInterface(ScriptingSystemInterface *scriptingInterface)
 		{
 			HUSH_ASSERT(scriptingInterface != nullptr, "Scripting interface cannot be null!");
@@ -271,7 +279,7 @@ namespace Hush
 		EntityId RegisterIfNeededSlow()
 		{
 			// First, get the entity id, and check if the component is registered.
-			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(this);
+			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
 
 			return InternalRegisterCppComponent(status, componentId, info);
@@ -312,5 +320,12 @@ namespace Hush
 		ScriptingSystemInterface *m_scriptingInterface;
 
 		bool m_isInitialized = false;
+
+		/// Globally unique, monotonically increasing identifier. Used as a stable cache key
+		/// in ComponentTraits::detail::GetEntityIdImpl. Pointer values can be recycled by the
+		/// allocator after a Scene is destroyed; this counter cannot.
+		std::uint64_t m_sceneId;
+
+		static std::atomic<std::uint64_t> s_nextSceneId;
 	};
 } // namespace Hush

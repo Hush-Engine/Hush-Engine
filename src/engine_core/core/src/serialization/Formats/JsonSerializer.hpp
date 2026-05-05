@@ -75,18 +75,9 @@ namespace Hush::Serialization
 		}
 
 		template <typename T>
-			requires(sizeof(T) > 16 && !IsSerializable<T, JsonSerializer>)
-		ESerializationError Serialize(const T &)
-		{
-			static_assert(false, "Type is not serializable");
-
-			return ESerializationError::InvalidType;
-		}
-
-		template <typename T>
-			requires(sizeof(T) <= 16 && !IsSerializable<T, JsonSerializer>)
+			requires(!IsSerializable<T, JsonSerializer>)
 		[[nodiscard]]
-		ESerializationError Serialize(const T)
+		ESerializationError Serialize(const T &)
 		{
 			static_assert(false, "Type is not serializable");
 
@@ -316,7 +307,7 @@ namespace Hush::Serialization
 	/// @param value Value to serialize
 	/// @return SerializationError
 	template <>
-	inline ESerializationError JsonSerializer::Serialize<double>(const double value)
+	inline ESerializationError JsonSerializer::Serialize<double>(const double &value)
 	{
 		return m_writer.Double(value) ? ESerializationError::None : ESerializationError::InvalidData;
 	}
@@ -328,9 +319,10 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const float value)
+	inline ESerializationError JsonSerializer::Serialize(const float &value)
 	{
-		return Serialize<double>(value);
+		const double promoted = value;
+		return Serialize<double>(promoted);
 	}
 
 	/// Serializes a boolean value to a JSON string.
@@ -339,7 +331,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const bool value)
+	inline ESerializationError JsonSerializer::Serialize(const bool &value)
 	{
 		return m_writer.Bool(value) ? ESerializationError::None : ESerializationError::InvalidData;
 	}
@@ -350,7 +342,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::uint8_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::uint8_t &value)
 	{
 		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -361,7 +353,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::uint16_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::uint16_t &value)
 	{
 		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -372,7 +364,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::uint32_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::uint32_t &value)
 	{
 		return !m_writer.Uint(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -383,7 +375,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::uint64_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::uint64_t &value)
 	{
 		return !m_writer.Uint64(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -394,7 +386,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::int8_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::int8_t &value)
 	{
 		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -405,7 +397,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::int16_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::int16_t &value)
 	{
 		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -416,7 +408,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::int32_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::int32_t &value)
 	{
 		return !m_writer.Int(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -427,7 +419,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::int64_t value)
+	inline ESerializationError JsonSerializer::Serialize(const std::int64_t &value)
 	{
 		return !m_writer.Int64(value) ? ESerializationError::InvalidData : ESerializationError::None;
 	}
@@ -449,7 +441,7 @@ namespace Hush::Serialization
 	/// @return SerializationError
 	template <>
 	[[nodiscard]]
-	inline ESerializationError JsonSerializer::Serialize(const std::string_view value)
+	inline ESerializationError JsonSerializer::Serialize(const std::string_view &value)
 	{
 		return !m_writer.String(value.data(), static_cast<rapidjson::SizeType>(value.size()))
 				   ? ESerializationError::InvalidData

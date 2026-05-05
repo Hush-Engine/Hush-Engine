@@ -312,7 +312,7 @@ namespace Hush
 		EntityId RegisterIfNeededSlow() const
 		{
 			// First, get the entity id, and check if the component is registered.
-			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(m_ownerScene);
+			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetSceneUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
 
 			return InternalRegisterCppComponent(status, componentId, info);
@@ -320,6 +320,9 @@ namespace Hush
 
 		[[nodiscard]]
 		void *GetSceneWorld() const;
+
+		[[nodiscard]]
+		std::uint64_t GetSceneUniqueId() const;
 
 		/// Check if a component is registered.
 		/// @param componentId Id of the component.

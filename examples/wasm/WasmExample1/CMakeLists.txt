@@ -7,7 +7,7 @@ hush_add_executable(
                   # resources/fullscreen_texture.wgsl
 )
 
-target_link_libraries(WasmExample1 PRIVATE Hush::Engine pthread)
+target_link_libraries(WasmExample1 PRIVATE Hush::Engine)
 
 # Copy resources folder to binary directory
 # add_custom_command(TARGET WasmExample1 POST_BUILD

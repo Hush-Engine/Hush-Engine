@@ -19,7 +19,7 @@ if (linux)
 endif()
 
 if (EMSCRIPTEN)
-    target_link_libraries(HushThreading PUBLIC pthread)
+    # target_link_libraries(HushThreading PUBLIC pthread)
 endif()
 
 add_test_target(
