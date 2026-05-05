@@ -185,11 +185,7 @@ jobs:
         run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v
       - name: Test hush
         if: matrix.build-type == 'debug'
-        shell: pwsh
-        run: |
-          $buildDir = "build/windows-x64-${{ matrix.build-type }}"
-          $env:PATH = "$buildDir\bin;$buildDir\Debug\bin;$buildDir\lib;$buildDir\Debug\lib;$buildDir\vcpkg_installed\x64-windows\bin;$buildDir\vcpkg_installed\x64-windows\debug\bin;$env:PATH"
-          ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
+        run: ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
 
   build-hush-wasm:
     name: Build hush engine (Wasm)

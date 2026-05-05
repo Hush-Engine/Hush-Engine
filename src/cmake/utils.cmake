@@ -289,6 +289,9 @@ macro(add_test_target)
     if (HUSH_ENABLE_TESTS)
         cmake_parse_arguments(TEST "" "TARGET_NAME;ENGINE_TARGET" "SRCS;HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
         add_executable(${TEST_TARGET_NAME} ${TEST_SRCS})
+        set_target_properties(${TEST_TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug/>bin"
+        )
         target_include_directories(${TEST_TARGET_NAME} PRIVATE ${TEST_HEADER_DIRS})
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
