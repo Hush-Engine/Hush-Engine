@@ -9,6 +9,7 @@ on:
 permissions:
   actions: write
   contents: read
+  packages: write
 
 jobs:
   detect-changes:
@@ -71,18 +72,30 @@ jobs:
 
   build-devtool:
     name: Build and Upload devtool
-    needs: test-devtool
-    if: always() && !failure() && !cancelled()
+    needs: [detect-changes, test-devtool]
+    if: >-
+      always() && !failure() && !cancelled() &&
+      (needs.detect-changes.outputs.devtool == 'true' ||
+       needs.detect-changes.outputs.engine == 'true' ||
+       needs.detect-changes.outputs.wasm == 'true')
     strategy:
       matrix:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
+      - name: Cache devtool binary
+        id: devtool-bin-cache
+        uses: actions/cache@v4
+        with:
+          path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          key: hush-devtool-bin-${{ runner.os }}-${{ hashFiles('src/devtool/Cargo.toml', 'src/devtool/Cargo.lock', 'src/devtool/src/**', 'src/devtool/templates/**') }}
       - uses: Swatinem/rust-cache@v2
+        if: steps.devtool-bin-cache.outputs.cache-hit != 'true'
         with:
           workspaces: src/devtool
       - name: Build release
+        if: steps.devtool-bin-cache.outputs.cache-hit != 'true'
         run: cargo build --release
         working-directory: src/devtool
       - name: Upload artifact
@@ -145,17 +158,11 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_BINARY_SOURCES: "clear;nuget,GitHub,readwrite"
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
-      - name: Export GitHub Actions cache env vars
-        uses: actions/github-script@v9
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v2.0.9
         with:
@@ -179,12 +186,20 @@ jobs:
           arch: x64
       - name: Bootstrap VCPKG
         run: ./vcpkg/bootstrap-vcpkg.bat
+      - name: Setup vcpkg NuGet credentials
+        shell: pwsh
+        run: |
+          $nuget = & ./vcpkg/vcpkg.exe fetch nuget | Select-Object -Last 1
+          $feed  = "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          & $nuget sources add -Source $feed -StorePasswordInClearText `
+              -Name GitHub -UserName "${{ github.actor }}" `
+              -Password "${{ secrets.GITHUB_TOKEN }}"
+          & $nuget setapikey "${{ secrets.GITHUB_TOKEN }}" -Source $feed
       - name: Configure hush
         run: ./hush-devtool.exe configure --preset windows-x64-${{ matrix.build-type }} -v
       - name: Build hush
         run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v
       - name: Test hush
-        if: matrix.build-type == 'debug'
         run: ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
 
   build-hush-wasm:
@@ -196,17 +211,11 @@ jobs:
         build-type: [debug, release]
     runs-on: windows-latest
     env:
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_BINARY_SOURCES: "clear;nuget,GitHub,readwrite"
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
-      - name: Export GitHub Actions cache env vars
-        uses: actions/github-script@v9
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Setup Emscripten SDK
         uses: emscripten-core/setup-emsdk@v16
         with:
@@ -226,10 +235,18 @@ jobs:
         shell: bash
       - name: Bootstrap VCPKG
         run: ./vcpkg/bootstrap-vcpkg.bat
+      - name: Setup vcpkg NuGet credentials
+        shell: pwsh
+        run: |
+          $nuget = & ./vcpkg/vcpkg.exe fetch nuget | Select-Object -Last 1
+          $feed  = "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          & $nuget sources add -Source $feed -StorePasswordInClearText `
+              -Name GitHub -UserName "${{ github.actor }}" `
+              -Password "${{ secrets.GITHUB_TOKEN }}"
+          & $nuget setapikey "${{ secrets.GITHUB_TOKEN }}" -Source $feed
       - name: Configure hush (Wasm)
         run: ./hush-devtool.exe configure --preset wasm-x64-${{ matrix.build-type }} -v
       - name: Build hush (Wasm)
         run: ./hush-devtool.exe build --preset wasm-x64-${{ matrix.build-type }} -v
       - name: Test hush (Wasm)
-        if: matrix.build-type == 'debug'
-        run: ./hush-devtool.exe test --preset wasm-x64-debug -v
+        run: ./hush-devtool.exe test --preset wasm-x64-${{ matrix.build-type }} -v

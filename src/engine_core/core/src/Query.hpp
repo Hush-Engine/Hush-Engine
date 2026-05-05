@@ -153,6 +153,10 @@ namespace Hush
 		[[nodiscard, hush::export]]
 		Scene *GetScene() const noexcept;
 
+		/// Forward to the owning scene's unique id without requiring Scene to be complete here.
+		[[nodiscard]]
+		std::uint64_t GetSceneUniqueId() const noexcept;
+
 		/// Get an iterator to iterate over the entities in the query.
 		/// @return Iterator to iterate over the entities in the query.
 		[[nodiscard, hush::export]]
@@ -581,7 +585,7 @@ namespace Hush
 		EntityId RegisterIfNeededSlow() const
 		{
 			// First, get the entity id, and check if the component is registered.
-			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetRawQuery().GetScene());
+			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetRawQuery().GetSceneUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
 
 			return InternalRegisterCppComponent(status, componentId, info);
