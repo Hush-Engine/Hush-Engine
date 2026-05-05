@@ -296,7 +296,13 @@ macro(add_test_target)
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
 
-        catch_discover_tests(${TEST_TARGET_NAME} DISCOVERY_MODE PRE_TEST)
+        catch_discover_tests(${TEST_TARGET_NAME}
+            DISCOVERY_MODE PRE_TEST
+            DL_PATHS
+                "$<TARGET_FILE_DIR:${TEST_TARGET_NAME}>"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+        )
 
         if (${HUSH_ENABLE_LTO})
             set_property(TARGET ${TEST_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
