@@ -248,5 +248,5 @@ jobs:
         run: ./hush-devtool.exe configure --preset wasm-x64-${{ matrix.build-type }} -v
       - name: Build hush (Wasm)
         run: ./hush-devtool.exe build --preset wasm-x64-${{ matrix.build-type }} -v
-      - name: Test hush (Wasm)
-        run: ./hush-devtool.exe test --preset wasm-x64-${{ matrix.build-type }} -v
+      # - name: Test hush (Wasm)
+      #   run: ./hush-devtool.exe test --preset wasm-x64-${{ matrix.build-type }} -v

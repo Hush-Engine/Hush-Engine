@@ -7,7 +7,7 @@ index c7708eb..952470f 100644
  endif()
  
 +if (EMSCRIPTEN)
-+    target_compile_options(spdlog PRIVATE -pthread)
++    # target_compile_options(spdlog PRIVATE -pthread)
 +endif()
 +
  add_library(spdlog::spdlog ALIAS spdlog)

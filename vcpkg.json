@@ -12,7 +12,6 @@
     "rapidjson",
     {
       "name": "sdl3",
-      "features": ["emscripten-pthreads"],
       "platform": "emscripten"
     },
     {

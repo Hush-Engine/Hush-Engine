@@ -101,12 +101,19 @@ namespace Hush::Graphics
 		[[maybe_unused]]
 		auto *webGpuGraphicsDevice = dynamic_cast<WebGPUGraphicsDevice *>(device);
 		webGpuGraphicsDevice->PollEvents();
-#elif defined(HUSH_PLATFORM_EMSCRIPTEN)
-		callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
-		m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
+#elif defined(WEBGPU_BACKEND_EMDAWNWEBGPU)
+		m_buffer.mapAsync(mapMode, 0, m_descriptor.size, wgpu::CallbackMode::AllowProcessEvents,
+						  [&success](wgpu::MapAsyncStatus status, WGPUStringView message) {
+							  success = (status == wgpu::MapAsyncStatus::Success);
+							  if (!success)
+							  {
+								  Hush::LogFormat(ELogLevel::Error, "WebGPU buffer mapping failed: {:.{}}",
+												  message.data, static_cast<int>(message.length));
+							  }
+						  });
 		while (!success)
 		{
-			emscripten_sleep(5);		// Sleep for 10 ms before checking again
+			emscripten_sleep(5);		// Sleep for 5 ms before checking again
 			m_instance.processEvents(); // Process any pending WebGPU events, including the mapAsync callback
 		}
 #endif

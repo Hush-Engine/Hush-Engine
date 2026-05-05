@@ -213,9 +213,9 @@ macro(hush_add_library)
     target_link_options(${LIB_TARGET_NAME} PRIVATE ${HUSH_CPU_FLAGS})
     target_compile_definitions(${LIB_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 
-    if (EMSCRIPTEN)
-        target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
-    endif ()
+    # if (EMSCRIPTEN)
+    #     target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
+    # endif ()
 
     if (${LIB_ENABLE_REFLECTION})
         enable_reflection(
@@ -261,11 +261,11 @@ macro(hush_add_executable)
         endforeach ()
 
         set_target_properties(${EXE_TARGET_NAME} PROPERTIES SUFFIX ".html")
-        target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
-        target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
+        # target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
+        # target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
         target_link_options(${EXE_TARGET_NAME} PRIVATE
             # "-sPROXY_TO_PTHREAD"
-            "-sPTHREAD_POOL_SIZE=16"
+            # "-sPTHREAD_POOL_SIZE=16"
             "-sALLOW_MEMORY_GROWTH=1"
             "-sSTACK_SIZE=1mb"
             "-sEXPORTED_RUNTIME_METHODS=cwrap"
