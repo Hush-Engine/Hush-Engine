@@ -1,5 +1,5 @@
 use crate::commands::clicommand::CliCommand;
-use crate::commands::utils::cmake_version;
+use crate::commands::utils::check_cmake_version;
 use anyhow::anyhow;
 use clap::Parser;
 use std::process::{ExitCode, Stdio};
@@ -38,9 +38,7 @@ impl ConfigureCommand {
 
 impl CliCommand for ConfigureCommand {
     fn run(self) -> anyhow::Result<ExitCode> {
-        let cmake_version = cmake_version()?;
-
-        if cmake_version.as_str() < "3.26" {
+        if !check_cmake_version(3, 26)? {
             return Err(anyhow!("CMake must be version 3.26 or newer"));
         }
 

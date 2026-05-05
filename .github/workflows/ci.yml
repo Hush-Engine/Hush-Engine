@@ -19,7 +19,7 @@ jobs:
       engine: ${{ steps.filter.outputs.engine }}
       wasm: ${{ steps.filter.outputs.wasm }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v4
@@ -61,7 +61,7 @@ jobs:
     needs: detect-changes
     if: fromJSON(needs.detect-changes.outputs.devtool)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src/devtool
@@ -71,14 +71,14 @@ jobs:
 
   build-devtool:
     name: Build and Upload devtool
-    needs: format-devtool
+    needs: test-devtool
     if: always() && !failure() && !cancelled()
     strategy:
       matrix:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src/devtool
@@ -87,13 +87,13 @@ jobs:
         working-directory: src/devtool
       - name: Upload artifact
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
           path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       - name: Upload artifact
         if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
           path: src/devtool/target/release/hush${{ matrix.os == 'windows-latest' && '.exe' || '' }}
@@ -101,10 +101,10 @@ jobs:
   test-devtool:
     name: Test devtool
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: fromJSON(needs.detect-changes.outputs.devtool)
+    needs: [detect-changes, format-devtool]
+    if: always() && !failure() && !cancelled() && fromJSON(needs.detect-changes.outputs.devtool)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src/devtool
@@ -112,9 +112,32 @@ jobs:
         working-directory: src/devtool
         run: cargo test
 
+  format-hush:
+    name: Format hush engine
+    needs: [detect-changes, build-devtool]
+    if: fromJSON(needs.detect-changes.outputs.engine)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Get devtool
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/download-artifact@v8
+        with:
+          name: hush-devtool-windows-latest-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+      - name: Get devtool
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
+        uses: actions/download-artifact@v8
+        with:
+          name: hush-devtool-windows-latest-${{ github.sha }}
+      - name: Rename devtool
+        run: mv hush.exe hush-devtool.exe
+        shell: bash
+      - name: Format hush
+        run: ./hush-devtool.exe format --check -v --print-files --all-files
+
   build-hush-windows:
     name: Build hush engine
-    needs: [detect-changes, build-devtool]
+    needs: [detect-changes, format-hush, build-devtool]
     if: fromJSON(needs.detect-changes.outputs.engine)
     strategy:
       matrix:
@@ -124,11 +147,11 @@ jobs:
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: Export GitHub Actions cache env vars
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -139,12 +162,12 @@ jobs:
           version: "19"
       - name: Get devtool
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
       - name: Get devtool
         if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hush-devtool-${{ matrix.os }}-${{ github.sha }}
       - name: Rename devtool
@@ -158,17 +181,19 @@ jobs:
         run: ./vcpkg/bootstrap-vcpkg.bat
       - name: Configure hush
         run: ./hush-devtool.exe configure --preset windows-x64-${{ matrix.build-type }} -v
-      - name: Format hush
-        run: ./hush-devtool.exe format --check -v --print-files --all-files
       - name: Build hush
         run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v
       - name: Test hush
         if: matrix.build-type == 'debug'
-        run: ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
+        shell: pwsh
+        run: |
+          $buildDir = "build/windows-x64-${{ matrix.build-type }}"
+          $env:PATH = "$buildDir\bin;$buildDir\Debug\bin;$buildDir\lib;$buildDir\Debug\lib;$buildDir\vcpkg_installed\x64-windows\bin;$buildDir\vcpkg_installed\x64-windows\debug\bin;$env:PATH"
+          ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
 
   build-hush-wasm:
     name: Build hush engine (Wasm)
-    needs: [detect-changes, build-devtool]
+    needs: [detect-changes, format-hush, build-devtool]
     if: fromJSON(needs.detect-changes.outputs.wasm)
     strategy:
       matrix:
@@ -177,11 +202,11 @@ jobs:
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: Export GitHub Actions cache env vars
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -192,12 +217,12 @@ jobs:
           version: latest
       - name: Get devtool
         if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hush-devtool-windows-latest-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
       - name: Get devtool
         if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hush-devtool-windows-latest-${{ github.sha }}
       - name: Rename devtool
