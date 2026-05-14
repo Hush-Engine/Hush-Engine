@@ -34,7 +34,7 @@
 
 namespace Hush
 {
-	enum class [[hush::export]] EComponentObserverType : int32_t
+	enum class [[hush::export]] EComponentObserverType
 	{
 		Add,
 		Remove,

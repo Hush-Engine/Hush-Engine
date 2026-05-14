@@ -11,10 +11,50 @@
 #include <cstdint>
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
+#include <flecs/private/api_types.h>
+
+
+void* Hush::ComponentRef::GetDataRaw() {
+	auto* ref = reinterpret_cast<ecs_ref_t*>(&this->m_refInternal);
+	const auto* world = reinterpret_cast<const ecs_world_t*>(this->m_world);
+	return ecs_ref_get_id(world, ref, ref->id);
+}
+
+
+const void* Hush::ComponentRef::GetDataRaw() const {
+	auto* ref = reinterpret_cast<ecs_ref_t*>(&this->m_refInternal);
+	const auto* world = reinterpret_cast<const ecs_world_t*>(this->m_world);
+	return ecs_ref_get_id(world, ref, ref->id);
+}
+
+
+Hush::Entity::EntityId Hush::ComponentRef::GetComponentId() const {
+	const auto* ref = reinterpret_cast<const ecs_ref_t*>(&this->m_refInternal);
+	return ref->id;
+}
 
 Hush::Entity::EntityId Hush::Entity::RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const
 {
 	return m_ownerScene->RegisterComponentRaw(desc);
+}
+
+void Hush::Entity::NotifyComponentModifiedRaw(Entity::EntityId componentId) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_modified_id(world, this->m_entityId, componentId);
+}
+
+
+Hush::ComponentRef Hush::Entity::CreateComponentReferenceRaw(EntityId componentId) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_ref_t ref = ecs_ref_init_id(world, this->m_entityId, componentId);
+	static_assert(sizeof(ecs_ref_t) == ECS_REF_SIZE, "Reference size does not match to our internal usage!");
+
+	ComponentRef publicRef{};
+
+	publicRef.m_world = world;
+	auto* refInternalPtr = reinterpret_cast<ecs_ref_t*>(&publicRef.m_refInternal);
+	*refInternalPtr = ref;
+	return publicRef;
 }
 
 void *Hush::Entity::AddComponentRaw(const EntityId componentId)
