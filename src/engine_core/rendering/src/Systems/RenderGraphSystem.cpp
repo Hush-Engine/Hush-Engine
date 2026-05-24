@@ -53,6 +53,7 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 	auto &renderGraph = m_renderDevice->GetRenderGraph();
 
 	bool canTakeFastPath = renderGraph.IsCompiled();
+	Hush::LogFormat(ELogLevel::Info, "Can take fast path: {}", canTakeFastPath);
 
 	if (canTakeFastPath)
 	{

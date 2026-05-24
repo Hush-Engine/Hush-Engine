@@ -56,7 +56,7 @@ namespace Hush
 		[[nodiscard]] uint64_t GetComponentId() const;
 		
 	private:
-		mutable std::aligned_storage<ECS_REF_SIZE> m_refInternal;
+		mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
 		// TODO: Make it a thread local variable
 		void* m_world;
 		friend class Entity;
@@ -130,6 +130,8 @@ namespace Hush
 
 			return *this;
 		}
+
+		Entity() = default;
 
 		/// Get a null entity. A null entity is an entity that does not exist in the scene. It can be used to represent
 		/// an invalid entity.
@@ -390,7 +392,7 @@ namespace Hush
 		EntityId m_entityId{};
 
 		/// Scene that owns this entity
-		Scene *m_ownerScene;
+		Scene *m_ownerScene = nullptr;
 	};
 
 

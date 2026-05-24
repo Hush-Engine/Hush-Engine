@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Entity.hpp"
 #include "IEditorPanel.hpp"
 #include <glm/glm.hpp>
 
@@ -25,10 +26,7 @@ namespace Hush
 		/// This is the size that the scene render texture should match.
 		/// Returns (0, 0) before the first frame.
 		[[nodiscard]]
-		glm::u32vec2 GetPanelSize() const noexcept
-		{
-			return m_panelSize;
-		}
+		glm::u32vec2 GetPanelSize() const noexcept;
 
 		/// @brief Returns true if the panel content region changed size since
 		/// the last call to ConsumeResized().  After calling ConsumeResized()
@@ -52,10 +50,10 @@ namespace Hush
 		uint32_t m_textureWidth = 0;
 		uint32_t m_textureHeight = 0;
 
-		/// Current content size of the Scene panel (updated every frame).
-		glm::u32vec2 m_panelSize{0, 0};
-
 		/// Set to true whenever m_panelSize changes.
 		bool m_resized = false;
+		// Entity that represents the scene panel in the ECS, it's used to communicate with other systems
+		Entity m_bridgeEntity;
+		ComponentRef m_panelSizeRef;
 	};
 } // namespace Hush

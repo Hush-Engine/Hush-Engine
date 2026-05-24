@@ -1,9 +1,12 @@
 #include "ScenePanel.hpp"
+#include "Logger.hpp"
 #include "Scene.hpp"
 #include <imgui/imgui.h>
+#include "components/EditorPanelComponents.hpp"
 #include <algorithm>
 
-constexpr ImGuiWindowFlags SCENE_PANEL_FLAGS = ImGuiWindowFlags_NoScrollbar;
+constexpr ImGuiWindowFlags SCENE_PANEL_FLAGS =
+	ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
 
 /// Minimum panel dimension in pixels — avoids creating zero-sized textures.
 constexpr int32_t MIN_PANEL_DIMENSION = 1;
@@ -11,10 +14,21 @@ constexpr int32_t MIN_PANEL_DIMENSION = 1;
 void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 {
 	(void)activeScene;
+	this->m_bridgeEntity = activeScene->CreateEntityWithKey("ScenePanel");
+	ScenePanelSizeComp &panelSize = this->m_bridgeEntity.AddComponent<ScenePanelSizeComp>();
+	// Initially set this to the min dimensions
+	panelSize.size = {MIN_PANEL_DIMENSION, MIN_PANEL_DIMENSION};
+	this->m_panelSizeRef = this->m_bridgeEntity.CreateComponentReference<ScenePanelSizeComp>();
+}
+
+glm::u32vec2 Hush::ScenePanel::GetPanelSize() const noexcept
+{
+	return *this->m_panelSizeRef.GetData<glm::u32vec2>();
 }
 
 void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 {
+	auto *panelSize = this->m_panelSizeRef.GetData<ScenePanelSizeComp>();
 	(void)deltaTime;
 
 	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
@@ -26,10 +40,12 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 	auto newWidth = std::max(static_cast<int32_t>(availSize.x), MIN_PANEL_DIMENSION);
 	auto newHeight = std::max(static_cast<int32_t>(availSize.y), MIN_PANEL_DIMENSION);
 
-	if (newWidth != m_panelSize.x || newHeight != m_panelSize.y)
+	if (newWidth != panelSize->size.x || newHeight != panelSize->size.y)
 	{
-		m_panelSize = {newWidth, newHeight};
+		panelSize->size = {newWidth, newHeight};
 		m_resized = true;
+		this->m_bridgeEntity.NotifyComponentModifiedRaw(this->m_panelSizeRef.GetComponentId());
+		LogFormat(ELogLevel::Info, "Size changed to ({}, {})", newWidth, newHeight);
 	}
 
 	// ── Display the scene texture ───────────────────────────────────

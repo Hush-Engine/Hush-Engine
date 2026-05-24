@@ -4,6 +4,7 @@
 	\brief Scene entity
 */
 #include "Entity.hpp"
+#include "Assertions.hpp"
 #include "EcsTerms.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
@@ -51,9 +52,9 @@ Hush::ComponentRef Hush::Entity::CreateComponentReferenceRaw(EntityId componentI
 
 	ComponentRef publicRef{};
 
-	publicRef.m_world = world;
 	auto* refInternalPtr = reinterpret_cast<ecs_ref_t*>(&publicRef.m_refInternal);
 	*refInternalPtr = ref;
+	publicRef.m_world = world;
 	return publicRef;
 }
 

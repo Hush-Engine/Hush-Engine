@@ -420,7 +420,7 @@ namespace Hush::Graphics
 			return cacheIt->second;
 		}
 
-		auto result = CompileInternal(nameStr.c_str(), source.data(), source.size(), entryPoints);
+		ShaderCompilationResult result = CompileInternal(nameStr.c_str(), source.data(), source.size(), entryPoints);
 
 		// Cache the result
 		m_cache[cacheKey] = result;
@@ -450,6 +450,7 @@ namespace Hush::Graphics
 		case EGraphicsAPI::Metal:
 			return EShaderTarget::SPIRV;
 		default:
+			LogFormat(ELogLevel::Warn, "Unrecognized graphics API {}; defaulting to WGSL!", static_cast<int32_t>(api));
 			return EShaderTarget::WGSL;
 		}
 	}
