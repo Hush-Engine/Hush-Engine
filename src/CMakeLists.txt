@@ -7,6 +7,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEBUG)
 endif()
 
+add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 add_subdirectory(engine_core)
 
 add_subdirectory(bindings)

@@ -5,6 +5,7 @@
 #include "ISystem.hpp"
 #include "Query.hpp"
 #include "Shared/EditorCamera.hpp"
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
 
 namespace Hush
@@ -23,9 +24,14 @@ namespace Hush
 	
 	struct ViewUniforms
 	{
-		glm::mat4 viewproj;
-		glm::vec3 pos;
+		glm::mat4 invviewproj;
+		glm::vec4 pos;
+		glm::vec4 forward;
+		glm::vec4 up;
+		glm::vec4 right;
+		glm::vec2 resolution;
 		float farPlane;
+		uint8_t padding[35];
 	};
 
 	class RenderingSystem final : public ISystem

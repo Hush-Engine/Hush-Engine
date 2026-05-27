@@ -21,58 +21,50 @@
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
+#include <glm/ext/quaternion_common.hpp>
+#include <glm/matrix.hpp>
 #include <string_view>
 
 using namespace Hush::Graphics;
 
-void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph& graph, Hush::RenderingSystem* self) {
+void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
+{
 	using namespace Hush::Graphics;
 	using namespace Hush::RenderGraph;
 
 	using RenderGraphBuldContext_t = Hush::RenderGraph::RenderGraph::BuildContext;
 
-	struct GridPassData {
+	struct GridPassData
+	{
 		ResourceId sceneTexture;
-		ResourceId depthTexture;
 	};
 
-	graph.AddPass<GridPassData>(EPassType::Graphics, "GridPass", [self](RenderGraphBuldContext_t& ctx, GridPassData& data) {
-		// Build
-		data.sceneTexture = ctx.Read(ctx.GetResourceIdByName("EditorScenePass_RenderTexture"), EResourceState::RenderTarget);
-		// Get the scene texture ??
-		// Create the depth buffer
-		data.depthTexture = ctx.Create<TextureResource>("GridPass_Depth", {
-		    .width = self->m_cachedViewportSize.x,
-		    .height = self->m_cachedViewportSize.y,
-			.format = ETextureFormat::D24_UNORM,
-			.usage = ETextureUsage::DepthStencil
+	graph.AddPass<GridPassData>(
+		EPassType::Graphics, "GridPass",
+		[self](RenderGraphBuldContext_t &ctx, GridPassData &data) {
+			// Build
+			data.sceneTexture =
+				ctx.Write(ctx.GetResourceIdByName("EditorScenePass_RenderTexture"), EResourceState::RenderTarget);
+			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+		},
+		[self](GridPassData &data, ICommandList *cmdList, const Hush::RenderGraph::ResourceManager &resourceManager) {
+			auto *cmd = dynamic_cast<IGraphicsCommandList *>(cmdList);
+			auto *sceneTex = resourceManager.GetResource<TextureResource>(data.sceneTexture)->texture.get();
+			RenderPassDescriptor rp{};
+			rp.AddColorAttachment({.texture = sceneTex, .loadOp = ELoadOp::Load, .storeOp = EStoreOp::Store});
+
+			auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
+			graphicsDevice->WriteBuffer(self->m_gridUniformBuffer.get(), 0, &self->m_cachedViewUniforms,
+										sizeof(ViewUniforms));
+
+			cmd->BeginRenderPass(rp);
+			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
+							 static_cast<float>(self->m_cachedViewportSize.y), 0, 1);
+			cmd->BindPipeline(self->m_gridPipeline.get());
+			cmd->SetBindGroup(0, self->m_gridBindGroup.get());
+			cmd->Draw(6, 1, 0, 0);
+			cmd->EndRenderPass();
 		});
-	    ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
-	},
-	[self](GridPassData& data, ICommandList* cmdList, const Hush::RenderGraph::ResourceManager& resourceManager){
-		LogFormat(ELogLevel::Info, "Executing grid pass");
-		auto *cmd = dynamic_cast<IGraphicsCommandList*>(cmdList);
-        auto *sceneTex = resourceManager.GetResource<TextureResource>(data.sceneTexture)->texture.get();
-        auto *depthTex = resourceManager.GetResource<TextureResource>(data.depthTexture)->texture.get();
-        RenderPassDescriptor rp{};
-        rp.AddColorAttachment({.texture = sceneTex, .loadOp = ELoadOp::Load, .storeOp = EStoreOp::Store});
-        RenderPassDepthStencilAttachment depth{};
-        depth.texture = depthTex;
-        depth.depthLoadOp = ELoadOp::Clear;
-        depth.depthStoreOp = EStoreOp::Store;
-        depth.depthClearValue = 1.0f;
-        rp.SetDepthStencilAttachment(depth);
-
-		auto* graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
-		graphicsDevice->WriteBuffer(self->m_gridUniformBuffer.get(), 0, &self->m_cachedViewUniforms, sizeof(ViewUniforms));
-
-        cmd->BeginRenderPass(rp);
-        cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x), static_cast<float>(self->m_cachedViewportSize.y), 0, 1);
-        cmd->BindPipeline(self->m_gridPipeline.get());
-        cmd->SetBindGroup(0, self->m_gridBindGroup.get());
-        cmd->Draw(6, 1, 0, 0);
-        cmd->EndRenderPass();		
-	});
 }
 
 void Hush::RenderingSystem::Init()
@@ -81,18 +73,16 @@ void Hush::RenderingSystem::Init()
 	this->m_renderableTargetsQuery =
 		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::Auto);
 
-	this->GetScene().AddComponentObserver<ScenePanelSizeComp>(EComponentObserverType::Set, [this](Entity::EntityId entity, ScenePanelSizeComp* panelSize){
-		this->m_cachedViewportSize = panelSize->size;
-	});
+	this->GetScene().AddComponentObserver<ScenePanelSizeComp>(
+		EComponentObserverType::Set, [this](Entity::EntityId entity, ScenePanelSizeComp *panelSize) {
+			this->m_cachedViewportSize = panelSize->size;
+		});
 
 	this->m_editorCameraQuery = this->GetScene().CreateQuery<EditorCamera>();
 
 	// Make sure we have the data so that initialization order does not matter
 	auto scenePanelQuery = this->GetScene().CreateQuery<const ScenePanelSizeComp>(RawQuery::ECacheMode::None);
-	scenePanelQuery.Each([this](const ScenePanelSizeComp& sizeComp) {
-		this->m_cachedViewportSize = sizeComp.size;
-	});
-
+	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
 
 	// We need to load the shaders here
 	// Access the filesystem
@@ -144,22 +134,19 @@ void Hush::RenderingSystem::Init()
 	desc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
 	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
 	desc.bindGroupLayoutCount = 1;
-	// depth test so grid draws correctly behind opaque objects
-	desc.depthStencil = {.enabled = true, .format = ETextureFormat::D24_UNORM};
+	// draw grid directly on the scene render target without depth testing
+	desc.depthStencil = {.enabled = false, .format = ETextureFormat::D24_UNORM};
 	this->m_gridPipeline = device->CreateGraphicsPipeline(desc);
-
 
 	BindGroupDescriptor bgDesc{};
 	bgDesc.layout = this->m_gridBindGroupLayout.get();
 	bgDesc.entries = {{.binding = 0, .buffer = m_gridUniformBuffer.get(), .offset = 0, .size = sizeof(ViewUniforms)}};
-	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);	
+	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);
 
 	Entity builderEnt = this->GetScene().CreateEntityWithKey("GridRenderGraph");
-	auto& builder = builderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
-	builder.builderFunc = [this](RenderGraph::RenderGraph& graph) {
-		BuildGridPassFunction(graph, this);
-	};
-	builder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph&){};
+	auto &builder = builderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
+	builder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildGridPassFunction(graph, this); };
+	builder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
 }
 
 void Hush::RenderingSystem::OnShutdown()
@@ -183,19 +170,33 @@ void Hush::RenderingSystem::OnPreRender()
 	ZoneScoped;
 	// TODO: Update camera view matrix and everything else in the scene data here
 	//
-	// 
+	//
 
-	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera& editorCam) {
-	    glm::mat4 viewProj = editorCam.GetProjectionMatrix() * editorCam.GetViewMatrix();
-		this->m_cachedViewUniforms.viewproj = viewProj;
+	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
+	    glm::mat4 view = editorCam.GetViewMatrix();
+		glm::mat4 viewProj = editorCam.GetProjectionMatrix() * view;
+		// this->m_cachedViewUniforms.viewproj = (viewProj);
+		this->m_cachedViewUniforms.resolution = { this->m_cachedViewportSize.x, this->m_cachedViewportSize.y };
+		this->m_cachedViewUniforms.invviewproj = (glm::inverse(viewProj));
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();
-		this->m_cachedViewUniforms.pos = editorCam.GetPosition();
+
+
+		// view = glm::transpose(view);
+		glm::vec3 forward = -glm::vec3(view[0][2], view[1][2], view[2][2]);
+		glm::vec3 right = glm::vec3(view[0][0], view[1][0], view[2][0]);
+		glm::vec3 up = glm::vec3(view[0][1], view[1][1], view[2][1]);
+
+		this->m_cachedViewUniforms.forward = glm::vec4(forward, 0.0);
+		this->m_cachedViewUniforms.right = glm::vec4(right, 0.0);
+		this->m_cachedViewUniforms.up = glm::vec4(up, 0.0);
+
+		glm::vec3 pos = editorCam.GetPosition();
+		this->m_cachedViewUniforms.pos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
 	});
-	
 
 	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 	this->m_renderableTargetsQuery.Each([&renderer](Entity &_, const MeshReference &mesh, const WorldTransform &xform) {
-	    ZoneScopedN("Renderable meshes push");
+		ZoneScopedN("Renderable meshes push");
 		renderer->PushMesh(&xform, mesh.GetMesh().Get());
 	});
 }

@@ -85,7 +85,7 @@ public:
 
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
-		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./res");
+		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "C:/Users/nefes/Personal/Hush-Engine/");
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
@@ -310,7 +310,7 @@ private:
 					resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
 				colorAttachment.loadOp = ELoadOp::Clear;
 				colorAttachment.storeOp = EStoreOp::Store;
-				colorAttachment.clearValue = ClearColorValue{0.2f, 0.2f, 0.2f, 0.2f};
+				colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
 				renderPass.AddColorAttachment(colorAttachment);
 
 				cmd->BeginRenderPass(renderPass);
