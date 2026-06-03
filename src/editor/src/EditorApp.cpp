@@ -85,7 +85,7 @@ public:
 
 		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
 		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
-		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "C:/Users/nefes/Personal/Hush-Engine/");
+		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", HUSH_ENGINE_RES_DIR);
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
