@@ -90,12 +90,12 @@ public:
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
 		// Scripting
-		constexpr std::string_view scriptingProjDllPath =
-			"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		// constexpr std::string_view scriptingProjDllPath =
+				// "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-		this->m_scriptingHost->Initialize(scriptingProjDllPath);
-		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
+		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
+		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		// this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
 		this->m_resourceManager = m_engine->GetResourceManager();
 

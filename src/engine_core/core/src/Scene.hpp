@@ -326,7 +326,7 @@ namespace Hush
 
 		void *m_world;
 
-		ScriptingSystemInterface *m_scriptingInterface;
+		ScriptingSystemInterface *m_scriptingInterface = nullptr;
 
 		bool m_isInitialized = false;
 	};

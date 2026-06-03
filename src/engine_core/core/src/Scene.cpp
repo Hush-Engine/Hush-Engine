@@ -38,10 +38,15 @@ void Hush::Scene::Init()
 	}
 
 	// TODO: Group user systems into buckets
-	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
-	Threading::Wait(
-		Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
-							   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+	if (this->m_scriptingInterface != nullptr) {
+		ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
+		Threading::Wait(
+			Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
+								   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+	}
+	else {
+		LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	}
 
 	this->m_isInitialized = true;
 }
@@ -58,6 +63,10 @@ void Hush::Scene::Update(float delta)
 			}));
 	}
 
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -78,6 +87,10 @@ void Hush::Scene::FixedUpdate(float delta)
 			}));
 	}
 
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
 		this->m_scriptingInterface->fixedUpdateFunction;
 	// TODO: Sort in threading
@@ -96,6 +109,11 @@ void Hush::Scene::PreRender()
 											   [](ISystem *system) { system->OnPreRender(); }));
 	}
 
+
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -112,6 +130,11 @@ void Hush::Scene::Render()
 											   [](ISystem *system) { system->OnRender(); }));
 	}
 
+
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -129,6 +152,11 @@ void Hush::Scene::PostRender()
 											   [](ISystem *system) { system->OnPostRender(); }));
 	}
 
+
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -146,6 +174,11 @@ void Hush::Scene::Shutdown()
 											   [](ISystem *system) { system->OnShutdown(); }));
 	}
 
+
+	if (this->m_scriptingInterface == nullptr) {
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)

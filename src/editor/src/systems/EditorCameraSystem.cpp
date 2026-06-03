@@ -1,5 +1,4 @@
 #include "EditorCameraSystem.hpp"
-#include "Logger.hpp"
 #include "MathUtils.hpp"
 #include "Profiling.hpp"
 #include "Renderer.hpp"
@@ -112,7 +111,6 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;
 		pitch = MathUtils::Clamp(pitch + (mouseAcceleration.y * mouseLookSpeed * delta), CAM_PITCH_MIN, CAM_PITCH_MAX);
 	}
-	LogFormat(ELogLevel::Info, "Camera's direction: ({}, {}, {})", cameraDir.x, cameraDir.y, cameraDir.z);
 }
 
 // NOLINTBEGIN
