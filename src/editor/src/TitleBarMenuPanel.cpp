@@ -10,7 +10,7 @@ void Hush::TitleBarMenuPanel::Init(Scene *activeScene) noexcept
 	(void)activeScene;
 }
 
-void Hush::TitleBarMenuPanel::OnRender(float deltaTime) noexcept
+void Hush::TitleBarMenuPanel::OnRender([[maybe_unused]] float deltaTime) noexcept
 {
 	if (ImGui::BeginMainMenuBar())
 	{

@@ -41,7 +41,68 @@ function (download_hush_file)
     message(STATUS "Downloaded and verified ${DOWNLOAD_FILENAME} successfully.")
 endfunction()
 
-if (MSVC)
+function(download_minject)
+    set(_MI_VERSION "v3.2.8")
+    set(_MI_URL_BASE "https://github.com/microsoft/mimalloc/raw/${_MI_VERSION}/bin")
+
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+        set(_MI_FILE "minject-arm64.exe")
+        set(_MI_HASH "")
+    elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(_MI_FILE "minject32.exe")
+        set(_MI_HASH "")
+    else()
+        set(_MI_FILE "minject.exe")
+        set(_MI_HASH "951882964a3660d83cce7211888fed7f955ba7a44b81bf7b6482ec0ec9fb6672")
+    endif()
+
+    if (NOT _MI_HASH)
+        message(FATAL_ERROR "minject SHA256 not populated for this architecture (${CMAKE_SYSTEM_PROCESSOR}). Add it in cmake/utils.cmake.")
+    endif()
+
+    download_hush_file(
+        URL "${_MI_URL_BASE}/${_MI_FILE}"
+        FILENAME ${_MI_FILE}
+        EXPECTED_HASH ${_MI_HASH}
+    )
+
+    set(HUSH_MINJECT_BIN "${CMAKE_BINARY_DIR}/${_MI_FILE}" CACHE INTERNAL "Path to minject.exe")
+endfunction()
+
+function(hush_deploy_runtime_dlls tgt)
+    if (NOT WIN32)
+        return()
+    endif()
+    add_custom_command(TARGET ${tgt} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${tgt}>
+                $<TARGET_FILE_DIR:${tgt}>
+        COMMAND_EXPAND_LISTS
+        COMMENT "Deploying runtime DLLs next to ${tgt}"
+        VERBATIM
+    )
+endfunction()
+
+function(hush_minject_target tgt)
+    if (NOT WIN32)
+        return()
+    endif()
+
+    download_minject()
+
+    add_custom_command(TARGET ${tgt} POST_BUILD
+      COMMAND ${HUSH_MINJECT_BIN}
+              --inplace --force
+              "$<$<CONFIG:Debug>:--postfix=-debug>"
+              $<TARGET_FILE:${tgt}>
+      COMMENT "minject: patch ${tgt} so mimalloc.dll loads first"
+      COMMAND_EXPAND_LISTS
+      VERBATIM
+    )
+endfunction()
+
+
+if (CMAKE_HOST_WIN32)
     set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
     set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
 
@@ -64,10 +125,12 @@ if (MSVC)
     set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
 endif ()
 
+set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+
 
 # Set all warnings for the target
 macro(set_all_warnings target)
-    if (UNIX)
+    if (UNIX AND NOT EMSCRIPTEN)
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
     elseif (WIN32)
         target_compile_options(${target} PRIVATE /W4 /WX)
@@ -150,6 +213,10 @@ macro(hush_add_library)
     target_link_options(${LIB_TARGET_NAME} PRIVATE ${HUSH_CPU_FLAGS})
     target_compile_definitions(${LIB_TARGET_NAME} PUBLIC GLM_FORCE_XYZW_ONLY)
 
+    # if (EMSCRIPTEN)
+    #     target_compile_options(${LIB_TARGET_NAME} PRIVATE -pthread)
+    # endif ()
+
     if (${LIB_ENABLE_REFLECTION})
         enable_reflection(
                 TARGET_NAME ${LIB_TARGET_NAME}
@@ -166,8 +233,9 @@ endmacro()
 # PUBLIC_HEADER_DIRS: Public header directories for the library
 # PRIVATE_HEADER_DIRS: Private header directories for the library
 # ENABLE_REFLECTION: Whether to enable reflection for the executable
+# RESOURCES: Resources to copy to the output directory after build. This is needed in wasm
 macro(hush_add_executable)
-    cmake_parse_arguments(EXE "" "TARGET_NAME" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
+    cmake_parse_arguments(EXE "" "TARGET_NAME" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION;RESOURCES" ${ARGN})
     add_executable(${EXE_TARGET_NAME} ${EXE_SRCS})
     target_include_directories(${EXE_TARGET_NAME} PRIVATE ${EXE_PUBLIC_HEADER_DIRS} ${EXE_PRIVATE_HEADER_DIRS})
     set_all_warnings(${EXE_TARGET_NAME})
@@ -184,6 +252,31 @@ macro(hush_add_executable)
                 PRIVATE_HEADER_DIRS ${EXE_PRIVATE_HEADER_DIRS}
         )
     endif ()
+
+    if (EMSCRIPTEN)
+        # RESOURCES is a list, but we need to expand it to --embed-file {file1} --embed-file {file2} ...
+        set(EMBED_FILES "")
+        foreach (resource IN LISTS EXE_RESOURCES)
+            set(EMBED_FILES "${EMBED_FILES}" "--embed-file" "${CMAKE_CURRENT_SOURCE_DIR}/${resource}@${resource}")
+        endforeach ()
+
+        set_target_properties(${EXE_TARGET_NAME} PROPERTIES SUFFIX ".html")
+        # target_compile_options(${EXE_TARGET_NAME} PRIVATE -pthread "-sPROXY_TO_PTHREAD" "-sPTHREAD_POOL_SIZE=16")
+        # target_link_libraries(${EXE_TARGET_NAME} PRIVATE pthread)
+        target_link_options(${EXE_TARGET_NAME} PRIVATE
+            # "-sPROXY_TO_PTHREAD"
+            # "-sPTHREAD_POOL_SIZE=16"
+            "-sALLOW_MEMORY_GROWTH=1"
+            "-sSTACK_SIZE=1mb"
+            "-sEXPORTED_RUNTIME_METHODS=cwrap"
+            "-sMODULARIZE=1"
+            "-sASYNCIFY=1"
+            "-sOFFSCREENCANVAS_SUPPORT"
+
+            ${EMBED_FILES}
+        )
+
+    endif ()
 endmacro()
 
 # Adds a test target to the project
@@ -196,11 +289,20 @@ macro(add_test_target)
     if (HUSH_ENABLE_TESTS)
         cmake_parse_arguments(TEST "" "TARGET_NAME;ENGINE_TARGET" "SRCS;HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
         add_executable(${TEST_TARGET_NAME} ${TEST_SRCS})
+        set_target_properties(${TEST_TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug/>bin"
+        )
         target_include_directories(${TEST_TARGET_NAME} PRIVATE ${TEST_HEADER_DIRS})
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE ${TEST_ENGINE_TARGET} Hush::Log Catch2::Catch2WithMain)
         set_all_warnings(${TEST_TARGET_NAME})
 
-        catch_discover_tests(${TEST_TARGET_NAME} DISCOVERY_MODE PRE_TEST)
+        catch_discover_tests(${TEST_TARGET_NAME}
+            DISCOVERY_MODE PRE_TEST
+            DL_PATHS
+                "$<TARGET_FILE_DIR:${TEST_TARGET_NAME}>"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+        )
 
         if (${HUSH_ENABLE_LTO})
             set_property(TARGET ${TEST_TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

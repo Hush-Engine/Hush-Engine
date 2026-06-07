@@ -153,11 +153,11 @@ void Hush::RenderingSystem::OnShutdown()
 {
 }
 
-void Hush::RenderingSystem::OnUpdate(float delta)
+void Hush::RenderingSystem::OnUpdate([[maybe_unused]] float delta)
 {
 }
 
-void Hush::RenderingSystem::OnFixedUpdate(float delta)
+void Hush::RenderingSystem::OnFixedUpdate([[maybe_unused]] float delta)
 {
 }
 
@@ -195,8 +195,9 @@ void Hush::RenderingSystem::OnPreRender()
 	});
 
 	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	this->m_renderableTargetsQuery.Each([&renderer](Entity &_, const MeshReference &mesh, const WorldTransform &xform) {
-		ZoneScopedN("Renderable meshes push");
+	this->m_renderableTargetsQuery.Each([&renderer]([[maybe_unused]]
+													Entity &_,
+													const MeshReference &mesh, const WorldTransform &xform) {
 		renderer->PushMesh(&xform, mesh.GetMesh().Get());
 	});
 }

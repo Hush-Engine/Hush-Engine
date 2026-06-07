@@ -28,7 +28,7 @@
 #include <string>
 #include "HushEngine.hpp"
 
-constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiViewportFlags_NoFocusOnAppearing;
+constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiWindowFlags_NoFocusOnAppearing;
 
 void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 {
@@ -40,7 +40,7 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 	// this->m_modelLoader.SetResourceManager(this->m_resourceManager);
 }
 
-void Hush::ContentPanel::OnRender(float deltaTime)
+void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	if (ImGui::Begin("Project", nullptr, CONTENT_PANEL_FLAGS))
 	{
@@ -59,6 +59,7 @@ void Hush::ContentPanel::OnRender(float deltaTime)
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
+				[[maybe_unused]]
 				IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
 				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
 				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
@@ -181,7 +182,7 @@ void Hush::ContentPanel::MakeMetaFile(const FileInfo &fileData, const FileMetada
 	file->Close();
 }
 
-void Hush::ContentPanel::CreateInnerResources(const FileInfo &fileData, const FileMetadata &metadata)
+void Hush::ContentPanel::CreateInnerResources(const FileInfo &fileData, [[maybe_unused]] const FileMetadata &metadata)
 {
 	switch (fileData.extension)
 	{

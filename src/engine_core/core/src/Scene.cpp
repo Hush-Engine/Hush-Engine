@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*! \file Scene.cpp
 	\author Alan Ramirez
 	\date 2025-01-20
@@ -14,14 +15,18 @@
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
+std::atomic<std::uint64_t> Hush::Scene::s_nextSceneId{1};
+
 Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
 	: m_engine(engine),
+	  m_threadPool(threadPool),
 	  m_world(ecs_init()),
-	  m_threadPool(threadPool)
+	  m_sceneId(s_nextSceneId.fetch_add(1, std::memory_order_relaxed))
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
 }
+
 
 Hush::Scene::~Scene()
 {
@@ -33,16 +38,31 @@ void Hush::Scene::Init()
 	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->Init();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->Init(); }));
+#endif
 	}
 
 	// TODO: Group user systems into buckets
 	if (this->m_scriptingInterface != nullptr) {
 		ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (uintptr_t system : this->m_scriptingSystems)
+		{
+			initFunc(reinterpret_cast<void *>(system));
+		}
+#else
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
 								   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+#endif
 	}
 	else {
 		LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
@@ -56,11 +76,18 @@ void Hush::Scene::Update(float delta)
 	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnUpdate(delta);
+		}
+#else
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
 				// Call the update method for each system
 				system->OnUpdate(delta);
 			}));
+#endif
 	}
 
 	if (this->m_scriptingInterface == nullptr) {
@@ -78,14 +105,23 @@ void Hush::Scene::Update(float delta)
 void Hush::Scene::FixedUpdate(float delta)
 {
 	ZoneScoped;
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnFixedUpdate(delta);
+		}
+#else
 		Threading::Wait(
 			Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(), [delta](ISystem *system) {
 				// Call the fixed update method for each system
 				system->OnFixedUpdate(delta);
 			}));
+#endif
 	}
+	
 
 	if (this->m_scriptingInterface == nullptr) {
 		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
@@ -102,13 +138,21 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
+
 	ZoneScoped;
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnPreRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPreRender(); }));
+#endif
 	}
-
 
 	if (this->m_scriptingInterface == nullptr) {
 		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
@@ -123,14 +167,22 @@ void Hush::Scene::PreRender()
 }
 void Hush::Scene::Render()
 {
+
 	ZoneScoped;
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnRender(); }));
+#endif
 	}
-
-
+	
 	if (this->m_scriptingInterface == nullptr) {
 		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
 		return;
@@ -145,14 +197,22 @@ void Hush::Scene::Render()
 
 void Hush::Scene::PostRender()
 {
+
 	ZoneScoped;
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnPostRender();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnPostRender(); }));
+#endif
 	}
-
-
+	
 	if (this->m_scriptingInterface == nullptr) {
 		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
 		return;
@@ -167,13 +227,22 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
+
 	ZoneScoped;
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (ISystem *system : systemBucket)
+		{
+			system->OnShutdown();
+		}
+#else
 		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 											   [](ISystem *system) { system->OnShutdown(); }));
+#endif
 	}
-
+	
 
 	if (this->m_scriptingInterface == nullptr) {
 		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");

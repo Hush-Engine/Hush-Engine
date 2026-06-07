@@ -142,6 +142,11 @@ Hush::Scene *Hush::RawQuery::GetScene() const noexcept
 	return m_scene;
 }
 
+std::uint64_t Hush::RawQuery::GetSceneUniqueId() const noexcept
+{
+	return m_scene->GetUniqueId();
+}
+
 Hush::RawQuery::QueryIterator Hush::RawQuery::GetIterator()
 {
 	auto world = static_cast<ecs_world_t *>(m_scene->GetWorld());

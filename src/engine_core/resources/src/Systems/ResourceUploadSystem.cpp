@@ -25,6 +25,8 @@
 
 static constexpr uint64_t ROW_BYTE_ALIGNMENT = 256;
 
+static constexpr uint16_t RENDER_GRAPH_SYSTEM_ORDER = 0;
+
 Hush::Renderer::ResourceUploadSystem::ResourceUploadSystem(Hush::Scene &scene, RenderGraph::RenderDevice *renderDevice,
 														   uint64_t stagingBufferSize)
 	: ISystem(scene),
@@ -36,6 +38,8 @@ Hush::Renderer::ResourceUploadSystem::ResourceUploadSystem(Hush::Scene &scene, R
 {
 	HUSH_ASSERT(m_renderDevice != nullptr, "ResourceUploadSystem requires a valid RenderDevice!");
 	HUSH_ASSERT(m_graphicsDevice != nullptr, "ResourceUploadSystem requires a valid IGraphicsDevice!");
+
+	SetOrder(RENDER_GRAPH_SYSTEM_ORDER);
 }
 
 void Hush::Renderer::ResourceUploadSystem::Init()
@@ -100,6 +104,14 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 {
 	ZoneScoped;
 
+	// Staging-buffer mapping must happen before the frame's BeginFrame().
+	// On Emscripten/Chromium, WebGPUBuffer::Map yields to the browser via
+	// emscripten_sleep, and any task yield between
+	// GPUCanvasContext.getCurrentTexture() and queue.submit() destroys
+	// the canvas texture backing — producing a "Destroyed texture used
+	// in a submit" validation error. Running in OnUpdate (which executes
+	// before any system's OnPreRender) keeps the yield outside that
+	// window.
 	void *mapped = nullptr;
 	{
 		ZoneScopedN("MapStagingBuffer");

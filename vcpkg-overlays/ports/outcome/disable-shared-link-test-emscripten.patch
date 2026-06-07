@@ -1,0 +1,16 @@
+diff --git a/test/link/CMakeLists.txt b/test/link/CMakeLists.txt
+index ff27697..c46be34 100644
+--- a/test/link/CMakeLists.txt
++++ b/test/link/CMakeLists.txt
+@@ -23,6 +23,11 @@
+ 
+ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+ 
++if(EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
++  message(STATUS "Skipping outcome SHARED link test on Emscripten (no dynamic linking)")
++  return()
++endif()
++
+ set(outcome_LINK_TARGETS)
+ foreach(type STATIC SHARED)
+   foreach(visibility default hidden)

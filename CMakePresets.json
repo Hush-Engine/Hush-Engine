@@ -1,6 +1,4 @@
 {
   "version": 6,
-  "include": [
-    "cmake/windows-presets.json"
-  ]
+  "include": ["cmake/windows-presets.json", "cmake/emscripten-presets.json"]
 }

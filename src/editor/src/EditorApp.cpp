@@ -14,6 +14,7 @@
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
+#include "backends/imgui_impl_sdl3.h"
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
@@ -32,7 +33,7 @@
 #include "Logger.hpp"
 
 #include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_wgpu.h>
 
 #include <algorithm>
@@ -62,7 +63,7 @@ public:
 	~EditorApp() override
 	{
 		ImGui_ImplWGPU_Shutdown();
-		ImGui_ImplSDL2_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext();
 	}
 
@@ -106,9 +107,9 @@ public:
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		// Platform backend (SDL2)
+		// Platform backend (SDL3)
 		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
-		ImGui_ImplSDL2_InitForOther(windowRenderer->GetSDLWindow());
+		ImGui_ImplSDL3_InitForOther(windowRenderer->GetSDLWindow());
 
 		// Renderer backend (WebGPU / wgpu-native)
 		Hush::Graphics::IGraphicsDevice *gfxDevice = windowRenderer->GetGraphicsDevice();
@@ -158,7 +159,7 @@ public:
 
 		// Start a new ImGui frame (platform + renderer backends + core)
 		ImGui_ImplWGPU_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
 

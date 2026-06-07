@@ -18,7 +18,9 @@ add_subdirectory(editor)
 hush_add_library(
         TARGET_NAME HushEngine
         LIB_TYPE STATIC
-        SRCS engine_core/src/main.cpp engine_core/src/HushEngine.cpp
+        SRCS engine_core/src/main.cpp
+             engine_core/src/HushEngine.cpp
+             engine_core/src/AllocatorOverrides.cpp
         PUBLIC_HEADER_DIRS engine_core/src
 )
 
@@ -34,6 +36,16 @@ hush_add_executable(
 )
 
 target_link_libraries(HushRuntime PRIVATE Hush::Engine Hush::Bindings)
+
+hush_deploy_runtime_dlls(HushRuntime)
+
+if (HUSH_ENABLE_MIMALLOC)
+    find_package(mimalloc CONFIG REQUIRED)
+    target_link_libraries(HushEngine PUBLIC mimalloc)
+    target_compile_definitions(HushEngine PUBLIC HUSH_USE_MIMALLOC=1)
+    hush_minject_target(HushRuntime)
+endif()
+
 
 if (WIN32)
     set_target_properties(HushEngine PROPERTIES

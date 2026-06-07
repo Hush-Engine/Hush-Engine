@@ -34,7 +34,7 @@
 #error "Platform not supported"
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
 #define HUSH_COMPILER_CLANG 1
 #define HUSH_COMPILER_GCC 0
 #define HUSH_COMPILER_MSVC 0

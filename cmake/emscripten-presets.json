@@ -1,0 +1,49 @@
+{
+  "version": 6,
+  "include": ["default-presets.json"],
+  "configurePresets": [
+    {
+      "name": "wasm-x64-default",
+      "inherits": ["default"],
+      "cacheVariables": {
+        "HUSH_RENDERER_IMPL": "HUSH_WEBGPU_IMPL",
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "CMAKE_SYSTEM_NAME": "Emscripten",
+        "CMAKE_CXX_FLAGS": "-fexceptions -Wno-unknown-attributes",
+        "HUSH_ENABLE_PROFILING": "OFF",
+        "HUSH_ENABLE_TESTS": "ON",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "node",
+        "HUSH_ENABLE_MIMALLOC": "OFF"
+      }
+    },
+    {
+      "name": "wasm-x64-debug",
+      "inherits": ["wasm-x64-default"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "wasm-x64-release",
+      "inherits": ["wasm-x64-default"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "wasm-x64-debug",
+      "displayName": "Wasm x64 Debug",
+      "configurePreset": "wasm-x64-debug"
+    },
+    {
+      "name": "wasm-x64-release",
+      "displayName": "Wasm x64 Release",
+      "configurePreset": "wasm-x64-release"
+    }
+  ]
+}

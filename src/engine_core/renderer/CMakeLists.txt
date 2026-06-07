@@ -10,7 +10,6 @@ hush_add_library(
 add_library(Hush::Renderer ALIAS HushRenderer)
 
 target_link_libraries(HushRenderer PUBLIC
-        SDL2::SDL2
         imgui
         imguizmo
         stb

@@ -18,6 +18,17 @@ pub fn cmake_version() -> anyhow::Result<String> {
     Ok(extracted_version.as_str().to_string())
 }
 
+pub fn check_cmake_version(major: u32, minor: u32) -> anyhow::Result<bool> {
+    let version = cmake_version()?;
+    let re = Regex::new(r"(\d+)\.(\d+)")?;
+    let caps = re
+        .captures(&version)
+        .ok_or_else(|| anyhow!("Cannot parse CMake version"))?;
+    let ver_major: u32 = caps[1].parse()?;
+    let ver_minor: u32 = caps[2].parse()?;
+    Ok(ver_major > major || (ver_major == major && ver_minor >= minor))
+}
+
 pub fn git_username() -> anyhow::Result<String> {
     let git_command = Command::new("git")
         .arg("config")

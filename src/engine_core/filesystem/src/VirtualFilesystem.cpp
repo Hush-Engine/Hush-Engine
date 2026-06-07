@@ -77,9 +77,7 @@ Hush::Result<std::unique_ptr<Hush::IFile>, Hush::IFile::EError> Hush::VirtualFil
 	auto &filesystem = resolved->filesystem;
 	auto &path = resolved->path;
 
-	auto file = filesystem->OpenFile(virtualPath, path, mode);
-
-	return file;
+	return filesystem->OpenFile(virtualPath, path, mode);
 }
 
 void Hush::VirtualFilesystem::MountFileSystemInternal(std::string_view path,

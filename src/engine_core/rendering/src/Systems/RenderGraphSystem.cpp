@@ -9,11 +9,15 @@
 #include "Profiling.hpp"
 #include "Scene.hpp"
 
+static constexpr uint16_t RENDER_GRAPH_SYSTEM_ORDER = 5;
+
 Hush::Graphics::RenderGraphSystem::RenderGraphSystem(Hush::Scene &scene, RenderGraph::RenderDevice *renderDevice)
 	: ISystem(scene),
 	  m_renderDevice(renderDevice)
 {
 	HUSH_ASSERT(m_renderDevice != nullptr, "RenderGraphSystem requires a valid RenderDevice!");
+
+	SetOrder(RENDER_GRAPH_SYSTEM_ORDER);
 }
 
 void Hush::Graphics::RenderGraphSystem::Init()
@@ -44,10 +48,8 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
 	ZoneScoped;
 
-	{
-		ZoneScopedN("BeginFrame");
-		m_renderDevice->BeginFrame();
-	}
+	HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
+	m_renderDevice->BeginFrame();
 	m_frameActive = true;
 
 	auto &renderGraph = m_renderDevice->GetRenderGraph();
@@ -72,7 +74,9 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// --------------------------------------------------------------
 		// FAST PATH — graph topology is unchanged, skip recompilation.
 		// --------------------------------------------------------------
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScopedN("RenderGraph::FastPath");
+#endif
 
 		// Reset only the executor's per-frame state (fence counters,
 		// resource state tracker). Graph passes and compilation are kept.
@@ -88,7 +92,9 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// Clear the previous frame's render graph (passes, resources,
 		// compilation state) and reset the executor's per-frame state.
 		// Fence objects themselves are kept alive and reused across frames.
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScopedN("RenderGraph::FullRebuild");
+#endif
 
 		m_renderDevice->Reset();
 
@@ -112,7 +118,9 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 
 void Hush::Graphics::RenderGraphSystem::OnRender()
 {
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
+#endif
 	if (!m_renderDevice->IsCompiled())
 	{
 		Hush::LogWarn("RenderGraphSystem::OnRender — graph is not compiled, "

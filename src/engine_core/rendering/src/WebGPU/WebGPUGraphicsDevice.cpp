@@ -17,12 +17,16 @@
 #include "WebGPUSampler.hpp"
 #include "Logger.hpp"
 #include "Assertions.hpp"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_video.h>
-#include <sdl2webgpu/sdl2webgpu.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
+#include <sdl3webgpu/sdl3webgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include <webgpu/webgpu.hpp>
 #include "Profiling.hpp"
+
+#if HUSH_PLATFORM_EMSCRIPTEN
+#include <emscripten/html5.h>
+#endif
 
 namespace Hush::Graphics
 {
@@ -43,6 +47,7 @@ namespace Hush::Graphics
 		int width = 0;
 		int height = 0;
 		SDL_GetWindowSize(window, &width, &height);
+		Hush::LogFormat(Hush::ELogLevel::Info, "Initial window size: {}x{}", width, height);
 		ConfigureSurface(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 		// Create command queue
@@ -373,7 +378,10 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::BeginFrame()
 	{
+		m_instance.processEvents();
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
+#endif
 		if (m_needsResize)
 		{
 			// Release stale frame texture/view from the previous frame before
@@ -422,14 +430,22 @@ namespace Hush::Graphics
 												  .sampleCount = 1,
 												  .format = ConvertToEngineTextureFormat(m_surfaceFormat),
 												  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
+												  .debugName = "Current Frame Texture",
 												  .ownedByExternalSource = true,
 											  });
 	}
 
 	void WebGPUGraphicsDevice::EndFrame()
 	{
+#ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
+#endif
+#if HUSH_PLATFORM_EMSCRIPTEN
+		m_currentFrameTexture = WebGPUTexture();
+		emscripten_sleep(0);
+#else
 		m_surface.present();
+#endif
 		m_currentFrameView = nullptr;
 		FlushDeletionQueue();
 	}

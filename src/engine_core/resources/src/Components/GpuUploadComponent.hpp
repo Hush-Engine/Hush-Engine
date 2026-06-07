@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace Hush::Renderer
 {
 	/// @brief ECS component used to mark entities that require GPU uploads.

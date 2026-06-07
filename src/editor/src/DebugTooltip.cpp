@@ -1,7 +1,7 @@
 #include "DebugTooltip.hpp"
 #include "imgui/imgui.h"
 
-void Hush::DebugTooltip::OnRender(float deltaTime) noexcept
+void Hush::DebugTooltip::OnRender([[maybe_unused]] float deltaTime) noexcept
 {
 	if (s_debugTooltip == nullptr)
 	{

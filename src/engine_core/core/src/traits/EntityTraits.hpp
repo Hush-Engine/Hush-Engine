@@ -421,33 +421,32 @@ namespace Hush::ComponentTraits
 
 		/// Get the entity id for a given entity type.
 		/// @tparam T Type of the entity, without cvref.
-		/// @param worldPtr Pointer to the world.
+		/// @param sceneId Globally unique, monotonically increasing scene id (Scene::GetUniqueId()).
+		/// Used as the cache key.
 		/// @return Pair with the status of the entity and the entity id.
 		template <typename T>
-		static std::pair<EEntityRegisterStatus, std::uint64_t *> GetEntityIdImpl(const void *worldPtr)
+		static std::pair<EEntityRegisterStatus, std::uint64_t *> GetEntityIdImpl(std::uint64_t sceneId)
 		{
 			thread_local std::uint64_t entityId = 0;
-			thread_local const void *world = nullptr;
+			thread_local std::uint64_t cachedSceneId = 0;
 
-			// First, check if it's already registered
-			if (entityId == 0 || world != worldPtr)
+			if (entityId == 0 || cachedSceneId != sceneId)
 			{
-				world = worldPtr;
+				cachedSceneId = sceneId;
 				return {EEntityRegisterStatus::NotRegistered, &entityId};
 			}
-			world = worldPtr;
 
 			return {EEntityRegisterStatus::Registered, &entityId};
 		}
 
 		/// Get the entity id for a given entity type.
 		/// @tparam T Type of the entity.
-		/// @param worldPtr Pointer to the world.
+		/// @param sceneId Scene::GetUniqueId() of the owning scene.
 		/// @return Pair with the status of the entity and the entity id.
 		template <typename T>
-		static std::pair<EEntityRegisterStatus, std::uint64_t *> GetEntityId(const void *worldPtr)
+		static std::pair<EEntityRegisterStatus, std::uint64_t *> GetEntityId(std::uint64_t sceneId)
 		{
-			return GetEntityIdImpl<std::remove_cvref_t<T>>(worldPtr);
+			return GetEntityIdImpl<std::remove_cvref_t<T>>(sceneId);
 		}
 	} // namespace detail
 } // namespace Hush::ComponentTraits
