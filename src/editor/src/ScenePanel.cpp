@@ -13,7 +13,6 @@ constexpr uint32_t MIN_PANEL_DIMENSION = 1;
 
 void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 {
-	(void)activeScene;
 	this->m_bridgeEntity = activeScene->CreateEntityWithKey("ScenePanel");
 	ScenePanelSizeComp &panelSize = this->m_bridgeEntity.AddComponent<ScenePanelSizeComp>();
 	// Initially set this to the min dimensions

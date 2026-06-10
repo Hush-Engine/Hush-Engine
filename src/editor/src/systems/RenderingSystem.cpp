@@ -87,8 +87,7 @@ void Hush::RenderingSystem::Init()
 
 	// We need to load the shaders here
 	// Access the filesystem
-	Entity engineManager = this->GetScene().CreateEntityWithKey(ENGINE_MANAGER);
-	VirtualFilesystem *vfs = engineManager.GetComponent<Hush::VirtualFilesystem>();
+	VirtualFilesystem *vfs = this->GetScene().GetEngine()->GetVirtualFilesystem();
 	HUSH_ASSERT(vfs != nullptr, "File system on engine manager can't be null, check initialization order!");
 
 	// With the filesystem
@@ -102,9 +101,7 @@ void Hush::RenderingSystem::Init()
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
-	// TODO: use the actual dynamic graphics API here:
-	Graphics::EShaderTarget target = Graphics::ShaderCompiler::GetTargetForAPI(Graphics::EGraphicsAPI::WebGPU);
-	shaderCompiler->Initialize({.target = target});
+	shaderCompiler->Initialize();
 	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
 		"", actualPath,
 		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragmentMain"}});
