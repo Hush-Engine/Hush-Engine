@@ -37,28 +37,33 @@ namespace Hush
 
 	class Entity;
 
-	class ComponentRef {
+	class ComponentRef
+	{
 	public:
-		void* GetDataRaw();
+		void *GetDataRaw();
 
-		[[nodiscard]] const void* GetDataRaw() const;
-		
+		[[nodiscard]]
+		const void *GetDataRaw() const;
+
 		template <class T>
-		T* GetData() {
-			return static_cast<T*>(GetDataRaw());
+		T *GetData()
+		{
+			return static_cast<T *>(GetDataRaw());
 		}
 
 		template <class T>
-		const T* GetData() const {
-			return static_cast<const T*>(GetDataRaw());
+		const T *GetData() const
+		{
+			return static_cast<const T *>(GetDataRaw());
 		}
 
-		[[nodiscard]] uint64_t GetComponentId() const;
-		
+		[[nodiscard]]
+		uint64_t GetComponentId() const;
+
 	private:
 		mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
 		// TODO: Make it a thread local variable
-		void* m_world = nullptr;
+		void *m_world = nullptr;
 		friend class Entity;
 	};
 
@@ -242,7 +247,8 @@ namespace Hush
 		}
 
 		template <class T>
-		ComponentRef CreateComponentReference() {
+		ComponentRef CreateComponentReference()
+		{
 			const EntityId entityId = RegisterIfNeededSlow<std::remove_cvref_t<T>>();
 
 			return CreateComponentReferenceRaw(entityId);
@@ -257,12 +263,12 @@ namespace Hush
 		[[hush::export]] [[nodiscard]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
-
-		/// @brief Notifies a component has been modified, this is useful when you get a component through its raw pointer and you have an observer that's listening for changes
+		/// @brief Notifies a component has been modified, this is useful when you get a component through its raw
+		/// pointer and you have an observer that's listening for changes
 		void NotifyComponentModifiedRaw(Entity::EntityId componentId);
 
 		ComponentRef CreateComponentReferenceRaw(EntityId componentId);
-		
+
 		/// Add a component to the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
@@ -397,8 +403,5 @@ namespace Hush
 		/// Scene that owns this entity
 		Scene *m_ownerScene = nullptr;
 	};
-
-
-	
 
 } // namespace Hush

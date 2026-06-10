@@ -10,18 +10,19 @@
 
 namespace Hush
 {
-	namespace Graphics {
+	namespace Graphics
+	{
 		class IShaderModule;
 		class IGraphicsPipeline;
 		class IBindGroupLayout;
 		class IBindGroup;
-	}
+	} // namespace Graphics
 
-	namespace RenderGraph {
+	namespace RenderGraph
+	{
 		class RenderGraph;
 	}
 
-	
 	struct ViewUniforms
 	{
 		glm::mat4 invviewproj;
@@ -57,9 +58,8 @@ namespace Hush
 		std::string_view GetName() const override;
 
 	private:
-
 		// Needs to be static to access private members
-		static void BuildGridPassFunction(Hush::RenderGraph::RenderGraph& graph, Hush::RenderingSystem* self);
+		static void BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;

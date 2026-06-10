@@ -17,9 +17,9 @@
 		a = a | b;                                                                                                     \
 		return a;                                                                                                      \
 	}                                                                                                                  \
-	inline bool operator==(const BaseEnumType &a, IntegerType b)                                                    \
+	inline bool operator==(const BaseEnumType &a, IntegerType b)                                                       \
 	{                                                                                                                  \
-		return static_cast<IntegerType>(a) == b;                                                                                                      \
+		return static_cast<IntegerType>(a) == b;                                                                       \
 	}
 
 ///@brief Definitions and all that just to make everything type safe

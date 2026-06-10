@@ -63,7 +63,6 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	}
 	this->m_editorInfo->currentState = EEditorState::FreeLook;
 
-
 	glm::vec3 cameraDir(0.F);
 
 	if (InputManager::IsKeyDown(EKeyCode::W))

@@ -84,7 +84,7 @@ public:
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
-		Hush::VirtualFilesystem* vfs = this->m_engine->GetVirtualFilesystem();
+		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
 		vfs->MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();

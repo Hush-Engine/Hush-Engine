@@ -171,13 +171,12 @@ void Hush::RenderingSystem::OnPreRender()
 	//
 	//
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
-	    (void)ent;
-	    glm::mat4 view = editorCam.GetViewMatrix();
+		(void)ent;
+		glm::mat4 view = editorCam.GetViewMatrix();
 		glm::mat4 viewProj = editorCam.GetProjectionMatrix() * view;
-		this->m_cachedViewUniforms.resolution = { this->m_cachedViewportSize.x, this->m_cachedViewportSize.y };
+		this->m_cachedViewUniforms.resolution = {this->m_cachedViewportSize.x, this->m_cachedViewportSize.y};
 		this->m_cachedViewUniforms.invviewproj = (glm::inverse(viewProj));
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();
-
 
 		// view = glm::transpose(view);
 		glm::vec3 forward = -glm::vec3(view[0][2], view[1][2], view[2][2]);

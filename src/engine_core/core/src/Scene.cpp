@@ -26,7 +26,6 @@ Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *t
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
 }
 
-
 Hush::Scene::~Scene()
 {
 	ecs_fini(static_cast<ecs_world_t *>(m_world));
@@ -50,7 +49,8 @@ void Hush::Scene::Init()
 	}
 
 	// TODO: Group user systems into buckets
-	if (this->m_scriptingInterface != nullptr) {
+	if (this->m_scriptingInterface != nullptr)
+	{
 		ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
 #if HUSH_PLATFORM_EMSCRIPTEN
 		for (uintptr_t system : this->m_scriptingSystems)
@@ -63,8 +63,11 @@ void Hush::Scene::Init()
 								   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
 #endif
 	}
-	else {
-		LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	else
+	{
+		LogFormat(
+			ELogLevel::Warn,
+			"FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
 	}
 
 	this->m_isInitialized = true;
@@ -89,8 +92,10 @@ void Hush::Scene::Update(float delta)
 #endif
 	}
 
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
@@ -120,10 +125,11 @@ void Hush::Scene::FixedUpdate(float delta)
 			}));
 #endif
 	}
-	
 
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
@@ -153,8 +159,10 @@ void Hush::Scene::PreRender()
 #endif
 	}
 
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
@@ -181,9 +189,11 @@ void Hush::Scene::Render()
 											   [](ISystem *system) { system->OnRender(); }));
 #endif
 	}
-	
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
@@ -211,9 +221,11 @@ void Hush::Scene::PostRender()
 											   [](ISystem *system) { system->OnPostRender(); }));
 #endif
 	}
-	
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
@@ -241,10 +253,11 @@ void Hush::Scene::Shutdown()
 											   [](ISystem *system) { system->OnShutdown(); }));
 #endif
 	}
-	
 
-	if (this->m_scriptingInterface == nullptr) {
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;

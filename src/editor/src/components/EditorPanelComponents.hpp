@@ -7,8 +7,10 @@
 #pragma once
 #include <glm/glm.hpp>
 
-namespace Hush {
-	struct ScenePanelSizeComp {
+namespace Hush
+{
+	struct ScenePanelSizeComp
+	{
 		glm::u32vec2 size{};
 	};
-}
+} // namespace Hush

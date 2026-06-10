@@ -208,7 +208,8 @@ namespace Hush::Graphics
 
 		desc.mappedAtCreation = static_cast<WGPUBool>(false);
 
-		if (Bitwise::HasCompositeFlag(descriptor.usage, EBufferUsage::Uniform)) {
+		if (Bitwise::HasCompositeFlag(descriptor.usage, EBufferUsage::Uniform))
+		{
 			desc.usage |= wgpu::BufferUsage::CopyDst;
 		}
 
@@ -536,7 +537,8 @@ namespace Hush::Graphics
 		{
 			result |= WGPUTextureUsage_StorageBinding;
 		}
-		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::RenderTarget) || Bitwise::HasCompositeFlag(usage, ETextureUsage::DepthStencil))
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::RenderTarget) ||
+			Bitwise::HasCompositeFlag(usage, ETextureUsage::DepthStencil))
 		{
 			result |= WGPUTextureUsage_RenderAttachment;
 		}
