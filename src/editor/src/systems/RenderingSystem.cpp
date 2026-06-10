@@ -75,6 +75,7 @@ void Hush::RenderingSystem::Init()
 
 	this->GetScene().AddComponentObserver<ScenePanelSizeComp>(
 		EComponentObserverType::Set, [this](Entity::EntityId entity, ScenePanelSizeComp *panelSize) {
+			(void)entity;
 			this->m_cachedViewportSize = panelSize->size;
 		});
 
@@ -171,11 +172,10 @@ void Hush::RenderingSystem::OnPreRender()
 	// TODO: Update camera view matrix and everything else in the scene data here
 	//
 	//
-
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
+	    (void)ent;
 	    glm::mat4 view = editorCam.GetViewMatrix();
 		glm::mat4 viewProj = editorCam.GetProjectionMatrix() * view;
-		// this->m_cachedViewUniforms.viewproj = (viewProj);
 		this->m_cachedViewUniforms.resolution = { this->m_cachedViewportSize.x, this->m_cachedViewportSize.y };
 		this->m_cachedViewUniforms.invviewproj = (glm::inverse(viewProj));
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();

@@ -1,9 +1,9 @@
 #include "EditorCameraSystem.hpp"
+#include "InputManager.hpp"
 #include "MathUtils.hpp"
 #include "Profiling.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
-#include "WindowManager.hpp"
 #include "../UIUtils.hpp"
 #include <glm/ext/vector_float3.hpp>
 

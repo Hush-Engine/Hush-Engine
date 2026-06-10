@@ -15,5 +15,6 @@ namespace Hush
 		EKeyCode code = EKeyCode::UNKNOWN;
 		EKeyState currentState = EKeyState::None;
 		EKeyState previousState = EKeyState::None;
+		uint64_t timestamp = 0;
 	};
 } // namespace Hush

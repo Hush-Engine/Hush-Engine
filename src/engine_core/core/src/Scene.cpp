@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*! \file Scene.cpp
 	\author Alan Ramirez
 	\date 2025-01-20

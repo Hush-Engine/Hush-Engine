@@ -28,7 +28,6 @@ namespace Hush
 		{
 			glm::mat4 proj = glm::perspective(glm::radians(this->m_fov), this->m_viewportSize.x / this->m_viewportSize.y,
 									this->m_farPlane, this->m_nearPlane);
-			proj[1][1] *= -1;
 			return proj;
 		}
 

@@ -58,7 +58,7 @@ namespace Hush
 	private:
 		mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
 		// TODO: Make it a thread local variable
-		void* m_world;
+		void* m_world = nullptr;
 		friend class Entity;
 	};
 
