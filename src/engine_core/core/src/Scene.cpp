@@ -34,9 +34,9 @@ Hush::Scene::~Scene()
 void Hush::Scene::Init()
 {
 	ZoneScoped;
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
+
 #if HUSH_PLATFORM_EMSCRIPTEN
 		for (ISystem *system : systemBucket)
 		{
@@ -49,10 +49,25 @@ void Hush::Scene::Init()
 	}
 
 	// TODO: Group user systems into buckets
-	ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
-	for (uintptr_t system : this->m_scriptingSystems)
+	if (this->m_scriptingInterface != nullptr)
 	{
-		initFunc(reinterpret_cast<void *>(system));
+		ScriptingSystemInterface::CallSystemInit_t initFunc = this->m_scriptingInterface->initFunction;
+#if HUSH_PLATFORM_EMSCRIPTEN
+		for (uintptr_t system : this->m_scriptingSystems)
+		{
+			initFunc(reinterpret_cast<void *>(system));
+		}
+#else
+		Threading::Wait(
+			Threading::ParallelFor(m_threadPool, this->m_scriptingSystems.begin(), this->m_scriptingSystems.end(),
+								   [initFunc](uintptr_t system) { initFunc(reinterpret_cast<void *>(system)); }));
+#endif
+	}
+	else
+	{
+		LogFormat(
+			ELogLevel::Warn,
+			"FIXME: The scripting interface should be set, having a nullptr is only tolerated for testing purposes!");
 	}
 
 	this->m_isInitialized = true;
@@ -61,7 +76,6 @@ void Hush::Scene::Init()
 void Hush::Scene::Update(float delta)
 {
 	ZoneScoped;
-
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 #if HUSH_PLATFORM_EMSCRIPTEN
@@ -78,6 +92,12 @@ void Hush::Scene::Update(float delta)
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -106,6 +126,12 @@ void Hush::Scene::FixedUpdate(float delta)
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnFixedUpdate_t fixedUpdateFunc =
 		this->m_scriptingInterface->fixedUpdateFunction;
 	// TODO: Sort in threading
@@ -117,6 +143,7 @@ void Hush::Scene::FixedUpdate(float delta)
 
 void Hush::Scene::PreRender()
 {
+
 	ZoneScoped;
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -132,6 +159,12 @@ void Hush::Scene::PreRender()
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnPreRender_t preRenderFunc = this->m_scriptingInterface->preRenderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -139,9 +172,9 @@ void Hush::Scene::PreRender()
 		preRenderFunc(reinterpret_cast<void *>(system));
 	}
 }
-
 void Hush::Scene::Render()
 {
+
 	ZoneScoped;
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -157,6 +190,12 @@ void Hush::Scene::Render()
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnRender_t renderFunc = this->m_scriptingInterface->renderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -167,6 +206,7 @@ void Hush::Scene::Render()
 
 void Hush::Scene::PostRender()
 {
+
 	ZoneScoped;
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -182,6 +222,12 @@ void Hush::Scene::PostRender()
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnPostRender_t postRender = this->m_scriptingInterface->postRenderFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -192,6 +238,7 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
+
 	ZoneScoped;
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -207,6 +254,12 @@ void Hush::Scene::Shutdown()
 #endif
 	}
 
+	if (this->m_scriptingInterface == nullptr)
+	{
+		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
+		// for testing purposes!");
+		return;
+	}
 	ScriptingSystemInterface::CallSystemOnShutdown_t shutdownFunc = this->m_scriptingInterface->shutdownFunction;
 	// TODO: Sort in threading
 	for (uintptr_t system : this->m_scriptingSystems)
@@ -248,6 +301,59 @@ Hush::Entity Hush::Scene::CreateEntityWithName(std::string_view name)
 	Entity result{this, entityId};
 	result.EmplaceComponent<Entity::Name>(name);
 	return result;
+}
+
+Hush::Entity Hush::Scene::CreateEntityWithKey(std::string_view key)
+{
+	auto *world = static_cast<ecs_world_t *>(m_world);
+	ecs_entity_desc_t desc = {.name = key.data()};
+	const Entity::EntityId entityId = ecs_entity_init(world, &desc);
+	Entity result{this, entityId};
+	return result;
+}
+
+void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
+										  EComponentObserverType observerType, ObserverCallback_t callback)
+{
+	HUSH_ASSERT(callback != nullptr, "Cannot add a component observer with a null callback!");
+	Entity::EntityId event = this->ObserverTypeToEntityId(observerType);
+
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	ecs_term_t queryTerm = {.id = componentId, .inout = EcsIn};
+	ecs_query_desc_t query = {.terms = {queryTerm}};
+
+	// TODO: Replace heap for arena allocator
+	struct CallbackContext
+	{
+		ObserverCallback_t function;
+		size_t componentByteSize;
+	};
+
+	auto *context = new CallbackContext();
+	context->function = callback;
+	context->componentByteSize = componentSize;
+
+	ecs_observer_desc_t observerDesc = {
+		.query = query,
+		.events = {event},
+		.callback =
+			[](ecs_iter_t *it) {
+				if (it->count <= 0)
+				{
+					return;
+				}
+				Entity::EntityId eventEntity = it->entities[0];
+
+				auto *callbackCtx = reinterpret_cast<CallbackContext *>(it->callback_ctx);
+				void *componentInstance = ecs_field_w_size(it, callbackCtx->componentByteSize, 0);
+
+				callbackCtx->function(eventEntity, componentInstance);
+			},
+		.callback_ctx = context,
+		.callback_ctx_free = [](void *ctx) { delete static_cast<CallbackContext *>(ctx); }};
+
+	[[maybe_unused]]
+	Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 }
 
 void Hush::Scene::DestroyEntity(Entity &&entity)
@@ -512,10 +618,10 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	return componentId;
 }
 
-Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view key) const
 {
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
-	Entity::EntityId result = ecs_lookup(world, tag.data());
+	Entity::EntityId result = ecs_lookup(world, key.data());
 	return result;
 }
 

@@ -59,12 +59,17 @@ Hush::HushEngine::~HushEngine()
 
 void Hush::HushEngine::Init(int argc, char **argv)
 {
-	// Load the VFS with the default data directory
+#ifndef HUSH_ENGINE_RES_DIR
 #if HUSH_PLATFORM_EMSCRIPTEN
-	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "/");
+	constexpr std::string_view engineResDir = "/";
 #else
-	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
+	constexpr std::string_view engineResDir = "./";
 #endif
+#else
+	constexpr std::string_view engineResDir = HUSH_ENGINE_RES_DIR;
+#endif
+	// Load the VFS with the default data directory
+	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", engineResDir);
 
 	this->m_app = LoadApplication(this);
 
@@ -121,6 +126,9 @@ void Hush::HushEngine::Run()
 	this->m_app->OnRender(deltaTime);
 	this->m_app->OnPostRender();
 	this->m_app->DisposeFrame();
+
+	InputManager::ResetMouseAcceleration();
+	InputManager::ResetCharData();
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	m_elapsed = end - start;

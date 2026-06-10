@@ -120,8 +120,6 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 {
 	// SDL_Event event;
 	KeyCode code = 0;
-	InputManager::ResetMouseAcceleration();
-	InputManager::ResetCharData();
 	// Forward event to ImGui
 	// TODO: this shouldn't be here, but this will be done later.
 	if (ImGui::GetCurrentContext() != nullptr)

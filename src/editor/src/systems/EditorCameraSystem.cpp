@@ -1,9 +1,9 @@
 #include "EditorCameraSystem.hpp"
+#include "InputManager.hpp"
 #include "MathUtils.hpp"
 #include "Profiling.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
-#include "WindowManager.hpp"
 #include "../UIUtils.hpp"
 #include <glm/ext/vector_float3.hpp>
 
@@ -42,6 +42,9 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 
 	glm::mat4 viewMatrix = this->m_editorCamera->GetViewMatrix();
 	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+
 	glm::vec3 &positionRef = this->m_editorCamera->GetPosition();
 	if (InputManager::GetMouseScrollAcceleration().y != 0.0F && UIUtils::IsMouseInScene())
 	{
@@ -59,9 +62,6 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 		return;
 	}
 	this->m_editorInfo->currentState = EEditorState::FreeLook;
-
-	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
 
 	glm::vec3 cameraDir(0.F);
 

@@ -21,19 +21,53 @@ namespace Hush
 	{
 		// Unsafe implementations... TODO: Maybe use std::span?
 
+		/// @brief Adds the relationship to be queried for, with a wildcard as target
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
 		[[hush::export]]
 		void WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef, const Entity &relationship);
 
 		[[hush::export]]
+		/// @brief Adds the relationship to be queried for, with a specific target
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
 		void WithRelationship(uint8_t *queryDesc, uint8_t *termCountRef, const Entity &relationship,
 							  const Entity &target);
 
+		/// @brief Adds the term to be queried for, serves as a generic way to query for components, entities, events or
+		/// relationships
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
 		[[hush::export]]
 		void WithTerm(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term);
 
+		/// @brief Adds the terms in the given span to the query for filtering.
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
 		[[hush::export]]
 		void InitDescriptor(uint8_t *queryDesc, std::span<Entity::EntityId> components);
 
+		/// @brief Excludes the term from the query, such that it will match if an entity DOES NOT have said component
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
+		[[hush::export]]
+		void Without(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term);
+
+		/// @brief Adds the term to the query but makes it optional, such that it will match to an entity whether it has
+		/// this component or not
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
+		/// @param termCountRef Mutable reference to the number of terms in the query, expect it to be N + 1 by the end
+		/// of the method
+		[[hush::export]]
+		void WithOptional(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term);
+
+		/// @brief Builds the query from the specified descriptor
+		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
 		[[hush::export]]
 		RawQuery InitQuery(Scene *scene, const uint8_t *queryDesc);
 
