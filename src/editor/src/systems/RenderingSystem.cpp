@@ -87,6 +87,7 @@ void Hush::RenderingSystem::Init()
 
 	// We need to load the shaders here
 	// Access the filesystem
+	Entity engineManager = this->GetScene().CreateEntityWithKey(ENGINE_MANAGER);
 	VirtualFilesystem *vfs = this->GetScene().GetEngine()->GetVirtualFilesystem();
 	HUSH_ASSERT(vfs != nullptr, "File system on engine manager can't be null, check initialization order!");
 
