@@ -16,7 +16,7 @@ hush_add_library(
              src/WindowRenderer.cpp
              # src/Shared/GpuAllocatedBuffer.cpp
              # src/Shared/ShaderMaterial.cpp
-             # src/Shared/Mesh.cpp
+             src/Shared/Mesh.cpp
 
              src/Shared/Camera.cpp
              # src/Shared/ImageTexture.cpp

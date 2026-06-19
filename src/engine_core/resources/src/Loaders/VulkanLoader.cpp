@@ -53,8 +53,6 @@ Hush::Result<std::vector<Hush::Entity>, Hush::IModelLoader::EError> Hush::Vulkan
 	// HUSH_ASSERT(loadedAsset->meshes.size() != loadedAsset->nodes.size(), "Meshes vector size does not match nodes
 	// size");
 
-	// TODO:
-	// bool shouldCreateFatherEntity = loadedAsset->nodes.size() > 1;
 	for (const fastgltf::Mesh &mesh : loadedAsset->meshes)
 	{
 		Entity entity = activeScene->CreateEntityWithName(mesh.name.empty() ? "LoadedMesh" : mesh.name);

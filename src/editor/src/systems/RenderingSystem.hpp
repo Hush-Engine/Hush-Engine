@@ -5,8 +5,11 @@
 #include "ISystem.hpp"
 #include "Query.hpp"
 #include "Shared/EditorCamera.hpp"
+#include "Shared/PBRMaterial.hpp"
+#include "VirtualFilesystem.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
+#include <vector>
 
 namespace Hush
 {
@@ -16,23 +19,41 @@ namespace Hush
 		class IGraphicsPipeline;
 		class IBindGroupLayout;
 		class IBindGroup;
-	} // namespace Graphics
+		class IGraphicsTexture;
+		class ISampler;
+		class ShaderCompiler;
+	}
 
 	namespace RenderGraph
 	{
 		class RenderGraph;
 	}
 
-	struct ViewUniforms
+	struct GridViewUniforms
 	{
-		glm::mat4 invviewproj;
+		glm::mat4 view;
 		glm::vec4 pos;
-		glm::vec4 forward;
-		glm::vec4 up;
-		glm::vec4 right;
 		glm::vec2 resolution;
 		float farPlane;
-		uint8_t padding[35];
+		uint8_t padding[2];
+	};
+
+
+	/// @brief Matches ModelData in mesh.slang — per-draw model matrix
+	struct ModelData
+	{
+		glm::mat4 modelMatrix;
+	};
+
+	/// @brief Single draw command populated each frame from MeshReference + WorldTransform
+	struct MeshDraw
+	{
+		glm::mat4 modelMatrix;
+		Graphics::IGraphicsBuffer *vertexBuffer;
+		Graphics::IGraphicsBuffer *indexBuffer;
+		uint32_t indexCount;
+		uint32_t firstIndex;
+		uint32_t dynamicOffset; // byte offset into per-draw model uniform buffer
 	};
 
 	class RenderingSystem final : public ISystem
@@ -58,19 +79,49 @@ namespace Hush
 		std::string_view GetName() const override;
 
 	private:
-		// Needs to be static to access private members
+		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 		static void BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
+
+		void SetupGridPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
+
+		void SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
 
-		ViewUniforms m_cachedViewUniforms;
-		glm::u32vec2 m_cachedViewportSize{1, 1}; // Min dimensions set to 1 to avoid breaking graphics APIs
+		GridViewUniforms m_cachedViewUniforms;
+		SceneData m_cachedSceneData;
+		glm::u32vec2 m_cachedViewportSize{1, 1};
+
+		// Grid rendering (existing)
 		std::unique_ptr<Graphics::IShaderModule> m_vertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_fragModule;
 		std::unique_ptr<Graphics::IGraphicsPipeline> m_gridPipeline;
 		std::unique_ptr<Graphics::IBindGroupLayout> m_gridBindGroupLayout;
 		std::unique_ptr<Graphics::IBindGroup> m_gridBindGroup;
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gridUniformBuffer;
+
+		// Mesh rendering
+		std::unique_ptr<Graphics::IShaderModule> m_meshVertModule;
+		std::unique_ptr<Graphics::IShaderModule> m_meshFragModule;
+		std::unique_ptr<Graphics::IGraphicsPipeline> m_meshPipeline;
+
+		std::unique_ptr<Graphics::IBindGroupLayout> m_meshSceneBindGroupLayout;
+		std::unique_ptr<Graphics::IBindGroupLayout> m_meshMaterialBindGroupLayout;
+		std::unique_ptr<Graphics::IBindGroup> m_meshSceneBindGroup;
+		std::unique_ptr<Graphics::IBindGroup> m_meshMaterialBindGroup;
+
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_sceneDataBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshModelBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshMaterialBuffer;
+		uint32_t m_meshModelSlotSize = 0;
+
+		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultColorTex;
+		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultMetalRoughTex;
+		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultNormalTex;
+		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultEmissiveTex;
+		std::unique_ptr<Graphics::ISampler> m_defaultSampler;
+
+		std::vector<MeshDraw> m_meshDrawList;
 	};
 } // namespace Hush

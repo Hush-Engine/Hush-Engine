@@ -13,11 +13,8 @@ static const float4 zAxisColor = float4(0.0, 0.0, 1.0, 1.0);
 
 
 struct ViewUniforms {
-    float4x4 invviewproj;
+    float4x4 view;
     vec4 pos;
-	vec4 forward;
-	vec4 up;
-	vec4 right;
     float2 resolution;
     float farPlane;
 };
@@ -104,11 +101,10 @@ FragmentOutput fragmentMain(VertOutput input)
         input.uv.y * 2.0 - 1.0
     );    
 
-    float3 camPos     = view.pos.xyz;
-    float3 camRight   = normalize(view.right.xyz);
-    float3 camUp      = normalize(view.up.xyz);
-    float3 camForward = normalize(view.forward.xyz);
-    // float3 camForward = normalize(float3(0.0, -0.25, view.forward.z));
+    float3 camPos = view.pos.xyz;
+    float3 camRight = normalize(vec3(view.view[0][0], view.view[1][0], view.view[2][0]));
+    float3 camUp = normalize(vec3(view.view[0][1], view.view[1][1], view.view[2][1]));
+    float3 camForward = normalize(-vec3(view.view[0][2], view.view[1][2], view.view[2][2]));
 
     // HARDCODED: 90 degree vertical FOV => tan(45°) = 1
     float aspect = view.resolution.x / view.resolution.y;

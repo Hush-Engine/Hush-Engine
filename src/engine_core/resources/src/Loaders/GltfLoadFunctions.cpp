@@ -1,8 +1,6 @@
 #include "GltfLoadFunctions.hpp"
 #include "Assertions.hpp"
 #include "Result.hpp"
-#include "Shared/ImageTexture.hpp"
-#include "Vulkan/GltfMetallicRoughness.hpp"
 #include <cstddef>
 #include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
@@ -50,7 +48,7 @@ glm::mat4 Hush::GltfLoadFunctions::GetNodeTransform(const fastgltf::Node &node)
 	// Use TRS components
 	glm::vec3 translation = *reinterpret_cast<const glm::vec3 *>(trsMatrix->translation.data());
 
-	glm::quat rotation = *reinterpret_cast<const glm::quat *>(trsMatrix->rotation.value_ptr());
+	glm::quat rotation = *reinterpret_cast<const glm::fquat *>(trsMatrix->rotation.data());
 
 	glm::vec3 scale = *reinterpret_cast<const glm::vec3 *>(trsMatrix->scale.data());
 
@@ -77,61 +75,65 @@ Hush::GltfLoadFunctions::EError Hush::GltfLoadFunctions::SetMaterialTextures(voi
 																			 const fastgltf::Material &material,
 																			 const void *loadedTextures)
 {
+	(void)outMaterialResources;
+	(void)asset;
+	(void)material;
+	(void)loadedTextures;
 	// Each rendering implementation will cast the out material resources and the loaded textures
-	const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
+	// const auto *loadedTexturesImpl = reinterpret_cast<const std::vector<GpuAllocatedImage> *>(loadedTextures);
 
-	// TODO: Refactor all this in a function
-	const fastgltf::PBRData &pbrData = material.pbrData;
-	if (pbrData.baseColorTexture.has_value())
-	{
-		size_t textureDataIdx = material.pbrData.baseColorTexture->textureIndex;
-		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
-		if (fastgltfTexture.imageIndex.has_value())
-		{
-			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResources->GetMaterialResources().colorImage = allocImage;
-		}
-	}
+	// // TODO: Refactor all this in a function
+	// const fastgltf::PBRData &pbrData = material.pbrData;
+	// if (pbrData.baseColorTexture.has_value())
+	// {
+	// 	size_t textureDataIdx = material.pbrData.baseColorTexture->textureIndex;
+	// 	const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+	// 	if (fastgltfTexture.imageIndex.has_value())
+	// 	{
+	// 		const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+	// 		outMaterialResources->GetMaterialResources().colorImage = allocImage;
+	// 	}
+	// }
 
-	if (pbrData.metallicRoughnessTexture.has_value())
-	{
-		size_t textureDataIdx = material.pbrData.metallicRoughnessTexture->textureIndex;
-		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+	// if (pbrData.metallicRoughnessTexture.has_value())
+	// {
+	// 	size_t textureDataIdx = material.pbrData.metallicRoughnessTexture->textureIndex;
+	// 	const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
 
-		if (fastgltfTexture.imageIndex.has_value())
-		{
-			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResources->GetMaterialResources().metalRoughImage = allocImage;
-		}
-	}
-	if (material.normalTexture.has_value())
-	{
-		size_t textureDataIdx = material.normalTexture->textureIndex;
-		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+	// 	if (fastgltfTexture.imageIndex.has_value())
+	// 	{
+	// 		const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+	// 		outMaterialResources->GetMaterialResources().metalRoughImage = allocImage;
+	// 	}
+	// }
+	// if (material.normalTexture.has_value())
+	// {
+	// 	size_t textureDataIdx = material.normalTexture->textureIndex;
+	// 	const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
 
-		if (fastgltfTexture.imageIndex.has_value())
-		{
-			EPbrOptions options = outMaterialResources->GetPbrOptions();
-			options |= EPbrOptions::UseNormalTexture;
-			outMaterialResources->SetPbrOptions(options);
-			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResources->GetMaterialResources().normalImage = allocImage;
-		}
-	}
+	// 	if (fastgltfTexture.imageIndex.has_value())
+	// 	{
+	// 		EPbrOptions options = outMaterialResources->GetPbrOptions();
+	// 		options |= EPbrOptions::UseNormalTexture;
+	// 		outMaterialResources->SetPbrOptions(options);
+	// 		const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+	// 		outMaterialResources->GetMaterialResources().normalImage = allocImage;
+	// 	}
+	// }
 
-	if (material.emissiveTexture.has_value())
-	{
-		size_t textureDataIdx = material.emissiveTexture->textureIndex;
-		const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
+	// if (material.emissiveTexture.has_value())
+	// {
+	// 	size_t textureDataIdx = material.emissiveTexture->textureIndex;
+	// 	const fastgltf::Texture &fastgltfTexture = asset.textures.at(textureDataIdx);
 
-		if (fastgltfTexture.imageIndex.has_value())
-		{
-			const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
-			outMaterialResources->GetMaterialResources().emissiveImage = allocImage;
-		}
-	}
+	// 	if (fastgltfTexture.imageIndex.has_value())
+	// 	{
+	// 		const GpuAllocatedImage &allocImage = loadedTexturesImpl->at(fastgltfTexture.imageIndex.value());
+	// 		outMaterialResources->GetMaterialResources().emissiveImage = allocImage;
+	// 	}
+	// }
 
-	return EError::None;
+	return EError::NotImplemented;
 }
 
 std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fastgltf::Image &image,
@@ -164,24 +166,24 @@ std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fas
 	return {};
 }
 
-std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
-																						const fastgltf::Image &image)
-{
-	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
-	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
-	if (!byteBuffer.empty())
-	{
-		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
-	}
-	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
+// std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,
+// 																						const fastgltf::Image &image)
+// {
+// 	fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+// 	const std::span<const std::byte> byteBuffer = ExtractImageBuffer(image, asset, &mimeType);
+// 	if (!byteBuffer.empty())
+// 	{
+// 		return std::make_shared<ImageTexture>(byteBuffer.data(), byteBuffer.size());
+// 	}
+// 	const fastgltf::sources::URI *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
 
-	// TODO: support for file byte offset
-	if (uriData == nullptr || uriData->fileByteOffset > 0)
-	{
-		return nullptr;
-	}
-	return std::make_shared<ImageTexture>(uriData->uri.fspath());
-}
+// 	// TODO: support for file byte offset
+// 	if (uriData == nullptr || uriData->fileByteOffset > 0)
+// 	{
+// 		return nullptr;
+// 	}
+// 	return std::make_shared<ImageTexture>(uriData->uri.fspath());
+// }
 
 Hush::Result<const std::byte *, Hush::GltfLoadFunctions::EError> Hush::GltfLoadFunctions::GetDataFromBufferSource(
 	const fastgltf::Buffer &buffer)

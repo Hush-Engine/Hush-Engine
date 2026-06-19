@@ -6,9 +6,10 @@ hush_add_library(
         LIB_TYPE OBJECT
         SRCS src/Systems/ResourceUploadSystem.cpp
              src/ResourceManager.cpp
+             src/Loaders/GltfLoader.cpp
         # SRCS src/ResourceManager.cpp
         # src/Loaders/VulkanLoader.cpp
-        # src/Loaders/GltfLoadFunctions.cpp
+        src/Loaders/GltfLoadFunctions.cpp
         PUBLIC_HEADER_DIRS src
         ENABLE_REFLECTION ON
 )

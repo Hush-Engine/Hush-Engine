@@ -14,18 +14,114 @@
 #include "RHI/IGraphicsDevice.hpp"
 #include "RHI/IShaderModule.hpp"
 #include "RHI/ShaderCompiler.hpp"
+#include "RHI/ISampler.hpp"
+#include "RHI/ICommandQueue.hpp"
 #include "../components/EditorPanelComponents.hpp"
 #include "RenderGraph/RenderGraph.hpp"
 #include "Scene.hpp"
 #include "Shared/EditorCamera.hpp"
+#include "Shared/PBRMaterial.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/matrix.hpp>
+#include <cstddef>
+#include <cstring>
 #include <string_view>
 
 using namespace Hush::Graphics;
+
+void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
+{
+	using namespace Hush::Graphics;
+	using namespace Hush::RenderGraph;
+
+	using RenderGraphBuildContext_t = Hush::RenderGraph::RenderGraph::BuildContext;
+
+	struct ScenePassData
+	{
+		ResourceId renderTexture;
+		ResourceId depthTexture;
+	};
+
+	graph.AddPass<ScenePassData>(
+		EPassType::Graphics, "EditorScenePass",
+		[self](RenderGraphBuildContext_t &ctx, ScenePassData &data) {
+			const glm::u32vec2 bufferSize = self->m_cachedViewportSize;
+
+			ctx.Read(ctx.GetResourceIdByName(Hush::RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
+
+			data.renderTexture = ctx.Create<TextureResource>(
+				"EditorScenePass_RenderTexture", TextureDescriptor{
+													 .width = bufferSize.x,
+													 .height = bufferSize.y,
+													 .format = ETextureFormat::BGRA8_UNORM,
+													 .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
+												 });
+
+			data.depthTexture =
+				ctx.Create<TextureResource>("EditorScenePass_DepthTexture", TextureDescriptor{
+																				.width = bufferSize.x,
+																				.height = bufferSize.y,
+																				.format = ETextureFormat::D32_FLOAT,
+																				.usage = ETextureUsage::DepthStencil,
+																			});
+
+			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+		},
+		[self](ScenePassData &data, ICommandList *cmdList, const Hush::RenderGraph::ResourceManager &resourceManager) {
+			auto *cmd = dynamic_cast<IGraphicsCommandList *>(cmdList);
+			if (cmd == nullptr)
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[EditorScenePass] Failed to get graphics command list.");
+				return;
+			}
+
+			RenderPassDescriptor renderPass{};
+			renderPass.debugLabel = "EditorScenePass";
+
+			RenderPassColorAttachment colorAttachment{};
+			colorAttachment.texture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+			colorAttachment.loadOp = ELoadOp::Clear;
+			colorAttachment.storeOp = EStoreOp::Store;
+			colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
+			renderPass.AddColorAttachment(colorAttachment);
+
+			RenderPassDepthStencilAttachment depthAttachment{};
+			depthAttachment.texture = resourceManager.GetResource<TextureResource>(data.depthTexture)->texture.get();
+			depthAttachment.depthLoadOp = ELoadOp::Clear;
+			depthAttachment.depthStoreOp = EStoreOp::Store;
+			depthAttachment.depthClearValue = 1.0f;
+			renderPass.SetDepthStencilAttachment(depthAttachment);
+
+			auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
+
+			graphicsDevice->WriteBuffer(self->m_sceneDataBuffer.get(), 0, &self->m_cachedSceneData,
+										sizeof(SceneData));
+
+
+			cmd->BeginRenderPass(renderPass);
+			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
+							 static_cast<float>(self->m_cachedViewportSize.y), 0, 1);
+			cmd->BindPipeline(self->m_meshPipeline.get());
+
+			for (const auto &draw : self->m_meshDrawList)
+			{
+				cmd->SetVertexBuffer(0, draw.vertexBuffer);
+				cmd->SetIndexBuffer(draw.indexBuffer);
+				cmd->SetBindGroup(0, self->m_meshSceneBindGroup.get(),
+								  std::span<const uint32_t>{&draw.dynamicOffset, 1});
+				if (self->m_meshMaterialBindGroup != nullptr)
+				{
+					cmd->SetBindGroup(1, self->m_meshMaterialBindGroup.get());
+				}
+				cmd->DrawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
+			}
+
+			cmd->EndRenderPass();
+		});
+}
 
 void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
 {
@@ -55,7 +151,7 @@ void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph
 
 			auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
 			graphicsDevice->WriteBuffer(self->m_gridUniformBuffer.get(), 0, &self->m_cachedViewUniforms,
-										sizeof(ViewUniforms));
+										sizeof(GridViewUniforms));
 
 			cmd->BeginRenderPass(rp);
 			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
@@ -88,59 +184,26 @@ void Hush::RenderingSystem::Init()
 	// We need to load the shaders here
 	// Access the filesystem
 	Entity engineManager = this->GetScene().CreateEntityWithKey(ENGINE_MANAGER);
+
 	VirtualFilesystem *vfs = this->GetScene().GetEngine()->GetVirtualFilesystem();
 	HUSH_ASSERT(vfs != nullptr, "File system on engine manager can't be null, check initialization order!");
-
-	// With the filesystem
-	constexpr std::string_view virtualPath = "engine_res://res/shaders/grid.slang";
-	auto res = vfs->ResolveVirtualPath(virtualPath);
-	HUSH_RESULT_ASSERT(res, "Could not load grid shader! Make sure it's present on {}", virtualPath);
-
-	std::string_view actualPath = res.value();
 
 	auto *shaderCompiler = engineManager.GetComponent<Hush::Graphics::ShaderCompiler>();
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
 	shaderCompiler->Initialize();
-	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
-		"", actualPath,
-		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragmentMain"}});
 
-	HUSH_ASSERT(compilationResult.success, "Could not compile grid shader, diagnostics: {}!",
-				compilationResult.diagnostics);
 
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 
-	const CompiledShaderStage *vertStage = compilationResult.FindStage(Graphics::EShaderStage::Vertex);
-	const CompiledShaderStage *fragStage = compilationResult.FindStage(Graphics::EShaderStage::Fragment);
+	SetupGridPipeline(device, vfs, shaderCompiler);
+	SetupMeshPipeline(device, vfs, shaderCompiler);
 
-	this->m_vertModule = device->CreateShaderModule(vertStage->moduleDesc);
-	this->m_fragModule = device->CreateShaderModule(fragStage->moduleDesc);
-
-	std::vector<BindGroupLayoutDescriptor> layouts = compilationResult.BuildBindGroupLayoutDescriptors();
-	// Set index
-	this->m_gridBindGroupLayout = device->CreateBindGroupLayout(layouts[0]);
-
-	// View uniform buffer
-	this->m_gridUniformBuffer = device->CreateBuffer(
-		{.size = sizeof(ViewUniforms), .usage = EBufferUsage::Uniform, .memoryAccess = EMemoryAccess::CPUNone});
-
-	GraphicsPipelineDescriptor desc{};
-	desc.vertexStage = {this->m_vertModule.get()};
-	desc.fragmentStage = {this->m_fragModule.get()};
-	desc.primitive.topology = EPrimitiveTopology::TriangleList;
-	desc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
-	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
-	desc.bindGroupLayoutCount = 1;
-	// draw grid directly on the scene render target without depth testing
-	desc.depthStencil = {.enabled = false, .format = ETextureFormat::D24_UNORM};
-	this->m_gridPipeline = device->CreateGraphicsPipeline(desc);
-
-	BindGroupDescriptor bgDesc{};
-	bgDesc.layout = this->m_gridBindGroupLayout.get();
-	bgDesc.entries = {{.binding = 0, .buffer = m_gridUniformBuffer.get(), .offset = 0, .size = sizeof(ViewUniforms)}};
-	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);
+	Entity sceneBuilderEnt = this->GetScene().CreateEntityWithKey("SceneRenderGraph");
+	auto &scenePassBuilder = sceneBuilderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
+	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildScenePassFunction(graph, this); };
+	scenePassBuilder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
 
 	Entity builderEnt = this->GetScene().CreateEntityWithKey("GridRenderGraph");
 	auto &builder = builderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
@@ -167,36 +230,71 @@ void Hush::RenderingSystem::OnRender()
 void Hush::RenderingSystem::OnPreRender()
 {
 	ZoneScoped;
-	// TODO: Update camera view matrix and everything else in the scene data here
-	//
-	//
+
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
 		(void)ent;
 		glm::mat4 view = editorCam.GetViewMatrix();
-		glm::mat4 viewProj = editorCam.GetProjectionMatrix() * view;
+		glm::mat4 proj = editorCam.GetProjectionMatrix();
+		glm::mat4 viewProj = proj * view;
+
+		// Grid uniforms
 		this->m_cachedViewUniforms.resolution = {this->m_cachedViewportSize.x, this->m_cachedViewportSize.y};
-		this->m_cachedViewUniforms.invviewproj = (glm::inverse(viewProj));
+		this->m_cachedViewUniforms.view = view;
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();
-
-		// view = glm::transpose(view);
-		glm::vec3 forward = -glm::vec3(view[0][2], view[1][2], view[2][2]);
-		glm::vec3 right = glm::vec3(view[0][0], view[1][0], view[2][0]);
-		glm::vec3 up = glm::vec3(view[0][1], view[1][1], view[2][1]);
-
-		this->m_cachedViewUniforms.forward = glm::vec4(forward, 0.0);
-		this->m_cachedViewUniforms.right = glm::vec4(right, 0.0);
-		this->m_cachedViewUniforms.up = glm::vec4(up, 0.0);
 
 		glm::vec3 pos = editorCam.GetPosition();
 		this->m_cachedViewUniforms.pos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
+
+		// Scene data for mesh rendering
+		this->m_cachedSceneData.view = view;
+		this->m_cachedSceneData.proj = proj;
+		this->m_cachedSceneData.viewproj = viewProj;
+		this->m_cachedSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
+		this->m_cachedSceneData.sunlightDirection = glm::vec4(0.5f, 1.0f, 0.3f, 1.0f);
+		this->m_cachedSceneData.sunlightColor = glm::vec4(1.0f, 0.98f, 0.9f, 1.0f);
 	});
 
-	IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
-	this->m_renderableTargetsQuery.Each([&renderer]([[maybe_unused]]
-													Entity &_,
-													const MeshReference &mesh, const WorldTransform &xform) {
-		renderer->PushMesh(&xform, mesh.GetMesh().Get());
-	});
+	m_meshDrawList.clear();
+
+	HUSH_ASSERT(this->m_meshPipeline != nullptr, "Mesh pipeline should not ever be null!");
+
+	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
+	uint32_t slotIndex = 0;
+
+	m_renderableTargetsQuery.Each(
+		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
+			const auto *mesh = meshRef.GetMesh().Get();
+			if (mesh == nullptr)
+			{
+				return;
+			}
+
+			auto *vb = meshRef.GetGpuVertexBuffer();
+			auto *ib = meshRef.GetGpuIndexBuffer();
+			if (vb == nullptr || ib == nullptr)
+			{
+				return;
+			}
+
+			glm::mat4 modelMatrix = xform.GetTransformationMatrix();
+
+			uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
+			device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
+
+			for (const auto &surface : mesh->GetSurfaces())
+			{
+				m_meshDrawList.push_back(MeshDraw{
+					.modelMatrix = modelMatrix,
+					.vertexBuffer = vb,
+					.indexBuffer = ib,
+					.indexCount = surface.count,
+					.firstIndex = surface.startIndex,
+					.dynamicOffset = slotOffset,
+				});
+			}
+
+			slotIndex++;
+		});
 }
 
 void Hush::RenderingSystem::OnPostRender()
@@ -206,4 +304,237 @@ void Hush::RenderingSystem::OnPostRender()
 std::string_view Hush::RenderingSystem::GetName() const
 {
 	return "RenderingSystem";
+}
+
+
+void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler) {
+	// With the filesystem
+	constexpr std::string_view virtualPath = "engine_res://res/shaders/grid.slang";
+	auto res = vfs->ResolveVirtualPath(virtualPath);
+	HUSH_RESULT_ASSERT(res, "Could not load grid shader! Make sure it's present on {}", virtualPath);
+
+	std::string_view actualPath = res.value();
+
+	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
+		"", actualPath,
+		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragmentMain"}});
+
+	HUSH_ASSERT(compilationResult.success, "Could not compile grid shader, diagnostics: {}!",
+				compilationResult.diagnostics);
+
+	const CompiledShaderStage *vertStage = compilationResult.FindStage(Graphics::EShaderStage::Vertex);
+	const CompiledShaderStage *fragStage = compilationResult.FindStage(Graphics::EShaderStage::Fragment);
+
+	this->m_vertModule = device->CreateShaderModule(vertStage->moduleDesc);
+	this->m_fragModule = device->CreateShaderModule(fragStage->moduleDesc);
+
+	std::vector<BindGroupLayoutDescriptor> layouts = compilationResult.BuildBindGroupLayoutDescriptors();
+	// Set index
+	this->m_gridBindGroupLayout = device->CreateBindGroupLayout(layouts[0]);
+
+	// View uniform buffer
+	this->m_gridUniformBuffer = device->CreateBuffer(
+		{.size = sizeof(GridViewUniforms), .usage = EBufferUsage::Uniform, .memoryAccess = EMemoryAccess::CPUNone});
+
+	GraphicsPipelineDescriptor desc{};
+	desc.vertexStage = {this->m_vertModule.get()};
+	desc.fragmentStage = {this->m_fragModule.get()};
+	desc.primitive.topology = EPrimitiveTopology::TriangleList;
+	desc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
+	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
+	desc.bindGroupLayoutCount = 1;
+	// draw grid directly on the scene render target without depth testing
+	desc.depthStencil = {.enabled = false, .format = ETextureFormat::D24_UNORM};
+	this->m_gridPipeline = device->CreateGraphicsPipeline(desc);
+
+	BindGroupDescriptor bgDesc{};
+	bgDesc.layout = this->m_gridBindGroupLayout.get();
+	bgDesc.entries = {
+		{.binding = 0, .buffer = m_gridUniformBuffer.get(), .offset = 0, .size = sizeof(GridViewUniforms)}};
+	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);
+}
+
+
+void Hush::RenderingSystem::SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler) {
+	constexpr std::string_view meshVirtualPath = "engine_res://res/shaders/mesh.slang";
+	auto meshRes = vfs->ResolveVirtualPath(meshVirtualPath);
+	HUSH_RESULT_ASSERT(meshRes, "Could not load mesh shader! Make sure it's present on {}", meshVirtualPath);
+
+	std::string_view meshActualPath = meshRes.value();
+	Graphics::ShaderCompilationResult meshCompilationResult = shaderCompiler->CompileFromSource(
+		"", meshActualPath,
+		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragMain"}});
+
+	HUSH_ASSERT(meshCompilationResult.success, "Could not compile mesh shader, diagnostics: {}!",
+				meshCompilationResult.diagnostics);
+
+	const CompiledShaderStage *meshVertStage = meshCompilationResult.FindStage(Graphics::EShaderStage::Vertex);
+	const CompiledShaderStage *meshFragStage = meshCompilationResult.FindStage(Graphics::EShaderStage::Fragment);
+
+	this->m_meshVertModule = device->CreateShaderModule(meshVertStage->moduleDesc);
+	this->m_meshFragModule = device->CreateShaderModule(meshFragStage->moduleDesc);
+
+	// ── Bind group layouts (auto-generated from reflection) ──────
+	std::vector<BindGroupLayoutDescriptor> meshLayouts = meshCompilationResult.BuildBindGroupLayoutDescriptors();
+	HUSH_ASSERT(meshLayouts.size() >= 1,
+				"Mesh shader must have at least one bind group layout (set 0: scene + model)!");
+
+	// Mark set 0 binding 1 (ModelData) as having dynamic offset
+	for (auto &entry : meshLayouts[0].entries)
+	{
+		if (entry.binding == 1)
+		{
+			entry.hasDynamicOffset = true;
+		}
+	}
+
+	this->m_meshSceneBindGroupLayout = device->CreateBindGroupLayout(meshLayouts[0]);
+	if (meshLayouts.size() >= 2)
+	{
+		this->m_meshMaterialBindGroupLayout = device->CreateBindGroupLayout(meshLayouts[1]);
+	}
+
+	// Default placeholder textures
+	{
+		auto create1x1Texture = [device](std::unique_ptr<IGraphicsTexture> &outTex, const uint8_t rgba[4],
+										 const char *debugName) {
+			auto staging = device->CreateBuffer({.size = 4,
+												 .usage = EBufferUsage::CopySource,
+												 .memoryAccess = EMemoryAccess::CPUWrite,
+												 .debugName = debugName});
+
+			void *mapped = staging->Map(device);
+			std::memcpy(mapped, rgba, 4);
+			staging->Unmap();
+
+			outTex = device->CreateTexture({.width = 1,
+											.height = 1,
+											.format = ETextureFormat::RGBA8_UNORM,
+											.usage = ETextureUsage::Sampled | ETextureUsage::CopyDestination,
+											.debugName = debugName});
+
+			auto copyCmd = device->CreateCopyCommandList();
+			copyCmd->CopyBufferToTexture(staging.get(), 0, outTex.get(), 0, 0, 0, 1, 1, 1, 256);
+			copyCmd->Close();
+			ICommandList *cmdRaw = copyCmd.get();
+			device->GetGraphicsQueue()->Submit(std::span<ICommandList *>{&cmdRaw, 1});
+			device->GetGraphicsQueue()->WaitIdle();
+		};
+
+		uint8_t white[] = {255, 255, 255, 255};
+		uint8_t flatNormal[] = {128, 128, 255, 255};
+		uint8_t black[] = {0, 0, 0, 255};
+		uint8_t defaultMetalRough[] = {255, 128, 0, 255};
+
+		// NOLINTBEGIN
+		create1x1Texture(m_defaultColorTex, white, "DefaultColorTex");
+		create1x1Texture(m_defaultMetalRoughTex, defaultMetalRough, "DefaultMetalRoughTex");
+		create1x1Texture(m_defaultNormalTex, flatNormal, "DefaultNormalTex");
+		create1x1Texture(m_defaultEmissiveTex, black, "DefaultEmissiveTex");
+		// NOLINTEND
+	}
+
+	// Default sampler
+	{
+		SamplerDescriptor samplerDesc{};
+		samplerDesc.debugName = "DefaultMeshSampler";
+		m_defaultSampler = device->CreateSampler(samplerDesc);
+	}
+
+	// Graphics Pipeline
+	{
+		GraphicsPipelineDescriptor meshDesc{};
+		meshDesc.vertexStage = {this->m_meshVertModule.get()};
+		meshDesc.fragmentStage = {this->m_meshFragModule.get()};
+
+		// Match to VertexInput struct on the shader
+		meshDesc.vertexBufferLayouts.push_back(VertexBufferLayout{
+			.stride = sizeof(Mesh::Vertex),
+			.stepMode = EVertexStepMode::Vertex,
+			.attributes = {
+				{.shaderLocation = 0, .offset = offsetof(Mesh::Vertex, position), .format = EVertexFormat::Float32x3},
+				{.shaderLocation = 1, .offset = offsetof(Mesh::Vertex, normal), .format = EVertexFormat::Float32x3},
+				{.shaderLocation = 2, .offset = offsetof(Mesh::Vertex, color), .format = EVertexFormat::Float32x4},
+				{.shaderLocation = 3, .offset = offsetof(Mesh::Vertex, tangent), .format = EVertexFormat::Float32x4},
+				{.shaderLocation = 4, .offset = offsetof(Mesh::Vertex, uv), .format = EVertexFormat::Float32x2}}});
+
+		meshDesc.primitive.topology = EPrimitiveTopology::TriangleList;
+		meshDesc.primitive.cullMode = ECullModeFlags::Back;
+		meshDesc.primitive.frontFace = EFrontFace::CounterClockwise;
+
+		meshDesc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
+
+		meshDesc.depthStencil = {.enabled = true,
+								 .format = ETextureFormat::D32_FLOAT,
+								 .depthWriteEnabled = true,
+								 .depthCompare = ECompareFunction::Less};
+
+		meshDesc.bindGroupLayouts[0] = this->m_meshSceneBindGroupLayout.get();
+		if (this->m_meshMaterialBindGroupLayout != nullptr)
+		{
+			meshDesc.bindGroupLayouts[1] = this->m_meshMaterialBindGroupLayout.get();
+			meshDesc.bindGroupLayoutCount = 2;
+		}
+		else
+		{
+			meshDesc.bindGroupLayoutCount = 1;
+		}
+
+		meshDesc.debugName = "MeshPipeline";
+		this->m_meshPipeline = device->CreateGraphicsPipeline(meshDesc);
+	}
+
+	// Uniform buffers
+	constexpr uint32_t minOffsetAlignment = 256;
+	uint32_t meshModelSlotSize = (sizeof(ModelData) + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
+	this->m_meshModelSlotSize = meshModelSlotSize;
+
+	constexpr uint32_t maxMeshInstances = 1024;
+	this->m_meshModelBuffer = device->CreateBuffer({.size = static_cast<uint64_t>(meshModelSlotSize) * maxMeshInstances,
+													.usage = EBufferUsage::Uniform,
+													.memoryAccess = EMemoryAccess::CPUNone,
+													.debugName = "MeshModelBuffer"});
+
+	this->m_sceneDataBuffer = device->CreateBuffer({.size = sizeof(SceneData),
+													.usage = EBufferUsage::Uniform,
+													.memoryAccess = EMemoryAccess::CPUNone,
+													.debugName = "SceneDataBuffer"});
+
+	this->m_meshMaterialBuffer = device->CreateBuffer({.size = sizeof(PBRMaterialData),
+													   .usage = EBufferUsage::Uniform,
+
+													   .memoryAccess = EMemoryAccess::CPUNone,
+													   .debugName = "MeshMaterialBuffer"});
+
+	// Bind groups
+	{
+		BindGroupDescriptor sceneBgDesc{};
+		sceneBgDesc.layout = this->m_meshSceneBindGroupLayout.get();
+		sceneBgDesc.entries = {
+			{.binding = 0, .buffer = this->m_sceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
+			{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = meshModelSlotSize}};
+		this->m_meshSceneBindGroup = device->CreateBindGroup(sceneBgDesc);
+	}
+
+	if (this->m_meshMaterialBindGroupLayout != nullptr)
+	{
+		BindGroupDescriptor matBgDesc{};
+		matBgDesc.layout = this->m_meshMaterialBindGroupLayout.get();
+		matBgDesc.entries = {
+			{.binding = 0, .buffer = this->m_meshMaterialBuffer.get(), .offset = 0, .size = sizeof(PBRMaterialData)},
+			{.binding = 1, .texture = this->m_defaultColorTex.get()},
+			{.binding = 2, .texture = this->m_defaultMetalRoughTex.get()},
+			{.binding = 3, .texture = this->m_defaultNormalTex.get()},
+			{.binding = 4, .texture = this->m_defaultEmissiveTex.get()},
+			{.binding = 5, .sampler = this->m_defaultSampler.get()}};
+		this->m_meshMaterialBindGroup = device->CreateBindGroup(matBgDesc);
+	}
+
+	PBRMaterialData defaultMaterial{};
+	defaultMaterial.colorFactors = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	defaultMaterial.metalRoughFactors = glm::vec4(1.0f, 0.5f, 0.0f, 0.0f);
+	defaultMaterial.emissionFactors = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	defaultMaterial.alphaCutoff = 0.5f;
+	defaultMaterial.optionFlags = EPBRMaterialFlags::None;
+	device->WriteBuffer(this->m_meshMaterialBuffer.get(), 0, &defaultMaterial, sizeof(PBRMaterialData));
 }
