@@ -37,7 +37,7 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 
 	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
 
-	auto* editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
 	editorInfo->isMouseOnScene = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
 	// ── Track the panel's content region size every frame ────────────

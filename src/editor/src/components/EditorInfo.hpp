@@ -11,7 +11,6 @@ namespace Hush
 		JumpMode
 	};
 
-
 	struct EditorInfo
 	{
 		EEditorState currentState = EEditorState::None;
