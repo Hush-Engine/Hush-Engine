@@ -38,8 +38,8 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	// We need to retrieve the camera and editor info references every frame because the scene might have been reloaded,
 	// which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more
 	// complex event system just for this.
-	auto* editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
-	auto* editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	auto *editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
+	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
 	HUSH_ASSERT(editorInfo != nullptr, "Editor info component should never be null if the HushEditor is running!");
 
 	if (editorCamera == nullptr)
