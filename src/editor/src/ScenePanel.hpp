@@ -55,5 +55,6 @@ namespace Hush
 		// Entity that represents the scene panel in the ECS, it's used to communicate with other systems
 		Entity m_bridgeEntity;
 		ComponentRef m_panelSizeRef;
+		ComponentRef m_editorInfoRef;
 	};
 } // namespace Hush

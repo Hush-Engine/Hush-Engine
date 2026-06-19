@@ -1,10 +1,13 @@
 #include "EditorCameraSystem.hpp"
+#include "Assertions.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "InputManager.hpp"
 #include "MathUtils.hpp"
 #include "Profiling.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
-#include "../UIUtils.hpp"
+#include "../components/EditorInfo.hpp"
+#include "Shared/EditorCamera.hpp"
 #include <glm/ext/vector_float3.hpp>
 
 constexpr float CAM_PITCH_MIN = -89.5f * Hush::MathUtils::DEG_TO_RAD;
@@ -17,10 +20,12 @@ void Hush::EditorCameraSystem::Init()
 		[this](Entity &entity, [[maybe_unused]]
 							   EditorCamera &camRef) { this->m_editorCameraEntity = std::move(entity); });
 
+	Entity editorCamEntity = this->GetScene().CreateEntityWithKey(EDITOR_CAMERA);
+	this->m_editorCameraRef = editorCamEntity.CreateComponentReference<EditorCamera>();
+
 	// There should only ever be ONE EditorInfo component in the active scene
-	this->GetScene().CreateQuery<EditorInfo>().Each(
-		[this](Entity &entity, [[maybe_unused]]
-							   EditorInfo &infoRef) { this->m_editorInfoEntity = std::move(entity); });
+	Entity managerEntity = this->GetScene().CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfoRef = managerEntity.CreateComponentReference<EditorInfo>();
 }
 
 void Hush::EditorCameraSystem::OnShutdown()
@@ -33,35 +38,37 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	// We need to retrieve the camera and editor info references every frame because the scene might have been reloaded,
 	// which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more
 	// complex event system just for this.
-	m_editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
-	m_editorInfo = m_editorInfoEntity.GetComponent<EditorInfo>();
-	if (this->m_editorCamera == nullptr || this->m_editorInfo == nullptr)
+	auto* editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
+	auto* editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	HUSH_ASSERT(editorInfo != nullptr, "Editor info component should never be null if the HushEditor is running!");
+
+	if (editorCamera == nullptr)
 	{
 		return;
 	}
 
-	glm::mat4 viewMatrix = this->m_editorCamera->GetViewMatrix();
+	glm::mat4 viewMatrix = editorCamera->GetViewMatrix();
 	glm::vec3 forward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 	glm::vec3 right = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 	glm::vec3 up = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
 
-	glm::vec3 &positionRef = this->m_editorCamera->GetPosition();
-	if (InputManager::GetMouseScrollAcceleration().y != 0.0F && UIUtils::IsMouseInScene())
+	glm::vec3 &positionRef = editorCamera->GetPosition();
+	if (InputManager::GetMouseScrollAcceleration().y != 0.0F && editorInfo->isMouseOnScene)
 	{
-		constexpr float zoomSpeed = 100.F;
+		constexpr float zoomSpeed = 10.F;
 		positionRef += forward * InputManager::GetMouseScrollAcceleration().y * zoomSpeed * delta;
 	}
 
 	if (!InputManager::GetMouseButtonPressed(EMouseButton::Right))
 	{
 		// Only reset the state if we controlled the current one
-		if (this->m_editorInfo->currentState == EEditorState::FreeLook)
+		if (editorInfo->currentState == EEditorState::FreeLook)
 		{
-			this->m_editorInfo->currentState = EEditorState::None;
+			editorInfo->currentState = EEditorState::None;
 		}
 		return;
 	}
-	this->m_editorInfo->currentState = EEditorState::FreeLook;
+	editorInfo->currentState = EEditorState::FreeLook;
 
 	glm::vec3 cameraDir(0.F);
 
@@ -105,8 +112,8 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	if (mouseAcceleration != glm::vec2{0.0F})
 	{
 		constexpr float mouseLookSpeed = 3.0F;
-		float &yaw = this->m_editorCamera->GetYaw();
-		float &pitch = this->m_editorCamera->GetPitch();
+		float &yaw = editorCamera->GetYaw();
+		float &pitch = editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;
 		pitch = MathUtils::Clamp(pitch + (mouseAcceleration.y * mouseLookSpeed * delta), CAM_PITCH_MIN, CAM_PITCH_MAX);
 	}
