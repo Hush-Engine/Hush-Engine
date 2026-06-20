@@ -1,31 +1,25 @@
 #include "ContentPanel.hpp"
-#include "Components/MeshReference.hpp"
-#include "Components/WorldTransform.hpp"
+#include "Components/GlobalKeys.hpp"
+#include "Entity.hpp"
 #include "FileMetadata.hpp"
 #include "IFile.hpp"
-#include "Logger.hpp"
 #include "Query.hpp"
-#include "Ref.hpp"
-#include "ResourceManager.hpp"
 #include "Result.hpp"
-#include "Loaders/GltfLoadFunctions.hpp"
 #include "UI.hpp"
-#include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
-#include "WindowManager.hpp"
+#include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
 #include <cstddef>
-#include <fastgltf/core.hpp>
-#include <fastgltf/types.hpp>
 #include <filesystem>
 #include <imgui/imgui.h>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
 #include <span>
 #include <string>
+#include <vector>
 #include "HushEngine.hpp"
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiWindowFlags_NoFocusOnAppearing;
@@ -35,6 +29,8 @@ void Hush::ContentPanel::Init(Scene *activeScene) noexcept
 	this->m_resourceManager = activeScene->GetEngine()->GetResourceManager();
 	this->m_filesystem = activeScene->GetEngine()->GetVirtualFilesystem();
 	this->m_scene = activeScene;
+	Entity editorInfoEntity = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfoRef = editorInfoEntity.CreateComponentReference<EditorInfo>();
 	// this->m_folderImage = this->m_resourceManager->LoadTexture("engine_res://folder.png");
 	// this->m_fileImage = this->m_resourceManager->LoadTexture("engine_res://file.png");
 	// this->m_modelLoader.SetResourceManager(this->m_resourceManager);
@@ -51,7 +47,7 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			UI::S_INITIALIZED = true;
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
-		bool isMouseInScene = UIUtils::IsMouseInScene();
+		bool isMouseInScene = this->m_editorInfoRef.GetData<EditorInfo>()->isMouseOnScene;
 		this->DrawFiles(isMouseInScene);
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
 		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
@@ -59,8 +55,11 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
-				[[maybe_unused]]
-				IRenderer *renderer = WindowManager::GetMainWindow()->GetInternalRenderer();
+				// GLTFLoader::GenerateMeshEntities(this->m_scene, this->m_resourceManager, data->path);
+				// Create the mesh resources (?
+				// A mesh is just data, we can represent that on disk (except GPUMeshBuffers)
+				// GLBs and other model files have hierarchy data attached to them, we need a way to handle that
+
 				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
 				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
 				// // Use the Model Loader interface to get entities and then forward that to the renderer

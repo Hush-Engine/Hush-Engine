@@ -38,12 +38,3 @@ namespace Hush
 		}
 	};
 } // namespace Hush
-
-namespace Hush::UIUtils
-{
-	inline bool IsMouseInScene()
-	{
-		return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-	}
-
-} // namespace Hush::UIUtils
