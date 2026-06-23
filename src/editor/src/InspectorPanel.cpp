@@ -97,6 +97,7 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 
 	[[maybe_unused]]
 	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
+	ImGui::Text("Surface count: %zu", surfaces.size());
 	// // Iterate over the surfaces and  serialize their materials as submeshes
 	// for (size_t i = 0; i < surfaces.size(); i++)
 	// {

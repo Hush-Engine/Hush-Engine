@@ -13,6 +13,7 @@
 #include "RHI/ICommandList.hpp"
 #include "RHI/IGraphicsDevice.hpp"
 #include "RHI/IShaderModule.hpp"
+#include "RHI/PipelineDescriptor.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "RHI/ISampler.hpp"
 #include "RHI/ICommandQueue.hpp"
@@ -97,9 +98,7 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 
 			auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
 
-			graphicsDevice->WriteBuffer(self->m_sceneDataBuffer.get(), 0, &self->m_cachedSceneData,
-										sizeof(SceneData));
-
+			graphicsDevice->WriteBuffer(self->m_sceneDataBuffer.get(), 0, &self->m_cachedSceneData, sizeof(SceneData));
 
 			cmd->BeginRenderPass(renderPass);
 			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
@@ -192,8 +191,9 @@ void Hush::RenderingSystem::Init()
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
-	shaderCompiler->Initialize();
-
+	shaderCompiler->Initialize({
+		.matrixLayout = 1
+	});
 
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 
@@ -239,7 +239,7 @@ void Hush::RenderingSystem::OnPreRender()
 
 		// Grid uniforms
 		this->m_cachedViewUniforms.resolution = {this->m_cachedViewportSize.x, this->m_cachedViewportSize.y};
-		this->m_cachedViewUniforms.view = view;
+		this->m_cachedViewUniforms.invViewProj= glm::inverse(viewProj);
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();
 
 		glm::vec3 pos = editorCam.GetPosition();
@@ -306,8 +306,9 @@ std::string_view Hush::RenderingSystem::GetName() const
 	return "RenderingSystem";
 }
 
-
-void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler) {
+void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
+											  Graphics::ShaderCompiler *shaderCompiler)
+{
 	// With the filesystem
 	constexpr std::string_view virtualPath = "engine_res://res/shaders/grid.slang";
 	auto res = vfs->ResolveVirtualPath(virtualPath);
@@ -340,7 +341,13 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice* device,
 	desc.vertexStage = {this->m_vertModule.get()};
 	desc.fragmentStage = {this->m_fragModule.get()};
 	desc.primitive.topology = EPrimitiveTopology::TriangleList;
-	desc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
+	desc.colorTargets = {
+		{.format = ETextureFormat::BGRA8_UNORM,
+		 .blendEnabled = true,
+		 .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha},
+		 .alphaBlend = {
+
+			 .srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
 	desc.bindGroupLayoutCount = 1;
 	// draw grid directly on the scene render target without depth testing
@@ -354,8 +361,9 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice* device,
 	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);
 }
 
-
-void Hush::RenderingSystem::SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler) {
+void Hush::RenderingSystem::SetupMeshPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
+											  Graphics::ShaderCompiler *shaderCompiler)
+{
 	constexpr std::string_view meshVirtualPath = "engine_res://res/shaders/mesh.slang";
 	auto meshRes = vfs->ResolveVirtualPath(meshVirtualPath);
 	HUSH_RESULT_ASSERT(meshRes, "Could not load mesh shader! Make sure it's present on {}", meshVirtualPath);

@@ -31,7 +31,7 @@ namespace Hush
 
 	struct GridViewUniforms
 	{
-		glm::mat4 view;
+		glm::mat4 invViewProj;
 		glm::vec4 pos;
 		glm::vec2 resolution;
 		float farPlane;

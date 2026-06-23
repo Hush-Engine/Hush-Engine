@@ -8,6 +8,7 @@
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
 #include "components/EditorInfo.hpp"
+#include "Loaders/GltfLoader.hpp"
 #include "crypto/Hashing.hpp"
 #include "Assertions.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
@@ -47,29 +48,18 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			UI::S_INITIALIZED = true;
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
+
 		bool isMouseInScene = this->m_editorInfoRef.GetData<EditorInfo>()->isMouseOnScene;
 		this->DrawFiles(isMouseInScene);
+
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
 		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
-				// GLTFLoader::GenerateMeshEntities(this->m_scene, this->m_resourceManager, data->path);
-				// Create the mesh resources (?
-				// A mesh is just data, we can represent that on disk (except GPUMeshBuffers)
-				// GLBs and other model files have hierarchy data attached to them, we need a way to handle that
-
-				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
-				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
-				// // Use the Model Loader interface to get entities and then forward that to the renderer
-				// LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-				// // Very very bad code, we should change it before a PR
-				// for (Entity &entt : result.value())
-				// {
-				// 	renderer->PushMesh(entt.GetComponent<WorldTransform>(),
-				// 					   entt.GetComponent<MeshReference>()->GetMesh().Get());
-				// }
+				Entity rootEntity = GLTFLoader::GenerateMeshEntities(this->m_scene, this->m_resourceManager, data->path);
+				HUSH_ASSERT(rootEntity.IsValid(), "Failed to create meshes from the GLTF file!");
 			}
 		}
 	}

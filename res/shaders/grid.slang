@@ -13,7 +13,7 @@ static const float4 zAxisColor = float4(0.0, 0.0, 1.0, 1.0);
 
 
 struct ViewUniforms {
-    float4x4 view;
+    float4x4 invViewProj;
     vec4 pos;
     float2 resolution;
     float farPlane;
@@ -35,7 +35,7 @@ static const float HEIGHT = -1;
 static const float FOV = 90;
 static const float PI = 3.14159;
 static const float2 RESOLUTION = float2(480, 600);
-static const float3 COLOR = float3(0.5, 0.5, 0.5);
+static const float3 COLOR = float3(1, 1, 1);
 static const vec4 X_AXIS_COLOR = vec4(1.0, 0.1, 0.1, 1.0);
 static const vec4 Z_AXIS_COLOR = vec4(0.1, 0.1, 1.0, 1.0);
 
@@ -61,14 +61,16 @@ static const float2 uvs[6] = {
     float2(0.0, 1.0),
 };
 
-float GetActualDrawWidth(float intendedThickness) {
-    
+
+float ddLength(float a)
+{
+  return length(float2(ddx(a), ddy(a)));
 }
 
 float3 GridMask(vec2 uv, vec4 uvDDXY, vec2 uvDeriv, float lineThickness) {
     bool2 invertLine = lineThickness > 0.5;
     float2 targetWidth = select(invertLine, 1.0 - lineThickness, lineThickness);
-    float2 drawWidth = clamp(targetWidth, uvDeriv, 0.5);
+    float2 drawWidth = clamp(targetWidth, uvDeriv, vec2(0.5));
     // float2 drawWidth = targetWidth;
     float2 lineAA = uvDeriv * 1.5;
     float2 gridUV = abs(frac(uv) * 2.0 - 1.0);
@@ -96,34 +98,28 @@ FragmentOutput fragmentMain(VertOutput input)
 {
     FragmentOutput o;
     // NDC from interpolated UV
-    float2 ndc = float2(
-        input.uv.x * 2.0 - 1.0,
-        input.uv.y * 2.0 - 1.0
-    );    
-
-    float3 camPos = view.pos.xyz;
-    float3 camRight = normalize(vec3(view.view[0][0], view.view[1][0], view.view[2][0]));
-    float3 camUp = normalize(vec3(view.view[0][1], view.view[1][1], view.view[2][1]));
-    float3 camForward = normalize(-vec3(view.view[0][2], view.view[1][2], view.view[2][2]));
-
-    // HARDCODED: 90 degree vertical FOV => tan(45°) = 1
-    float aspect = view.resolution.x / view.resolution.y;
-    float tanHalfFov = 1.0;
-
-    float3 rayDir = normalize(
-        camForward +
-        ndc.x * aspect * tanHalfFov * camRight +
-        ndc.y * tanHalfFov * camUp
-    );
-
-    // Intersect ground plane Y = 0
+    float2 ndc = float2(input.uv.x * 2.0 - 1.0, (input.uv.y * 2.0 - 1.0));
+    float4 nearW = mul(view.invViewProj, float4(ndc, -1.0, 1.0));
+    float4 farW  = mul(view.invViewProj, float4(ndc, 1.0, 1.0));
+    nearW /= nearW.w;
+    farW  /= farW.w;
+    float3 rayDir = normalize(farW.xyz - nearW.xyz);
+    // Intersect with Y=0 ground plane
     float denom = rayDir.y;
-    if (abs(denom) < 1e-6)
-    {
+    if (abs(denom) < 1e-6 || -nearW.y / denom <= 0.01) {
         FragmentOutput o;
         o.color = float4(0.0, 0.0, 0.0, 0.0);
         return o;
     }
+    float3 worldPos = (nearW.xyz + rayDir * (-nearW.y / denom));
+    float2 uv = worldPos.xz;    
+
+    // HARDCODED: 90 degree vertical FOV => tan(45°) = 1
+    float aspect = view.resolution.x / view.resolution.y;
+    float tanHalfFov = 1.0;
+    vec3 camPos = view.pos.xyz;
+
+    // Intersect ground plane Y = 0
 
     float t = -camPos.y / denom;
     if (t <= 0.01)
@@ -132,10 +128,6 @@ FragmentOutput fragmentMain(VertOutput input)
         o.color = float4(0.0, 0.0, 0.0, 0.0);
         return o;
     }
-
-    float3 hit = camPos + rayDir * t;
-
-    float2 uv = hit.xz;
 
     float4 uvDDXYMinor = float4(ddx(uv), ddy(uv)); //
     float2 uvDerivMinor = float2(length(uvDDXYMinor.xz), length(uvDDXYMinor.yw)); //

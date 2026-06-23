@@ -41,12 +41,12 @@ struct PBRMaterialData
 [[vk::binding(1, 0)]] ConstantBuffer<ModelData>          modelData;
 
 // Set 1 — per-material
-// [[vk::binding(0, 1)]] ConstantBuffer<PBRMaterialData>   materialData;
-// [[vk::binding(1, 1)]] Texture2D<float4>                  colorTex;
-// [[vk::binding(2, 1)]] Texture2D<float4>                  metalRoughTex;
-// [[vk::binding(3, 1)]] Texture2D<float4>                  normalTex;
-// [[vk::binding(4, 1)]] Texture2D<float4>                  emissiveTex;
-// [[vk::binding(5, 1)]] SamplerState                       defaultSampler;
+[[vk::binding(0, 1)]] ConstantBuffer<PBRMaterialData>   materialData;
+[[vk::binding(1, 1)]] Texture2D<float4>                  colorTex;
+[[vk::binding(2, 1)]] Texture2D<float4>                  metalRoughTex;
+[[vk::binding(3, 1)]] Texture2D<float4>                  normalTex;
+[[vk::binding(4, 1)]] Texture2D<float4>                  emissiveTex;
+[[vk::binding(5, 1)]] SamplerState                       defaultSampler;
 
 
 static const float PI      = 3.14159265;
