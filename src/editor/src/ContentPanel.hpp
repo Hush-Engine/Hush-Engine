@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include "Entity.hpp"
 #include "FileMetadata.hpp"
 #include "IEditorPanel.hpp"
 #include "IFile.hpp"
@@ -45,6 +46,7 @@ namespace Hush
 
 		std::vector<FileInfo> m_currentItems;
 		std::string m_currentWorkingDirectory = "res://";
+		ComponentRef m_editorInfoRef{};
 		bool m_dirty = true;
 	};
 } // namespace Hush

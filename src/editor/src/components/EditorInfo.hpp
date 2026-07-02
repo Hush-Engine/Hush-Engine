@@ -14,5 +14,7 @@ namespace Hush
 	struct EditorInfo
 	{
 		EEditorState currentState = EEditorState::None;
+		// If we grow to have more booleans we should really just use flags instead
+		bool isMouseOnScene = false;
 	};
 } // namespace Hush

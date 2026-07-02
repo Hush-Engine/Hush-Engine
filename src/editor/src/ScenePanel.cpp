@@ -1,7 +1,9 @@
 #include "ScenePanel.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
 #include <imgui/imgui.h>
+#include "components/EditorInfo.hpp"
 #include "components/EditorPanelComponents.hpp"
 #include <algorithm>
 
@@ -18,6 +20,9 @@ void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 	// Initially set this to the min dimensions
 	panelSize.size = {MIN_PANEL_DIMENSION, MIN_PANEL_DIMENSION};
 	this->m_panelSizeRef = this->m_bridgeEntity.CreateComponentReference<ScenePanelSizeComp>();
+
+	Entity editorInfoEntity = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfoRef = editorInfoEntity.CreateComponentReference<EditorInfo>();
 }
 
 glm::u32vec2 Hush::ScenePanel::GetPanelSize() const noexcept
@@ -31,6 +36,9 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 	(void)deltaTime;
 
 	ImGui::Begin("Scene", nullptr, SCENE_PANEL_FLAGS);
+
+	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	editorInfo->isMouseOnScene = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
 	// ── Track the panel's content region size every frame ────────────
 	ImVec2 availSize = ImGui::GetContentRegionAvail();
