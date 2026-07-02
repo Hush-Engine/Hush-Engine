@@ -8,8 +8,10 @@
 
 #include "Assertions.hpp"
 #include "Entity.hpp"
+#include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
 #include "QueryBuilder.hpp"
@@ -20,6 +22,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <memory_resource>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -177,13 +180,14 @@ namespace Hush
 		/// Get the component registered id by name
 		/// @param name Component name
 		/// @return The component id if it exists, std::nullopt otherwise
-		std::optional<std::uint64_t> GetRegisteredComponentId(std::string_view name);
+		std::optional<std::uint64_t> GetRegisteredComponentId(NullTerminatedStringView name);
 
 		/// Register a component id
 		/// @param name Name of the component
 		/// @param id Id of the component
-		[[hush::export]]
-		void RegisterComponentId(std::string_view name, Entity::EntityId id);
+		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
+		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
+		void RegisterComponentId(NullTerminatedStringView name, Entity::EntityId id);
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
@@ -193,8 +197,10 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
-		[[nodiscard]] [[hush::export]]
-		EntityId Lookup(std::string_view tag) const;
+		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
+		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
+		[[nodiscard]]
+		EntityId Lookup(NullTerminatedStringView tag) const;
 
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
@@ -241,6 +247,25 @@ namespace Hush
 		const HushEngine *GetEngine() const
 		{
 			return this->m_engine;
+		}
+
+		/// Sets the engine-owned frame and scene-scoped memory resources into this scene.
+		/// Both may be null, in which case the scene falls back to owning heap allocations.
+		void SetMemoryResources(std::pmr::memory_resource *frameMemory,
+								Hush::Memory::ThreadLocalMemoryResourcePool *sceneMemory) noexcept
+		{
+			this->m_frameMemory = frameMemory;
+			this->m_sceneMemory = sceneMemory;
+		}
+
+		/// The engine-owned frame-scoped memory resource wired into this scene, or null if not
+		/// wired. Handy for callers that only hold a `Scene*` and need to materialize a
+		/// `NullTerminatedStringView` from a bare view before calling `Lookup` and friends, e.g.
+		/// `scene->Lookup(MakeNullTerminated(tag, scene->GetFrameScopeMemoryResource()))`.
+		[[nodiscard]]
+		std::pmr::memory_resource *GetFrameScopeMemoryResource() const noexcept
+		{
+			return this->m_frameMemory;
 		}
 
 		[[nodiscard]]
@@ -311,6 +336,14 @@ namespace Hush
 		std::vector<uintptr_t> m_scriptingSystems;
 
 		HushEngine *m_engine;
+
+		/// Frame-scoped memory resource (owned by the engine): transient allocations such as
+		/// null-terminated string copies at C-API boundaries. Null until wired by the engine.
+		std::pmr::memory_resource *m_frameMemory = nullptr;
+
+		/// Scene-scoped bump allocator (owned by the engine). Allocations live until the scene
+		/// is torn down, at which point ~Scene rewinds it. Null until wired by the engine.
+		Hush::Memory::ThreadLocalMemoryResourcePool *m_sceneMemory = nullptr;
 
 		/// Thread pool used by the scene for parallel operations
 		Threading::Executors::ThreadPool *m_threadPool;

@@ -5,8 +5,8 @@
 */
 
 #pragma once
+#include <NullTerminatedStringView.hpp>
 #include <Result.hpp>
-#include <string_view>
 
 namespace Hush
 {
@@ -44,7 +44,7 @@ namespace Hush
 		/// @return A pointer to the symbol
 		template <typename T>
 		[[nodiscard]]
-		T *GetSymbolUnsafe(std::string_view symbolName)
+		T *GetSymbolUnsafe(NullTerminatedStringView symbolName)
 		{
 			return reinterpret_cast<T *>(GetRawSymbol(symbolName));
 		}
@@ -55,7 +55,7 @@ namespace Hush
 		/// @return A result with the symbol, or an error if it can't be found
 		template <typename T>
 		[[nodiscard]]
-		Result<T, EError> GetSymbol(std::string_view symbolName) noexcept
+		Result<T, EError> GetSymbol(NullTerminatedStringView symbolName) noexcept
 		{
 			auto symbol = GetSymbolUnsafe<T>(symbolName);
 			if (symbol == nullptr)
@@ -68,10 +68,10 @@ namespace Hush
 		/// Opens a shared library and returns a handle to it.
 		/// @param libraryName Shared Library name.
 		/// @return A handle to the shared library
-		static Result<SharedLibrary, EError> OpenSharedLibrary(std::string_view libraryName) noexcept;
+		static Result<SharedLibrary, EError> OpenSharedLibrary(NullTerminatedStringView libraryName) noexcept;
 
 	private:
-		void *GetRawSymbol(std::string_view symbolName);
+		void *GetRawSymbol(NullTerminatedStringView symbolName);
 
 		void *m_nativeHandle;
 	};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "Result.hpp"
 #include <string_view>
 #include <vector>
@@ -44,7 +45,7 @@ namespace Hush
 			"Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
 
 		// We need to load an arbitrary DLL and communicate with it through C calls
-		void Initialize(std::string_view dllPath);
+		void Initialize(NullTerminatedStringView dllPath);
 
 		std::vector<ScriptingSystemInfo> &GetAvailableSystems();
 

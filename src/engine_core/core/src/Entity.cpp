@@ -170,7 +170,7 @@ Hush::Entity::EntityId Hush::Entity::InternalRegisterCppComponent(
 	return m_ownerScene->InternalRegisterCppComponent(registerStatus, id, desc);
 }
 
-std::optional<Hush::Entity::EntityId> Hush::Entity::InternalCachedComponentId(const std::string_view name) const
+std::optional<Hush::Entity::EntityId> Hush::Entity::InternalCachedComponentId(const NullTerminatedStringView name) const
 {
 	return m_ownerScene->GetRegisteredComponentId(name);
 }

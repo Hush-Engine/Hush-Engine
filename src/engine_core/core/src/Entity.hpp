@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
 
@@ -342,7 +343,7 @@ namespace Hush
 		/// @param name Name of the component.
 		/// @return Id of the component, or std::nullopt if the component is not found.
 		[[nodiscard]]
-		std::optional<EntityId> InternalCachedComponentId(std::string_view name) const;
+		std::optional<EntityId> InternalCachedComponentId(NullTerminatedStringView name) const;
 
 		/// Id of the entity
 		EntityId m_entityId{};

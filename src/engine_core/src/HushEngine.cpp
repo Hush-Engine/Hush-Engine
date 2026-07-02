@@ -6,6 +6,7 @@
 #include "Systems/RenderGraphSystem.hpp"
 #include "Systems/ResourceUploadSystem.hpp"
 #include "WindowRenderer.hpp"
+#include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include <WindowManager.hpp>
 #include <algorithm>
@@ -26,6 +27,10 @@ extern "C" void HushForceLinkAllocatorOverrides() noexcept;
 #endif
 #include <vector>
 
+// Per-thread initial buffer size, in KB, for the frame and scene arenas.
+static constexpr std::size_t HUSH_FRAME_ARENA_SIZE_KB = 256;
+static constexpr std::size_t HUSH_SCENE_ARENA_SIZE_KB = 256;
+
 struct Hush::HushEngine::HushEngineInternal
 {
 	Hush::VirtualFilesystem vfs;
@@ -34,6 +39,8 @@ struct Hush::HushEngine::HushEngineInternal
 	std::unique_ptr<Graphics::RenderGraphSystem> renderGraphSystem;
 	std::unique_ptr<Hush::Renderer::ResourceUploadSystem> resourceUploadSystem;
 	std::unique_ptr<WindowRenderer> windowRenderer = nullptr;
+	Hush::Memory::ThreadLocalMemoryResourcePool frameMemoryPool{HUSH_FRAME_ARENA_SIZE_KB * 1024};
+	Hush::Memory::ThreadLocalMemoryResourcePool sceneMemoryPool{HUSH_SCENE_ARENA_SIZE_KB * 1024};
 };
 
 #if defined(HUSH_PLATFORM_EMSCRIPTEN)
@@ -67,6 +74,11 @@ void Hush::HushEngine::Init(int argc, char **argv)
 #endif
 
 	this->m_app = LoadApplication(this);
+
+	// Wire the engine-owned frame/scene memory resources into the scene, so it can cheaply
+	// materialize null-terminated strings for Flecs and allocate scene-lifetime data from the
+	// scene arena.
+	this->m_app->GetScene()->SetMemoryResources(&this->m_internal->frameMemoryPool, &this->m_internal->sceneMemoryPool);
 
 	// Check for --wait-profiler flag
 	std::span<char *> args(argv, static_cast<size_t>(argc));
@@ -122,6 +134,17 @@ void Hush::HushEngine::Run()
 	this->m_app->OnPostRender();
 	this->m_app->DisposeFrame();
 
+	this->m_internal->frameMemoryPool.Reset();
+
+	// Publish this frame's frame-arena usage to Tracy (no-op when profiling is off). The plots
+	// show whether the configured arena size is right: "Spill" > 0 means the buffer was too small.
+	const Hush::Memory::ThreadLocalMemoryResourcePool::Stats frameStats = this->m_internal->frameMemoryPool.GetStats();
+	TracyPlot("Frame Arena Bytes", static_cast<double>(frameStats.bytesRequestedLastCycle));
+	TracyPlot("Frame Arena Spill", static_cast<double>(frameStats.spilledBytesLastCycle));
+
+	// The scene-scoped pool is intentionally NOT reset here: its allocations persist across
+	// frames and are reclaimed on scene teardown via ResetSceneScopeMemory().
+
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	m_elapsed = end - start;
 #ifndef HUSH_PLATFORM_EMSCRIPTEN
@@ -168,4 +191,19 @@ void Hush::HushEngine::AddDefaultSystems()
 Hush::ResourceManager *Hush::HushEngine::GetResourceManager() noexcept
 {
 	return &this->m_internal->resourceManager;
+}
+
+std::pmr::memory_resource *Hush::HushEngine::GetFrameScopeMemoryResource() noexcept
+{
+	return &this->m_internal->frameMemoryPool;
+}
+
+std::pmr::memory_resource *Hush::HushEngine::GetSceneScopeAllocator() noexcept
+{
+	return &this->m_internal->sceneMemoryPool;
+}
+
+void Hush::HushEngine::ResetSceneScopeMemory() noexcept
+{
+	this->m_internal->sceneMemoryPool.Reset();
 }

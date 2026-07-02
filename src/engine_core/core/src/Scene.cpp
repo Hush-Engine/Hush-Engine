@@ -11,6 +11,8 @@
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include "Profiling.hpp"
+#include <memory>
+#include <string>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -28,7 +30,14 @@ Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *t
 
 Hush::Scene::~Scene()
 {
+	// ecs_fini runs component binding_ctx_free hooks, which destroy any objects allocated from
+	// the scene arena. Rewind the arena only afterwards, once nothing references it.
 	ecs_fini(static_cast<ecs_world_t *>(m_world));
+
+	if (m_sceneMemory != nullptr)
+	{
+		m_sceneMemory->Reset();
+	}
 }
 
 void Hush::Scene::Init()
@@ -265,10 +274,10 @@ void Hush::Scene::DestroyEntity(Entity &entity)
 	ecs_delete(world, entity.GetId());
 }
 
-std::optional<std::uint64_t> Hush::Scene::GetRegisteredComponentId(std::string_view name)
+std::optional<std::uint64_t> Hush::Scene::GetRegisteredComponentId(NullTerminatedStringView name)
 {
 	std::shared_lock lock(m_registeredEntitiesMutex);
-	const auto entityIt = m_registeredEntities.find(name.data());
+	const auto entityIt = m_registeredEntities.find(std::string(std::string_view(name)));
 
 	if (entityIt != m_registeredEntities.end())
 	{
@@ -279,10 +288,10 @@ std::optional<std::uint64_t> Hush::Scene::GetRegisteredComponentId(std::string_v
 	return std::nullopt;
 }
 
-void Hush::Scene::RegisterComponentId(std::string_view name, Entity::EntityId id)
+void Hush::Scene::RegisterComponentId(NullTerminatedStringView name, Entity::EntityId id)
 {
 	std::unique_lock lock(m_registeredEntitiesMutex);
-	m_registeredEntities.insert_or_assign(name.data(), id);
+	m_registeredEntities.insert_or_assign(std::string(std::string_view(name)), id);
 }
 
 std::optional<Hush::Entity> Hush::Scene::EntityFromId(EntityId id)
@@ -312,16 +321,28 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 
 		void *userCtx{};
 		void (*userCtxFree)(void *){};
+
+		// The resource this instance was allocated from, so binding_ctx_free can return the
+		// storage symmetrically (a no-op for the scene arena, an actual free for the fallback).
+		std::pmr::memory_resource *ownerResource{};
 	};
 
-	// TODO: Arena
-	auto *componentInfo = new ComponentInfo();
+	// This context lives for the scene/world lifetime, so it belongs in the scene arena. When
+	// the arena is not wired yet, fall back to the general heap; either way the free hook below
+	// routes deallocation back through ownerResource.
+	std::pmr::memory_resource *ownerResource = m_sceneMemory != nullptr
+												   ? static_cast<std::pmr::memory_resource *>(m_sceneMemory)
+												   : std::pmr::new_delete_resource();
+
+	void *storage = ownerResource->allocate(sizeof(ComponentInfo), alignof(ComponentInfo));
+	auto *componentInfo = std::construct_at(static_cast<ComponentInfo *>(storage));
 	componentInfo->size = desc.size;
 	componentInfo->alignment = desc.alignment;
 	componentInfo->name = desc.name;
 	componentInfo->ops = desc.ops;
 	componentInfo->userCtx = desc.userCtx;
 	componentInfo->userCtxFree = desc.userCtxFree;
+	componentInfo->ownerResource = ownerResource;
 
 	ecs_component_desc_t componentDesc = {};
 	ecs_entity_desc_t associatedEntityDesc = {};
@@ -337,12 +358,14 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentDesc.entity = ecs_entity_init(world, &associatedEntityDesc);
 
 	componentDesc.type.hooks.binding_ctx_free = [](void *ctx) {
-		const auto *info = static_cast<ComponentInfo *>(ctx);
+		auto *info = static_cast<ComponentInfo *>(ctx);
 		if (info->userCtxFree != nullptr)
 		{
 			info->userCtxFree(info->userCtx);
 		}
-		delete info;
+		std::pmr::memory_resource *ownerResource = info->ownerResource;
+		std::destroy_at(info);
+		ownerResource->deallocate(info, sizeof(ComponentInfo), alignof(ComponentInfo));
 	};
 
 	if (desc.ops.ctor != nullptr)
@@ -512,11 +535,10 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	return componentId;
 }
 
-Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 {
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
-	Entity::EntityId result = ecs_lookup(world, tag.data());
-	return result;
+	return ecs_lookup(world, tag.c_str());
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)
@@ -545,8 +567,13 @@ Hush::Entity::EntityId Hush::Scene::InternalRegisterCppComponent(
 	// has never been registered.
 	if (registerStatus == ComponentTraits::detail::EEntityRegisterStatus::NotRegistered)
 	{
+		// desc.name is a null-terminated C string (from GetTypeName<T>()), but a plain const
+		// char* does not implicitly convert to NullTerminatedStringView, so wrap it explicitly.
+		const NullTerminatedStringView componentName =
+			NullTerminatedStringView::promise_null_terminated(std::string_view{desc.name});
+
 		// First, check if the component is already registered in the scene.
-		if (auto cachedComponentId = GetRegisteredComponentId(desc.name); cachedComponentId.has_value())
+		if (auto cachedComponentId = GetRegisteredComponentId(componentName); cachedComponentId.has_value())
 		{
 			// Okay, already registered in the scene by another thread or translation unit.
 			*id = *cachedComponentId;
@@ -555,7 +582,7 @@ Hush::Entity::EntityId Hush::Scene::InternalRegisterCppComponent(
 		{
 			// We need to register the component.
 			*id = RegisterComponentRaw(desc);
-			RegisterComponentId(desc.name, *id);
+			RegisterComponentId(componentName, *id);
 		}
 	}
 	return *id;

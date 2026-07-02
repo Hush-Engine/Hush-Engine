@@ -10,9 +10,11 @@
 #include "HushBindings.hpp"
 #include "executors/ThreadPool.hpp"
 
+#include <memory_resource>
 #include <span>
 #include <string_view>
 #include <SDL3/SDL_events.h>
+#include <memory>
 
 namespace Hush
 {
@@ -73,6 +75,33 @@ namespace Hush
 		VirtualFilesystem *GetVirtualFilesystem() noexcept;
 
 		ResourceManager *GetResourceManager() noexcept;
+
+		/// Returns a pointer to the memory resource used for frame-scoped allocations.
+		///
+		/// This memory resource is for temporary allocations that will live only for the duration of this frame.
+		/// It resets at the end of each frame, allowing for efficient reuse of memory without fragmentation.
+		///
+		/// @note This is thread-safe. Each thread that calls this function
+		///       will receive a pointer to a thread-local memory resource managed by the engine.
+		///       All the created memory resources will be destroyed when the engine is destroyed.
+		///
+		/// @return A pointer to the frame scope memory resource.
+		std::pmr::memory_resource *GetFrameScopeMemoryResource() noexcept;
+
+		/// Returns a pointer to the memory resource used for scene-scoped allocations.
+		///
+		/// This memory resource is for allocations that should persist for the duration of a scene.
+		/// It resets when a new scene is loaded, allowing for efficient reuse of memory without fragmentation across
+		/// scenes.
+		///
+		/// @return A pointer to the scene scope memory resource.
+		std::pmr::memory_resource *GetSceneScopeAllocator() noexcept;
+
+		/// Rewinds the scene-scoped memory resource, reclaiming everything allocated from it.
+		///
+		/// Called when a scene is torn down (see `Scene::~Scene`). Must only be called once the
+		/// scene that owns those allocations is gone, so no live object still references them.
+		void ResetSceneScopeMemory() noexcept;
 
 	private:
 		void AddDefaultSystems();

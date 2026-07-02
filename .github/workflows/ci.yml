@@ -33,6 +33,7 @@ jobs:
               - '.github/workflows/**'
             engine:
               - 'src/engine_core/**'
+              - 'src/editor/**'
               - 'src/cmake/**'
               - 'cmake/**'
               - 'CMakeLists.txt'
