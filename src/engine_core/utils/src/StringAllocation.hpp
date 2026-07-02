@@ -18,12 +18,12 @@ namespace Hush
 {
 	/// Allocates a null-terminated copy of `sv` from `mr` and returns a view over it.
 	///
-	/// Use this function when you need to pass a string view to an API that requires a null-terminated string, 
+	/// Use this function when you need to pass a string view to an API that requires a null-terminated string,
 	/// and you want to avoid expensive allocations through the global heap.
 	/// The returned view is valid until the memory resource is reset or destroyed.
-	/// 
-	/// The most common memory resource for this is the frame-scoped allocator, and for strings that are meant to be used for
-	/// short-lived operations.
+	///
+	/// The most common memory resource for this is the frame-scoped allocator, and for strings that are meant to be
+	/// used for short-lived operations.
 	///
 	/// @param sv The (possibly non-null-terminated) source view to copy.
 	/// @param mr The memory resource to allocate from. Must not be null.
