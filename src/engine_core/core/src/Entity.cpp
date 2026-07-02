@@ -50,9 +50,9 @@ Hush::ComponentRef Hush::Entity::CreateComponentReferenceRaw(EntityId componentI
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_ref_t ref = ecs_ref_init_id(world, this->m_entityId, componentId);
 	static_assert(sizeof(ecs_ref_t) <= ECS_REF_SIZE,
-	              "ecs_ref_t no longer fits ComponentRef's internal buffer; bump ECS_REF_SIZE.");
+				  "ecs_ref_t no longer fits ComponentRef's internal buffer; bump ECS_REF_SIZE.");
 	static_assert(alignof(ecs_ref_t) <= ECS_REF_ALIGN,
-	              "ecs_ref_t needs stronger alignment than ECS_REF_ALIGN; bump ECS_REF_ALIGN.");
+				  "ecs_ref_t needs stronger alignment than ECS_REF_ALIGN; bump ECS_REF_ALIGN.");
 
 	ComponentRef publicRef{};
 
