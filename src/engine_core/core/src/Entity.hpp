@@ -34,7 +34,10 @@ namespace Hush
 
 	template <typename... Components>
 	class Query;
+	// Upper bound on sizeof(ecs_ref_t): 48 bytes on 64-bit targets. On 32 bit target (such as wasm32) the two trailing
+	// pointers are 4 bytes each, so it is 40 there.
 	constexpr size_t ECS_REF_SIZE = 48;
+	constexpr size_t ECS_REF_ALIGN = 8; // ecs_ref_t holds uint64_t/pointers, so it needs 8-byte alignment.
 
 	class Entity;
 
@@ -62,7 +65,7 @@ namespace Hush
 		uint64_t GetComponentId() const;
 
 	private:
-		mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
+		alignas(ECS_REF_ALIGN) mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
 		// TODO: Make it a thread local variable
 		void *m_world = nullptr;
 		friend class Entity;
