@@ -449,6 +449,7 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	componentInfo->userCtx = desc.userCtx;
 	componentInfo->userCtxFree = desc.userCtxFree;
 	componentInfo->ownerResource = ownerResource;
+	componentInfo->opsFlags = desc.opsFlags;
 
 	ecs_component_desc_t componentDesc = {};
 	ecs_entity_desc_t associatedEntityDesc = {};
