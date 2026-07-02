@@ -4,6 +4,7 @@
 	\brief WebGPU implementation of IGraphicsDevice interface
 */
 #include "WebGPUGraphicsDevice.hpp"
+#include "BitwiseUtils.hpp"
 #include "RHI/GraphicsTypes.hpp"
 #include "RHI/IGraphicsTexture.hpp"
 #include "WebGPU/WebGPUTexture.hpp"
@@ -206,6 +207,11 @@ namespace Hush::Graphics
 		}
 
 		desc.mappedAtCreation = static_cast<WGPUBool>(false);
+
+		if (Bitwise::HasCompositeFlag(descriptor.usage, EBufferUsage::Uniform))
+		{
+			desc.usage |= wgpu::BufferUsage::CopyDst;
+		}
 
 		if (descriptor.debugName != nullptr)
 		{
@@ -523,23 +529,24 @@ namespace Hush::Graphics
 	{
 		WGPUTextureUsage result = WGPUTextureUsage_None;
 
-		if ((usage & ETextureUsage::Sampled) != ETextureUsage::None)
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::Sampled))
 		{
 			result |= WGPUTextureUsage_TextureBinding;
 		}
-		if ((usage & ETextureUsage::Storage) != ETextureUsage::None)
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::Storage))
 		{
 			result |= WGPUTextureUsage_StorageBinding;
 		}
-		if ((usage & ETextureUsage::RenderTarget) != ETextureUsage::None)
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::RenderTarget) ||
+			Bitwise::HasCompositeFlag(usage, ETextureUsage::DepthStencil))
 		{
 			result |= WGPUTextureUsage_RenderAttachment;
 		}
-		if ((usage & ETextureUsage::CopySource) != ETextureUsage::None)
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::CopySource))
 		{
 			result |= WGPUTextureUsage_CopySrc;
 		}
-		if ((usage & ETextureUsage::CopyDestination) != ETextureUsage::None)
+		if (Bitwise::HasCompositeFlag(usage, ETextureUsage::CopyDestination))
 		{
 			result |= WGPUTextureUsage_CopyDst;
 		}

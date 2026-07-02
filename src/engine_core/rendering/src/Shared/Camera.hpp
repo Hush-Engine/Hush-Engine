@@ -26,8 +26,10 @@ namespace Hush
 		[[nodiscard]]
 		inline glm::mat4 GetProjectionMatrix() const noexcept
 		{
-			return glm::perspective(glm::radians(this->m_fov), this->m_viewportSize.x / this->m_viewportSize.y,
-									this->m_farPlane, this->m_nearPlane);
+			glm::mat4 proj =
+				glm::perspective(glm::radians(this->m_fov), this->m_viewportSize.x / this->m_viewportSize.y,
+								 this->m_farPlane, this->m_nearPlane);
+			return proj;
 		}
 
 		[[nodiscard]]

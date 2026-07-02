@@ -22,6 +22,7 @@
 #include <reflection/Type.hpp>
 #include <serialization/Serialization.hpp>
 #include <serialization/Deserialization.hpp>
+#include <type_traits>
 
 #if __has_include("Entity.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
 #include "Entity.hushgen.hpp"
@@ -33,6 +34,39 @@ namespace Hush
 
 	template <typename... Components>
 	class Query;
+	constexpr size_t ECS_REF_SIZE = 48;
+
+	class Entity;
+
+	class ComponentRef
+	{
+	public:
+		void *GetDataRaw();
+
+		[[nodiscard]]
+		const void *GetDataRaw() const;
+
+		template <class T>
+		T *GetData()
+		{
+			return static_cast<T *>(GetDataRaw());
+		}
+
+		template <class T>
+		const T *GetData() const
+		{
+			return static_cast<const T *>(GetDataRaw());
+		}
+
+		[[nodiscard]]
+		uint64_t GetComponentId() const;
+
+	private:
+		mutable std::array<std::byte, ECS_REF_SIZE> m_refInternal;
+		// TODO: Make it a thread local variable
+		void *m_world = nullptr;
+		friend class Entity;
+	};
 
 	///
 	/// Describes an entity in the scene.
@@ -102,6 +136,8 @@ namespace Hush
 
 			return *this;
 		}
+
+		Entity() = default;
 
 		/// Get a null entity. A null entity is an entity that does not exist in the scene. It can be used to represent
 		/// an invalid entity.
@@ -211,6 +247,14 @@ namespace Hush
 			(void)RegisterIfNeededSlow<std::remove_cvref_t<T>>();
 		}
 
+		template <class T>
+		ComponentRef CreateComponentReference()
+		{
+			const EntityId entityId = RegisterIfNeededSlow<std::remove_cvref_t<T>>();
+
+			return CreateComponentReferenceRaw(entityId);
+		}
+
 		// Raw component functions. Mostly for internal use but also usable by bindings. They don't check if the
 		// component is registered.
 
@@ -219,6 +263,12 @@ namespace Hush
 		/// @return Id of the component.
 		[[hush::export]] [[nodiscard]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
+
+		/// @brief Notifies a component has been modified, this is useful when you get a component through its raw
+		/// pointer and you have an observer that's listening for changes
+		void NotifyComponentModifiedRaw(Entity::EntityId componentId);
+
+		ComponentRef CreateComponentReferenceRaw(EntityId componentId);
 
 		/// Add a component to the entity.
 		/// @param componentId Id of the component.
@@ -301,6 +351,9 @@ namespace Hush
 			return this->m_entityId != INVALID_ENTITY_ID;
 		}
 
+		[[nodiscard]] [[hush::export]]
+		bool IsAlive() const;
+
 	private:
 		friend class Scene;
 		friend class Query<>;
@@ -349,7 +402,7 @@ namespace Hush
 		EntityId m_entityId{};
 
 		/// Scene that owns this entity
-		Scene *m_ownerScene;
+		Scene *m_ownerScene = nullptr;
 	};
 
 } // namespace Hush

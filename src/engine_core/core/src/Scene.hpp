@@ -25,6 +25,7 @@
 #include <memory_resource>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -37,12 +38,15 @@
 
 namespace Hush
 {
-	enum class EComponentObserverType : int32_t
+	enum class [[hush::export]] EComponentObserverType
 	{
 		Add,
 		Remove,
 		Set
 	};
+
+	using ObserverCallback_t = void (*)(Entity::EntityId, void *);
+
 	class HushEngine;
 
 	// TODO: this class is expected to change a lot, it's just a placeholder for now.
@@ -105,10 +109,22 @@ namespace Hush
 		Entity CreateEntity();
 
 		/// Creates an entity with a name
-		/// @param name Unique name of the entity
+		/// @param name Display name of the entity
 		/// @return Entity
 		[[nodiscard]] [[hush::export]]
 		Entity CreateEntityWithName(std::string_view name);
+
+		[[nodiscard]] [[hush::export]]
+		Entity CreateEntityWithKey(std::string_view key);
+
+		/// @brief Registers a callback that gets called whenever a component receives the specified event
+		/// @param componentId Component to query for
+		/// @param componentSize Size in bytes of the component, needed for ensuring correct data access on your
+		/// callback
+		/// @param observerType Component event type
+		[[hush::export]]
+		void AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
+									 EComponentObserverType observerType, ObserverCallback_t callback);
 
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type
@@ -116,25 +132,7 @@ namespace Hush
 			requires std::invocable<Func, Entity::EntityId, T *>
 		void AddComponentObserver(EComponentObserverType observerType, Func &&callback)
 		{
-			Entity::EntityId event = 0;
-			switch (observerType)
-			{
-			case EComponentObserverType::Add:
-				event = EcsOnAdd;
-				break;
-			case EComponentObserverType::Remove:
-				event = EcsOnRemove;
-				break;
-			case EComponentObserverType::Set:
-				event = EcsOnSet;
-				break;
-			default:
-				// TODO: Error here
-				LogFormat(ELogLevel::Error, "Component observer {} not recognized!",
-						  static_cast<int32_t>(observerType));
-				return;
-			}
-
+			Entity::EntityId event = ObserverTypeToEntityId(observerType);
 			const Entity::EntityId componentId = RegisterIfNeededSlow<T>();
 
 			auto *world = static_cast<ecs_world_t *>(this->m_world);
@@ -175,6 +173,7 @@ namespace Hush
 		/// @param entity Entity to destroy
 		void DestroyEntity(Entity &&entity);
 
+		[[hush::export]]
 		void DestroyEntity(Entity &entity);
 
 		/// Get the component registered id by name
@@ -310,6 +309,24 @@ namespace Hush
 			return InternalRegisterCppComponent(status, componentId, info);
 		}
 
+		inline Entity::EntityId ObserverTypeToEntityId(EComponentObserverType observerType)
+		{
+			switch (observerType)
+			{
+			case EComponentObserverType::Add:
+				return EcsOnAdd;
+			case EComponentObserverType::Remove:
+				return EcsOnRemove;
+			case EComponentObserverType::Set:
+				return EcsOnSet;
+			default:
+				// TODO: Error here
+				LogFormat(ELogLevel::Error, "Component observer {} not recognized!",
+						  static_cast<int32_t>(observerType));
+				return Entity::INVALID_ENTITY_ID;
+			}
+		}
+
 		Entity::EntityId InternalRegisterCppComponent(ComponentTraits::detail::EEntityRegisterStatus registerStatus,
 													  std::uint64_t *id, const ComponentTraits::ComponentInfo &desc);
 
@@ -350,7 +367,7 @@ namespace Hush
 
 		void *m_world;
 
-		ScriptingSystemInterface *m_scriptingInterface;
+		ScriptingSystemInterface *m_scriptingInterface = nullptr;
 
 		bool m_isInitialized = false;
 

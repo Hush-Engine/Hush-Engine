@@ -5,6 +5,7 @@
 */
 #pragma once
 
+#include "BitwiseUtils.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -32,15 +33,7 @@ namespace Hush::Graphics
 		Indirect = 1 << 6,
 	};
 
-	inline EBufferUsage operator|(EBufferUsage a, EBufferUsage b)
-	{
-		return static_cast<EBufferUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-	}
-
-	inline EBufferUsage operator&(EBufferUsage a, EBufferUsage b)
-	{
-		return static_cast<EBufferUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-	}
+	HUSH_GENERATE_FLAGS(EBufferUsage, uint32_t);
 
 	/// @brief Texture usage flags
 	enum class ETextureUsage : uint32_t
@@ -54,15 +47,7 @@ namespace Hush::Graphics
 		CopyDestination = 1 << 5,
 	};
 
-	inline ETextureUsage operator|(ETextureUsage a, ETextureUsage b)
-	{
-		return static_cast<ETextureUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-	}
-
-	inline ETextureUsage operator&(ETextureUsage a, ETextureUsage b)
-	{
-		return static_cast<ETextureUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-	}
+	HUSH_GENERATE_FLAGS(ETextureUsage, uint32_t);
 
 	// NOLINTBEGIN(readability-identifier-naming)
 	/// @brief Texture format

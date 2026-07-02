@@ -3,9 +3,11 @@
 //
 
 #include "Assertions.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
@@ -70,35 +72,32 @@ public:
 		// Make the giant System pool
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		auto windowSize = m_engine->GetWindowRenderer()->GetWindowSize();
-		m_sceneBufferSize = windowSize; // initial size until the panel reports its own
-		this->m_scene->CreateEntityWithName("EditorCamera")
+
+		this->m_scene->CreateEntityWithKey(EDITOR_CAMERA)
 			.EmplaceComponent<Hush::EditorCamera>(45.0f, static_cast<float>(windowSize.x),
 												  static_cast<float>(windowSize.y), 0.1f, 1000.0f);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
-		Hush::Entity entt = this->m_scene->CreateEntityWithName("EngineManager");
+		Hush::Entity entt = this->m_scene->CreateEntityWithKey(ENGINE_MANAGER);
 
 		entt.AddComponent<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
+		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
+		vfs->MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
+
+		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
+
 		// Scripting
 		// constexpr std::string_view scriptingProjDllPath =
-		// 	"C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+		// "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
 		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-
-		Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
-		vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
-		vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
-		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
+		// this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
 		this->m_resourceManager = m_engine->GetResourceManager();
-		// this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
-		// Hush::VirtualFilesystem &vfs = entt.AddComponent<Hush::VirtualFilesystem>();
-		// vfs.MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
-		// vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", "./");
 
 		// ── ImGui initialization ────────────────────────────────────
 		IMGUI_CHECKVERSION();
@@ -126,7 +125,7 @@ public:
 
 		// Register the render graph builder component so the RenderGraphSystem
 		// picks it up automatically and wires our passes into the frame.
-		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithName("EditorRenderGraphBuilder");
+		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithKey("EditorRenderGraphBuilder");
 		auto &builder = renderGraphBuilderEntity.AddComponent<Hush::RenderGraph::RenderGraphBuilderComponent>();
 
 		builder.builderFunc = [this](Hush::RenderGraph::RenderGraph &graph) { this->SetupRenderGraph(graph); };
@@ -294,6 +293,8 @@ private:
 			// EXECUTE
 			[](ScenePassData &data, Hush::Graphics::ICommandList *cmdList,
 			   const Hush::RenderGraph::ResourceManager &resourceManager) {
+				static int32_t counter = 0;
+				counter++;
 				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
 				if (cmd == nullptr)
 				{
@@ -309,7 +310,7 @@ private:
 					resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
 				colorAttachment.loadOp = ELoadOp::Clear;
 				colorAttachment.storeOp = EStoreOp::Store;
-				colorAttachment.clearValue = ClearColorValue{0.6f, 0.6f, 0.0f, 1.0f};
+				colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
 				renderPass.AddColorAttachment(colorAttachment);
 
 				cmd->BeginRenderPass(renderPass);
@@ -516,7 +517,7 @@ private:
 
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.
-	glm::u32vec2 m_sceneBufferSize{0, 0};
+	glm::u32vec2 m_sceneBufferSize{1, 1};
 
 	/// Set to true when the scene panel resizes; consumed in OnPreRender
 	/// to invalidate the render graph before the next rebuild.

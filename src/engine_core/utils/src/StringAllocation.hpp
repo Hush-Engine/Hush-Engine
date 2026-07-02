@@ -18,14 +18,12 @@ namespace Hush
 {
 	/// Allocates a null-terminated copy of `sv` from `mr` and returns a view over it.
 	///
-	/// This is the bridge for the common case where an arbitrary — possibly non-null-terminated
-	/// — `std::string_view` must be handed to a C API (Flecs, Win32, ...) that requires a
-	/// `const char*`. Backing it with a frame or scene arena makes the copy a pointer bump that
-	/// is reclaimed in bulk, instead of a per-call `std::string` heap allocation.
-	///
-	/// The returned view is valid for as long as `mr` keeps the allocation alive — for a
-	/// monotonic frame/scene resource, until its next `Reset()`. The bytes are never freed
-	/// individually.
+	/// Use this function when you need to pass a string view to an API that requires a null-terminated string, 
+	/// and you want to avoid expensive allocations through the global heap.
+	/// The returned view is valid until the memory resource is reset or destroyed.
+	/// 
+	/// The most common memory resource for this is the frame-scoped allocator, and for strings that are meant to be used for
+	/// short-lived operations.
 	///
 	/// @param sv The (possibly non-null-terminated) source view to copy.
 	/// @param mr The memory resource to allocate from. Must not be null.

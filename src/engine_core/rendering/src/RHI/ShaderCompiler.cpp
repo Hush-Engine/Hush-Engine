@@ -449,6 +449,7 @@ namespace Hush::Graphics
 		case EGraphicsAPI::Metal:
 			return EShaderTarget::SPIRV;
 		default:
+			LogFormat(ELogLevel::Warn, "Unrecognized graphics API {}; defaulting to WGSL!", static_cast<int32_t>(api));
 			return EShaderTarget::WGSL;
 		}
 	}

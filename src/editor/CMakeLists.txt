@@ -42,6 +42,10 @@ target_compile_definitions(HushEditor PRIVATE
     "HUSH_DEFAULT_PROJECT_DIR=R\"(${ESCAPED_PROJECT_ROOT})\""
 )
 
+target_compile_definitions(HushEditor PRIVATE
+    "HUSH_ENGINE_RES_DIR=R\"(${CMAKE_SOURCE_DIR})\""
+)
+
 target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)
 
 hush_deploy_runtime_dlls(HushEditor)
