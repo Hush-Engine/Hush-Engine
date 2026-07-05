@@ -1,19 +1,26 @@
 #include "GltfLoader.hpp"
+#include "Assertions.hpp"
 #include "Components/LocalTransform.hpp"
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Components/GpuUploadComponent.hpp"
 #include <fastgltf/tools.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <vector>
+#include "RHI/IGraphicsDevice.hpp"
+#include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include <fastgltf/types.hpp>
 #include "GltfLoadFunctions.hpp"
 #include "Scene.hpp"
 
-void Hush::GLTFLoader::ProcessPrimitives(const fastgltf::Asset &asset, const fastgltf::Mesh &mesh, Hush::Ref<Hush::Mesh> &meshRef)
+void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
+										 const fastgltf::Mesh &mesh, MeshReference &meshRef)
 {
-	std::vector<uint32_t> &indexRef = meshRef->GetIndexBuffer();
-	std::vector<Mesh::Vertex> &vertexRef = meshRef->GetVertexBuffer();
+	Ref<Mesh>& innerMeshRef = meshRef.GetMesh();
+	std::vector<uint32_t> &indexRef = innerMeshRef->GetIndexBuffer();
+	std::vector<Mesh::Vertex> &vertexRef = innerMeshRef->GetVertexBuffer();
 	indexRef.clear();
 	vertexRef.clear();
 
@@ -58,20 +65,31 @@ void Hush::GLTFLoader::ProcessPrimitives(const fastgltf::Asset &asset, const fas
 			vertexRef.at(i + initialVertex).color = colors.at(i);
 		}
 
+		if (primitive.materialIndex.has_value())
+		{
+			size_t materialIdx = primitive.materialIndex.value();
+
+			Ref<Graphics::Material3D> materialInstance = MakeMaterial(renderingContext, materialIdx, asset, {});
+			// Keep alive on the Mesh component
+			meshRef.PushMaterial(materialInstance);
+			// Non-owning ref on the surface
+			surfaceToAdd.material = materialInstance.Get();
+		}
+
 		// Correct normals if empty
 		if (normalBuffer.empty())
 		{
-			meshRef->CalculateNormals();
+			innerMeshRef->CalculateNormals();
 		}
 
-		meshRef->AddSurface(std::move(surfaceToAdd));
+		innerMeshRef->AddSurface(std::move(surfaceToAdd));
 	}
 }
 
 /// @brief This is a temporary function, we need to move this behavior to HushCooker, but this will work to prove we can
 /// already load and render objects
-Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(Hush::Scene *activeScene, Hush::ResourceManager *resourceManager,
-								  const std::filesystem::path &path)
+Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &renderingContext,
+													const std::filesystem::path &path)
 {
 	// Open the file and parse it with the gltf loader functions
 	auto assetRes = GltfLoadFunctions::GetAssetFromFile(path);
@@ -80,6 +98,8 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(Hush::Scene *activeScene, Hu
 	std::vector<Entity> entities;
 
 	// For each node, generate an entity with a transform
+	Scene *activeScene = renderingContext.activeScene;
+	ResourceManager *resourceManager = renderingContext.resourceManager;
 
 	int32_t generatedEntities = 0;
 	for (const fastgltf::Mesh &mesh : assetRes->meshes)
@@ -89,10 +109,11 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(Hush::Scene *activeScene, Hu
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
 		Ref<Mesh> meshRef = resourceManager->AllocateRef<Mesh>(mesh.name);
+		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
 		meshRef->SetName(mesh.name);
 
-		ProcessPrimitives(assetRes.get(), mesh, meshRef);
+		ProcessPrimitives(renderingContext, assetRes.get(), mesh, meshComponent);
 
 		// Generate the material per primitive here
 
@@ -101,7 +122,6 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(Hush::Scene *activeScene, Hu
 
 		// Load everything into Mesh components
 		// Add a GpuUploadComponent for the UploadResourceSystem to pick it up
-		entity.EmplaceComponent<MeshReference>(meshRef);
 		entity.AddComponent<Renderer::GpuUploadComponent>();
 
 		entities.emplace_back(std::move(entity));
@@ -153,4 +173,39 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(Hush::Scene *activeScene, Hu
 		return fatherEntity;
 	}
 	return std::move(entities[0]);
+}
+
+Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
+	const RenderingContext &renderingContext, size_t materialIdx, const fastgltf::Asset &asset,
+	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures)
+{
+	(void)loadedTextures;
+	const fastgltf::Material &material = asset.materials.at(materialIdx);
+	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
+
+	ResourceManager *resourceManager = renderingContext.resourceManager;
+	const Graphics::Material3DDescriptor *defaultMaterialDesc = renderingContext.materialDescriptor;
+	Graphics::IGraphicsDevice *graphicsDevice = renderingContext.device;
+
+	auto materialInstance = resourceManager->AllocateRef<Graphics::Material3D>(material.name);
+	materialInstance->SetMaterialPass(passType);
+
+	if (!materialInstance->IsInitialized())
+	{
+		Graphics::Material3D::EError err = materialInstance->Init(graphicsDevice, *defaultMaterialDesc);
+		HUSH_COND_FAIL_MSG_V(err == Graphics::Material3D::EError::None, {}, "Unable to initialize material: {}",
+							 magic_enum::enum_name(err));
+	}
+	// Use the PBRMaterial as the default
+
+	// Albedo
+	materialInstance->SetProperty("colorFactors",
+								  *reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
+	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
+															   material.emissiveFactor.z(), 1.0f));
+	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
+	// material.pbrData.metallicFactor
+	materialInstance->SetName(material.name);
+
+	return materialInstance;
 }

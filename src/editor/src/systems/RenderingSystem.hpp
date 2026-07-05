@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
+#include "RHI/ShaderCompiler.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
 #include "VirtualFilesystem.hpp"
@@ -78,13 +80,16 @@ namespace Hush
 		[[nodiscard]]
 		std::string_view GetName() const override;
 
+		/// @brief Default PBR material descriptor for instancing any other material
+		Graphics::Material3DDescriptor& GetPBRDescriptor();
+
 	private:
 		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 		static void BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 
 		void SetupGridPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
 
-		void SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
+		Graphics::ShaderCompilationResult SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
@@ -102,6 +107,8 @@ namespace Hush
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gridUniformBuffer;
 
 		// Mesh rendering
+		Graphics::Material3DDescriptor m_pbrMaterialDescriptor;
+		Graphics::ShaderCompilationResult m_pbrCompilationData;
 		std::unique_ptr<Graphics::IShaderModule> m_meshVertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_meshFragModule;
 		std::unique_ptr<Graphics::IGraphicsPipeline> m_meshPipeline;

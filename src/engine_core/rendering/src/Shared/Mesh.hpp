@@ -1,22 +1,28 @@
 #pragma once
 
-#include "Shared/IMaterial3D.hpp"
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
 namespace Hush
 {
+
+	namespace Graphics {
+		class Material3D;
+	}
+
 	struct GeoSurface
 	{
 		uint32_t startIndex;
 		uint32_t count;
-		std::shared_ptr<IMaterial3D> material;
+		// Lifetime of this material is handled by the MeshReference component
+		Graphics::Material3D* material;
 	};
 
 	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the

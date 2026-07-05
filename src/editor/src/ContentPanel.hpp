@@ -44,6 +44,7 @@ namespace Hush
 		Ref<ImageTexture> m_folderImage;
 		Ref<ImageTexture> m_fileImage;
 
+
 		std::vector<FileInfo> m_currentItems;
 		std::string m_currentWorkingDirectory = "res://";
 		ComponentRef m_editorInfoRef{};

@@ -81,6 +81,13 @@ namespace Hush::Graphics
 
 		/// @brief For buffer bindings: minimum required size (0 = unknown)
 		uint64_t bufferSize = 0;
+		/// @brief The offset of the initial buffer pointer (mostly to handle struct fields of one giant buffer)
+		uint64_t bufferOffset = 0;
+
+		/// @brief True if this is a per-member sub-entry of a ConstantBuffer struct.
+		/// When true, this entry represents a single field within a constant buffer
+		/// and should be used for property mapping (not for layout building).
+		bool isMember = false;
 	};
 
 	/// @brief Reflected vertex input attribute extracted from the vertex shader.
@@ -162,6 +169,12 @@ namespace Hush::Graphics
 
 			for (const auto &b : bindings)
 			{
+				// Per-member sub-entries do not represent distinct layout bindings.
+				if (b.isMember)
+				{
+					continue;
+				}
+
 				BindGroupLayoutEntry entry{};
 				entry.binding = b.binding;
 				entry.type = b.type;

@@ -13,6 +13,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 namespace Hush::Graphics
 {
@@ -128,6 +129,44 @@ namespace Hush::Graphics
 		}
 	}
 
+	static void FillWithPropertiesPerBindingStruct(slang::TypeLayoutReflection *elementTypeLayout,
+												   std::vector<ReflectedBinding> &outBindings,
+												   const ReflectedBinding &parentBinding)
+	{
+		if (elementTypeLayout == nullptr)
+		{
+			return;
+		}
+
+		auto fieldCount = static_cast<uint32_t>(elementTypeLayout->getFieldCount());
+		for (uint32_t f = 0; f < fieldCount; ++f)
+		{
+			slang::VariableLayoutReflection *fieldVar = elementTypeLayout->getFieldByIndex(f);
+			if (fieldVar == nullptr)
+			{
+				continue;
+			}
+
+			slang::TypeLayoutReflection *fieldType = fieldVar->getTypeLayout();
+			if (fieldType == nullptr)
+			{
+				continue;
+			}
+
+			ReflectedBinding fieldBinding{};
+			const char *fieldName = fieldVar->getName();
+			fieldBinding.name = (fieldName != nullptr) ? fieldName : "";
+			fieldBinding.set = parentBinding.set;
+			fieldBinding.binding = parentBinding.binding;
+			fieldBinding.type = EBindingType::UniformBuffer;
+			fieldBinding.stageFlags = parentBinding.stageFlags;
+			fieldBinding.bufferSize = fieldType->getSize();
+			fieldBinding.bufferOffset = fieldVar->getOffset();
+			fieldBinding.isMember = true;
+			outBindings.push_back(fieldBinding);
+		}
+	}
+
 	static void ReflectParameterBinding(slang::VariableLayoutReflection *param,
 										const std::vector<CompiledShaderStage> &stages,
 										std::vector<ReflectedBinding> &outBindings)
@@ -192,13 +231,14 @@ namespace Hush::Graphics
 		}
 
 		// Refine binding type based on the Slang type kind
-		if (kind == slang::TypeReflection::Kind::ConstantBuffer || kind == slang::TypeReflection::Kind::ParameterBlock)
+		if (kind == slang::TypeReflection::Kind::ConstantBuffer)
 		{
 			binding.type = EBindingType::UniformBuffer;
-			auto *elementTypeLayout = typeLayout->getElementTypeLayout();
+			slang::TypeLayoutReflection *elementTypeLayout = typeLayout->getElementTypeLayout();
 			if (elementTypeLayout != nullptr)
 			{
 				binding.bufferSize = elementTypeLayout->getSize();
+				FillWithPropertiesPerBindingStruct(elementTypeLayout, outBindings, binding);
 			}
 		}
 		else if (kind == slang::TypeReflection::Kind::Resource)

@@ -164,6 +164,11 @@ void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph
 
 void Hush::RenderingSystem::Init()
 {
+	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
+	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
+	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();
+	renderingSystemRef = this;
+
 	// TODO: Check why we can't do Cache::All
 	this->m_renderableTargetsQuery =
 		this->GetScene().CreateQuery<const MeshReference, const WorldTransform>(RawQuery::ECacheMode::Auto);
@@ -191,14 +196,12 @@ void Hush::RenderingSystem::Init()
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
-	shaderCompiler->Initialize({
-		.matrixLayout = 1
-	});
+	shaderCompiler->Initialize({.matrixLayout = 1});
 
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 
 	SetupGridPipeline(device, vfs, shaderCompiler);
-	SetupMeshPipeline(device, vfs, shaderCompiler);
+	this->m_pbrCompilationData = SetupMeshPipeline(device, vfs, shaderCompiler);
 
 	Entity sceneBuilderEnt = this->GetScene().CreateEntityWithKey("SceneRenderGraph");
 	auto &scenePassBuilder = sceneBuilderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
@@ -209,6 +212,15 @@ void Hush::RenderingSystem::Init()
 	auto &builder = builderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
 	builder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildGridPassFunction(graph, this); };
 	builder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
+
+	this->m_pbrMaterialDescriptor = {
+		.vertexShader = this->m_meshVertModule.get(),
+		.fragmentShader = this->m_meshFragModule.get(),
+		.vertexEntry = "vertMain",
+		.fragmentEntry = "fragMain",
+		.compilationResult = &this->m_pbrCompilationData,
+		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
+	};
 }
 
 void Hush::RenderingSystem::OnShutdown()
@@ -239,7 +251,7 @@ void Hush::RenderingSystem::OnPreRender()
 
 		// Grid uniforms
 		this->m_cachedViewUniforms.resolution = {this->m_cachedViewportSize.x, this->m_cachedViewportSize.y};
-		this->m_cachedViewUniforms.invViewProj= glm::inverse(viewProj);
+		this->m_cachedViewUniforms.invViewProj = glm::inverse(viewProj);
 		this->m_cachedViewUniforms.farPlane = editorCam.GetFarPlane();
 
 		glm::vec3 pos = editorCam.GetPosition();
@@ -306,6 +318,11 @@ std::string_view Hush::RenderingSystem::GetName() const
 	return "RenderingSystem";
 }
 
+Hush::Graphics::Material3DDescriptor &Hush::RenderingSystem::GetPBRDescriptor()
+{
+	return this->m_pbrMaterialDescriptor;
+}
+
 void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
 											  Graphics::ShaderCompiler *shaderCompiler)
 {
@@ -345,9 +362,7 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device,
 		{.format = ETextureFormat::BGRA8_UNORM,
 		 .blendEnabled = true,
 		 .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha},
-		 .alphaBlend = {
-
-			 .srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
+		 .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
 	desc.bindGroupLayoutCount = 1;
 	// draw grid directly on the scene render target without depth testing
@@ -361,8 +376,8 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device,
 	this->m_gridBindGroup = device->CreateBindGroup(bgDesc);
 }
 
-void Hush::RenderingSystem::SetupMeshPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
-											  Graphics::ShaderCompiler *shaderCompiler)
+Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline(
+	Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs, Graphics::ShaderCompiler *shaderCompiler)
 {
 	constexpr std::string_view meshVirtualPath = "engine_res://res/shaders/mesh.slang";
 	auto meshRes = vfs->ResolveVirtualPath(meshVirtualPath);
@@ -545,4 +560,5 @@ void Hush::RenderingSystem::SetupMeshPipeline(Graphics::IGraphicsDevice *device,
 	defaultMaterial.alphaCutoff = 0.5f;
 	defaultMaterial.optionFlags = EPBRMaterialFlags::None;
 	device->WriteBuffer(this->m_meshMaterialBuffer.get(), 0, &defaultMaterial, sizeof(PBRMaterialData));
+	return meshCompilationResult;
 }

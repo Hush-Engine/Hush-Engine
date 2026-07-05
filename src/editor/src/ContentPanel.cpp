@@ -1,12 +1,15 @@
 #include "ContentPanel.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/Material3D.hpp"
 #include "Entity.hpp"
 #include "FileMetadata.hpp"
 #include "IFile.hpp"
 #include "Query.hpp"
+#include "RHI/IGraphicsDevice.hpp"
 #include "Result.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
+#include "WindowRenderer.hpp"
 #include "components/EditorInfo.hpp"
 #include "Loaders/GltfLoader.hpp"
 #include "crypto/Hashing.hpp"
@@ -22,6 +25,7 @@
 #include <string>
 #include <vector>
 #include "HushEngine.hpp"
+#include "systems/RenderingSystem.hpp"
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiWindowFlags_NoFocusOnAppearing;
 
@@ -58,7 +62,19 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
-				Entity rootEntity = GLTFLoader::GenerateMeshEntities(this->m_scene, this->m_resourceManager, data->path);
+				Entity renderingSystemEnt = this->m_scene->CreateEntityWithKey("RenderingSystem");
+				auto* systemRef = *renderingSystemEnt.GetComponent<RenderingSystem*>();
+
+				HushEngine* engine = this->m_scene->GetEngine();
+				Graphics::IGraphicsDevice* device = engine->GetWindowRenderer()->GetGraphicsDevice();
+				RenderingContext ctx = {
+					.materialDescriptor = &systemRef->GetPBRDescriptor(),
+					.activeScene = this->m_scene,
+					.resourceManager = this->m_resourceManager,
+					.device = device
+				};
+
+				Entity rootEntity = GLTFLoader::GenerateMeshEntities(ctx, data->path);
 				HUSH_ASSERT(rootEntity.IsValid(), "Failed to create meshes from the GLTF file!");
 			}
 		}

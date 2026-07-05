@@ -1,10 +1,12 @@
 #pragma once
 
+#include "Components/Material3D.hpp"
 #include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
 
 #include <memory>
+#include <vector>
 
 namespace Hush
 {
@@ -56,8 +58,14 @@ namespace Hush
 			m_gpuIndexBuffer = std::move(buffer);
 		}
 
+		void PushMaterial(Ref<Graphics::Material3D>& material) {
+			this->m_materials.push_back(material);
+		}
+
 	private:
 		Ref<Mesh> m_mesh;
+		/// @brief Material references used for this mesh's GeometrySurfaces, see @ref GeoSurface
+		std::vector<Ref<Graphics::Material3D>> m_materials;
 
 		/// @brief GPU vertex buffer, owned by this component and populated by ResourceUploadSystem.
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
