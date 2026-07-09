@@ -6,6 +6,13 @@ option(HUSH_ENABLE_DOCS "Enable documentation" ON)
 option(HUSH_ENABLE_PROFILING "Enable Tracy profiler instrumentation" ON)
 option(HUSH_ENABLE_MIMALLOC "Use mimalloc as the process-wide allocator" ON)
 
+# When mimalloc backs global operator new, expose HUSH_USE_MIMALLOC to every module (not just
+# the HushEngine assembly) so headers like the coroutine promise allocator can switch on it —
+# coroutine frames then use global new (= mimalloc) rather than the slower in-house pool.
+if (HUSH_ENABLE_MIMALLOC)
+    add_compile_definitions(HUSH_USE_MIMALLOC=1)
+endif()
+
 if (HUSH_ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT result OUTPUT output)

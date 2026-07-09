@@ -8,6 +8,8 @@
 
 // NOLINTBEGIN(readability-identifier-naming, modernize-use-nodiscard)
 
+#include "Hush/Memory/CoroutineFrameResource.hpp"
+
 #include <Logger.hpp>
 #include <cassert>
 #include <coroutine>
@@ -22,6 +24,10 @@ namespace Hush::Threading
 	{
 		struct PromiseBase
 		{
+			// Route this coroutine's frame allocation through the pooled, cross-thread-safe
+			// coroutine resource instead of global operator new. Covers every Task<T>.
+			HUSH_COROUTINE_FRAME_ALLOCATOR()
+
 			std::coroutine_handle<> continuation;
 
 			struct FinalAwaiter

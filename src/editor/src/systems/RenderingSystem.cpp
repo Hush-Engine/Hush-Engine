@@ -6,6 +6,7 @@
 #include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
 #include "Logger.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "Profiling.hpp"
 #include "Query.hpp"
 #include "RHI/GraphicsResources.hpp"
@@ -24,6 +25,8 @@
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/matrix.hpp>
 #include <string_view>
+
+#include "StringAllocation.hpp"
 
 using namespace Hush::Graphics;
 
@@ -102,9 +105,12 @@ void Hush::RenderingSystem::Init()
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
+	NullTerminatedStringView actualPathNT =
+		Hush::MakeNullTerminated(actualPath, this->GetScene().GetFrameScopeMemoryResource());
+
 	shaderCompiler->Initialize();
 	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
-		"", actualPath,
+		NullTerminatedStringView(""), actualPathNT,
 		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragmentMain"}});
 
 	HUSH_ASSERT(compilationResult.success, "Could not compile grid shader, diagnostics: {}!",

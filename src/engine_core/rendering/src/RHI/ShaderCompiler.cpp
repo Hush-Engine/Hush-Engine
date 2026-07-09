@@ -399,7 +399,8 @@ namespace Hush::Graphics
 		return m_options.target;
 	}
 
-	ShaderCompilationResult ShaderCompiler::CompileFromSource(std::string_view source, std::string_view sourceName,
+	ShaderCompilationResult ShaderCompiler::CompileFromSource(NullTerminatedStringView source,
+															  NullTerminatedStringView sourceName,
 															  const std::vector<ShaderEntryPointRequest> &entryPoints)
 	{
 		if (!m_initialized)
@@ -410,17 +411,15 @@ namespace Hush::Graphics
 			return failResult;
 		}
 
-		std::string nameStr(sourceName);
-
 		// Check cache
-		std::string cacheKey = BuildCacheKey(nameStr.c_str(), entryPoints);
+		std::string cacheKey = BuildCacheKey(sourceName, entryPoints);
 		auto cacheIt = m_cache.find(cacheKey);
 		if (cacheIt != m_cache.end())
 		{
 			return cacheIt->second;
 		}
 
-		ShaderCompilationResult result = CompileInternal(nameStr.c_str(), source.data(), source.size(), entryPoints);
+		auto result = CompileInternal(sourceName, source, entryPoints);
 
 		// Cache the result
 		m_cache[cacheKey] = result;
@@ -493,8 +492,8 @@ namespace Hush::Graphics
 		}
 	}
 
-	ShaderCompilationResult ShaderCompiler::CompileInternal(const char *moduleNameOrPath, const char *source,
-															size_t sourceLength,
+	ShaderCompilationResult ShaderCompiler::CompileInternal(NullTerminatedStringView moduleNameOrPath,
+															NullTerminatedStringView source,
 															const std::vector<ShaderEntryPointRequest> &entryPoints)
 	{
 		ShaderCompilationResult result;
@@ -564,16 +563,16 @@ namespace Hush::Graphics
 		Slang::ComPtr<ISlangBlob> diagnosticsBlob;
 		slang::IModule *module = nullptr;
 
-		if (source != nullptr && sourceLength > 0)
+		if (!source.empty())
 		{
 			// Load from source string
-			module = session->loadModuleFromSourceString(moduleNameOrPath,
-														 moduleNameOrPath, // virtual path for diagnostics
-														 source, diagnosticsBlob.writeRef());
+			module = session->loadModuleFromSourceString(moduleNameOrPath.c_str(),
+														 moduleNameOrPath.c_str(), // virtual path for diagnostics
+														 source.c_str(), diagnosticsBlob.writeRef());
 		}
 		else
 		{
-			module = session->loadModule(moduleNameOrPath, diagnosticsBlob.writeRef());
+			module = session->loadModule(moduleNameOrPath.c_str(), diagnosticsBlob.writeRef());
 		}
 
 		AppendDiagnostics(diagnosticsBlob.get(), result.diagnostics);
@@ -583,7 +582,7 @@ namespace Hush::Graphics
 			if (result.diagnostics.empty())
 			{
 				result.diagnostics = "Failed to load Slang module: ";
-				result.diagnostics += moduleNameOrPath;
+				result.diagnostics += moduleNameOrPath.c_str();
 			}
 			return result;
 		}
@@ -741,11 +740,11 @@ namespace Hush::Graphics
 		ReflectVertexInputs(layout, outResult.vertexInputs);
 	}
 
-	std::string ShaderCompiler::BuildCacheKey(const char *moduleNameOrPath,
+	std::string ShaderCompiler::BuildCacheKey(NullTerminatedStringView moduleNameOrPath,
 											  const std::vector<ShaderEntryPointRequest> &entryPoints) const
 	{
 		std::string key;
-		key += moduleNameOrPath;
+		key += moduleNameOrPath.c_str();
 		key += "|target=";
 		key += std::to_string(static_cast<uint32_t>(m_options.target));
 		key += "|opt=";

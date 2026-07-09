@@ -11,10 +11,10 @@
 #include "IShaderModule.hpp"
 #include "PipelineDescriptor.hpp"
 
+#include <NullTerminatedStringView.hpp>
 #include <algorithm>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -243,7 +243,7 @@ namespace Hush::Graphics
 		/// @param entryPoints List of entry points to compile.
 		/// @return Compilation result.
 		[[nodiscard]]
-		ShaderCompilationResult CompileFromSource(std::string_view source, std::string_view sourceName,
+		ShaderCompilationResult CompileFromSource(NullTerminatedStringView source, NullTerminatedStringView sourceName,
 												  const std::vector<ShaderEntryPointRequest> &entryPoints);
 
 		/// @brief Clear all cached compilation results.
@@ -270,9 +270,8 @@ namespace Hush::Graphics
 	private:
 		/// @brief Shared compilation logic used by both CompileFromFile and
 		///        CompileFromSource.
-		ShaderCompilationResult CompileInternal(const char *moduleNameOrPath,
-												const char *source, // nullptr when compiling from file
-												size_t sourceLength,
+		ShaderCompilationResult CompileInternal(NullTerminatedStringView moduleNameOrPath,
+												NullTerminatedStringView source, // empty when compiling from file
 												const std::vector<ShaderEntryPointRequest> &entryPoints);
 
 		/// @brief Extract reflection data from a linked Slang program.
@@ -286,7 +285,7 @@ namespace Hush::Graphics
 
 		/// @brief Build a cache key from the compilation inputs.
 		[[nodiscard]]
-		std::string BuildCacheKey(const char *moduleNameOrPath,
+		std::string BuildCacheKey(NullTerminatedStringView moduleNameOrPath,
 								  const std::vector<ShaderEntryPointRequest> &entryPoints) const;
 
 		/// @brief Map an EShaderStage to the Slang SlangStage enum value.
