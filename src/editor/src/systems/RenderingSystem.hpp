@@ -11,6 +11,7 @@
 #include "VirtualFilesystem.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
+#include <unordered_map>
 #include <vector>
 
 namespace Hush
@@ -24,7 +25,7 @@ namespace Hush
 		class IGraphicsTexture;
 		class ISampler;
 		class ShaderCompiler;
-	}
+	} // namespace Graphics
 
 	namespace RenderGraph
 	{
@@ -39,7 +40,6 @@ namespace Hush
 		float farPlane;
 		uint8_t padding[2];
 	};
-
 
 	/// @brief Matches ModelData in mesh.slang — per-draw model matrix
 	struct ModelData
@@ -56,6 +56,7 @@ namespace Hush
 		uint32_t indexCount;
 		uint32_t firstIndex;
 		uint32_t dynamicOffset; // byte offset into per-draw model uniform buffer
+		Graphics::IBindGroup *materialBindGroup = nullptr;
 	};
 
 	class RenderingSystem final : public ISystem
@@ -81,15 +82,16 @@ namespace Hush
 		std::string_view GetName() const override;
 
 		/// @brief Default PBR material descriptor for instancing any other material
-		Graphics::Material3DDescriptor& GetPBRDescriptor();
+		Graphics::Material3DDescriptor &GetPBRDescriptor();
 
 	private:
 		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
-		static void BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 
-		void SetupGridPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
+		void SetupGridPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
+							   Graphics::ShaderCompiler *shaderCompiler);
 
-		Graphics::ShaderCompilationResult SetupMeshPipeline(Graphics::IGraphicsDevice* device, VirtualFilesystem* vfs, Graphics::ShaderCompiler* shaderCompiler);
+		Graphics::ShaderCompilationResult SetupMeshPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
+															Graphics::ShaderCompiler *shaderCompiler);
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
@@ -98,7 +100,7 @@ namespace Hush
 		SceneData m_cachedSceneData;
 		glm::u32vec2 m_cachedViewportSize{1, 1};
 
-		// Grid rendering (existing)
+		// Grid rendering
 		std::unique_ptr<Graphics::IShaderModule> m_vertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_fragModule;
 		std::unique_ptr<Graphics::IGraphicsPipeline> m_gridPipeline;
@@ -128,6 +130,11 @@ namespace Hush
 		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultNormalTex;
 		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultEmissiveTex;
 		std::unique_ptr<Graphics::ISampler> m_defaultSampler;
+
+		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up the pointer
+		// ... That is not yet implemented and we should really pay attention to it later on
+		std::unordered_map<const Graphics::Material3D *, std::unique_ptr<Graphics::IBindGroup>>
+			m_materialBindGroupCache;
 
 		std::vector<MeshDraw> m_meshDrawList;
 	};

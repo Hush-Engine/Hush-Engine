@@ -230,6 +230,10 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		uint64_t GetUniformBufferSize() const noexcept;
 
+		/// @brief Get a read-only view of the CPU-side uniform staging buffer.
+		[[nodiscard]]
+		const std::vector<uint8_t> &GetUniformStagingBuffer() const noexcept;
+
 	private:
 		/// @brief Build the property map from the shader's reflected bindings.
 		void BuildPropertyMapFromReflection(const ShaderCompilationResult &result);

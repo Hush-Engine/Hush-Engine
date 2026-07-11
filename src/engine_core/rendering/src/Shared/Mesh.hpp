@@ -13,7 +13,8 @@
 namespace Hush
 {
 
-	namespace Graphics {
+	namespace Graphics
+	{
 		class Material3D;
 	}
 
@@ -22,7 +23,7 @@ namespace Hush
 		uint32_t startIndex;
 		uint32_t count;
 		// Lifetime of this material is handled by the MeshReference component
-		Graphics::Material3D* material;
+		Graphics::Material3D *material;
 	};
 
 	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the

@@ -18,7 +18,7 @@
 void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
 										 const fastgltf::Mesh &mesh, MeshReference &meshRef)
 {
-	Ref<Mesh>& innerMeshRef = meshRef.GetMesh();
+	Ref<Mesh> &innerMeshRef = meshRef.GetMesh();
 	std::vector<uint32_t> &indexRef = innerMeshRef->GetIndexBuffer();
 	std::vector<Mesh::Vertex> &vertexRef = innerMeshRef->GetVertexBuffer();
 	indexRef.clear();
@@ -206,6 +206,8 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
 	// material.pbrData.metallicFactor
 	materialInstance->SetName(material.name);
+
+	materialInstance->FlushProperties(renderingContext.device);
 
 	return materialInstance;
 }

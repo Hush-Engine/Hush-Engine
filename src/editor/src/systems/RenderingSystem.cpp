@@ -103,6 +103,13 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 			cmd->BeginRenderPass(renderPass);
 			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
 							 static_cast<float>(self->m_cachedViewportSize.y), 0, 1);
+
+			graphicsDevice->WriteBuffer(self->m_gridUniformBuffer.get(), 0, &self->m_cachedViewUniforms,
+										sizeof(GridViewUniforms));
+			cmd->BindPipeline(self->m_gridPipeline.get());
+			cmd->SetBindGroup(0, self->m_gridBindGroup.get());
+			cmd->Draw(6, 1, 0, 0);
+
 			cmd->BindPipeline(self->m_meshPipeline.get());
 
 			for (const auto &draw : self->m_meshDrawList)
@@ -111,53 +118,13 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 				cmd->SetIndexBuffer(draw.indexBuffer);
 				cmd->SetBindGroup(0, self->m_meshSceneBindGroup.get(),
 								  std::span<const uint32_t>{&draw.dynamicOffset, 1});
-				if (self->m_meshMaterialBindGroup != nullptr)
+				if (draw.materialBindGroup != nullptr)
 				{
-					cmd->SetBindGroup(1, self->m_meshMaterialBindGroup.get());
+					cmd->SetBindGroup(1, draw.materialBindGroup);
 				}
 				cmd->DrawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
 			}
 
-			cmd->EndRenderPass();
-		});
-}
-
-void Hush::RenderingSystem::BuildGridPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
-{
-	using namespace Hush::Graphics;
-	using namespace Hush::RenderGraph;
-
-	using RenderGraphBuldContext_t = Hush::RenderGraph::RenderGraph::BuildContext;
-
-	struct GridPassData
-	{
-		ResourceId sceneTexture;
-	};
-
-	graph.AddPass<GridPassData>(
-		EPassType::Graphics, "GridPass",
-		[self](RenderGraphBuldContext_t &ctx, GridPassData &data) {
-			// Build
-			data.sceneTexture =
-				ctx.Write(ctx.GetResourceIdByName("EditorScenePass_RenderTexture"), EResourceState::RenderTarget);
-			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
-		},
-		[self](GridPassData &data, ICommandList *cmdList, const Hush::RenderGraph::ResourceManager &resourceManager) {
-			auto *cmd = dynamic_cast<IGraphicsCommandList *>(cmdList);
-			auto *sceneTex = resourceManager.GetResource<TextureResource>(data.sceneTexture)->texture.get();
-			RenderPassDescriptor rp{};
-			rp.AddColorAttachment({.texture = sceneTex, .loadOp = ELoadOp::Load, .storeOp = EStoreOp::Store});
-
-			auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
-			graphicsDevice->WriteBuffer(self->m_gridUniformBuffer.get(), 0, &self->m_cachedViewUniforms,
-										sizeof(GridViewUniforms));
-
-			cmd->BeginRenderPass(rp);
-			cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedViewportSize.x),
-							 static_cast<float>(self->m_cachedViewportSize.y), 0, 1);
-			cmd->BindPipeline(self->m_gridPipeline.get());
-			cmd->SetBindGroup(0, self->m_gridBindGroup.get());
-			cmd->Draw(6, 1, 0, 0);
 			cmd->EndRenderPass();
 		});
 }
@@ -208,11 +175,6 @@ void Hush::RenderingSystem::Init()
 	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildScenePassFunction(graph, this); };
 	scenePassBuilder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
 
-	Entity builderEnt = this->GetScene().CreateEntityWithKey("GridRenderGraph");
-	auto &builder = builderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
-	builder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildGridPassFunction(graph, this); };
-	builder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
-
 	this->m_pbrMaterialDescriptor = {
 		.vertexShader = this->m_meshVertModule.get(),
 		.fragmentShader = this->m_meshFragModule.get(),
@@ -225,6 +187,7 @@ void Hush::RenderingSystem::Init()
 
 void Hush::RenderingSystem::OnShutdown()
 {
+	m_materialBindGroupCache.clear();
 }
 
 void Hush::RenderingSystem::OnUpdate([[maybe_unused]] float delta)
@@ -273,40 +236,69 @@ void Hush::RenderingSystem::OnPreRender()
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 	uint32_t slotIndex = 0;
 
-	m_renderableTargetsQuery.Each(
-		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
-			const auto *mesh = meshRef.GetMesh().Get();
-			if (mesh == nullptr)
+	m_renderableTargetsQuery.Each([this, device, &slotIndex](const MeshReference &meshRef,
+															 const WorldTransform &xform) {
+		const auto *mesh = meshRef.GetMesh().Get();
+		if (mesh == nullptr)
+		{
+			return;
+		}
+
+		auto *vb = meshRef.GetGpuVertexBuffer();
+		auto *ib = meshRef.GetGpuIndexBuffer();
+		if (vb == nullptr || ib == nullptr)
+		{
+			return;
+		}
+
+		glm::mat4 modelMatrix = xform.GetTransformationMatrix();
+
+		uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
+		device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
+
+		for (const auto &surface : mesh->GetSurfaces())
+		{
+			Graphics::IBindGroup *matBindGroup = nullptr;
+			auto *mat = surface.material;
+			if (mat != nullptr)
 			{
-				return;
+				mat->FlushProperties(device);
+				auto it = m_materialBindGroupCache.find(mat);
+				if (it == m_materialBindGroupCache.end())
+				{
+					BindGroupDescriptor bgDesc{};
+					bgDesc.layout = m_meshMaterialBindGroupLayout.get();
+					bgDesc.debugName = mat->GetName() + "_BindGroup";
+					uint64_t bufSize = mat->GetUniformBufferSize();
+					bgDesc.entries = {{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize},
+									  {.binding = 1, .texture = m_defaultColorTex.get()},
+									  {.binding = 2, .texture = m_defaultMetalRoughTex.get()},
+									  {.binding = 3, .texture = m_defaultNormalTex.get()},
+									  {.binding = 4, .texture = m_defaultEmissiveTex.get()},
+									  {.binding = 5, .sampler = m_defaultSampler.get()}};
+					auto [newIt, _] = m_materialBindGroupCache.emplace(mat, device->CreateBindGroup(bgDesc));
+					it = newIt;
+				}
+				matBindGroup = it->second.get();
+			}
+			else
+			{
+				matBindGroup = m_meshMaterialBindGroup.get();
 			}
 
-			auto *vb = meshRef.GetGpuVertexBuffer();
-			auto *ib = meshRef.GetGpuIndexBuffer();
-			if (vb == nullptr || ib == nullptr)
-			{
-				return;
-			}
+			m_meshDrawList.push_back(MeshDraw{
+				.modelMatrix = modelMatrix,
+				.vertexBuffer = vb,
+				.indexBuffer = ib,
+				.indexCount = surface.count,
+				.firstIndex = surface.startIndex,
+				.dynamicOffset = slotOffset,
+				.materialBindGroup = matBindGroup,
+			});
+		}
 
-			glm::mat4 modelMatrix = xform.GetTransformationMatrix();
-
-			uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
-			device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
-
-			for (const auto &surface : mesh->GetSurfaces())
-			{
-				m_meshDrawList.push_back(MeshDraw{
-					.modelMatrix = modelMatrix,
-					.vertexBuffer = vb,
-					.indexBuffer = ib,
-					.indexCount = surface.count,
-					.firstIndex = surface.startIndex,
-					.dynamicOffset = slotOffset,
-				});
-			}
-
-			slotIndex++;
-		});
+		slotIndex++;
+	});
 }
 
 void Hush::RenderingSystem::OnPostRender()
@@ -365,8 +357,11 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device,
 		 .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 	desc.bindGroupLayouts[0] = this->m_gridBindGroupLayout.get();
 	desc.bindGroupLayoutCount = 1;
-	// draw grid directly on the scene render target without depth testing
-	desc.depthStencil = {.enabled = false, .format = ETextureFormat::D24_UNORM};
+	// Compatible with the scene pass depth attachment — grid doesn't write to depth
+	desc.depthStencil = {.enabled = true,
+						 .format = ETextureFormat::D32_FLOAT,
+						 .depthWriteEnabled = false,
+						 .depthCompare = ECompareFunction::Always};
 	this->m_gridPipeline = device->CreateGraphicsPipeline(desc);
 
 	BindGroupDescriptor bgDesc{};
@@ -525,7 +520,6 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 
 	this->m_meshMaterialBuffer = device->CreateBuffer({.size = sizeof(PBRMaterialData),
 													   .usage = EBufferUsage::Uniform,
-
 													   .memoryAccess = EMemoryAccess::CPUNone,
 													   .debugName = "MeshMaterialBuffer"});
 

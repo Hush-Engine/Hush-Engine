@@ -449,6 +449,11 @@ namespace Hush::Graphics
 		return static_cast<uint64_t>(m_uniformStagingBuffer.size());
 	}
 
+	const std::vector<uint8_t> &Material3D::GetUniformStagingBuffer() const noexcept
+	{
+		return m_uniformStagingBuffer;
+	}
+
 	// =====================================================================
 	// Private helpers
 	// =====================================================================

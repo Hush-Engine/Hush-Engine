@@ -38,7 +38,8 @@ namespace Hush
 namespace Hush::GLTFLoader
 {
 
-	void ProcessPrimitives(const RenderingContext& renderingContext, const fastgltf::Asset &asset, const fastgltf::Mesh &mesh, Hush::MeshReference &meshRef);
+	void ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
+						   const fastgltf::Mesh &mesh, Hush::MeshReference &meshRef);
 
 	Entity GenerateMeshEntities(const RenderingContext &renderingContext, const std::filesystem::path &path);
 

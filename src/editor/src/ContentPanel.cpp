@@ -63,16 +63,14 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			if (CanBeDroppedToScene(*data))
 			{
 				Entity renderingSystemEnt = this->m_scene->CreateEntityWithKey("RenderingSystem");
-				auto* systemRef = *renderingSystemEnt.GetComponent<RenderingSystem*>();
+				auto *systemRef = *renderingSystemEnt.GetComponent<RenderingSystem *>();
 
-				HushEngine* engine = this->m_scene->GetEngine();
-				Graphics::IGraphicsDevice* device = engine->GetWindowRenderer()->GetGraphicsDevice();
-				RenderingContext ctx = {
-					.materialDescriptor = &systemRef->GetPBRDescriptor(),
-					.activeScene = this->m_scene,
-					.resourceManager = this->m_resourceManager,
-					.device = device
-				};
+				HushEngine *engine = this->m_scene->GetEngine();
+				Graphics::IGraphicsDevice *device = engine->GetWindowRenderer()->GetGraphicsDevice();
+				RenderingContext ctx = {.materialDescriptor = &systemRef->GetPBRDescriptor(),
+										.activeScene = this->m_scene,
+										.resourceManager = this->m_resourceManager,
+										.device = device};
 
 				Entity rootEntity = GLTFLoader::GenerateMeshEntities(ctx, data->path);
 				HUSH_ASSERT(rootEntity.IsValid(), "Failed to create meshes from the GLTF file!");

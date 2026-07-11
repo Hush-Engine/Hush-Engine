@@ -58,7 +58,8 @@ namespace Hush
 			m_gpuIndexBuffer = std::move(buffer);
 		}
 
-		void PushMaterial(Ref<Graphics::Material3D>& material) {
+		void PushMaterial(Ref<Graphics::Material3D> &material)
+		{
 			this->m_materials.push_back(material);
 		}
 

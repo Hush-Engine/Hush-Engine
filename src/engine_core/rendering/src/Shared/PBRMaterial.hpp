@@ -5,7 +5,8 @@
 
 namespace Hush
 {
-	enum class EPBRMaterialFlags : uint32_t {
+	enum class EPBRMaterialFlags : uint32_t
+	{
 		None = 0,
 		UseNormals = 1,
 		DebugNormals = 2,
@@ -34,5 +35,6 @@ namespace Hush
 		uint8_t padding[8];
 	};
 
-	HUSH_STATIC_ASSERT(sizeof(PBRMaterialData) == 64, "PBRMaterialData should be 64 bytes to comply with shader-side uniform buffer size!");
+	HUSH_STATIC_ASSERT(sizeof(PBRMaterialData) == 64,
+					   "PBRMaterialData should be 64 bytes to comply with shader-side uniform buffer size!");
 } // namespace Hush
