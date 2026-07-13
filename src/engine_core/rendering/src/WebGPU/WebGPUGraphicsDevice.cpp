@@ -269,11 +269,15 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::ResizeBuffer(IGraphicsBuffer *buffer, uint64_t size)
 	{
-		HUSH_ASSERT(size < this->m_capabilities.maxBufferSize,
+		HUSH_ASSERT(size <= this->m_capabilities.maxBufferSize,
 					"Cannot resize buffer size to {}, maximum buffer size for this graphics device is: {}", size,
 					this->m_capabilities.maxBufferSize);
 		// There is an available descriptor, we just copy that, obviously this is an intentional copy-op
 		BufferDescriptor newDesc = buffer->GetDescriptor();
+		HUSH_ASSERT(
+			Bitwise::HasCompositeFlag(newDesc.usage, EBufferUsage::CopySource),
+			"For a buffer to be resized it needs to have the CopySource usage flag, current buffer's usage flags: {}",
+			newDesc.usage);
 		newDesc.size = size;
 
 		// Copy the original buffer back to the new one
