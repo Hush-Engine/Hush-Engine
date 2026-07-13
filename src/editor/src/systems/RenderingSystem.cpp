@@ -241,7 +241,8 @@ void Hush::RenderingSystem::OnPreRender()
 	// Resize our mesh buffer if we get to the max amount of meshes
 	uint64_t currBufferSize = this->m_meshModelBuffer->GetSize();
 	constexpr uint64_t meshBufferGrowthFactor = 2;
-	if (meshCount > (currBufferSize / this->m_meshModelSlotSize)) {
+	if (meshCount > (currBufferSize / this->m_meshModelSlotSize))
+	{
 		device->ResizeBuffer(this->m_meshModelBuffer.get(), currBufferSize * meshBufferGrowthFactor);
 	}
 
@@ -518,17 +519,19 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 
 	// If we exceed the count of mesh instances here we need to call device->ResizeBuffer()
 	constexpr uint32_t initialMeshInstancePoolSize = 1024;
-	this->m_meshModelBuffer = device->CreateBuffer({.size = static_cast<uint64_t>(meshModelSlotSize) * initialMeshInstancePoolSize,
-													.usage = EBufferUsage::Uniform,
-													.memoryAccess = EMemoryAccess::CPUNone,
-													.debugName = "MeshModelBuffer"});
+	this->m_meshModelBuffer =
+		device->CreateBuffer({.size = static_cast<uint64_t>(meshModelSlotSize) * initialMeshInstancePoolSize,
+							  .usage = EBufferUsage::Uniform,
+							  .memoryAccess = EMemoryAccess::CPUNone,
+							  .debugName = "MeshModelBuffer"});
 
 	this->m_sceneDataBuffer = device->CreateBuffer({.size = sizeof(SceneData),
 													.usage = EBufferUsage::Uniform,
 													.memoryAccess = EMemoryAccess::CPUNone,
 													.debugName = "SceneDataBuffer"});
 
-	// This assumes the material will always be the default PBR, which is fine for a general buffer, but, we will need per material buffers
+	// This assumes the material will always be the default PBR, which is fine for a general buffer, but, we will need
+	// per material buffers
 	this->m_meshMaterialBuffer = device->CreateBuffer({.size = sizeof(PBRMaterialData),
 													   .usage = EBufferUsage::Uniform,
 													   .memoryAccess = EMemoryAccess::CPUNone,
