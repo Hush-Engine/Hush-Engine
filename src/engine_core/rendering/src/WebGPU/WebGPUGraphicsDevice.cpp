@@ -197,7 +197,7 @@ namespace Hush::Graphics
 		return m_capabilities;
 	}
 
-	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
+	wgpu::Buffer WebGPUGraphicsDevice::CreateBufferInternal(const BufferDescriptor &descriptor)
 	{
 		ZoneScoped;
 		wgpu::BufferDescriptor desc{};
@@ -232,6 +232,17 @@ namespace Hush::Graphics
 		if (buffer == nullptr)
 		{
 			LogError("Failed to create WebGPU buffer");
+		}
+
+		return buffer;
+	}
+
+	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
+	{
+		wgpu::Buffer buffer = this->CreateBufferInternal(descriptor);
+		if (buffer == nullptr)
+		{
+			// Error is logged on the internal function
 			return nullptr;
 		}
 
@@ -254,6 +265,63 @@ namespace Hush::Graphics
 
 		wgpu::Queue queue = m_device.getQueue();
 		queue.writeBuffer(webgpuBuffer->GetBuffer(), offset, data, static_cast<size_t>(size));
+	}
+
+	void WebGPUGraphicsDevice::ResizeBuffer(IGraphicsBuffer *buffer, uint64_t size)
+	{
+		HUSH_ASSERT(size <= this->m_capabilities.maxBufferSize,
+					"Cannot resize buffer size to {}, maximum buffer size for this graphics device is: {}", size,
+					this->m_capabilities.maxBufferSize);
+		// There is an available descriptor, we just copy that, obviously this is an intentional copy-op
+		BufferDescriptor newDesc = buffer->GetDescriptor();
+		HUSH_ASSERT(
+			Bitwise::HasCompositeFlag(newDesc.usage, EBufferUsage::CopySource),
+			"For a buffer to be resized it needs to have the CopySource usage flag, current buffer's usage flags: {}",
+			newDesc.usage);
+		newDesc.size = size;
+
+		// Copy the original buffer back to the new one
+		// Create a new buffer with the updated size and map it
+		wgpu::Buffer buff = this->CreateBufferInternal(newDesc);
+		uint64_t oldBuffSize = buffer->GetSize();
+
+		if (buff == nullptr)
+		{
+			LogFormat(ELogLevel::Error, "Failed to resize buffer on buffer creation");
+			return;
+		}
+
+		if (oldBuffSize > 0)
+		{
+			uint64_t bytesToCopy = std::min(size, oldBuffSize);
+			// Handle alignment for WebGPU (multiples of 4 rounding down to avoid writing out of bounds)
+			uint64_t remainder = bytesToCopy % 4;
+			if (remainder != 0)
+			{
+				// Maybe we should issue a warning for the round down(? TBD on PR
+				bytesToCopy = (bytesToCopy / 4) * 4;
+			}
+
+			// Encoder stuff, we do this raw instead of going through the abstractions
+			// because it is easier and we don't mess with lifetimes
+			wgpu::CommandEncoder encoder = this->m_device.createCommandEncoder();
+			wgpu::Buffer oldBuffer = static_cast<WGPUBuffer>(buffer->GetNativeHandle());
+			encoder.copyBufferToBuffer(oldBuffer, 0, buff, 0, bytesToCopy);
+
+			wgpu::CommandBuffer cmdBuffer = encoder.finish();
+			wgpu::Queue nativeQueue = static_cast<WGPUQueue>(this->m_graphicsQueue->GetNativeHandle());
+
+			nativeQueue.submit(cmdBuffer);
+		}
+
+		// Destroy the current buffer
+		buffer->Destroy();
+
+		// Just set the data
+		auto *bufferImpl = dynamic_cast<WebGPUBuffer *>(buffer);
+		bufferImpl->m_buffer = buff;
+		bufferImpl->m_instance = this->m_instance;
+		bufferImpl->m_descriptor = newDesc;
 	}
 
 	std::unique_ptr<IGraphicsTexture> WebGPUGraphicsDevice::CreateTexture(const TextureDescriptor &descriptor)
