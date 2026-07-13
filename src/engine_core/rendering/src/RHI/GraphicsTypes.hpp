@@ -365,6 +365,7 @@ namespace Hush::Graphics
 	struct BufferDescriptor
 	{
 		uint64_t size = 0;
+		uint64_t resizeBy = 0;
 		EBufferUsage usage = EBufferUsage::None;
 		EMemoryAccess memoryAccess = EMemoryAccess::CPUNone;
 		const char *debugName = nullptr;

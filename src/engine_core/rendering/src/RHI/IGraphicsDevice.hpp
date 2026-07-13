@@ -71,6 +71,11 @@ namespace Hush::Graphics
 		/// @param size    Number of bytes to write.
 		virtual void WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size) = 0;
 
+		/// @brief Dynamically resizes the GPU-side buffer
+		/// this implies destroying the current buffer and creating a new one with
+		/// an identical descriptor expanded in size
+		virtual void ResizeBuffer(size_t size, IGraphicsBuffer *buffer) = 0;
+
 		/// @brief Create a texture
 		/// @param descriptor Texture creation parameters
 		/// @return Created texture, or nullptr on failure

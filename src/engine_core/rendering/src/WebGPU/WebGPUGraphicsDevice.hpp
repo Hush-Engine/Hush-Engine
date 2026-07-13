@@ -52,6 +52,8 @@ namespace Hush::Graphics
 
 		void WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size) override;
 
+		void ResizeBuffer(size_t size, IGraphicsBuffer *buffer) override;
+
 		[[nodiscard]]
 		std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) override;
 
@@ -177,6 +179,8 @@ namespace Hush::Graphics
 		static void OnDeviceLost(WGPUDeviceLostReason reason, char const *message, void *userdata);
 
 	private:
+		wgpu::Buffer CreateBufferInternal(const BufferDescriptor &descriptor);
+
 		// WebGPU objects
 		wgpu::Instance m_instance;
 		wgpu::Adapter m_adapter;

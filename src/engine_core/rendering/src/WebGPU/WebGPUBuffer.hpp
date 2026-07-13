@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../RHI/IGraphicsBuffer.hpp"
+#include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include <webgpu/webgpu.hpp>
 
 namespace Hush::Graphics
@@ -32,6 +33,14 @@ namespace Hush::Graphics
 		{
 			return m_descriptor.usage;
 		}
+
+		[[nodiscard]]
+		const BufferDescriptor &GetDescriptor() const override {
+			return this->m_descriptor;
+		}
+
+		void Destroy() override;
+
 		void *Map(Graphics::IGraphicsDevice *device) override;
 		void Unmap() override;
 		[[nodiscard]]
@@ -48,6 +57,8 @@ namespace Hush::Graphics
 		wgpu::Instance m_instance;
 		BufferDescriptor m_descriptor;
 		void *m_mappedData = nullptr;
+
+		friend class WebGPUGraphicsDevice;
 	};
 
 } // namespace Hush::Graphics
