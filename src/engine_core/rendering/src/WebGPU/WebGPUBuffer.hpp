@@ -35,7 +35,8 @@ namespace Hush::Graphics
 		}
 
 		[[nodiscard]]
-		const BufferDescriptor &GetDescriptor() const override {
+		const BufferDescriptor &GetDescriptor() const override
+		{
 			return this->m_descriptor;
 		}
 

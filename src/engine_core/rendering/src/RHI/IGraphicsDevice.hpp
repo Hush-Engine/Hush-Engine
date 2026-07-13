@@ -18,6 +18,7 @@
 #include "PipelineDescriptor.hpp"
 #include "ShaderCompiler.hpp"
 #include "Logger.hpp"
+#include <cstdint>
 #include <memory>
 #include <functional>
 
@@ -74,7 +75,7 @@ namespace Hush::Graphics
 		/// @brief Dynamically resizes the GPU-side buffer
 		/// this implies destroying the current buffer and creating a new one with
 		/// an identical descriptor expanded in size
-		virtual void ResizeBuffer(size_t size, IGraphicsBuffer *buffer) = 0;
+		virtual void ResizeBuffer(IGraphicsBuffer *buffer, uint64_t size) = 0;
 
 		/// @brief Create a texture
 		/// @param descriptor Texture creation parameters

@@ -33,7 +33,8 @@ namespace Hush::Graphics
 		m_buffer.destroy();
 	}
 
-	void WebGPUBuffer::Destroy() {
+	void WebGPUBuffer::Destroy()
+	{
 		if (m_mappedData != nullptr)
 		{
 			Unmap();

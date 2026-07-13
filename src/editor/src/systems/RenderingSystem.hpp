@@ -131,7 +131,8 @@ namespace Hush
 		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultEmissiveTex;
 		std::unique_ptr<Graphics::ISampler> m_defaultSampler;
 
-		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up the pointer
+		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up
+		// the pointer
 		// ... That is not yet implemented and we should really pay attention to it later on
 		std::unordered_map<const Graphics::Material3D *, std::unique_ptr<Graphics::IBindGroup>>
 			m_materialBindGroupCache;
