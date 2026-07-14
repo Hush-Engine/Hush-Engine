@@ -246,69 +246,127 @@ void Hush::RenderingSystem::OnPreRender()
 		device->ResizeBuffer(this->m_meshModelBuffer.get(), currBufferSize * meshBufferGrowthFactor);
 	}
 
-	m_renderableTargetsQuery.Each([this, device, &slotIndex](const MeshReference &meshRef,
-															 const WorldTransform &xform) {
-		const auto *mesh = meshRef.GetMesh().Get();
-		if (mesh == nullptr)
-		{
-			return;
-		}
-
-		auto *vb = meshRef.GetGpuVertexBuffer();
-		auto *ib = meshRef.GetGpuIndexBuffer();
-		if (vb == nullptr || ib == nullptr)
-		{
-			return;
-		}
-
-		glm::mat4 modelMatrix = xform.GetTransformationMatrix();
-
-		uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
-		device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
-
-		for (const auto &surface : mesh->GetSurfaces())
-		{
-			Graphics::IBindGroup *matBindGroup = nullptr;
-			auto *mat = surface.material;
-			if (mat != nullptr)
+	m_renderableTargetsQuery.Each(
+		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
+			const auto *mesh = meshRef.GetMesh().Get();
+			if (mesh == nullptr)
 			{
-				mat->FlushProperties(device);
-				auto it = m_materialBindGroupCache.find(mat);
-				if (it == m_materialBindGroupCache.end())
+				return;
+			}
+
+			auto *vb = meshRef.GetGpuVertexBuffer();
+			auto *ib = meshRef.GetGpuIndexBuffer();
+			if (vb == nullptr || ib == nullptr)
+			{
+				return;
+			}
+
+			glm::mat4 modelMatrix = xform.GetTransformationMatrix();
+
+			uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
+			device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
+
+			for (const auto &surface : mesh->GetSurfaces())
+			{
+				Graphics::IBindGroup *matBindGroup = nullptr;
+				auto *mat = surface.material;
+				if (mat != nullptr)
 				{
-					BindGroupDescriptor bgDesc{};
-					bgDesc.layout = m_meshMaterialBindGroupLayout.get();
-					bgDesc.debugName = mat->GetName() + "_BindGroup";
-					uint64_t bufSize = mat->GetUniformBufferSize();
-					bgDesc.entries = {{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize},
-									  {.binding = 1, .texture = m_defaultColorTex.get()},
-									  {.binding = 2, .texture = m_defaultMetalRoughTex.get()},
-									  {.binding = 3, .texture = m_defaultNormalTex.get()},
-									  {.binding = 4, .texture = m_defaultEmissiveTex.get()},
-									  {.binding = 5, .sampler = m_defaultSampler.get()}};
-					auto [newIt, _] = m_materialBindGroupCache.emplace(mat, device->CreateBindGroup(bgDesc));
-					it = newIt;
+					mat->FlushProperties(device);
+					auto it = m_materialBindGroupCache.find(mat);
+					if (it != m_materialBindGroupCache.end())
+					{
+						// Validate cache: check if any texture pointer changed (async upload completion).
+						bool cacheValid = true;
+						const auto &slots = mat->GetTextureSlots();
+						for (const auto &slot : slots)
+						{
+							auto cachedTex = it->second.textures.find(slot.binding);
+							IGraphicsTexture *currentTex = slot.texture;
+							if (cachedTex == it->second.textures.end())
+							{
+								if (currentTex != nullptr)
+								{
+									cacheValid = false;
+									break;
+								}
+							}
+							else if (cachedTex->second != currentTex)
+							{
+								cacheValid = false;
+								break;
+							}
+						}
+						if (!cacheValid)
+						{
+							m_materialBindGroupCache.erase(it);
+							it = m_materialBindGroupCache.end();
+						}
+					}
+
+					if (it == m_materialBindGroupCache.end())
+					{
+						BindGroupDescriptor bgDesc{};
+						bgDesc.layout = m_meshMaterialBindGroupLayout.get();
+						bgDesc.debugName = mat->GetName() + "_BindGroup";
+						uint64_t bufSize = mat->GetUniformBufferSize();
+						bgDesc.entries.push_back(
+							{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize});
+
+						CachedMaterialBindGroup cachedEntry;
+
+						// Map known PBR bindings to their fallback defaults.
+						auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
+							switch (binding)
+							{
+							case 1:
+								return m_defaultColorTex.get();
+							case 2:
+								return m_defaultMetalRoughTex.get();
+							case 3:
+								return m_defaultNormalTex.get();
+							case 4:
+								return m_defaultEmissiveTex.get();
+							default:
+								return m_defaultColorTex.get();
+							}
+						};
+
+						const auto &slots = mat->GetTextureSlots();
+						for (const auto &slot : slots)
+						{
+							IGraphicsTexture *tex =
+								slot.texture != nullptr ? slot.texture : defaultTextureForBinding(slot.binding);
+							bgDesc.entries.push_back({.binding = slot.binding, .texture = tex});
+							cachedEntry.textures[slot.binding] = tex;
+						}
+
+						bgDesc.entries.push_back({.binding = 5, .sampler = m_defaultSampler.get()});
+
+						cachedEntry.bindGroup = device->CreateBindGroup(bgDesc);
+						auto [newIt, _] = m_materialBindGroupCache.emplace(mat, std::move(cachedEntry));
+						it = newIt;
+					}
+					matBindGroup = it->second.bindGroup.get();
 				}
-				matBindGroup = it->second.get();
-			}
-			else
-			{
-				matBindGroup = m_meshMaterialBindGroup.get();
+				else
+				{
+					matBindGroup = m_meshMaterialBindGroup.get();
+				}
+
+				m_meshDrawList.push_back(MeshDraw{
+					.modelMatrix = modelMatrix,
+					.vertexBuffer = vb,
+					.indexBuffer = ib,
+					.indexCount = surface.count,
+					.firstIndex = surface.startIndex,
+					.dynamicOffset = slotOffset,
+					.materialBindGroup = matBindGroup,
+				});
 			}
 
-			m_meshDrawList.push_back(MeshDraw{
-				.modelMatrix = modelMatrix,
-				.vertexBuffer = vb,
-				.indexBuffer = ib,
-				.indexCount = surface.count,
-				.firstIndex = surface.startIndex,
-				.dynamicOffset = slotOffset,
-				.materialBindGroup = matBindGroup,
-			});
-		}
-
-		slotIndex++;
-	});
+			slotIndex++;
+		});
 }
 
 void Hush::RenderingSystem::OnPostRender()

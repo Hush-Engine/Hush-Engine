@@ -134,8 +134,13 @@ namespace Hush
 		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up
 		// the pointer
 		// ... That is not yet implemented and we should really pay attention to it later on
-		std::unordered_map<const Graphics::Material3D *, std::unique_ptr<Graphics::IBindGroup>>
-			m_materialBindGroupCache;
+		struct CachedMaterialBindGroup
+		{
+			std::unique_ptr<Graphics::IBindGroup> bindGroup;
+			// Per-binding texture pointer at creation time, used to detect async upload completion.
+			std::unordered_map<uint32_t, Graphics::IGraphicsTexture *> textures;
+		};
+		std::unordered_map<const Graphics::Material3D *, CachedMaterialBindGroup> m_materialBindGroupCache;
 
 		std::vector<MeshDraw> m_meshDrawList;
 	};

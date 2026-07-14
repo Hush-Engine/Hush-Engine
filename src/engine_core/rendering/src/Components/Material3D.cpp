@@ -57,6 +57,20 @@ namespace Hush::Graphics
 			{
 				m_materialBindGroupSet = m_propertyMap.begin()->second.bindingSet;
 			}
+
+			// Populate texture slots from reflection (non-member, SampledTexture entries).
+			m_textureSlots.clear();
+			for (const auto &b : descriptor.compilationResult->bindings)
+			{
+				if (b.isMember || b.type != EBindingType::SampledTexture)
+				{
+					continue;
+				}
+				TextureSlot slot{};
+				slot.binding = b.binding;
+				slot.set = b.set;
+				m_textureSlots.push_back(slot);
+			}
 		}
 
 		EError layoutErr = CreateAllBindGroupLayouts(device, layoutDescs);
@@ -152,27 +166,12 @@ namespace Hush::Graphics
 
 		for (size_t i = 0; i < setCount; ++i)
 		{
-			// Non-material set: use the full reflected layout as-is.
-			if (i != static_cast<size_t>(m_materialBindGroupSet))
+			if (i == static_cast<size_t>(m_materialBindGroupSet))
 			{
-				m_bindGroupLayouts[i].CreateResource(layoutDescs[i], device);
-				continue;
+				m_materialSetLayoutEntries = layoutDescs[i].entries;
 			}
 
-			// Material set: filter to only entries Material3D actually provides.
-			BindGroupLayoutDescriptor filtered{};
-			filtered.debugName = m_name + "_MaterialBindGroupLayout";
-
-			for (const auto &entry : layoutDescs[i].entries)
-			{
-				if (entry.type != EBindingType::UniformBuffer)
-				{
-					continue;
-				}
-				filtered.entries.push_back(entry);
-			}
-
-			m_bindGroupLayouts[i].CreateResource(filtered, device);
+			m_bindGroupLayouts[i].CreateResource(layoutDescs[i], device);
 		}
 
 		// Validate all layouts.
@@ -227,32 +226,74 @@ namespace Hush::Graphics
 		m_uniformStagingBuffer.resize(static_cast<size_t>(uniformBufferSize), 0);
 		device->WriteBuffer(m_uniformBuffer.Get(), 0, m_uniformStagingBuffer.data(), uniformBufferSize);
 
-		// Determine the binding index from the first uniform property.
-		uint32_t uniformBinding = 0;
-		if (!m_propertyMap.empty())
-		{
-			uniformBinding = m_propertyMap.begin()->second.binding;
-		}
-
 		const size_t matSet = static_cast<size_t>(m_materialBindGroupSet);
 
-		// Create the bind group using the material set's filtered layout.
-		BindGroupDescriptor bgDesc{};
-		bgDesc.layout = m_bindGroupLayouts[matSet].Get();
-		bgDesc.debugName = m_name + "_BindGroup";
-
-		BindGroupEntry bufEntry{};
-		bufEntry.binding = uniformBinding;
-		bufEntry.buffer = m_uniformBuffer.Get();
-		bufEntry.offset = 0;
-		bufEntry.size = uniformBufferSize;
-		bgDesc.entries.push_back(bufEntry);
-
-		m_bindGroup.CreateResource(bgDesc, device);
-		if (!m_bindGroup.IsValid())
+		// Create the bind group only if the layout contains exclusively entries
+		// that can be fulfilled during Init().  Non‑UBO entries (textures,
+		// samplers) require resources that are set after Init by the caller.
+		// When the layout is mixed, skip the bind group — the rendering system
+		// creates its own per‑material bind groups with the correct resources.
+		bool hasOnlyUBO = true;
+		for (const auto &e : m_materialSetLayoutEntries)
 		{
-			LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group.", m_name.c_str());
-			return EError::BindGroupCreationFailed;
+			if (e.type != EBindingType::UniformBuffer)
+			{
+				hasOnlyUBO = false;
+				break;
+			}
+		}
+
+		if (hasOnlyUBO && !m_materialSetLayoutEntries.empty())
+		{
+			BindGroupDescriptor bgDesc{};
+			bgDesc.layout = m_bindGroupLayouts[matSet].Get();
+			bgDesc.debugName = m_name + "_BindGroup";
+
+			for (const auto &layoutEntry : m_materialSetLayoutEntries)
+			{
+				BindGroupEntry entry{};
+				entry.binding = layoutEntry.binding;
+				if (layoutEntry.type == EBindingType::UniformBuffer)
+				{
+					entry.buffer = m_uniformBuffer.Get();
+					entry.offset = 0;
+					entry.size = uniformBufferSize;
+				}
+				bgDesc.entries.push_back(entry);
+			}
+
+			m_bindGroup.CreateResource(bgDesc, device);
+			if (!m_bindGroup.IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group.", m_name.c_str());
+				return EError::BindGroupCreationFailed;
+			}
+		}
+		else if (m_materialSetLayoutEntries.empty())
+		{
+			// Fallback: no reflection data — single UBO entry.
+			uint32_t fallbackBinding = 0;
+			if (!m_propertyMap.empty())
+			{
+				fallbackBinding = m_propertyMap.begin()->second.binding;
+			}
+			BindGroupDescriptor bgDesc{};
+			bgDesc.layout = m_bindGroupLayouts[matSet].Get();
+			bgDesc.debugName = m_name + "_BindGroup";
+
+			BindGroupEntry bufEntry{};
+			bufEntry.binding = fallbackBinding;
+			bufEntry.buffer = m_uniformBuffer.Get();
+			bufEntry.offset = 0;
+			bufEntry.size = uniformBufferSize;
+			bgDesc.entries.push_back(bufEntry);
+
+			m_bindGroup.CreateResource(bgDesc, device);
+			if (!m_bindGroup.IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create fallback bind group.", m_name.c_str());
+				return EError::BindGroupCreationFailed;
+			}
 		}
 
 		return EError::None;
@@ -455,6 +496,39 @@ namespace Hush::Graphics
 	}
 
 	// =====================================================================
+	// Texture slots
+	// =====================================================================
+
+	void Material3D::SetTexture(uint32_t binding, IGraphicsTexture *texture)
+	{
+		for (auto &slot : m_textureSlots)
+		{
+			if (slot.binding == binding)
+			{
+				slot.texture = texture;
+				return;
+			}
+		}
+	}
+
+	IGraphicsTexture *Material3D::GetTexture(uint32_t binding) const
+	{
+		for (const auto &slot : m_textureSlots)
+		{
+			if (slot.binding == binding)
+			{
+				return slot.texture;
+			}
+		}
+		return nullptr;
+	}
+
+	const std::vector<Material3D::TextureSlot> &Material3D::GetTextureSlots() const noexcept
+	{
+		return m_textureSlots;
+	}
+
+	// =====================================================================
 	// Private helpers
 	// =====================================================================
 
@@ -466,7 +540,7 @@ namespace Hush::Graphics
 
 		// First pass: process per-member entries (isMember flag set by ShaderCompiler
 		// when reflecting ConstantBuffer struct fields).  These carry exact offsets
-		// reported by Slang and must NOT contribute to a running-offset accumulator —
+		// reported by Slang and must NOT contribute to a running-offset accumulator
 		// the top-level parent entry already accounts for the full buffer size.
 		for (const auto &b : result.bindings)
 		{
@@ -483,6 +557,9 @@ namespace Hush::Graphics
 
 			if (!b.name.empty())
 			{
+				// BUG: Properties with the same name across different structs will collide, we need to create some
+				// referencing behavior like SetProperty("MyStruct.property", value); if it comes to that for now just
+				// try to not repeat names in your shaders lol
 				m_propertyMap[b.name] = info;
 			}
 

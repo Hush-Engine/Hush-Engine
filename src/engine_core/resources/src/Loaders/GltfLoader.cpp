@@ -8,6 +8,8 @@
 #include <fastgltf/tools.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <vector>
+#include <fstream>
+#include <optional>
 #include "RHI/IGraphicsDevice.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
@@ -16,7 +18,8 @@
 #include "Scene.hpp"
 
 void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
-										 const fastgltf::Mesh &mesh, MeshReference &meshRef)
+										 const fastgltf::Mesh &mesh, MeshReference &meshRef,
+										 const std::filesystem::path &basePath)
 {
 	Ref<Mesh> &innerMeshRef = meshRef.GetMesh();
 	std::vector<uint32_t> &indexRef = innerMeshRef->GetIndexBuffer();
@@ -57,6 +60,14 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 		// Load the UVs here
 		// TODO: LOADUVS()
 
+		std::vector<glm::vec2> texBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec2>(primitive, asset, "TEXCOORD_0");
+
+		for (uint32_t i = 0; i < texBuffer.size(); i++)
+		{
+			vertexRef.at(i + initialVertex).uv = {texBuffer.at(i).x, texBuffer.at(i).y};
+		}
+
 		// load vertex colors
 		std::vector<glm::vec4> colors = GltfLoadFunctions::FindAttributeByName<glm::vec4>(primitive, asset, "COLOR_0");
 
@@ -69,7 +80,8 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 		{
 			size_t materialIdx = primitive.materialIndex.value();
 
-			Ref<Graphics::Material3D> materialInstance = MakeMaterial(renderingContext, materialIdx, asset, {});
+			Ref<Graphics::Material3D> materialInstance =
+				MakeMaterial(renderingContext, materialIdx, asset, {}, meshRef, basePath);
 			// Keep alive on the Mesh component
 			meshRef.PushMaterial(materialInstance);
 			// Non-owning ref on the surface
@@ -113,7 +125,8 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 
 		meshRef->SetName(mesh.name);
 
-		ProcessPrimitives(renderingContext, assetRes.get(), mesh, meshComponent);
+		std::filesystem::path basePath = path.parent_path();
+		ProcessPrimitives(renderingContext, assetRes.get(), mesh, meshComponent, basePath);
 
 		// Generate the material per primitive here
 
@@ -175,9 +188,44 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 	return std::move(entities[0]);
 }
 
+namespace
+{
+
+	std::optional<std::vector<std::byte>> LoadGlTfImageData(const fastgltf::Asset &asset, const fastgltf::Image &image,
+															const std::filesystem::path &basePath)
+	{
+		fastgltf::MimeType mimeType = fastgltf::MimeType::None;
+		std::span<const std::byte> span = Hush::GltfLoadFunctions::ExtractImageBuffer(image, asset, &mimeType);
+		if (!span.empty())
+		{
+			return std::vector<std::byte>(span.begin(), span.end());
+		}
+
+		const auto *uriData = std::get_if<fastgltf::sources::URI>(&image.data);
+		if (uriData != nullptr)
+		{
+			std::filesystem::path imagePath = basePath / uriData->uri.fspath();
+			std::ifstream file(imagePath, std::ios::binary | std::ios::ate);
+			if (!file)
+			{
+				return {};
+			}
+			auto size = file.tellg();
+			std::vector<std::byte> buf(static_cast<size_t>(size));
+			file.seekg(0);
+			file.read(reinterpret_cast<char *>(buf.data()), static_cast<std::streamsize>(size));
+			return buf;
+		}
+
+		return {};
+	}
+
+} // namespace
+
 Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	const RenderingContext &renderingContext, size_t materialIdx, const fastgltf::Asset &asset,
-	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures)
+	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures, MeshReference &meshRef,
+	const std::filesystem::path &basePath)
 {
 	(void)loadedTextures;
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
@@ -196,7 +244,6 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 		HUSH_COND_FAIL_MSG_V(err == Graphics::Material3D::EError::None, {}, "Unable to initialize material: {}",
 							 magic_enum::enum_name(err));
 	}
-	// Use the PBRMaterial as the default
 
 	// Albedo
 	materialInstance->SetProperty("colorFactors",
@@ -204,10 +251,67 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
 															   material.emissiveFactor.z(), 1.0f));
 	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
-	// material.pbrData.metallicFactor
 	materialInstance->SetName(material.name);
 
-	materialInstance->FlushProperties(renderingContext.device);
+	// ── Per-material textures ──────────────────────────────────────────
+	// glTF PBR bindings: 1 = baseColor, 2 = metallicRoughness,
+	//                     3 = normal, 4 = emissive
+	constexpr uint32_t kBindingAlbedo = 1;
+	constexpr uint32_t kBindingMetalRough = 2;
+	constexpr uint32_t kBindingNormal = 3;
+	constexpr uint32_t kBindingEmissive = 4;
 
+	auto loadMaterialTexture = [&](uint32_t binding, const auto &textureInfo, const char *texName) -> void {
+		if (!textureInfo.has_value())
+		{
+			return;
+		}
+
+		size_t textureIdx = textureInfo->textureIndex;
+		const auto &gltfTexture = asset.textures.at(textureIdx);
+		if (!gltfTexture.imageIndex.has_value())
+		{
+			return;
+		}
+
+		size_t imageIdx = gltfTexture.imageIndex.value();
+		const fastgltf::Image &image = asset.images.at(imageIdx);
+
+		std::string texUniqueName = std::string(material.name) + "_" + texName;
+
+		// Check if already loaded for this material in the mesh reference
+		auto &texRefs = meshRef.GetMaterialTextureRefs()[materialInstance.Get()];
+		auto existingIt = texRefs.find(binding);
+		if (existingIt != texRefs.end())
+		{
+			auto *gpuTex = existingIt->second->GetGpuTexture();
+			materialInstance->SetTexture(binding, gpuTex);
+			return;
+		}
+
+		auto imgData = LoadGlTfImageData(asset, image, basePath);
+		if (!imgData.has_value())
+		{
+			return;
+		}
+
+		auto result = resourceManager->LoadTextureFromData(texUniqueName, *imgData);
+		if (result.has_error())
+		{
+			return;
+		}
+
+		Ref<TextureComponent> texRef = std::move(result.value());
+		auto *gpuTex = texRef->GetGpuTexture(); // May be null (async upload)
+		materialInstance->SetTexture(binding, gpuTex);
+		texRefs[binding] = std::move(texRef);
+	};
+
+	loadMaterialTexture(kBindingAlbedo, material.pbrData.baseColorTexture, "albedo");
+	loadMaterialTexture(kBindingMetalRough, material.pbrData.metallicRoughnessTexture, "metalRough");
+	loadMaterialTexture(kBindingNormal, material.normalTexture, "normal");
+	loadMaterialTexture(kBindingEmissive, material.emissiveTexture, "emissive");
+
+	materialInstance->FlushProperties(renderingContext.device);
 	return materialInstance;
 }

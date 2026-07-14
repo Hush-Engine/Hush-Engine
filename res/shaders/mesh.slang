@@ -229,7 +229,7 @@ VertexOutput vertMain(VertexInput input)
     output.normal = normalize(mul(modelMat3, input.normal));
     output.outTangent = normalize(mul(modelMat3, input.tangent.xyz));
     output.outHandedness = input.tangent.w;
-    // output.outColor = input.color.xyz * materialData.colorFactors.xyz;
+    output.outColor = input.color.xyz * materialData.colorFactors.xyz;
     output.outUV = input.uv;
 
     return output;
@@ -241,66 +241,66 @@ struct FragmentOutput
     [[vk::location(0)]] float4 color;
 };
 
-// [shader("fragment")]
-// FragmentOutput fragMain(VertexOutput input)
-// {
-//     float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
-//     float  alpha    = texColor.w;
-//     if (alpha < materialData.alphaCutoff)
-//     {
-//         discard;
-//     }
-
-//     PBRParameters params;
-//     params.Albedo = texColor.rgb * scalarPow(input.outColor, 2.2);
-
-//     float4 metalRough = metalRoughTex.Sample(defaultSampler, input.outUV);
-//     params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
-//     params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
-//     params.Roughness = max(params.Roughness, 0.05);
-
-//     // Calculate normal
-//     if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG))
-//     {
-//         float3 tangent = calculateTangentGramSchmidt(input.normal, input.outTangent);
-//         float3 biTangent = cross(input.normal, tangent) * input.outHandedness;
-//         float3x3 TBN = float3x3(tangent, biTangent, input.normal);
-//         float3 localNormal = 2.0 * normalTex.Sample(defaultSampler, input.outUV).rgb - 1.0;
-//         params.Normal      = normalize(mul(TBN, localNormal));
-//     }
-//     else
-//     {
-//         params.Normal = normalize(input.normal);
-//     }
-
-//     if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG))
-//     {
-//         FragmentOutput o;
-//         o.color = float4(params.Normal, alpha);
-//         return o;
-//     }
-
-//     float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
-//     params.View  = fragToCamDir;
-//     params.NdotV = max(dot(params.Normal, params.View), 0.0);
-
-//     float4 texEmission = emissiveTex.Sample(defaultSampler, input.outUV);
-//     float3 emission = (scalarPow(texEmission.xyz, 2.2) *
-//                        materialData.emissionFactors.xyz) *
-//                       materialData.emissionFactors.w;
-
-//     float3 directLight = CalculateDirLights(params);
-//     float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
-
-//     FragmentOutput o;
-//     o.color = float4(ambient + directLight + emission, texColor.a);
-//     return o;
-// }
-
 [shader("fragment")]
 FragmentOutput fragMain(VertexOutput input)
 {
-    FragmentOutput o;    
-    o.color = float4(0.0, 1.0, 0.0, 1.0);
+    float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
+    float  alpha    = texColor.w;
+    if (alpha < materialData.alphaCutoff)
+    {
+        discard;
+    }
+
+    PBRParameters params;
+    params.Albedo = texColor.rgb * scalarPow(input.outColor, 2.2);
+
+    float4 metalRough = metalRoughTex.Sample(defaultSampler, input.outUV);
+    params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
+    params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
+    params.Roughness = max(params.Roughness, 0.05);
+
+    // Calculate normal
+    if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG))
+    {
+        float3 tangent = calculateTangentGramSchmidt(input.normal, input.outTangent);
+        float3 biTangent = cross(input.normal, tangent) * input.outHandedness;
+        float3x3 TBN = float3x3(tangent, biTangent, input.normal);
+        float3 localNormal = 2.0 * normalTex.Sample(defaultSampler, input.outUV).rgb - 1.0;
+        params.Normal      = normalize(mul(TBN, localNormal));
+    }
+    else
+    {
+        params.Normal = normalize(input.normal);
+    }
+
+    if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG))
+    {
+        FragmentOutput o;
+        o.color = float4(params.Normal, alpha);
+        return o;
+    }
+
+    float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
+    params.View  = fragToCamDir;
+    params.NdotV = max(dot(params.Normal, params.View), 0.0);
+
+    float4 texEmission = emissiveTex.Sample(defaultSampler, input.outUV);
+    float3 emission = (scalarPow(texEmission.xyz, 2.2) *
+                       materialData.emissionFactors.xyz) *
+                      materialData.emissionFactors.w;
+
+    float3 directLight = CalculateDirLights(params);
+    float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
+
+    FragmentOutput o;
+    o.color = float4(ambient + directLight + emission, texColor.a);
     return o;
 }
+
+// [shader("fragment")]
+// FragmentOutput fragMain(VertexOutput input)
+// {
+//     FragmentOutput o;    
+//     o.color = vec4(input.outColor, 1.0);
+//     return o;
+// }
