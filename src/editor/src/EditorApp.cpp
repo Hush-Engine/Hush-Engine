@@ -4,6 +4,10 @@
 
 #include "Assertions.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "CookedFileSystem.hpp"
+#include "CookerService.hpp"
+#include "CookedDirectory.hpp"
+#include "FileWatcher.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
@@ -85,7 +89,32 @@ public:
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
-		vfs->MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
+		// Cooked-first: serve cooked .hcooked/*.hasset outputs transparently, falling back
+		// to raw sources. See CookedFileSystem.
+		const std::filesystem::path cookedDirPath = std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR) / ".hcooked";
+		vfs->MountFileSystem<Hush::CookedFileSystem>("res://", std::string("res://"),
+													 std::string(HUSH_DEFAULT_PROJECT_DIR), cookedDirPath.string());
+
+		// Cooker service for import pipeline (EditorApp-owned; no longer an ECS component)
+		m_cookerService = std::make_unique<Hush::CookerService>();
+		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR));
+
+		// Wire OS file drop → cooker import.
+		m_engine->GetWindowRenderer()->SetDropCallback(
+			[this](const std::filesystem::path &path) {
+				if (m_cookerService)
+				{
+					m_cookerService->ImportFile(path);
+				}
+			});
+
+		// File watcher + lifecycle
+		std::filesystem::path projRoot(HUSH_DEFAULT_PROJECT_DIR);
+		m_fileWatcher = std::make_unique<Hush::FileWatcher>(projRoot);
+		// Let the import service suppress the watcher events its own writes cause.
+		m_cookerService->SetFileWatcher(m_fileWatcher.get());
+		m_cookedDirectory.Init(projRoot, vfs);
+		m_cookedDirectory.Reconcile();
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
@@ -140,6 +169,18 @@ public:
 
 	void Update(float delta) override
 	{
+		// Drain file system events → trigger recook
+		if (m_fileWatcher)
+		{
+			m_fileWatcher->DrainEvents(
+				[this](const Hush::FileWatchEvent &ev) {
+					m_cookedDirectory.HandleFileEvent(ev.path,
+													   ev.type == Hush::FileWatchEvent::Type::Added,
+													   ev.type == Hush::FileWatchEvent::Type::Removed,
+													   ev.type == Hush::FileWatchEvent::Type::Modified);
+				});
+		}
+
 		this->m_scene->Update(delta);
 	}
 
@@ -514,6 +555,10 @@ private:
 
 	Hush::UI m_userInterface;
 	Hush::ResourceManager *m_resourceManager = nullptr;
+
+	std::unique_ptr<Hush::FileWatcher> m_fileWatcher;
+	Hush::CookedDirectory m_cookedDirectory;
+	std::unique_ptr<Hush::CookerService> m_cookerService;
 
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.

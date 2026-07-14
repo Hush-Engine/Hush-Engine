@@ -159,6 +159,12 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		// Send 0 as acceleration bc it will be calculated manually
 		InputManager::SendWheelEvent(event.wheel.mouse_x, event.wheel.mouse_y);
 		break;
+	case SDL_EVENT_DROP_FILE:
+		if (m_dropCallback && event.drop.data)
+		{
+			m_dropCallback(std::filesystem::path(event.drop.data));
+		}
+		break;
 	default:
 		if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
 		{
