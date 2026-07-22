@@ -71,6 +71,7 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 		return;
 	}
 
+
 	if (WindowManager::GetMainWindow() == nullptr)
 	{
 		// Set this window as the main one
@@ -79,26 +80,16 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 
 	// Now create the window
 	uint32_t defaultFlag = SDL_WINDOW_RESIZABLE;
-	// const int defaultWindowIndex = -1;
 
 	this->m_windowPtr = SDL_CreateWindow(windowName, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
-	// this->m_windowPtr = SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	// 									 DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, defaultFlag);
+
 	if (this->m_windowPtr == nullptr)
 	{
 		Hush::LogError("SDL window creation failed!");
 		return;
 	}
-	// this->m_rendererPtr = SDL_CreateRenderer(this->m_windowPtr, defaultWindowIndex, GetInitialRendererFlags());
 
-	// 	if (this->m_rendererPtr == nullptr)
-	// 	{
-	// 		Hush::ELogLevel severity = ELogLevel::Error;
-	// #ifdef HUSH_VULKAN_IMPL
-	// 		severity = ELogLevel::Warn;
-	// #endif // HUSH_VULKAN_IMPL
-	// 		Hush::LogFormat(severity, "SDL renderer creation failed! {}", SDL_GetError());
-	// 	}
+	SDL_StartTextInput(m_windowPtr);
 
 	this->m_windowRenderer = CreateGraphicsDevice(GetPreferredGraphicsAPI(), this->m_windowPtr);
 
@@ -190,7 +181,6 @@ bool Hush::WindowRenderer::IsActive() const noexcept
 
 bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 {
-	SDL_StartTextInput(m_windowPtr);
 	if (SDL_WasInit(0) != 0)
 	{
 		return true;
