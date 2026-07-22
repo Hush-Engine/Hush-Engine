@@ -148,7 +148,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		break;
 	case SDL_EVENT_MOUSE_WHEEL:
 		// Send 0 as acceleration bc it will be calculated manually
-		InputManager::SendWheelEvent(event.wheel.mouse_x, event.wheel.mouse_y);
+		InputManager::SendWheelEvent(event.wheel.x, event.wheel.y);
 		break;
 	default:
 		if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
