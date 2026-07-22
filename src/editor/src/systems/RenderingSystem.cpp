@@ -212,7 +212,7 @@ void Hush::RenderingSystem::OnPreRender()
 	ZoneScoped;
 
 	// This is a query because we'll want to support multiple dir lights later
-	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight& light, WorldTransform& xform) {
+	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
 		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
 		this->m_cachedSceneData.sunlightColor.w = light.intensity;
 		glm::vec3 dir = xform.Forward();
