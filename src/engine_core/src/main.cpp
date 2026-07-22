@@ -55,6 +55,10 @@ extern "C"
 		AppState &state = *static_cast<AppState *>(appstate);
 		state.engine.HandleEvents(*event);
 
+		if (!state.engine.ShouldRun()) {
+			return SDL_APP_SUCCESS;
+		}
+
 		return SDL_APP_CONTINUE;
 	}
 

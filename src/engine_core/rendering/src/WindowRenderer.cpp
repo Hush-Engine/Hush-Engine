@@ -190,16 +190,15 @@ bool Hush::WindowRenderer::IsActive() const noexcept
 
 bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 {
+	SDL_StartTextInput(m_windowPtr);
 	if (SDL_WasInit(0) != 0)
 	{
 		return true;
 	}
 #ifndef HUSH_PLATFORM_EMSCRIPTEN
 	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	SDL_StartTextInput(m_windowPtr);
 	return rc;
 #else
-	SDL_StartTextInput(m_windowPtr);
 	return true;
 #endif
 }

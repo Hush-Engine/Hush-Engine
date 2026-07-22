@@ -74,6 +74,10 @@ namespace Hush
 
 		ResourceManager *GetResourceManager() noexcept;
 
+		inline bool ShouldRun() const {
+			return this->m_isApplicationRunning;
+		}
+
 	private:
 		void AddDefaultSystems();
 
