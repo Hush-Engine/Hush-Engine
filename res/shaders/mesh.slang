@@ -49,7 +49,7 @@ struct PBRMaterialData
 [[vk::binding(5, 1)]] SamplerState                       defaultSampler;
 
 
-static const float PI      = 3.14159265;
+static const float PI = 3.14159265;
 static const float EPSILON = 0.00001f;
 
 float3 FresnelSchlick(float3 F0, float cosTheta)
@@ -64,8 +64,8 @@ float3 FresnelSchlickRoughness(float3 F0, float cosTheta, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float alpha)
 {
-    float k    = alpha / 2.0;
-    float num   = NdotV;
+    float k = alpha / 2.0;
+    float num = NdotV;
     float denom = NdotV * (1.0 - k) + k;
     return num / denom;
 }
@@ -74,8 +74,8 @@ float GeometrySmith(float3 N, float3 V, float3 L, float alpha)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, alpha);
-    float ggx1  = GeometrySchlickGGX(NdotL, alpha);
+    float ggx2 = GeometrySchlickGGX(NdotV, alpha);
+    float ggx1 = GeometrySchlickGGX(NdotL, alpha);
     return ggx1 * ggx2;
 }
 
@@ -93,19 +93,15 @@ float GaSchlickGGX(float cosLi, float NdotV, float roughness)
 
 float DistributionGGX(float3 N, float3 H, float alpha)
 {
-    float a2    = alpha * alpha;
+    float a2 = alpha * alpha;
     float NdotH = max(dot(N, H), 0.0);
     float NdotH2 = NdotH * NdotH;
 
-    float num   = a2;
+    float num = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
     return num / denom;
 }
-
-//===========================================================================
-//  shaderMath.glsl
-//===========================================================================
 
 static const float Epsilon = 0.00001;
 
@@ -142,10 +138,7 @@ bool HasCompositeFlag(int base, int compositeFlag)
     return (base & compositeFlag) != 0;
 }
 
-//===========================================================================
-//  lighting.glsl — PBR directional light
-//===========================================================================
-
+// Lighting
 struct PBRParameters
 {
     float3 Albedo;
@@ -192,10 +185,6 @@ float3 CalculateDirLights(PBRParameters params)
 static const int USE_NORMALS_FLAG   = 0x1;
 static const int DEBUG_NORMALS_FLAG = 0x2;
 
-//===========================================================================
-//  mesh.vert — vertex input / output structs
-//===========================================================================
-
 struct VertexInput
 {
     [[vk::location(0)]] float3 position : POSITION;
@@ -207,7 +196,7 @@ struct VertexInput
 
 struct VertexOutput
 {
-    float4                 position : SV_Position;
+    float4 position : SV_Position;
     [[vk::location(0)]] float3 normal;
     [[vk::location(1)]] float3 outColor;
     [[vk::location(2)]] float2 outUV;
@@ -245,7 +234,7 @@ struct FragmentOutput
 FragmentOutput fragMain(VertexOutput input)
 {
     float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
-    float  alpha    = texColor.w;
+    float  alpha = texColor.w;
     if (alpha < materialData.alphaCutoff)
     {
         discard;
@@ -266,7 +255,7 @@ FragmentOutput fragMain(VertexOutput input)
         float3 biTangent = cross(input.normal, tangent) * input.outHandedness;
         float3x3 TBN = float3x3(tangent, biTangent, input.normal);
         float3 localNormal = 2.0 * normalTex.Sample(defaultSampler, input.outUV).rgb - 1.0;
-        params.Normal      = normalize(mul(TBN, localNormal));
+        params.Normal = normalize(mul(TBN, localNormal));
     }
     else
     {
@@ -296,11 +285,3 @@ FragmentOutput fragMain(VertexOutput input)
     o.color = float4(ambient + directLight + emission, texColor.a);
     return o;
 }
-
-// [shader("fragment")]
-// FragmentOutput fragMain(VertexOutput input)
-// {
-//     FragmentOutput o;    
-//     o.color = vec4(input.outColor, 1.0);
-//     return o;
-// }

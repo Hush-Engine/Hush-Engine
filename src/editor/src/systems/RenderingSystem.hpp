@@ -3,9 +3,11 @@
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
 #include "VirtualFilesystem.hpp"
@@ -99,6 +101,9 @@ namespace Hush
 		GridViewUniforms m_cachedViewUniforms;
 		SceneData m_cachedSceneData;
 		glm::u32vec2 m_cachedViewportSize{1, 1};
+
+		// Lighting
+		Query<DirectionalLight, WorldTransform> m_directionalLightsQuery;
 
 		// Grid rendering
 		std::unique_ptr<Graphics::IShaderModule> m_vertModule;

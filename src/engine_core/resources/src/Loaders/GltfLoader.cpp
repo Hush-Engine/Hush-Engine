@@ -120,7 +120,7 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
-		Ref<Mesh> meshRef = resourceManager->AllocateRef<Mesh>(mesh.name);
+		Ref<Mesh> meshRef = resourceManager->AllocateRef<Mesh>(mesh.name); // BUG: If there's something with the same name we'll crash with this, we'll need to fix it in a future PR
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
 		meshRef->SetName(mesh.name);
@@ -251,9 +251,10 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
 															   material.emissiveFactor.z(), 1.0f));
 	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
+	constexpr uint32_t useNormalsFlag = 1;
+	materialInstance->SetProperty("optionFlags", useNormalsFlag);
 	materialInstance->SetName(material.name);
 
-	// ── Per-material textures ──────────────────────────────────────────
 	// glTF PBR bindings: 1 = baseColor, 2 = metallicRoughness,
 	//                     3 = normal, 4 = emissive
 	constexpr uint32_t kBindingAlbedo = 1;

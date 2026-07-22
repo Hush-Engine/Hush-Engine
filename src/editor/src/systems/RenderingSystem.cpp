@@ -20,12 +20,15 @@
 #include "../components/EditorPanelComponents.hpp"
 #include "RenderGraph/RenderGraph.hpp"
 #include "Scene.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
+#include <glm/ext/quaternion_geometric.hpp>
 #include <glm/matrix.hpp>
 #include <cstddef>
 #include <cstring>
@@ -148,6 +151,8 @@ void Hush::RenderingSystem::Init()
 
 	this->m_editorCameraQuery = this->GetScene().CreateQuery<EditorCamera>();
 
+	this->m_directionalLightsQuery = this->GetScene().CreateQuery<DirectionalLight, WorldTransform>();
+
 	// Make sure we have the data so that initialization order does not matter
 	auto scenePanelQuery = this->GetScene().CreateQuery<const ScenePanelSizeComp>(RawQuery::ECacheMode::None);
 	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
@@ -206,6 +211,14 @@ void Hush::RenderingSystem::OnPreRender()
 {
 	ZoneScoped;
 
+	// This is a query because we'll want to support multiple dir lights later
+	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight& light, WorldTransform& xform) {
+		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
+		this->m_cachedSceneData.sunlightColor.w = light.intensity;
+		glm::vec3 dir = xform.Forward();
+		this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
+	});
+
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
 		(void)ent;
 		glm::mat4 view = editorCam.GetViewMatrix();
@@ -225,8 +238,6 @@ void Hush::RenderingSystem::OnPreRender()
 		this->m_cachedSceneData.proj = proj;
 		this->m_cachedSceneData.viewproj = viewProj;
 		this->m_cachedSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
-		this->m_cachedSceneData.sunlightDirection = glm::vec4(0.5f, 1.0f, 0.3f, 1.0f);
-		this->m_cachedSceneData.sunlightColor = glm::vec4(1.0f, 0.98f, 0.9f, 1.0f);
 	});
 
 	m_meshDrawList.clear();
