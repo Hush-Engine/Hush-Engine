@@ -35,7 +35,8 @@ namespace Hush
 	private:
 
 		// For any pop up list, including (later on) the commands themselves
-		using OnElementClickedFn_t = void(*)(size_t);
+		struct PopupListState;
+		using OnElementClickedFn_t = void(*)(size_t, PopupListState*);
 		struct PopupListState
 		{
 			std::vector<std::string_view> options;
@@ -96,7 +97,7 @@ namespace Hush
 
 		std::vector<std::string_view> m_currentlyAvailableCommands;
 
-		static constexpr size_t MAX_ALLOWED_ENTITY_NAME = 30;
-		char m_searchInputText[MAX_ALLOWED_ENTITY_NAME] = {0};
+		static constexpr size_t MAX_TEXT_INPUT_STR_SIZE = 64;
+		char m_searchInputText[MAX_TEXT_INPUT_STR_SIZE] = {0};
 	};
 } // namespace Hush

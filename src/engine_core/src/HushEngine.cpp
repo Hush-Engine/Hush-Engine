@@ -7,6 +7,7 @@
 #include "Systems/ResourceUploadSystem.hpp"
 #include "WindowRenderer.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
+#include <SDL3/SDL_keyboard.h>
 #include <WindowManager.hpp>
 #include <algorithm>
 #include <cstdint>
@@ -126,6 +127,9 @@ void Hush::HushEngine::Run()
 	this->m_app->OnRender(deltaTime);
 	this->m_app->OnPostRender();
 	this->m_app->DisposeFrame();
+
+	// ImGUI's SDL3 impl will sometimes disable text input for some reason, this is here to counter that
+	SDL_StartTextInput(this->GetWindowRenderer()->GetSDLWindow());
 
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
