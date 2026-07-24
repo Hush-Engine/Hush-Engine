@@ -95,6 +95,8 @@ namespace Hush
 		Graphics::ShaderCompilationResult SetupMeshPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
 															Graphics::ShaderCompiler *shaderCompiler);
 
+		void CreateMeshSceneBindGroup(Graphics::IGraphicsDevice *device);
+
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
 

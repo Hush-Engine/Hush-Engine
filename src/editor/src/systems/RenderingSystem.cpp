@@ -251,10 +251,12 @@ void Hush::RenderingSystem::OnPreRender()
 
 	// Resize our mesh buffer if we get to the max amount of meshes
 	uint64_t currBufferSize = this->m_meshModelBuffer->GetSize();
-	constexpr uint64_t meshBufferGrowthFactor = 2;
+	constexpr float meshBufferGrowthFactor = 1.2f;
 	if (meshCount > (currBufferSize / this->m_meshModelSlotSize))
 	{
-		device->ResizeBuffer(this->m_meshModelBuffer.get(), currBufferSize * meshBufferGrowthFactor);
+		auto resizeBy = (uint64_t)((float)(meshCount * this->m_meshModelSlotSize) * meshBufferGrowthFactor);
+		device->ResizeBuffer(this->m_meshModelBuffer.get(), resizeBy);
+		this->CreateMeshSceneBindGroup(device);
 	}
 
 	m_renderableTargetsQuery.Each(
@@ -608,12 +610,7 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 
 	// Bind groups
 	{
-		BindGroupDescriptor sceneBgDesc{};
-		sceneBgDesc.layout = this->m_meshSceneBindGroupLayout.get();
-		sceneBgDesc.entries = {
-			{.binding = 0, .buffer = this->m_sceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
-			{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = meshModelSlotSize}};
-		this->m_meshSceneBindGroup = device->CreateBindGroup(sceneBgDesc);
+		this->CreateMeshSceneBindGroup(device);
 	}
 
 	if (this->m_meshMaterialBindGroupLayout != nullptr)
@@ -638,4 +635,14 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 	defaultMaterial.optionFlags = EPBRMaterialFlags::None;
 	device->WriteBuffer(this->m_meshMaterialBuffer.get(), 0, &defaultMaterial, sizeof(PBRMaterialData));
 	return meshCompilationResult;
+}
+
+void Hush::RenderingSystem::CreateMeshSceneBindGroup(Graphics::IGraphicsDevice *device)
+{
+	BindGroupDescriptor sceneBgDesc{};
+	sceneBgDesc.layout = this->m_meshSceneBindGroupLayout.get();
+	sceneBgDesc.entries = {
+		{.binding = 0, .buffer = this->m_sceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
+		{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = this->m_meshModelSlotSize}};
+	this->m_meshSceneBindGroup = device->CreateBindGroup(sceneBgDesc);
 }
