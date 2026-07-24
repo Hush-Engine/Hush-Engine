@@ -4,11 +4,15 @@
 
 #include "Assertions.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
@@ -135,6 +139,11 @@ public:
 		};
 
 		this->m_scene->Init();
+		// Create a directional light
+		Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
+		dirLightEntity.AddComponent<Hush::WorldTransform>();
+		dirLightEntity.AddComponent<Hush::LocalTransform>();
+		dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
 	}
 

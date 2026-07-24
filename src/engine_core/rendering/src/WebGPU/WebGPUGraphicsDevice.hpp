@@ -52,7 +52,7 @@ namespace Hush::Graphics
 
 		void WriteBuffer(IGraphicsBuffer *buffer, uint64_t offset, const void *data, uint64_t size) override;
 
-		void ResizeBuffer(size_t size, IGraphicsBuffer *buffer) override;
+		void ResizeBuffer(IGraphicsBuffer *buffer, uint64_t size) override;
 
 		[[nodiscard]]
 		std::unique_ptr<IGraphicsTexture> CreateTexture(const TextureDescriptor &descriptor) override;

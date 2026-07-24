@@ -20,12 +20,15 @@
 #include "../components/EditorPanelComponents.hpp"
 #include "RenderGraph/RenderGraph.hpp"
 #include "Scene.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
+#include <glm/ext/quaternion_geometric.hpp>
 #include <glm/matrix.hpp>
 #include <cstddef>
 #include <cstring>
@@ -148,6 +151,8 @@ void Hush::RenderingSystem::Init()
 
 	this->m_editorCameraQuery = this->GetScene().CreateQuery<EditorCamera>();
 
+	this->m_directionalLightsQuery = this->GetScene().CreateQuery<DirectionalLight, WorldTransform>();
+
 	// Make sure we have the data so that initialization order does not matter
 	auto scenePanelQuery = this->GetScene().CreateQuery<const ScenePanelSizeComp>(RawQuery::ECacheMode::None);
 	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
@@ -206,6 +211,14 @@ void Hush::RenderingSystem::OnPreRender()
 {
 	ZoneScoped;
 
+	// This is a query because we'll want to support multiple dir lights later
+	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
+		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
+		this->m_cachedSceneData.sunlightColor.w = light.intensity;
+		glm::vec3 dir = xform.Forward();
+		this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
+	});
+
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
 		(void)ent;
 		glm::mat4 view = editorCam.GetViewMatrix();
@@ -225,8 +238,6 @@ void Hush::RenderingSystem::OnPreRender()
 		this->m_cachedSceneData.proj = proj;
 		this->m_cachedSceneData.viewproj = viewProj;
 		this->m_cachedSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
-		this->m_cachedSceneData.sunlightDirection = glm::vec4(0.5f, 1.0f, 0.3f, 1.0f);
-		this->m_cachedSceneData.sunlightColor = glm::vec4(1.0f, 0.98f, 0.9f, 1.0f);
 	});
 
 	m_meshDrawList.clear();
@@ -236,69 +247,137 @@ void Hush::RenderingSystem::OnPreRender()
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 	uint32_t slotIndex = 0;
 
-	m_renderableTargetsQuery.Each([this, device, &slotIndex](const MeshReference &meshRef,
-															 const WorldTransform &xform) {
-		const auto *mesh = meshRef.GetMesh().Get();
-		if (mesh == nullptr)
-		{
-			return;
-		}
+	size_t meshCount = this->m_renderableTargetsQuery.begin().Size();
 
-		auto *vb = meshRef.GetGpuVertexBuffer();
-		auto *ib = meshRef.GetGpuIndexBuffer();
-		if (vb == nullptr || ib == nullptr)
-		{
-			return;
-		}
+	// Resize our mesh buffer if we get to the max amount of meshes
+	uint64_t currBufferSize = this->m_meshModelBuffer->GetSize();
+	constexpr uint64_t meshBufferGrowthFactor = 2;
+	if (meshCount > (currBufferSize / this->m_meshModelSlotSize))
+	{
+		device->ResizeBuffer(this->m_meshModelBuffer.get(), currBufferSize * meshBufferGrowthFactor);
+	}
 
-		glm::mat4 modelMatrix = xform.GetTransformationMatrix();
-
-		uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
-		device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
-
-		for (const auto &surface : mesh->GetSurfaces())
-		{
-			Graphics::IBindGroup *matBindGroup = nullptr;
-			auto *mat = surface.material;
-			if (mat != nullptr)
+	m_renderableTargetsQuery.Each(
+		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
+			const auto *mesh = meshRef.GetMesh().Get();
+			if (mesh == nullptr)
 			{
-				mat->FlushProperties(device);
-				auto it = m_materialBindGroupCache.find(mat);
-				if (it == m_materialBindGroupCache.end())
+				return;
+			}
+
+			auto *vb = meshRef.GetGpuVertexBuffer();
+			auto *ib = meshRef.GetGpuIndexBuffer();
+			if (vb == nullptr || ib == nullptr)
+			{
+				return;
+			}
+
+			glm::mat4 modelMatrix = xform.GetTransformationMatrix();
+
+			uint32_t slotOffset = slotIndex * m_meshModelSlotSize;
+			device->WriteBuffer(m_meshModelBuffer.get(), slotOffset, &modelMatrix, sizeof(glm::mat4));
+
+			for (const auto &surface : mesh->GetSurfaces())
+			{
+				Graphics::IBindGroup *matBindGroup = nullptr;
+				auto *mat = surface.material;
+				if (mat != nullptr)
 				{
-					BindGroupDescriptor bgDesc{};
-					bgDesc.layout = m_meshMaterialBindGroupLayout.get();
-					bgDesc.debugName = mat->GetName() + "_BindGroup";
-					uint64_t bufSize = mat->GetUniformBufferSize();
-					bgDesc.entries = {{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize},
-									  {.binding = 1, .texture = m_defaultColorTex.get()},
-									  {.binding = 2, .texture = m_defaultMetalRoughTex.get()},
-									  {.binding = 3, .texture = m_defaultNormalTex.get()},
-									  {.binding = 4, .texture = m_defaultEmissiveTex.get()},
-									  {.binding = 5, .sampler = m_defaultSampler.get()}};
-					auto [newIt, _] = m_materialBindGroupCache.emplace(mat, device->CreateBindGroup(bgDesc));
-					it = newIt;
+					mat->FlushProperties(device);
+					auto it = m_materialBindGroupCache.find(mat);
+					if (it != m_materialBindGroupCache.end())
+					{
+						// Validate cache: check if any texture pointer changed (async upload completion).
+						bool cacheValid = true;
+						const auto &slots = mat->GetTextureSlots();
+						for (const auto &slot : slots)
+						{
+							auto cachedTex = it->second.textures.find(slot.binding);
+							IGraphicsTexture *currentTex = slot.texture;
+							if (cachedTex == it->second.textures.end())
+							{
+								if (currentTex != nullptr)
+								{
+									cacheValid = false;
+									break;
+								}
+							}
+							else if (cachedTex->second != currentTex)
+							{
+								cacheValid = false;
+								break;
+							}
+						}
+						if (!cacheValid)
+						{
+							m_materialBindGroupCache.erase(it);
+							it = m_materialBindGroupCache.end();
+						}
+					}
+
+					if (it == m_materialBindGroupCache.end())
+					{
+						BindGroupDescriptor bgDesc{};
+						bgDesc.layout = m_meshMaterialBindGroupLayout.get();
+						bgDesc.debugName = mat->GetName() + "_BindGroup";
+						uint64_t bufSize = mat->GetUniformBufferSize();
+						bgDesc.entries.push_back(
+							{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize});
+
+						CachedMaterialBindGroup cachedEntry;
+
+						// Map known PBR bindings to their fallback defaults.
+						auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
+							switch (binding)
+							{
+							case 1:
+								return m_defaultColorTex.get();
+							case 2:
+								return m_defaultMetalRoughTex.get();
+							case 3:
+								return m_defaultNormalTex.get();
+							case 4:
+								return m_defaultEmissiveTex.get();
+							default:
+								return m_defaultColorTex.get();
+							}
+						};
+
+						const auto &slots = mat->GetTextureSlots();
+						for (const auto &slot : slots)
+						{
+							IGraphicsTexture *tex =
+								slot.texture != nullptr ? slot.texture : defaultTextureForBinding(slot.binding);
+							bgDesc.entries.push_back({.binding = slot.binding, .texture = tex});
+							cachedEntry.textures[slot.binding] = tex;
+						}
+
+						bgDesc.entries.push_back({.binding = 5, .sampler = m_defaultSampler.get()});
+
+						cachedEntry.bindGroup = device->CreateBindGroup(bgDesc);
+						auto [newIt, _] = m_materialBindGroupCache.emplace(mat, std::move(cachedEntry));
+						it = newIt;
+					}
+					matBindGroup = it->second.bindGroup.get();
 				}
-				matBindGroup = it->second.get();
-			}
-			else
-			{
-				matBindGroup = m_meshMaterialBindGroup.get();
+				else
+				{
+					matBindGroup = m_meshMaterialBindGroup.get();
+				}
+
+				m_meshDrawList.push_back(MeshDraw{
+					.modelMatrix = modelMatrix,
+					.vertexBuffer = vb,
+					.indexBuffer = ib,
+					.indexCount = surface.count,
+					.firstIndex = surface.startIndex,
+					.dynamicOffset = slotOffset,
+					.materialBindGroup = matBindGroup,
+				});
 			}
 
-			m_meshDrawList.push_back(MeshDraw{
-				.modelMatrix = modelMatrix,
-				.vertexBuffer = vb,
-				.indexBuffer = ib,
-				.indexCount = surface.count,
-				.firstIndex = surface.startIndex,
-				.dynamicOffset = slotOffset,
-				.materialBindGroup = matBindGroup,
-			});
-		}
-
-		slotIndex++;
-	});
+			slotIndex++;
+		});
 }
 
 void Hush::RenderingSystem::OnPostRender()
@@ -507,17 +586,21 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 	uint32_t meshModelSlotSize = (sizeof(ModelData) + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
 	this->m_meshModelSlotSize = meshModelSlotSize;
 
-	constexpr uint32_t maxMeshInstances = 1024;
-	this->m_meshModelBuffer = device->CreateBuffer({.size = static_cast<uint64_t>(meshModelSlotSize) * maxMeshInstances,
-													.usage = EBufferUsage::Uniform,
-													.memoryAccess = EMemoryAccess::CPUNone,
-													.debugName = "MeshModelBuffer"});
+	// If we exceed the count of mesh instances here we need to call device->ResizeBuffer()
+	constexpr uint32_t initialMeshInstancePoolSize = 1024;
+	this->m_meshModelBuffer =
+		device->CreateBuffer({.size = static_cast<uint64_t>(meshModelSlotSize) * initialMeshInstancePoolSize,
+							  .usage = EBufferUsage::Uniform,
+							  .memoryAccess = EMemoryAccess::CPUNone,
+							  .debugName = "MeshModelBuffer"});
 
 	this->m_sceneDataBuffer = device->CreateBuffer({.size = sizeof(SceneData),
 													.usage = EBufferUsage::Uniform,
 													.memoryAccess = EMemoryAccess::CPUNone,
 													.debugName = "SceneDataBuffer"});
 
+	// This assumes the material will always be the default PBR, which is fine for a general buffer, but, we will need
+	// per material buffers
 	this->m_meshMaterialBuffer = device->CreateBuffer({.size = sizeof(PBRMaterialData),
 													   .usage = EBufferUsage::Uniform,
 													   .memoryAccess = EMemoryAccess::CPUNone,

@@ -3,9 +3,11 @@
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
 #include "VirtualFilesystem.hpp"
@@ -100,6 +102,9 @@ namespace Hush
 		SceneData m_cachedSceneData;
 		glm::u32vec2 m_cachedViewportSize{1, 1};
 
+		// Lighting
+		Query<DirectionalLight, WorldTransform> m_directionalLightsQuery;
+
 		// Grid rendering
 		std::unique_ptr<Graphics::IShaderModule> m_vertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_fragModule;
@@ -131,10 +136,16 @@ namespace Hush
 		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultEmissiveTex;
 		std::unique_ptr<Graphics::ISampler> m_defaultSampler;
 
-		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up the pointer
+		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up
+		// the pointer
 		// ... That is not yet implemented and we should really pay attention to it later on
-		std::unordered_map<const Graphics::Material3D *, std::unique_ptr<Graphics::IBindGroup>>
-			m_materialBindGroupCache;
+		struct CachedMaterialBindGroup
+		{
+			std::unique_ptr<Graphics::IBindGroup> bindGroup;
+			// Per-binding texture pointer at creation time, used to detect async upload completion.
+			std::unordered_map<uint32_t, Graphics::IGraphicsTexture *> textures;
+		};
+		std::unordered_map<const Graphics::Material3D *, CachedMaterialBindGroup> m_materialBindGroupCache;
 
 		std::vector<MeshDraw> m_meshDrawList;
 	};

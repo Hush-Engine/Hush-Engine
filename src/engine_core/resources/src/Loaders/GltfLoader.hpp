@@ -39,13 +39,15 @@ namespace Hush::GLTFLoader
 {
 
 	void ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
-						   const fastgltf::Mesh &mesh, Hush::MeshReference &meshRef);
+						   const fastgltf::Mesh &mesh, Hush::MeshReference &meshRef,
+						   const std::filesystem::path &basePath);
 
 	Entity GenerateMeshEntities(const RenderingContext &renderingContext, const std::filesystem::path &path);
 
 	// Maybe make the textures vector a vector of Ref<Texture>
 	Ref<Graphics::Material3D> MakeMaterial(const RenderingContext &renderingContext, size_t materialIdx,
 										   const fastgltf::Asset &asset,
-										   const std::vector<Graphics::IGraphicsTexture *> &loadedTextures);
+										   const std::vector<Graphics::IGraphicsTexture *> &loadedTextures,
+										   Hush::MeshReference &meshRef, const std::filesystem::path &basePath);
 
 } // namespace Hush::GLTFLoader

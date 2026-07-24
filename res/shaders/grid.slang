@@ -35,7 +35,7 @@ static const float HEIGHT = -1;
 static const float FOV = 90;
 static const float PI = 3.14159;
 static const float2 RESOLUTION = float2(480, 600);
-static const float3 COLOR = float3(1, 1, 1);
+static const float3 COLOR = float3(0.5, 0.5, 0.5);
 static const vec4 X_AXIS_COLOR = vec4(1.0, 0.1, 0.1, 1.0);
 static const vec4 Z_AXIS_COLOR = vec4(0.1, 0.1, 1.0, 1.0);
 
@@ -70,7 +70,7 @@ float ddLength(float a)
 float3 GridMask(vec2 uv, vec4 uvDDXY, vec2 uvDeriv, float lineThickness) {
     bool2 invertLine = lineThickness > 0.5;
     float2 targetWidth = select(invertLine, 1.0 - lineThickness, lineThickness);
-    float2 drawWidth = clamp(targetWidth, uvDeriv, vec2(0.5));
+    float2 drawWidth = clamp(targetWidth, uvDeriv, 0.5);
     // float2 drawWidth = targetWidth;
     float2 lineAA = uvDeriv * 1.5;
     float2 gridUV = abs(frac(uv) * 2.0 - 1.0);

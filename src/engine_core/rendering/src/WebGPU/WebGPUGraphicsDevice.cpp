@@ -268,10 +268,17 @@ namespace Hush::Graphics
 		queue.writeBuffer(webgpuBuffer->GetBuffer(), offset, data, static_cast<size_t>(size));
 	}
 
-	void WebGPUGraphicsDevice::ResizeBuffer(size_t size, IGraphicsBuffer *buffer)
+	void WebGPUGraphicsDevice::ResizeBuffer(IGraphicsBuffer *buffer, uint64_t size)
 	{
+		HUSH_ASSERT(size <= this->m_capabilities.maxBufferSize,
+					"Cannot resize buffer size to {}, maximum buffer size for this graphics device is: {}", size,
+					this->m_capabilities.maxBufferSize);
 		// There is an available descriptor, we just copy that, obviously this is an intentional copy-op
 		BufferDescriptor newDesc = buffer->GetDescriptor();
+		HUSH_ASSERT(
+			Bitwise::HasCompositeFlag(newDesc.usage, EBufferUsage::CopySource),
+			"For a buffer to be resized it needs to have the CopySource usage flag, current buffer's usage flags: {}",
+			static_cast<uint32_t>(newDesc.usage));
 		newDesc.size = size;
 
 		// Copy the original buffer back to the new one
@@ -288,16 +295,16 @@ namespace Hush::Graphics
 		if (oldBuffSize > 0)
 		{
 			uint64_t bytesToCopy = std::min(size, oldBuffSize);
-			// Handle alignment for WebGPU (multiples of 4)
+			// Handle alignment for WebGPU (multiples of 4 rounding down to avoid writing out of bounds)
 			uint64_t remainder = bytesToCopy % 4;
 			if (remainder != 0)
 			{
-				bytesToCopy = bytesToCopy + 4 - remainder;
+				// Maybe we should issue a warning for the round down(? TBD on PR
+				bytesToCopy = (bytesToCopy / 4) * 4;
 			}
 
 			// Encoder stuff, we do this raw instead of going through the abstractions
 			// because it is easier and we don't mess with lifetimes
-			this->m_graphicsQueue->Submit({});
 			wgpu::CommandEncoder encoder = this->m_device.createCommandEncoder();
 			wgpu::Buffer oldBuffer = static_cast<WGPUBuffer>(buffer->GetNativeHandle());
 			encoder.copyBufferToBuffer(oldBuffer, 0, buff, 0, bytesToCopy);
