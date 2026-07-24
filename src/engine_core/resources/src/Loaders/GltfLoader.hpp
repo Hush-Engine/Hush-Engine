@@ -9,7 +9,7 @@
 namespace fastgltf
 {
 	class Asset;
-	class Mesh;
+	struct Mesh;
 } // namespace fastgltf
 
 namespace Hush

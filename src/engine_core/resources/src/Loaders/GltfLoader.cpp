@@ -130,6 +130,8 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 
 	Entity fatherEntity = Entity::Null();
 
+	HUSH_COND_FAIL_MSG_V(generatedEntities > 0, fatherEntity, "Could not generate meshes for an empty GLTF model");
+
 	// Create at origin, this should potentially be at the mouse's world position later on
 	if (generatedEntities > 1)
 	{
