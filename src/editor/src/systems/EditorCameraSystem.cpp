@@ -19,6 +19,9 @@ void Hush::EditorCameraSystem::Init()
 	Entity editorCamEntity = this->GetScene().CreateEntityWithKey(EDITOR_CAMERA);
 	this->m_editorCameraRef = editorCamEntity.CreateComponentReference<EditorCamera>();
 
+	Entity editorCamEntity = this->GetScene().CreateEntityWithKey(EDITOR_CAMERA);
+	this->m_editorCameraRef = editorCamEntity.CreateComponentReference<EditorCamera>();
+
 	// There should only ever be ONE EditorInfo component in the active scene
 	Entity managerEntity = this->GetScene().CreateEntityWithKey(ENGINE_MANAGER);
 	this->m_editorInfoRef = managerEntity.CreateComponentReference<EditorInfo>();

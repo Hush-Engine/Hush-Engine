@@ -49,7 +49,10 @@ Hush::ComponentRef Hush::Entity::CreateComponentReferenceRaw(EntityId componentI
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_ref_t ref = ecs_ref_init_id(world, this->m_entityId, componentId);
-	static_assert(sizeof(ecs_ref_t) == ECS_REF_SIZE, "Reference size does not match to our internal usage!");
+	static_assert(sizeof(ecs_ref_t) <= ECS_REF_SIZE,
+				  "ecs_ref_t no longer fits ComponentRef's internal buffer; bump ECS_REF_SIZE.");
+	static_assert(alignof(ecs_ref_t) <= ECS_REF_ALIGN,
+				  "ecs_ref_t needs stronger alignment than ECS_REF_ALIGN; bump ECS_REF_ALIGN.");
 
 	ComponentRef publicRef{};
 
@@ -218,7 +221,7 @@ Hush::Entity::EntityId Hush::Entity::InternalRegisterCppComponent(
 	return m_ownerScene->InternalRegisterCppComponent(registerStatus, id, desc);
 }
 
-std::optional<Hush::Entity::EntityId> Hush::Entity::InternalCachedComponentId(const std::string_view name) const
+std::optional<Hush::Entity::EntityId> Hush::Entity::InternalCachedComponentId(const NullTerminatedStringView name) const
 {
 	return m_ownerScene->GetRegisteredComponentId(name);
 }
