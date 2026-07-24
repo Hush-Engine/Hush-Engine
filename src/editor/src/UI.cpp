@@ -200,16 +200,19 @@ bool Hush::UI::Spinner(const char *label, float radius, int thickness, const uin
 	return true;
 }
 
-bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput, bool* outReceivedInput)
+bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput,
+								 bool *outReceivedInput)
 {
-	HUSH_ASSERT(outReceivedInput != nullptr, "Input text with hint needs to capture whether or not the textfield received an input");
+	HUSH_ASSERT(outReceivedInput != nullptr,
+				"Input text with hint needs to capture whether or not the textfield received an input");
 	char outChar = 0;
 	if (focusOnInput && InputManager::FetchCharThisFrame(&outChar))
 	{
 		ImGui::SetKeyboardFocusHere();
 		*outReceivedInput = true;
 	}
-	if (ImGui::IsKeyPressed(ImGuiKey_Backspace, true)) {
+	if (ImGui::IsKeyPressed(ImGuiKey_Backspace, true))
+	{
 		*outReceivedInput = true;
 	}
 	return ImGui::InputTextWithHint(label, hint, buffer, size);

@@ -1,10 +1,16 @@
 #include "ScenePanel.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
+#include "InputManager.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
-#include <imgui/imgui.h>
+#include "Shared/EditorCamera.hpp"
 #include "components/EditorInfo.hpp"
 #include "components/EditorPanelComponents.hpp"
+#include "definitions/KeyCode.hpp"
+#include "imguizmo/ImGuizmo.h"
+#include <imgui/imgui.h>
 #include <algorithm>
 
 constexpr ImGuiWindowFlags SCENE_PANEL_FLAGS =
@@ -15,14 +21,19 @@ constexpr uint32_t MIN_PANEL_DIMENSION = 1;
 
 void Hush::ScenePanel::Init(Scene *activeScene) noexcept
 {
+	this->m_activeScene = activeScene;
+
 	this->m_bridgeEntity = activeScene->CreateEntityWithKey("ScenePanel");
 	ScenePanelSizeComp &panelSize = this->m_bridgeEntity.AddComponent<ScenePanelSizeComp>();
-	// Initially set this to the min dimensions
 	panelSize.size = {MIN_PANEL_DIMENSION, MIN_PANEL_DIMENSION};
 	this->m_panelSizeRef = this->m_bridgeEntity.CreateComponentReference<ScenePanelSizeComp>();
 
 	Entity editorInfoEntity = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
 	this->m_editorInfoRef = editorInfoEntity.CreateComponentReference<EditorInfo>();
+
+	activeScene->CreateQuery<EditorCamera>().Each([this]([[maybe_unused]]
+														 Entity &entity,
+														 EditorCamera &camRef) { this->m_editorCamera = &camRef; });
 }
 
 glm::u32vec2 Hush::ScenePanel::GetPanelSize() const noexcept
@@ -60,13 +71,13 @@ void Hush::ScenePanel::OnRender(float deltaTime) noexcept
 	// ── Display the scene texture ───────────────────────────────────
 	if (m_sceneTextureView != nullptr)
 	{
-		// The render texture is now created to match the panel size, so
-		// we display it at 1:1 — no aspect-ratio fitting needed.
 		ImVec2 imageSize(static_cast<float>(m_textureWidth), static_cast<float>(m_textureHeight));
+		ImVec2 imagePos = ImGui::GetCursorScreenPos();
 
-		// The ImGui WebGPU backend expects a WGPUTextureView cast as ImTextureID
 		auto texId = reinterpret_cast<ImTextureID>(m_sceneTextureView);
 		ImGui::Image(texId, imageSize);
+
+		this->RenderGizmo(imagePos, imageSize);
 	}
 	else
 	{
@@ -81,4 +92,77 @@ void Hush::ScenePanel::SetSceneTextureView(void *nativeTextureView, uint32_t wid
 	m_sceneTextureView = nativeTextureView;
 	m_textureWidth = width;
 	m_textureHeight = height;
+}
+
+void Hush::ScenePanel::SetGizmoTarget(Entity::EntityId entityId) noexcept
+{
+	m_gizmoTargetId = entityId;
+}
+
+void Hush::ScenePanel::SetGizmoOperation(ImGuizmo::OPERATION op) noexcept
+{
+	m_currentGizmoOp = op;
+}
+
+void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSize)
+{
+	if (m_gizmoTargetId == Entity::INVALID_ENTITY_ID || m_editorCamera == nullptr)
+	{
+		return;
+	}
+
+	std::optional<Entity> optEntity = this->m_activeScene->EntityFromId(m_gizmoTargetId);
+	if (!optEntity.has_value() || !optEntity->IsValid())
+	{
+		return;
+	}
+	Entity &entity = optEntity.value();
+
+	EditorInfo *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	if (editorInfo->currentState == EEditorState::None)
+	{
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::R))
+		{
+			m_currentGizmoOp = ImGuizmo::ROTATE;
+		}
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::T))
+		{
+			m_currentGizmoOp = ImGuizmo::TRANSLATE;
+		}
+		if (InputManager::IsKeyDownThisFrame(EKeyCode::S))
+		{
+			m_currentGizmoOp = ImGuizmo::SCALE;
+		}
+	}
+
+	WorldTransform *worldXform = entity.GetComponent<WorldTransform>();
+	LocalTransform *localXform = entity.GetComponent<LocalTransform>();
+	if (worldXform == nullptr || localXform == nullptr)
+	{
+		return;
+	}
+
+	const glm::mat4 viewMat = m_editorCamera->GetViewMatrix();
+	const glm::mat4 projMat = m_editorCamera->GetProjectionMatrix();
+
+	ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+	ImGuizmo::SetRect(imagePos.x, imagePos.y, imageSize.x, imageSize.y);
+
+	glm::mat4 worldMatrix = worldXform->GetTransformationMatrix();
+	if (!ImGuizmo::Manipulate(reinterpret_cast<const float *>(&viewMat), reinterpret_cast<const float *>(&projMat),
+							  m_currentGizmoOp, ImGuizmo::MODE::LOCAL, reinterpret_cast<float *>(&worldMatrix)))
+	{
+		return;
+	}
+
+	glm::mat4 newLocalMatrix = worldMatrix;
+	const Entity parent = entity.GetParent();
+	if (parent.IsValid())
+	{
+		const WorldTransform *parentWorldXform = parent.GetComponent<WorldTransform>();
+		const glm::mat4 parentWorldMatrix = parentWorldXform->GetTransformationMatrix();
+		newLocalMatrix = glm::inverse(parentWorldMatrix) * worldMatrix;
+	}
+
+	localXform->SetTransformationMatrix(newLocalMatrix);
 }

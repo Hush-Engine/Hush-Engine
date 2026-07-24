@@ -2,15 +2,9 @@
 #include "Assertions.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/MeshReference.hpp"
-#include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
-#include "InputManager.hpp"
-#include "Mat4Math.hpp"
-#include "Shared/EditorCamera.hpp"
 #include "Shared/IMaterial3D.hpp"
-// #include "Vulkan/GltfMetallicRoughness.hpp"
 #include "components/EditorInfo.hpp"
-#include "definitions/KeyCode.hpp"
 #include "imgui/imgui.h"
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
@@ -20,9 +14,9 @@
 #include <string_view>
 #include <vector>
 #include "UI.hpp"
+#include "ScenePanel.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include <memory>
-#include "imguizmo/ImGuizmo.h"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
@@ -145,7 +139,6 @@ void Hush::InspectorPanel::OnRender([[maybe_unused]] float deltaTime)
 	if (this->m_inspectTarget.has_value())
 	{
 		this->RenderProperties();
-		this->RenderGizmo();
 	}
 	ImGui::End();
 }
@@ -157,15 +150,12 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
 													   Entity &entity,
 													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
-
-	activeScene->CreateQuery<EditorCamera>().Each([this]([[maybe_unused]]
-														 Entity &entity,
-														 EditorCamera &camRef) { this->m_editorCamera = &camRef; });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
 {
 	this->m_inspectTarget = this->m_activeScene->EntityFromId(entity);
+	UI::Get().GetPanel<ScenePanel>().SetGizmoTarget(entity);
 }
 
 const std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() const
@@ -199,62 +189,4 @@ void Hush::InspectorPanel::RenderProperties()
 	{
 		Serialize(meshComponent, entityName->name.data());
 	}
-}
-
-void Hush::InspectorPanel::RenderGizmo()
-{
-	if (this->m_editorInfo->currentState == EEditorState::None)
-	{
-		if (InputManager::IsKeyDownThisFrame(EKeyCode::R))
-		{
-			this->m_currentGizmoOp = ImGuizmo::ROTATE;
-		}
-
-		if (InputManager::IsKeyDownThisFrame(EKeyCode::T))
-		{
-			this->m_currentGizmoOp = ImGuizmo::TRANSLATE;
-		}
-
-		if (InputManager::IsKeyDownThisFrame(EKeyCode::S))
-		{
-			this->m_currentGizmoOp = ImGuizmo::SCALE;
-		}
-	}
-
-	if (this->m_editorCamera == nullptr)
-	{
-		return;
-	}
-	const EditorCamera &cam = *this->m_editorCamera;
-	// Start with translation Gizmo
-	ImGuiIO &io = ImGui::GetIO();
-	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-	glm::mat4 viewMat = cam.GetViewMatrix();
-	glm::mat4 projMat = cam.GetProjectionMatrix();
-	auto *viewMatPtr = reinterpret_cast<float *>(&viewMat);
-	auto *projMatPtr = reinterpret_cast<float *>(&projMat);
-
-	WorldTransform *worldXform = this->m_inspectTarget->GetComponent<WorldTransform>();
-	LocalTransform *localXform = this->m_inspectTarget->GetComponent<LocalTransform>();
-
-	glm::mat4 worldMatrix = worldXform->GetTransformationMatrix();
-	auto *worldMatrixPtr = reinterpret_cast<float *>(&worldMatrix);
-
-	if (!ImGuizmo::Manipulate(viewMatPtr, projMatPtr, this->m_currentGizmoOp, ImGuizmo::MODE::LOCAL, worldMatrixPtr))
-	{
-		return;
-	}
-
-	glm::mat4 newLocalMatrix = worldMatrix;
-
-	Entity parent = this->m_inspectTarget->GetParent();
-	if (parent.IsValid())
-	{
-		WorldTransform *parentWorldXform = parent.GetComponent<WorldTransform>();
-		glm::mat4 parentWorldMatrix = parentWorldXform->GetTransformationMatrix();
-
-		newLocalMatrix = glm::inverse(parentWorldMatrix) * worldMatrix;
-	}
-
-	localXform->SetTransformationMatrix(newLocalMatrix);
 }

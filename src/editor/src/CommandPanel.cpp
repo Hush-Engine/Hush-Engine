@@ -468,8 +468,8 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 	// Then find all entities in the scene here
 	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
 	query.Each([&state, &idsByIdx](Entity &entity, Entity::Name &name,
-						[[maybe_unused]]
-						WorldTransform &transform) {
+								   [[maybe_unused]]
+								   WorldTransform &transform) {
 		(void)(entity);
 		std::string_view currEntityName = name.name.data();
 		state.options.emplace_back(currEntityName);
@@ -478,7 +478,7 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 
 	state.ctx = &idsByIdx;
 	state.onElementClicked = [](size_t idx, PopupListState *state) {
-		auto* localIdsByIdx = reinterpret_cast<std::vector<Entity::EntityId>*>(state->ctx);
+		auto *localIdsByIdx = reinterpret_cast<std::vector<Entity::EntityId> *>(state->ctx);
 		Entity::EntityId targetId = localIdsByIdx->at(idx);
 		// TODO: Turn this into an event the inspector panel listens for
 		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(targetId);

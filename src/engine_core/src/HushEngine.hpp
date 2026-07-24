@@ -74,7 +74,8 @@ namespace Hush
 
 		ResourceManager *GetResourceManager() noexcept;
 
-		inline bool ShouldRun() const {
+		inline bool ShouldRun() const
+		{
 			return this->m_isApplicationRunning;
 		}
 

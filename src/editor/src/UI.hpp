@@ -54,8 +54,8 @@ namespace Hush
 		static bool Spinner(const char *label, float radius, int thickness,
 							const uint32_t &color = 3435973836u /*Default button color*/);
 
-		static bool InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size,
-									  bool focusOnInput, bool* receivedInput);
+		static bool InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput,
+									  bool *receivedInput);
 
 		static bool BeginCenterPopup(const char *label, bool transparent = false);
 

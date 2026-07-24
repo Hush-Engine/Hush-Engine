@@ -71,7 +71,6 @@ Hush::WindowRenderer::WindowRenderer(const char *windowName, [[maybe_unused]] Sc
 		return;
 	}
 
-
 	if (WindowManager::GetMainWindow() == nullptr)
 	{
 		// Set this window as the main one

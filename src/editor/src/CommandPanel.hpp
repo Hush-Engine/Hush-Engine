@@ -33,21 +33,20 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
-
 		// For any pop up list, including (later on) the commands themselves
 		struct PopupListState;
-		using OnElementClickedFn_t = void(*)(size_t, PopupListState*);
+		using OnElementClickedFn_t = void (*)(size_t, PopupListState *);
 		struct PopupListState
 		{
 			std::vector<std::string_view> options;
-			const char* filter;
+			const char *filter;
 			int32_t selected;
-			const char* label = nullptr;
-			const char* leftInstruction = nullptr;
-			const char* inputId = nullptr;
-			const char* hint = nullptr;
+			const char *label = nullptr;
+			const char *leftInstruction = nullptr;
+			const char *inputId = nullptr;
+			const char *hint = nullptr;
 			OnElementClickedFn_t onElementClicked = nullptr;
-			void* ctx = nullptr;
+			void *ctx = nullptr;
 		};
 
 		static inline constexpr std::string_view DEFAULT_CMD_PANEL_TEXT = "Type \":\" to enter command mode";
@@ -64,7 +63,7 @@ namespace Hush
 
 		void FindEntityPopup(const char *overrideLabel = nullptr);
 
-		void DrawSearchPopup(PopupListState* state);
+		void DrawSearchPopup(PopupListState *state);
 
 		void RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId);
 
