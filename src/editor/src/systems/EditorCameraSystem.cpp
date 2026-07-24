@@ -16,10 +16,6 @@ constexpr float CAM_PITCH_MAX = 89.5f * Hush::MathUtils::DEG_TO_RAD;
 void Hush::EditorCameraSystem::Init()
 {
 	// There should only ever be ONE EditorCamera component in the active scene
-	this->GetScene().CreateQuery<EditorCamera>().Each(
-		[this](Entity &entity, [[maybe_unused]]
-							   EditorCamera &camRef) { this->m_editorCameraEntity = std::move(entity); });
-
 	Entity editorCamEntity = this->GetScene().CreateEntityWithKey(EDITOR_CAMERA);
 	this->m_editorCameraRef = editorCamEntity.CreateComponentReference<EditorCamera>();
 
@@ -38,7 +34,8 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	// We need to retrieve the camera and editor info references every frame because the scene might have been reloaded,
 	// which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more
 	// complex event system just for this.
-	auto *editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
+	auto *editorCamera = this->m_editorCameraRef.GetData<EditorCamera>();
+	HUSH_ASSERT(editorCamera != nullptr, "Editor camera component should never be null if the HushEditor is running!");
 	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
 	HUSH_ASSERT(editorInfo != nullptr, "Editor info component should never be null if the HushEditor is running!");
 
