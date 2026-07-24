@@ -14,6 +14,7 @@
 namespace Hush::Graphics
 {
 	class IGraphicsDevice;
+	class IGraphicsTexture;
 	class IShaderModule;
 	struct ShaderCompilationResult;
 
@@ -234,13 +235,35 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		const std::vector<uint8_t> &GetUniformStagingBuffer() const noexcept;
 
+		// -----------------------------------------------------------------
+		// Texture slots (populated from shader reflection)
+		// -----------------------------------------------------------------
+
+		/// @brief Describes a single texture binding discovered via shader reflection.
+		struct TextureSlot
+		{
+			uint32_t binding = 0;
+			uint32_t set = 0;
+			IGraphicsTexture *texture = nullptr;
+		};
+
+		/// @brief Assign a GPU texture to a binding slot.
+		void SetTexture(uint32_t binding, IGraphicsTexture *texture);
+
+		/// @brief Get the texture assigned to a binding slot, or nullptr.
+		[[nodiscard]]
+		IGraphicsTexture *GetTexture(uint32_t binding) const;
+
+		/// @brief All texture slots discovered from reflection.
+		[[nodiscard]]
+		const std::vector<TextureSlot> &GetTextureSlots() const noexcept;
+
 	private:
 		/// @brief Build the property map from the shader's reflected bindings.
 		void BuildPropertyMapFromReflection(const ShaderCompilationResult &result);
 
 		/// @brief Create all bind group layout resources from the shader reflection.
-		/// Layouts for non-material sets use the full reflected layout; the material's
-		/// own set is filtered to only contain entries Material3D actually provides.
+		/// Layouts for all sets use the full reflected layout.
 		EError CreateAllBindGroupLayouts(IGraphicsDevice *device,
 										 const std::vector<BindGroupLayoutDescriptor> &layoutDescs);
 
@@ -268,8 +291,7 @@ namespace Hush::Graphics
 		//       descriptor.  Only the pipeline and binding resources are owned.
 
 		/// All bind group layouts, one per set (index matches set number).
-		/// Layouts for non-material sets are the full reflected layouts;
-		/// the material's own set is filtered to uniform-buffer-only.
+		/// Each layout uses the full reflected layout from the shader.
 		std::vector<BindGroupLayoutResource> m_bindGroupLayouts;
 
 		/// Which set index the material's uniform properties belong to.
@@ -286,6 +308,14 @@ namespace Hush::Graphics
 
 		/// Whether the staging buffer has been modified since the last flush.
 		bool m_propertiesDirty = false;
+
+		/// @brief Texture bindings discovered from shader reflection.
+		std::vector<TextureSlot> m_textureSlots;
+
+		/// Layout entries for the material's own bind group set.
+		/// Stored so CreateUniformBufferAndBindGroup can provide entries
+		/// for all bindings matching the full (unfiltered) layout.
+		std::vector<BindGroupLayoutEntry> m_materialSetLayoutEntries;
 
 		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 		ECullMode m_cullMode = ECullMode::None;

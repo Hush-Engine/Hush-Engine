@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Components/Material3D.hpp"
+#include "Components/TextureComponent.hpp"
 #include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace Hush
@@ -63,6 +65,19 @@ namespace Hush
 			this->m_materials.push_back(material);
 		}
 
+		// Temporary: raw Material3D* key, not safe if a material is destroyed mid-frame.
+		// Will need a safer referencing system later (e.g. material ID or weak handle).
+		auto &GetMaterialTextureRefs()
+		{
+			return m_materialTextureRefs;
+		}
+
+		[[nodiscard]]
+		const auto &GetMaterialTextureRefs() const
+		{
+			return m_materialTextureRefs;
+		}
+
 	private:
 		Ref<Mesh> m_mesh;
 		/// @brief Material references used for this mesh's GeometrySurfaces, see @ref GeoSurface
@@ -73,6 +88,11 @@ namespace Hush
 
 		/// @brief GPU index buffer, owned by this component and populated by ResourceUploadSystem.
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuIndexBuffer;
+
+		// Temporary: raw Material3D* key, not safe if a material is destroyed mid-frame.
+		// Will need a safer referencing system later (e.g. material ID or weak handle).
+		std::unordered_map<const Graphics::Material3D *, std::unordered_map<uint32_t, Ref<TextureComponent>>>
+			m_materialTextureRefs;
 	};
 
 	void Serialize(MeshReference *component, const char *entityName);

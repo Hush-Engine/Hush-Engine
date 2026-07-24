@@ -277,7 +277,7 @@ namespace Hush::Graphics
 		HUSH_ASSERT(
 			Bitwise::HasCompositeFlag(newDesc.usage, EBufferUsage::CopySource),
 			"For a buffer to be resized it needs to have the CopySource usage flag, current buffer's usage flags: {}",
-			newDesc.usage);
+			static_cast<uint32_t>(newDesc.usage));
 		newDesc.size = size;
 
 		// Copy the original buffer back to the new one

@@ -17,9 +17,9 @@ struct SceneData
     float4x4 view;
     float4x4 proj;
     float4x4 viewproj;
-    float4   ambientColor;
-    float4   sunlightDirection;   // .w = sun power
-    float4   sunlightColor;
+    float4 ambientColor;
+    float4 sunlightDirection; // .w = sun power
+    float4 sunlightColor;
 };
 
 struct ModelData
@@ -29,27 +29,34 @@ struct ModelData
 
 struct PBRMaterialData
 {
-    float4  colorFactors;
-    float4  metal_rough_factors;
-    float4  emissionFactors;
-    float   alphaCutoff;
+    float4 colorFactors;
+    float4 metal_rough_factors;
+    float4 emissionFactors;
+    float alphaCutoff;
     uint32_t optionFlags;
 };
 
 // Set 0 — per-frame / per-draw
-[[vk::binding(0, 0)]] ConstantBuffer<SceneData>         u_sceneData;
-[[vk::binding(1, 0)]] ConstantBuffer<ModelData>          modelData;
+[[vk::binding(0, 0)]]
+ConstantBuffer<SceneData> u_sceneData;
+[[vk::binding(1, 0)]]
+ConstantBuffer<ModelData> modelData;
 
 // Set 1 — per-material
-[[vk::binding(0, 1)]] ConstantBuffer<PBRMaterialData>   materialData;
-[[vk::binding(1, 1)]] Texture2D<float4>                  colorTex;
-[[vk::binding(2, 1)]] Texture2D<float4>                  metalRoughTex;
-[[vk::binding(3, 1)]] Texture2D<float4>                  normalTex;
-[[vk::binding(4, 1)]] Texture2D<float4>                  emissiveTex;
-[[vk::binding(5, 1)]] SamplerState                       defaultSampler;
+[[vk::binding(0, 1)]]
+ConstantBuffer<PBRMaterialData> materialData;
+[[vk::binding(1, 1)]]
+Texture2D<float4> colorTex;
+[[vk::binding(2, 1)]]
+Texture2D<float4> metalRoughTex;
+[[vk::binding(3, 1)]]
+Texture2D<float4> normalTex;
+[[vk::binding(4, 1)]]
+Texture2D<float4> emissiveTex;
+[[vk::binding(5, 1)]]
+SamplerState defaultSampler;
 
-
-static const float PI      = 3.14159265;
+static const float PI = 3.14159265;
 static const float EPSILON = 0.00001f;
 
 float3 FresnelSchlick(float3 F0, float cosTheta)
@@ -64,8 +71,8 @@ float3 FresnelSchlickRoughness(float3 F0, float cosTheta, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float alpha)
 {
-    float k    = alpha / 2.0;
-    float num   = NdotV;
+    float k = alpha / 2.0;
+    float num = NdotV;
     float denom = NdotV * (1.0 - k) + k;
     return num / denom;
 }
@@ -74,8 +81,8 @@ float GeometrySmith(float3 N, float3 V, float3 L, float alpha)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, alpha);
-    float ggx1  = GeometrySchlickGGX(NdotL, alpha);
+    float ggx2 = GeometrySchlickGGX(NdotV, alpha);
+    float ggx1 = GeometrySchlickGGX(NdotL, alpha);
     return ggx1 * ggx2;
 }
 
@@ -93,19 +100,15 @@ float GaSchlickGGX(float cosLi, float NdotV, float roughness)
 
 float DistributionGGX(float3 N, float3 H, float alpha)
 {
-    float a2    = alpha * alpha;
+    float a2 = alpha * alpha;
     float NdotH = max(dot(N, H), 0.0);
     float NdotH2 = NdotH * NdotH;
 
-    float num   = a2;
+    float num = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
     return num / denom;
 }
-
-//===========================================================================
-//  shaderMath.glsl
-//===========================================================================
 
 static const float Epsilon = 0.00001;
 
@@ -131,9 +134,9 @@ float3 scalarPow(float3 v, float n)
 
 float4 ToLinear(float4 sRGB)
 {
-    bool4  cutoff = sRGB < float4(0.04045);
+    bool4 cutoff = sRGB < float4(0.04045);
     float4 higher = pow((sRGB + float4(0.055)) / float4(1.055), float4(2.4));
-    float4 lower  = sRGB / float4(12.92);
+    float4 lower = sRGB / float4(12.92);
     return lerp(higher, lower, (float4)cutoff);
 }
 
@@ -142,18 +145,15 @@ bool HasCompositeFlag(int base, int compositeFlag)
     return (base & compositeFlag) != 0;
 }
 
-//===========================================================================
-//  lighting.glsl — PBR directional light
-//===========================================================================
-
+// Lighting
 struct PBRParameters
 {
     float3 Albedo;
-    float  Roughness;
-    float  Metalness;
+    float Roughness;
+    float Metalness;
     float3 Normal;
     float3 View;
-    float  NdotV;
+    float NdotV;
 };
 
 float3 CalculateDirLights(PBRParameters params)
@@ -165,19 +165,20 @@ float3 CalculateDirLights(PBRParameters params)
     for (int i = 0; i < 1; i++)
     {
         float sunPower = u_sceneData.sunlightDirection.w;
-        if (sunPower == 0.0) continue;
+        if (sunPower == 0.0)
+            continue;
 
-        float3 Li        = u_sceneData.sunlightDirection.xyz;
+        float3 Li = u_sceneData.sunlightDirection.xyz;
         float3 Lradiance = u_sceneData.sunlightColor.xyz * sunPower;
-        float3 Lh        = normalize(Li + params.View);
+        float3 Lh = normalize(Li + params.View);
 
         float cosLi = max(0.0, dot(params.Normal, Li));
 
         float3 F = FresnelSchlick(F0, max(0.0, dot(Lh, params.View)));
-        float  D = DistributionGGX(params.Normal, Lh, params.Roughness);
-        float  G = GaSchlickGGX(cosLi, params.NdotV, params.Roughness);
+        float D = DistributionGGX(params.Normal, Lh, params.Roughness);
+        float G = GaSchlickGGX(cosLi, params.NdotV, params.Roughness);
 
-        float3 kd          = (1.0 - F) * (1.0 - params.Metalness);
+        float3 kd = (1.0 - F) * (1.0 - params.Metalness);
         float3 diffuseBRDF = kd * params.Albedo;
 
         float3 specularBRDF = (F * D * G) / max(Epsilon, 4.0 * cosLi * params.NdotV);
@@ -188,32 +189,38 @@ float3 CalculateDirLights(PBRParameters params)
     return result;
 }
 
-
-static const int USE_NORMALS_FLAG   = 0x1;
+static const int USE_NORMALS_FLAG = 0x1;
 static const int DEBUG_NORMALS_FLAG = 0x2;
-
-//===========================================================================
-//  mesh.vert — vertex input / output structs
-//===========================================================================
 
 struct VertexInput
 {
-    [[vk::location(0)]] float3 position : POSITION;
-    [[vk::location(1)]] float3 normal   : NORMAL;
-    [[vk::location(2)]] float4 color    : COLOR;
-    [[vk::location(3)]] float4 tangent  : TANGENT;
-    [[vk::location(4)]] float2 uv       : TEXCOORD;
+    [[vk::location(0)]]
+    float3 position : POSITION;
+    [[vk::location(1)]]
+    float3 normal : NORMAL;
+    [[vk::location(2)]]
+    float4 color : COLOR;
+    [[vk::location(3)]]
+    float4 tangent : TANGENT;
+    [[vk::location(4)]]
+    float2 uv : TEXCOORD;
 };
 
 struct VertexOutput
 {
-    float4                 position : SV_Position;
-    [[vk::location(0)]] float3 normal;
-    [[vk::location(1)]] float3 outColor;
-    [[vk::location(2)]] float2 outUV;
-    [[vk::location(3)]] float3 outTangent;
-    [[vk::location(4)]] float  outHandedness;
-    [[vk::location(5)]] float3 outWorldPos;
+    float4 position : SV_Position;
+    [[vk::location(0)]]
+    float3 normal;
+    [[vk::location(1)]]
+    float3 outColor;
+    [[vk::location(2)]]
+    float2 outUV;
+    [[vk::location(3)]]
+    float3 outTangent;
+    [[vk::location(4)]]
+    float outHandedness;
+    [[vk::location(5)]]
+    float3 outWorldPos;
 };
 
 [shader("vertex")]
@@ -229,78 +236,69 @@ VertexOutput vertMain(VertexInput input)
     output.normal = normalize(mul(modelMat3, input.normal));
     output.outTangent = normalize(mul(modelMat3, input.tangent.xyz));
     output.outHandedness = input.tangent.w;
-    // output.outColor = input.color.xyz * materialData.colorFactors.xyz;
+    output.outColor = input.color.xyz * materialData.colorFactors.xyz;
     output.outUV = input.uv;
 
     return output;
 }
 
-
 struct FragmentOutput
 {
-    [[vk::location(0)]] float4 color;
+    [[vk::location(0)]]
+    float4 color;
 };
-
-// [shader("fragment")]
-// FragmentOutput fragMain(VertexOutput input)
-// {
-//     float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
-//     float  alpha    = texColor.w;
-//     if (alpha < materialData.alphaCutoff)
-//     {
-//         discard;
-//     }
-
-//     PBRParameters params;
-//     params.Albedo = texColor.rgb * scalarPow(input.outColor, 2.2);
-
-//     float4 metalRough = metalRoughTex.Sample(defaultSampler, input.outUV);
-//     params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
-//     params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
-//     params.Roughness = max(params.Roughness, 0.05);
-
-//     // Calculate normal
-//     if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG))
-//     {
-//         float3 tangent = calculateTangentGramSchmidt(input.normal, input.outTangent);
-//         float3 biTangent = cross(input.normal, tangent) * input.outHandedness;
-//         float3x3 TBN = float3x3(tangent, biTangent, input.normal);
-//         float3 localNormal = 2.0 * normalTex.Sample(defaultSampler, input.outUV).rgb - 1.0;
-//         params.Normal      = normalize(mul(TBN, localNormal));
-//     }
-//     else
-//     {
-//         params.Normal = normalize(input.normal);
-//     }
-
-//     if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG))
-//     {
-//         FragmentOutput o;
-//         o.color = float4(params.Normal, alpha);
-//         return o;
-//     }
-
-//     float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
-//     params.View  = fragToCamDir;
-//     params.NdotV = max(dot(params.Normal, params.View), 0.0);
-
-//     float4 texEmission = emissiveTex.Sample(defaultSampler, input.outUV);
-//     float3 emission = (scalarPow(texEmission.xyz, 2.2) *
-//                        materialData.emissionFactors.xyz) *
-//                       materialData.emissionFactors.w;
-
-//     float3 directLight = CalculateDirLights(params);
-//     float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
-
-//     FragmentOutput o;
-//     o.color = float4(ambient + directLight + emission, texColor.a);
-//     return o;
-// }
 
 [shader("fragment")]
 FragmentOutput fragMain(VertexOutput input)
 {
-    FragmentOutput o;    
-    o.color = float4(0.0, 1.0, 0.0, 1.0);
+    float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
+    float alpha = texColor.w;
+    if (alpha < materialData.alphaCutoff)
+    {
+        discard;
+    }
+
+    PBRParameters params;
+    params.Albedo = texColor.rgb * scalarPow(input.outColor, 2.2);
+
+    float4 metalRough = metalRoughTex.Sample(defaultSampler, input.outUV);
+    params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
+    params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
+    params.Roughness = max(params.Roughness, 0.05);
+
+    // Calculate normal
+    if (HasCompositeFlag(materialData.optionFlags, USE_NORMALS_FLAG))
+    {
+        float3 tangent = calculateTangentGramSchmidt(input.normal, input.outTangent);
+        float3 biTangent = cross(input.normal, tangent) * input.outHandedness;
+        float3x3 TBN = float3x3(tangent, biTangent, input.normal);
+        float3 localNormal = 2.0 * normalTex.Sample(defaultSampler, input.outUV).rgb - 1.0;
+        params.Normal = normalize(mul(TBN, localNormal));
+    }
+    else
+    {
+        params.Normal = normalize(input.normal);
+    }
+
+    if (HasCompositeFlag(materialData.optionFlags, DEBUG_NORMALS_FLAG))
+    {
+        FragmentOutput o;
+        o.color = float4(params.Normal, alpha);
+        return o;
+    }
+
+    float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
+    params.View = fragToCamDir;
+    params.NdotV = max(dot(params.Normal, params.View), 0.0);
+
+    float4 texEmission = emissiveTex.Sample(defaultSampler, input.outUV);
+    float3 emission =
+        (scalarPow(texEmission.xyz, 2.2) * materialData.emissionFactors.xyz) * materialData.emissionFactors.w;
+
+    float3 directLight = CalculateDirLights(params);
+    float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
+
+    FragmentOutput o;
+    o.color = float4(ambient + directLight + emission, texColor.a);
     return o;
 }
