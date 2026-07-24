@@ -1,4 +1,5 @@
 #include "CommandPanel.hpp"
+#include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Entity.hpp"
@@ -6,6 +7,7 @@
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
+#include "ScenePanel.hpp"
 #include "ScriptingHost.hpp"
 #include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
@@ -19,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <flecs.h>
+#include <glm/ext/vector_uint2_sized.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <string>
@@ -78,8 +81,8 @@ void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->AddComponentPopup();
 		break;
 	case EState::AddSystemMode: {
-		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost,
-																 &this->m_selectedSystem);
+		bool popupOpen =
+			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedItem);
 		if (!popupOpen)
 		{
 			this->CloseCommandMode();
@@ -337,8 +340,9 @@ void Hush::CommandPanel::AddComponentPopup()
 		memset(static_cast<void *>(this->m_searchInputText), 0, MAX_ALLOWED_ENTITY_NAME);
 		this->m_keyboardFocusSet = false;
 	}
+	bool receivedInput = false;
 	UI::InputTextWithHint("##Search", "i.e. Rigidbody", static_cast<char *>(this->m_searchInputText),
-						  MAX_ALLOWED_ENTITY_NAME, true);
+						  MAX_ALLOWED_ENTITY_NAME, true, &receivedInput);
 	// Find built in components
 	using Arr_t = std::array<std::string_view, 2>;
 	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
@@ -367,43 +371,105 @@ void Hush::CommandPanel::AddComponentPopup()
 	ImGui::End();
 }
 
-void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
+void Hush::CommandPanel::DrawSearchPopup(PopupListState *state)
 {
-	const char *label = overrideLabel != nullptr ? overrideLabel : "Entity search";
-	UI::BeginCenterPopup(label, true);
-	ImGui::Text("Search for an entity");
+	auto &scenePanel = UI::Get().GetPanel<ScenePanel>();
+	glm::u32vec2 scenePanelSize = scenePanel.GetPanelSize();
+
+	// At least 1/3 of the scene width
+	ImVec2 minPopupSize = {(float)scenePanelSize.x / 3.f, (float)scenePanelSize.y / 2.f};
+	ImGui::SetNextWindowSize(minPopupSize);
+
+	UI::BeginCenterPopup(state->label, true);
+	ImGui::Text("%s", state->leftInstruction);
 	if (this->m_keyboardFocusSet)
 	{
 		ImGui::SetKeyboardFocusHere();
 		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
 	}
-	UI::InputTextWithHint("##Search", "i.e. Player", static_cast<char *>(this->m_searchInputText),
-						  MAX_ALLOWED_ENTITY_NAME, true);
-	// Then find all entities in the scene here
-	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
-	std::vector<std::string> entityNames;
-	std::string_view searchEntityName(static_cast<char *>(this->m_searchInputText));
-	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name,
-													   [[maybe_unused]]
-													   WorldTransform &transform) {
-		std::string_view currEntityName = name.name.data();
-		if (searchEntityName.empty())
-		{
-			RenderEntitySelectable(currEntityName, entity.GetId());
-		}
-		entityNames.emplace_back(currEntityName);
-	});
+	bool receivedInput = false;
+	UI::InputTextWithHint(state->inputId, state->hint, static_cast<char *>(this->m_searchInputText),
+						  MAX_ALLOWED_ENTITY_NAME, true, &receivedInput);
 
-	std::vector<size_t> indices =
-		ArrayUtils::FuzzyFindIndices<std::vector<std::string>, std::string>(entityNames, this->m_searchInputText);
-
-	for (size_t idx : indices)
+	if (receivedInput)
 	{
-		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));
+		state->selected = -1;
+	}
+
+	std::string filterStr = state->filter;
+
+	ImDrawList *drawList = ImGui::GetWindowDrawList();
+	bool hovered = false;
+	std::vector<size_t> indices;
+	size_t maxOptionsSize = state->options.size();
+	if (filterStr.empty())
+	{
+		for (size_t i = 0; i < state->options.size(); i++)
+		{
+			if (UI::CustomSelectable(state->options[i].data(), &hovered, drawList, i == state->selected))
+			{
+				state->onElementClicked(i);
+				this->CloseCommandMode();
+			}
+		}
+	}
+	else
+	{
+		indices =
+			ArrayUtils::FuzzyFindIndices<std::vector<std::string_view>, std::string_view>(state->options, filterStr);
+		maxOptionsSize = indices.size();
+		for (size_t i = 0; i < indices.size(); i++) {
+			size_t indexOnOptionsArr = indices[i];
+			if (UI::CustomSelectable(state->options[indexOnOptionsArr].data(), &hovered, drawList, i == state->selected))
+			{
+				state->onElementClicked(indexOnOptionsArr);
+				this->CloseCommandMode();
+			}
+		}
+	}
+	if (ImGui::IsKeyPressed(ImGuiKey_DownArrow, true))
+	{
+		state->selected++;
+		state->selected = state->selected % static_cast<int32_t>(maxOptionsSize);
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true))
+	{
+		state->selected--;
+		if (state->selected < 0)
+		{
+			state->selected = static_cast<int32_t>(maxOptionsSize - 1);
+		}
 	}
 
 	ImGui::End();
+}
+
+void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
+{
+	PopupListState state{};
+	state.label = overrideLabel != nullptr ? overrideLabel : "Entity search";
+	state.filter = &(this->m_searchInputText[0]);
+	state.selected = this->m_selectedItem;
+	state.inputId = "##SearchEntity";
+	state.hint = "i.e Player";
+	state.leftInstruction = "Find any entity";
+
+	state.onElementClicked = [](size_t idx) { LogFormat(ELogLevel::Info, "Clicked on {}", idx); };
+
+	// Then find all entities in the scene here
+	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
+	query.Each([&state](Entity &entity, Entity::Name &name,
+						[[maybe_unused]]
+						WorldTransform &transform) {
+		(void)(entity);
+		std::string_view currEntityName = name.name.data();
+		state.options.emplace_back(currEntityName);
+	});
+
+	DrawSearchPopup(&state);
+
+	// Update the selected item on the global state
+	this->m_selectedItem = state.selected;
 }
 
 void Hush::CommandPanel::RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId)

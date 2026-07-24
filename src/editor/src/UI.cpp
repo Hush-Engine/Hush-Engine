@@ -1,4 +1,5 @@
 #include "UI.hpp"
+#include "Assertions.hpp"
 #include "CommandPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
@@ -65,7 +66,7 @@ void Hush::UI::SetupImGuiStyle()
 	style.ChildRounding = 0.0f;
 	style.ChildBorderSize = 1.0f;
 	style.PopupRounding = 0.0f;
-	style.PopupBorderSize = 1.0f;
+	style.PopupBorderSize = 5.0f;
 	style.FramePadding = ImVec2(6.0f, 6.0f);
 	style.FrameRounding = 0.0f;
 	style.FrameBorderSize = 0.0f;
@@ -199,12 +200,17 @@ bool Hush::UI::Spinner(const char *label, float radius, int thickness, const uin
 	return true;
 }
 
-bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput)
+bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput, bool* outReceivedInput)
 {
+	HUSH_ASSERT(outReceivedInput != nullptr, "Input text with hint needs to capture whether or not the textfield received an input");
 	char outChar = 0;
 	if (focusOnInput && InputManager::FetchCharThisFrame(&outChar))
 	{
 		ImGui::SetKeyboardFocusHere();
+		*outReceivedInput = true;
+	}
+	if (ImGui::IsKeyPressed(ImGuiKey_Backspace, true)) {
+		*outReceivedInput = true;
 	}
 	return ImGui::InputTextWithHint(label, hint, buffer, size);
 }
@@ -221,7 +227,7 @@ bool Hush::UI::BeginCenterPopup(const char *label, bool transparent)
 	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse;
 
 	const ImVec2 screenCenter = ImGui::GetMainViewport()->GetCenter();
-	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::Begin(label, nullptr, windowFlags);
 
 	return true;
