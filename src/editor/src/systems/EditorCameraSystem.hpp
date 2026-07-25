@@ -48,7 +48,6 @@ namespace Hush
 
 		Hush::ComponentRef m_editorInfoRef{};
 		Hush::ComponentRef m_editorCameraRef{};
-		Hush::Entity m_editorCameraEntity = Hush::Entity::Null();
 
 		float m_blendValue = 0.0F;
 	};

@@ -57,7 +57,8 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->DrawFiles(isMouseInScene);
 
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
-		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		if (isMouseInScene && payload != nullptr && payload->DataSize == sizeof(FileInfo) &&
+			ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))

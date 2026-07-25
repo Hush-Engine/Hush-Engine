@@ -19,6 +19,10 @@ namespace Hush::Threading
 		class SelfDeletePromise
 		{
 		public:
+			// Detached task: its frame is freed on whatever worker completes it (possibly a
+			// different thread), which the coroutine resource is built to handle.
+			HUSH_COROUTINE_FRAME_ALLOCATOR()
+
 			SelfDeletePromise() noexcept = default;
 
 			SelfDeletePromise(SelfDeletePromise &&) noexcept = default;

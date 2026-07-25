@@ -151,8 +151,8 @@ namespace Hush::Graphics
 			requires std::is_trivially_copyable_v<T>
 		std::optional<EError> SetPropertyAndFlush(IGraphicsDevice *device, std::string_view name, const T &value)
 		{
-			auto result = SetProperty(name, value);
-			if (result.has_value())
+			EError result = SetProperty(name, value);
+			if (result != EError::None)
 			{
 				return result;
 			}

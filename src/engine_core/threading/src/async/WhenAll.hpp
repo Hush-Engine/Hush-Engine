@@ -8,6 +8,7 @@
 // NOLINTBEGIN(readability-identifier-naming,modernize-use-nodiscard)
 
 #include "Assertions.hpp"
+#include "Hush/Memory/CoroutineFrameResource.hpp"
 #include "TaskTraits.hpp"
 
 #include <atomic>
@@ -322,6 +323,8 @@ namespace Hush::Threading
 		class WhenAllTasksPromise
 		{
 		public:
+			HUSH_COROUTINE_FRAME_ALLOCATOR()
+
 			using coroutine_handle_type = std::coroutine_handle<WhenAllTasksPromise<T>>;
 
 			WhenAllTasksPromise() = default;
@@ -408,6 +411,8 @@ namespace Hush::Threading
 		class WhenAllTasksPromise<void>
 		{
 		public:
+			HUSH_COROUTINE_FRAME_ALLOCATOR()
+
 			using coroutine_handle_type = std::coroutine_handle<WhenAllTasksPromise<void>>;
 			WhenAllTasksPromise() = default;
 
