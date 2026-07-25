@@ -8,7 +8,6 @@
 
 #include "Assertions.hpp"
 #include "Entity.hpp"
-#include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
@@ -16,7 +15,7 @@
 #include "HushBindings.hpp"
 #include "QueryBuilder.hpp"
 #include "executors/ThreadPool.hpp"
-
+#include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include <array>
 #include <atomic>
 #include <cstdint>

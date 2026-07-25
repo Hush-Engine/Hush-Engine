@@ -171,16 +171,7 @@ void Hush::RenderingSystem::Init()
 	HUSH_ASSERT(shaderCompiler != nullptr,
 				"Shader compiler on engine manager can't be null, check initialization order!");
 
-	NullTerminatedStringView actualPathNT =
-		Hush::MakeNullTerminated(actualPath, this->GetScene().GetFrameScopeMemoryResource());
-
 	shaderCompiler->Initialize({.matrixLayout = 1});
-	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
-		NullTerminatedStringView(""), actualPathNT,
-		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragmentMain"}});
-
-	HUSH_ASSERT(compilationResult.success, "Could not compile grid shader, diagnostics: {}!",
-				compilationResult.diagnostics);
 
 	Graphics::IGraphicsDevice *device = WindowManager::GetMainWindow()->GetGraphicsDevice();
 
@@ -416,7 +407,8 @@ void Hush::RenderingSystem::SetupGridPipeline(Graphics::IGraphicsDevice *device,
 	auto res = vfs->ResolveVirtualPath(virtualPath);
 	HUSH_RESULT_ASSERT(res, "Could not load grid shader! Make sure it's present on {}", virtualPath);
 
-	std::string_view actualPath = res.value();
+	NullTerminatedStringView actualPath =
+		MakeNullTerminated(res.value(), GetScene().GetEngine()->GetFrameScopeMemoryResource());
 
 	Graphics::ShaderCompilationResult compilationResult = shaderCompiler->CompileFromSource(
 		"", actualPath,
@@ -471,7 +463,8 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 	auto meshRes = vfs->ResolveVirtualPath(meshVirtualPath);
 	HUSH_RESULT_ASSERT(meshRes, "Could not load mesh shader! Make sure it's present on {}", meshVirtualPath);
 
-	std::string_view meshActualPath = meshRes.value();
+	NullTerminatedStringView meshActualPath =
+		MakeNullTerminated(meshRes.value(), GetScene().GetEngine()->GetFrameScopeMemoryResource());
 	Graphics::ShaderCompilationResult meshCompilationResult = shaderCompiler->CompileFromSource(
 		"", meshActualPath,
 		{{Graphics::EShaderStage::Vertex, "vertMain"}, {Graphics::EShaderStage::Fragment, "fragMain"}});

@@ -11,7 +11,7 @@
 	lifetime), so a frame freed after its allocating thread exits is still valid.
 */
 
-#include "Hush/Memory/CoroutineFrameResource.hpp"
+#include "CoroutineFrameResource.hpp"
 
 #include <array>
 #include <atomic>
