@@ -108,7 +108,7 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	glm::vec2 mouseAcceleration = InputManager::GetMouseAcceleration();
 	if (mouseAcceleration != glm::vec2{0.0F})
 	{
-		constexpr float mouseLookSpeed = 3.0F;
+		constexpr float mouseLookSpeed = 1.0F;
 		float &yaw = editorCamera->GetYaw();
 		float &pitch = editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;

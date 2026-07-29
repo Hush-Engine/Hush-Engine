@@ -104,6 +104,21 @@ void Hush::ScenePanel::SetGizmoOperation(ImGuizmo::OPERATION op) noexcept
 	m_currentGizmoOp = op;
 }
 
+float GetSnapValueForOp(ImGuizmo::OPERATION operation)
+{
+	switch (operation)
+	{
+	case ImGuizmo::TRANSLATE:
+		return 1.f;
+	case ImGuizmo::ROTATE:
+		return 15.f;
+	case ImGuizmo::SCALE:
+		return 5.f;
+	default:
+		return 0;
+	}
+}
+
 void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSize)
 {
 	if (m_gizmoTargetId == Entity::INVALID_ENTITY_ID || m_editorCamera == nullptr)
@@ -118,7 +133,7 @@ void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSi
 	}
 	Entity &entity = optEntity.value();
 
-	EditorInfo *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
 	if (editorInfo->currentState == EEditorState::None)
 	{
 		if (InputManager::IsKeyDownThisFrame(EKeyCode::R))
@@ -149,8 +164,22 @@ void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSi
 	ImGuizmo::SetRect(imagePos.x, imagePos.y, imageSize.x, imageSize.y);
 
 	glm::mat4 worldMatrix = worldXform->GetTransformationMatrix();
-	if (!ImGuizmo::Manipulate(reinterpret_cast<const float *>(&viewMat), reinterpret_cast<const float *>(&projMat),
-							  m_currentGizmoOp, ImGuizmo::MODE::LOCAL, reinterpret_cast<float *>(&worldMatrix)))
+
+	float snapBacking = 0;
+	float *snap = nullptr;
+
+	if (InputManager::IsKeyDown(EKeyCode::LCtrl) || InputManager::IsKeyDown(EKeyCode::RCtrl))
+	{
+		// Snap value depends on the operation to be done
+		snap = &snapBacking;
+		*snap = GetSnapValueForOp(this->m_currentGizmoOp);
+	}
+
+	bool isManipulating = ImGuizmo::Manipulate(
+		reinterpret_cast<const float *>(&viewMat), reinterpret_cast<const float *>(&projMat), m_currentGizmoOp,
+		ImGuizmo::MODE::LOCAL, reinterpret_cast<float *>(&worldMatrix), nullptr, snap);
+
+	if (!isManipulating || !ImGuizmo::IsUsing())
 	{
 		return;
 	}
@@ -165,4 +194,5 @@ void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSi
 	}
 
 	localXform->SetTransformationMatrix(newLocalMatrix);
+	worldXform->SetTransformationMatrix(worldMatrix);
 }
