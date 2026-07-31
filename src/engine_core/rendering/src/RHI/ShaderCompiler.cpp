@@ -7,6 +7,7 @@
 #include "ShaderCompiler.hpp"
 #include "Logger.hpp"
 
+#include <magic_enum/magic_enum.hpp>
 #include <slang.h>
 #include <slang-com-ptr.h>
 
@@ -129,6 +130,28 @@ namespace Hush::Graphics
 		}
 	}
 
+	inline EBindingDataTypeFlags BindingTypeFlagFromSlangScalar(slang::TypeReflection::ScalarType scalarType) {
+		switch (scalarType) {
+		case slang::TypeReflection::None:
+			return EBindingDataTypeFlags::Undefined;
+		case slang::TypeReflection::Int32:
+			return EBindingDataTypeFlags::Int32;
+		case slang::TypeReflection::UInt32:
+			return EBindingDataTypeFlags::UInt32;
+		case slang::TypeReflection::Int64:
+			return EBindingDataTypeFlags::Int64;
+		case slang::TypeReflection::UInt64:
+			return EBindingDataTypeFlags::UInt64;
+		case slang::TypeReflection::Float32:
+			return EBindingDataTypeFlags::Float32;
+		case slang::TypeReflection::Float64:
+			return EBindingDataTypeFlags::Float64;
+		default:
+			LogFormat(ELogLevel::Debug, "Scalar type on shader not implemented!");
+			return EBindingDataTypeFlags::Undefined;
+		}
+	}
+
 	static void FillWithPropertiesPerBindingStruct(slang::TypeLayoutReflection *elementTypeLayout,
 												   std::vector<ReflectedBinding> &outBindings,
 												   const ReflectedBinding &parentBinding)
@@ -163,6 +186,46 @@ namespace Hush::Graphics
 			fieldBinding.bufferSize = fieldType->getSize();
 			fieldBinding.bufferOffset = fieldVar->getOffset();
 			fieldBinding.isMember = true;
+			// Determine its data type
+			using SlangReflectionKind_t = slang::TypeReflection::Kind;
+			using SlangScalarType_t = slang::TypeReflection::ScalarType;
+
+			SlangReflectionKind_t kind = fieldType->getKind();
+			EBindingDataTypeFlags flags = EBindingDataTypeFlags::Undefined;
+
+			switch (kind) {
+				case SlangReflectionKind_t::Vector: {
+					// Could be a color or something, that is up to the user to decide
+					SlangScalarType_t scalarType = fieldType->getScalarType();
+					flags |= BindingTypeFlagFromSlangScalar(scalarType);
+					size_t vecDimensions = fieldType->getElementCount();
+
+					switch (vecDimensions) {
+						case 2:
+							flags |= EBindingDataTypeFlags::Vec2;
+							break;
+						case 3:
+							flags |= EBindingDataTypeFlags::Vec3;
+							break;
+						case 4:
+							flags |= EBindingDataTypeFlags::Vec4;
+							break;
+						default:
+							break;
+					}
+					break;
+				}
+				case SlangReflectionKind_t::Scalar: {
+					SlangScalarType_t scalarType = fieldType->getScalarType();
+					flags |= BindingTypeFlagFromSlangScalar(scalarType);
+					break;
+				}
+				default:
+					LogFormat(ELogLevel::Debug, "Kind {} not yet implemented for reflection", magic_enum::enum_name(kind));
+					break;
+				
+			}
+			fieldBinding.dataType = flags;
 			outBindings.push_back(fieldBinding);
 		}
 	}

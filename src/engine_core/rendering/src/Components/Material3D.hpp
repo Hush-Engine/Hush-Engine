@@ -1,4 +1,5 @@
 #pragma once
+#include "RHI/ShaderCompiler.hpp"
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
 #include "RHI/GraphicsResources.hpp"
@@ -27,6 +28,7 @@ namespace Hush::Graphics
 		uint32_t size = 0;
 		uint32_t bindingSet = 0;
 		uint32_t binding = 0;
+		EBindingDataTypeFlags typeFlags = EBindingDataTypeFlags::Undefined;
 	};
 
 	/// @brief Configuration options for initialising a Material3D.
@@ -86,6 +88,8 @@ namespace Hush::Graphics
 			BindGroupCreationFailed,
 			PipelineCreationFailed,
 			PropertyNotFound,
+			OutOfBoundsRead,
+			OutOfBoundsWrite
 		};
 
 		Material3D() = default;
@@ -116,6 +120,14 @@ namespace Hush::Graphics
 		// -----------------------------------------------------------------
 
 		EError SetPropertyRaw(std::string_view name, const std::span<const std::byte> &value);
+
+		EError GetPropertyRaw(std::string_view name, std::byte* outValue, size_t size);
+
+		template <class T>
+		EError GetProperty(std::string_view name, T* outValue) {
+			auto* ptr = reinterpret_cast<std::byte*>(outValue);
+			return GetPropertyRaw(name, ptr, sizeof(T));
+		}
 
 		/// @brief Set a uniform property by name.
 		///
@@ -223,9 +235,9 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		IGraphicsBuffer *GetUniformBuffer() const noexcept;
 
-		/// @brief Get the reflected property map.
-		[[nodiscard]]
-		const std::unordered_map<std::string, MaterialPropertyInfo> &GetPropertyMap() const noexcept;
+		/// @brief Iterates our property map and provides more direct property access for editing purposes (i.e. UI)
+		/// @param callback function to call on each property binding, should return true if any changes were made to the property value (i.e, changing a color), false otherwise
+		void OnEachPropertyMut(std::function<bool(std::string_view, MaterialPropertyInfo*, std::span<std::byte>)> callback);
 
 		/// @brief Get the total uniform buffer size in bytes.
 		[[nodiscard]]
@@ -330,3 +342,7 @@ namespace Hush::Graphics
 	};
 
 } // namespace Hush::Graphics
+
+namespace Hush {
+	void Serialize(Hush::Graphics::Material3D* component, size_t idx);
+}

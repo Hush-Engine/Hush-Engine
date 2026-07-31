@@ -6,6 +6,7 @@
 */
 #pragma once
 
+#include "BitwiseUtils.hpp"
 #include "GraphicsTypes.hpp"
 #include "IBindGroup.hpp"
 #include "IShaderModule.hpp"
@@ -57,6 +58,29 @@ namespace Hush::Graphics
 		std::string entryPointName = "main";
 	};
 
+	/// @brief Data type of the reflected binding, useful for inspector serialization
+	/// @details These flags can be encoded in a way that tells you what the composed type is scalar + (vector / array dimensions).
+	/// i.e:
+	///    - (Float32 | Vec4 | AsColor) == RGBA8 color binding
+	//     - (Float64 | Vec3) == Raw vec3 double precision vector, maybe for positions
+	enum class EBindingDataTypeFlags : uint32_t
+	{
+		Undefined = 0,
+		Int32 = 1,
+		UInt32 = 2,
+		Int64 = 4,
+		UInt64 = 8,
+		Float32 = 16,
+		Float64 = 32,
+		Vec2 = 64,
+		Vec3 = 128,
+		Vec4 = 256,
+		Mat3 = 512,
+		AsColor = 1024
+	};
+
+	HUSH_GENERATE_FLAGS(EBindingDataTypeFlags, uint32_t);
+
 	/// @brief A single reflected resource binding extracted from compiled shaders.
 	///
 	/// The compiler fills these from Slang's reflection API so that callers can
@@ -88,6 +112,8 @@ namespace Hush::Graphics
 		/// When true, this entry represents a single field within a constant buffer
 		/// and should be used for property mapping (not for layout building).
 		bool isMember = false;
+
+		EBindingDataTypeFlags dataType;
 	};
 
 	/// @brief Reflected vertex input attribute extracted from the vertex shader.

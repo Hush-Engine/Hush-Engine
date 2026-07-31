@@ -61,6 +61,12 @@ namespace Hush
 
 		static bool CustomSelectable(const char *label, bool *isHovered, ImDrawList *drawList, bool forceHover = false);
 
+		static bool Vec3Edit(const char *label, float v[3], float step = 0.01f, float stepFast = 0.1f,
+							 const char *format = "%.3f");
+
+		static bool Vec4Edit(const char *label, float v[4], float step = 0.01f, float stepFast = 0.1f,
+							 const char *format = "%.3f");
+
 		static bool BeginToolBar();
 
 		static ImGuiID DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags = 0);
@@ -71,6 +77,8 @@ namespace Hush
 
 	private:
 		static void DrawPlayButton();
+
+		static bool DrawVecComponent(const char* id, float* value, const ImVec4& color, float step, const char* format, float fieldWidth, float buttonWidth);
 
 		void SetupImGuiStyle();
 

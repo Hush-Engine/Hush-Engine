@@ -72,6 +72,11 @@ namespace Hush
 			return m_materialTextureRefs;
 		}
 
+		const std::vector<Ref<Graphics::Material3D>> &GetMaterials()
+		{
+			return this->m_materials;
+		}
+
 		[[nodiscard]]
 		const auto &GetMaterialTextureRefs() const
 		{

@@ -1,15 +1,24 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
+#include "BitwiseUtils.hpp"
 #include "Components/LocalTransform.hpp"
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
+#include "Components/Transform.hpp"
+#include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
-#include "Shared/IMaterial3D.hpp"
+#include "Logger.hpp"
+#include "RHI/ShaderCompiler.hpp"
+#include "Ref.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
+#include <array>
+#include <cstddef>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -35,48 +44,41 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-// void Hush::Serialize(IMaterial3D *component, const char *uniqueName)
-// {
+void Hush::Serialize(Hush::Graphics::Material3D* component, size_t idx) {
+	std::string_view name = component->GetName();
+	ImGui::Text("%s#%zu", name.data(), idx);
 
-// 	ImGui::Text("Material: %s", component->GetName().c_str());
+	component->OnEachPropertyMut([](std::string_view propName, Graphics::MaterialPropertyInfo* infoRef, std::span<std::byte> uniformRange){
+		Graphics::EBindingDataTypeFlags flags = infoRef->typeFlags;
 
-// 	// ECullMode cullMode = component->GetCullMode();
-// 	// Check which instance of the material is
-// 	// TODO: Do this with the reflection API instead of dynamic casting
-// 	auto *pbrMaterial = dynamic_cast<GLTFMetallicRoughness *>(component);
-// 	if (pbrMaterial == nullptr)
-// 	{
-// 		return;
-// 	}
-// 	const float range = 10.0F;
+		bool wasModified = false;
 
-// 	// Albedo color
-// 	glm::vec4 &albedo = pbrMaterial->GetAlbedo();
-// 	ImGui::ColorEdit4(ConcatCStr("Albedo##", component->GetName()).c_str(), reinterpret_cast<float *>(&albedo));
+		bool asColor = Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::AsColor);
+		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3)) {
+			HUSH_ASSERT(uniformRange.size_bytes() == sizeof(glm::vec3), "Property type does not map to its size!");
+			if (asColor) {
+				wasModified = ImGui::ColorEdit3(propName.data(), reinterpret_cast<float*>(uniformRange.data()));
+			}
+		}
+		else if(Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec4)) {
+			HUSH_ASSERT(uniformRange.size_bytes() == sizeof(glm::vec4), "Property type does not map to its size!");
+			if (asColor) {
+				wasModified = ImGui::ColorEdit4(propName.data(), reinterpret_cast<float*>(uniformRange.data()));
+			}
+			else {
+				wasModified = UI::Vec4Edit("##Edit", reinterpret_cast<float*>(uniformRange.data()));
+				// Have the option to turn on color edit
+				ImGui::SameLine();
+				ImGui::Checkbox("As Color?", &asColor);
+				if (asColor) {
+					infoRef->typeFlags |= Graphics::EBindingDataTypeFlags::AsColor;
+				}
+			}
+		}
 
-// 	glm::vec3 &emission = pbrMaterial->GetEmissionColor();
-// 	ImGui::ColorEdit3(ConcatCStr("Emission##", component->GetName()).c_str(), reinterpret_cast<float *>(&emission));
-
-// 	// TODO: Turn the float setters into references (try to reconcile this with CTRL + Z)
-
-// 	float emissionFactor = pbrMaterial->EmissionFactor();
-// 	ImGui::InputFloat(ConcatCStr("Emission Factor##", component->GetName()).c_str(), &emissionFactor);
-
-// 	pbrMaterial->SetEmissionFactor(emissionFactor);
-
-// 	float roughness = pbrMaterial->GetRoughnessFactor();
-
-// 	ImGui::SliderFloat(ConcatCStr("Roughness Factor##", component->GetName()).c_str(), &roughness, 0.F, 1.0F);
-// 	pbrMaterial->SetRoughnessFactor(roughness);
-
-// 	float metallic = pbrMaterial->GetMetallicFactor();
-// 	ImGui::SliderFloat(ConcatCStr("Metallic Factor##", component->GetName()).c_str(), &metallic, -1.0F, 1.0F);
-// 	pbrMaterial->SetMetallicFactor(metallic);
-
-// 	float alphaThreshold = pbrMaterial->GetAlphaThreshold();
-// 	ImGui::SliderFloat(ConcatCStr("Alpha Threshold##", component->GetName()).c_str(), &alphaThreshold, 0.0F, 1.0F);
-// 	pbrMaterial->SetAlphaThreshold(alphaThreshold);
-// }
+		return wasModified;
+	});
+}
 
 void Hush::Serialize(MeshReference *component, const char *entityName)
 {
@@ -89,10 +91,13 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
 
-	[[maybe_unused]]
-	const std::vector<GeoSurface> &surfaces = component->GetMesh()->GetSurfaces();
-	ImGui::Text("Surface count: %zu", surfaces.size());
-	// // Iterate over the surfaces and  serialize their materials as submeshes
+	const std::vector<Ref<Graphics::Material3D>>& materials = component->GetMaterials(); 
+	
+	for (size_t i = 0; i < materials.size(); i++) {
+		const Ref<Graphics::Material3D>& currMat = materials[i];
+		Serialize(const_cast<Graphics::Material3D*>(currMat.Get()), i);
+	}
+
 	// for (size_t i = 0; i < surfaces.size(); i++)
 	// {
 	// 	const GeoSurface &surface = surfaces[i];
@@ -115,21 +120,16 @@ void Hush::Serialize(Transform *component)
 	glm::vec3 *pos = component->GetPosition();
 	glm::vec3 scale = component->GetScale();
 	glm::vec3 rot = glm::degrees(component->GetEulerAngles());
-	ImGui::Text("Position");
-	ImGui::InputFloat3("##Position", reinterpret_cast<float *>(pos));
+	UI::Vec3Edit("Position", reinterpret_cast<float *>(pos));
 
-	ImGui::Text("Rotation");
-	ImGui::InputFloat3("##Rotation", reinterpret_cast<float *>(&rot));
-
-	ImGui::Text("Scale");
-	ImGui::InputFloat3("##Scale", reinterpret_cast<float *>(&scale));
-	if (scale != component->GetScale())
-	{
-		component->SetScale(scale);
-	}
-	if (rot != glm::degrees(component->GetEulerAngles()))
+	if (UI::Vec3Edit("Rotation", reinterpret_cast<float *>(&rot)))
 	{
 		component->SetRotationQuat(glm::quat(glm::radians(rot)));
+	}
+
+	if (UI::Vec3Edit("Scale", reinterpret_cast<float *>(&scale)))
+	{
+		component->SetScale(scale);
 	}
 }
 
