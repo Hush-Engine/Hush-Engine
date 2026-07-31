@@ -104,18 +104,22 @@ void Hush::ScenePanel::SetGizmoOperation(ImGuizmo::OPERATION op) noexcept
 	m_currentGizmoOp = op;
 }
 
-float GetSnapValueForOp(ImGuizmo::OPERATION operation)
+void GetSnapValueForOp(ImGuizmo::OPERATION operation, float snapRef[3])
 {
 	switch (operation)
 	{
 	case ImGuizmo::TRANSLATE:
-		return 1.f;
+		snapRef[0] = 1.0f;
+		snapRef[1] = 1.0f;
+		snapRef[2] = 1.0f;
+		break;
 	case ImGuizmo::ROTATE:
-		return 15.f;
+		snapRef[0] = 15.0f;
+		break;
 	case ImGuizmo::SCALE:
-		return 5.f;
+		snapRef[0] = 1.0f;
 	default:
-		return 0;
+		break;
 	}
 }
 
@@ -165,14 +169,15 @@ void Hush::ScenePanel::RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSi
 
 	glm::mat4 worldMatrix = worldXform->GetTransformationMatrix();
 
-	float snapBacking = 0;
+	// The backing is an array because translation uses 3 floats for its snap, all the other ones just point to snapBacking[0]
+	float snapBacking[3] = {0};
 	float *snap = nullptr;
 
 	if (InputManager::IsKeyDown(EKeyCode::LCtrl) || InputManager::IsKeyDown(EKeyCode::RCtrl))
 	{
 		// Snap value depends on the operation to be done
-		snap = &snapBacking;
-		*snap = GetSnapValueForOp(this->m_currentGizmoOp);
+		snap = &(snapBacking[0]);
+		GetSnapValueForOp(this->m_currentGizmoOp, snap);
 	}
 
 	bool isManipulating = ImGuizmo::Manipulate(

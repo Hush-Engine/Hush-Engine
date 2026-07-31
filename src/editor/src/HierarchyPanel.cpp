@@ -49,17 +49,19 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name,
 														InspectorPanel *inspector)
 {
-	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesToNodes;
 	if (entity.GetChildCount() < 1)
 	{
 		flags |= ImGuiTreeNodeFlags_Leaf;
 	}
-	if (ImGui::TreeNodeEx(name.name.data(), flags))
+
+	bool isNodeOpen = ImGui::TreeNodeEx(name.name.data(), flags);
+	if (ImGui::IsItemClicked())
 	{
-		if (ImGui::IsItemClicked())
-		{
-			inspector->SetInspectTarget(entity.GetId());
-		}
+		inspector->SetInspectTarget(entity.GetId());
+	}
+	if (isNodeOpen)
+	{
 		entity.EachChild([this, inspector](Entity &currChild) {
 			Entity::Name *childName = currChild.GetComponent<Entity::Name>();
 			if (childName == nullptr)
