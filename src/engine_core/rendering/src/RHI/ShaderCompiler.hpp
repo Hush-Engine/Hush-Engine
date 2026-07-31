@@ -76,7 +76,9 @@ namespace Hush::Graphics
 		Vec3 = 128,
 		Vec4 = 256,
 		Mat3 = 512,
-		AsColor = 1024
+		AsColor = 1024,
+		// Should not be exposed in any user-facing API by default
+		IsPrivate = 2048
 	};
 
 	HUSH_GENERATE_FLAGS(EBindingDataTypeFlags, uint32_t);

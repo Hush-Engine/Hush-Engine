@@ -44,38 +44,65 @@ void Hush::Serialize(DirectionalLight *component)
 	ImGui::InputFloat("Intensity", &component->intensity);
 }
 
-void Hush::Serialize(Hush::Graphics::Material3D* component, size_t idx) {
+void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
+{
 	std::string_view name = component->GetName();
 	ImGui::Text("%s#%zu", name.data(), idx);
 
-	component->OnEachPropertyMut([](std::string_view propName, Graphics::MaterialPropertyInfo* infoRef, std::span<std::byte> uniformRange){
+	auto drawPropertyFlags = [](const char* label, Graphics::EBindingDataTypeFlags* typeFlags) {
+		if (UI::FlagsBegin(label))
+		{
+			UI::FlagItem("As Color", Graphics::EBindingDataTypeFlags::AsColor, typeFlags);
+			UI::FlagItem("Hide", Graphics::EBindingDataTypeFlags::IsPrivate, typeFlags);
+			UI::FlagsEnd();
+		}
+		ImGui::SameLine();
+		
+	};
+
+	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName, Graphics::MaterialPropertyInfo *infoRef,
+									std::span<std::byte> uniformRange) {
+
+		// NYI: We should still show something about this property, but have it collapsed and grayed out or something
+		if (Bitwise::HasCompositeFlag(infoRef->typeFlags, Graphics::EBindingDataTypeFlags::IsPrivate)) {
+			return false;
+		}
+	    ImGui::PushID(propName.data());
 		Graphics::EBindingDataTypeFlags flags = infoRef->typeFlags;
 
+		// This indicates whether the material's CPU-side buffer was modified, NOT the property's flags or any other metadata
 		bool wasModified = false;
-
 		bool asColor = Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::AsColor);
-		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3)) {
+
+
+		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3))
+		{
+			drawPropertyFlags(propName.data(), &infoRef->typeFlags);
 			HUSH_ASSERT(uniformRange.size_bytes() == sizeof(glm::vec3), "Property type does not map to its size!");
-			if (asColor) {
-				wasModified = ImGui::ColorEdit3(propName.data(), reinterpret_cast<float*>(uniformRange.data()));
+			if (asColor)
+			{
+				wasModified = ImGui::ColorEdit3("##color", reinterpret_cast<float *>(uniformRange.data()));
+			}
+			else
+			{
+				wasModified = UI::Vec3Edit("##vec3", reinterpret_cast<float *>(uniformRange.data()));
 			}
 		}
-		else if(Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec4)) {
+		else if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec4))
+		{
+			drawPropertyFlags(propName.data(), &infoRef->typeFlags);
 			HUSH_ASSERT(uniformRange.size_bytes() == sizeof(glm::vec4), "Property type does not map to its size!");
-			if (asColor) {
-				wasModified = ImGui::ColorEdit4(propName.data(), reinterpret_cast<float*>(uniformRange.data()));
+			if (asColor)
+			{
+				wasModified = ImGui::ColorEdit4("##color", reinterpret_cast<float *>(uniformRange.data()));
 			}
-			else {
-				wasModified = UI::Vec4Edit("##Edit", reinterpret_cast<float*>(uniformRange.data()));
-				// Have the option to turn on color edit
-				ImGui::SameLine();
-				ImGui::Checkbox("As Color?", &asColor);
-				if (asColor) {
-					infoRef->typeFlags |= Graphics::EBindingDataTypeFlags::AsColor;
-				}
+			else
+			{
+				wasModified = UI::Vec4Edit("##vec4", reinterpret_cast<float *>(uniformRange.data()));
 			}
 		}
 
+		ImGui::PopID();
 		return wasModified;
 	});
 }
@@ -91,11 +118,12 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 	// TODO: Maybe write this as a table
 	ImGui::Indent(NESTED_INDENT_SIZE);
 
-	const std::vector<Ref<Graphics::Material3D>>& materials = component->GetMaterials(); 
-	
-	for (size_t i = 0; i < materials.size(); i++) {
-		const Ref<Graphics::Material3D>& currMat = materials[i];
-		Serialize(const_cast<Graphics::Material3D*>(currMat.Get()), i);
+	const std::vector<Ref<Graphics::Material3D>> &materials = component->GetMaterials();
+
+	for (size_t i = 0; i < materials.size(); i++)
+	{
+		const Ref<Graphics::Material3D> &currMat = materials[i];
+		Serialize(const_cast<Graphics::Material3D *>(currMat.Get()), i);
 	}
 
 	// for (size_t i = 0; i < surfaces.size(); i++)

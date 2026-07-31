@@ -1,5 +1,6 @@
 #include "UI.hpp"
 #include "Assertions.hpp"
+#include "BitwiseUtils.hpp"
 #include "CommandPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
@@ -275,34 +276,42 @@ bool Hush::UI::CustomSelectable(const char *label, bool *isHovered, ImDrawList *
 	return *isHovered && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Enter, false));
 }
 
-
 bool Hush::UI::Vec3Edit(const char *label, float v[3], float step, float stepFast, const char *format)
 {
-    bool changed = false;
-    ImGui::PushID(label);
-    ImGui::AlignTextToFramePadding();
+	bool changed = false;
+	ImGui::PushID(label);
+	ImGui::AlignTextToFramePadding();
 
-    // Label
-    ImGui::TextUnformatted(label);
-    ImGui::SameLine();
+	const char *labelEnd = ImGui::FindRenderedTextEnd(label);
+	bool hasVisibleLabel = (label != labelEnd);
 
-    float avail = ImGui::GetContentRegionAvail().x;
-    float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	if (hasVisibleLabel)
+	{
+		ImGui::TextUnformatted(label, labelEnd);
+		ImGui::SameLine();
+	}
+	else
+	{
+		ImGui::SameLine(0.0f, 0.0f);
+	}
 
-    float buttonWidth = ImGui::GetFrameHeight();
+	float avail = ImGui::GetContentRegionAvail().x;
+	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 
-    float totalSpacing = spacing * 2.0f;
-    float totalButtons = buttonWidth * 3.0f;
-    float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 3.0f);
+	float buttonWidth = ImGui::GetFrameHeight();
 
-    changed |= DrawVecComponent("x", &v[0], ImVec4(1.0f, 0.2f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
-    ImGui::SameLine(0.0f, spacing);
-    changed |= DrawVecComponent("y", &v[1], ImVec4(0.2f, 1.0f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
-    ImGui::SameLine(0.0f, spacing);
-    changed |= DrawVecComponent("z", &v[2], ImVec4(0.2f, 0.2f, 1.0f, 1.0f), step, format, fieldWidth, buttonWidth);
+	float totalSpacing = spacing * 2.0f;
+	float totalButtons = buttonWidth * 3.0f;
+	float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 3.0f);
 
-    ImGui::PopID();
-    return changed;
+	changed |= DrawVecComponent("x", &v[0], ImVec4(1.0f, 0.2f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+	changed |= DrawVecComponent("y", &v[1], ImVec4(0.2f, 1.0f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+	changed |= DrawVecComponent("z", &v[2], ImVec4(0.2f, 0.2f, 1.0f, 1.0f), step, format, fieldWidth, buttonWidth);
+
+	ImGui::PopID();
+	return changed;
 }
 
 bool Hush::UI::Vec4Edit(const char *label, float v[4], float step, float stepFast, const char *format)
@@ -312,28 +321,28 @@ bool Hush::UI::Vec4Edit(const char *label, float v[4], float step, float stepFas
 	ImGui::PushID(label);
 	ImGui::AlignTextToFramePadding();
 
-    const char* labelEnd = ImGui::FindRenderedTextEnd(label);
-    bool hasVisibleLabel = (label != labelEnd);
+	const char *labelEnd = ImGui::FindRenderedTextEnd(label);
+	bool hasVisibleLabel = (label != labelEnd);
 
-    if (hasVisibleLabel) {
-        // Only render text if something exists before '##'
-        ImGui::TextUnformatted(label, labelEnd);
-        ImGui::SameLine();
-    }
-    else {
-        ImGui::SameLine(0.0f, 0.0f);
-    }
+	if (hasVisibleLabel)
+	{
+		// Only render text if something exists before '##'
+		ImGui::TextUnformatted(label, labelEnd);
+		ImGui::SameLine();
+	}
+	else
+	{
+		ImGui::SameLine(0.0f, 0.0f);
+	}
 
-    float avail = ImGui::GetContentRegionAvail().x;
-    float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	float avail = ImGui::GetContentRegionAvail().x;
+	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 
-    float buttonWidth = ImGui::GetFrameHeight(); // square, like ImGui's own prefix buttons
+	float buttonWidth = ImGui::GetFrameHeight(); // square, like ImGui's own prefix buttons
 
-    float totalSpacing = spacing * 2.0f;
-    float totalButtons = buttonWidth * 4.0f;
-    float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 4.0f);
-	
-
+	float totalSpacing = spacing * 2.0f;
+	float totalButtons = buttonWidth * 4.0f;
+	float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 4.0f);
 
 	changed |= DrawVecComponent("x", &v[0], ImVec4(1.0f, 0.2f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
 	ImGui::SameLine(0.0f, spacing);
@@ -348,6 +357,24 @@ bool Hush::UI::Vec4Edit(const char *label, float v[4], float step, float stepFas
 
 	ImGui::PopID();
 	return changed;
+}
+
+bool Hush::UI::FlagsBegin(const char *label)
+{
+	const ImVec2 buttonSize(ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f,
+							ImGui::GetFrameHeight());
+
+	if (ImGui::Button(label, buttonSize))
+	{
+		ImGui::OpenPopup(label);
+	}
+
+	return ImGui::BeginPopup(label);
+}
+
+void Hush::UI::FlagsEnd()
+{
+	ImGui::EndPopup();
 }
 
 bool Hush::UI::BeginToolBar()
@@ -409,29 +436,31 @@ void Hush::UI::DrawPlayButton()
 	ImGui::End();
 }
 
-bool Hush::UI::DrawVecComponent(const char* id, float* value, const ImVec4& color, float step, const char* format, float fieldWidth, float buttonWidth) {
+bool Hush::UI::DrawVecComponent(const char *id, float *value, const ImVec4 &color, float step, const char *format,
+								float fieldWidth, float buttonWidth)
+{
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Button, color);
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0, 0});
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0, 0});
 
-    ImGui::BeginDisabled(true);
-    ImGui::Button(id, ImVec2(buttonWidth, 0.0f));
-    ImGui::EndDisabled();
+	ImGui::BeginDisabled(true);
+	ImGui::Button(id, ImVec2(buttonWidth, 0.0f));
+	ImGui::EndDisabled();
 
-    ImGui::SameLine();
-    ImGui::PopStyleColor(2);
+	ImGui::SameLine();
+	ImGui::PopStyleColor(2);
 
-    ImGui::PushItemWidth(fieldWidth);
-    char hashed[4] = {0};
-    hashed[0] = '#';
-    hashed[1] = '#';
-    hashed[2] = id[0];
+	ImGui::PushItemWidth(fieldWidth);
+	char hashed[4] = {0};
+	hashed[0] = '#';
+	hashed[1] = '#';
+	hashed[2] = id[0];
 
-    bool changed = ImGui::DragFloat(hashed, value, step, 0.0f, 0.0f, format);
+	bool changed = ImGui::DragFloat(hashed, value, step, 0.0f, 0.0f, format);
 
-    ImGui::PopStyleVar();
-    ImGui::PopItemWidth();
-    return changed;	
+	ImGui::PopStyleVar();
+	ImGui::PopItemWidth();
+	return changed;
 }
 
 // NOLINTEND

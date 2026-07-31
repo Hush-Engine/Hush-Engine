@@ -9,6 +9,7 @@
 #include "IEditorPanel.hpp"
 #include "ScenePanel.hpp"
 #include "Scene.hpp"
+#include "RHI/ShaderCompiler.hpp"
 #include "imgui/imgui.h"
 #include <cstdint>
 #include <memory>
@@ -69,6 +70,37 @@ namespace Hush
 
 		static bool BeginToolBar();
 
+		/// @brief Begin a popup attached to a button showing @p label. Call @ref FlagItem inside.
+		/// @return true if the popup is open and FlagItems should be rendered.
+		static bool FlagsBegin(const char *label);
+
+		/// @brief End the popup opened by @ref FlagsBegin.
+		static void FlagsEnd();
+
+		/// @brief Render a checkbox to toggle a single flag inside a FlagsBegin/FlagsEnd block.
+		/// @return true if the flag was toggled this frame.
+		template <class T>
+		static bool FlagItem(const char *label, T flagValue, T *flags)
+		{
+			bool active = Bitwise::HasCompositeFlag(*flags, flagValue);
+			ImGui::PushID(label);
+			if (ImGui::Checkbox(label, &active))
+			{
+				if (active)
+				{
+					*flags |= flagValue;
+				}
+				else
+				{
+					*flags = static_cast<T>(static_cast<uint64_t>(*flags) & ~static_cast<uint64_t>(flagValue));
+				}
+				ImGui::PopID();
+				return true;
+			}
+			ImGui::PopID();
+			return false;
+		}
+
 		static ImGuiID DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags = 0);
 
 		static UI &Get();
@@ -78,7 +110,8 @@ namespace Hush
 	private:
 		static void DrawPlayButton();
 
-		static bool DrawVecComponent(const char* id, float* value, const ImVec4& color, float step, const char* format, float fieldWidth, float buttonWidth);
+		static bool DrawVecComponent(const char *id, float *value, const ImVec4 &color, float step, const char *format,
+									 float fieldWidth, float buttonWidth);
 
 		void SetupImGuiStyle();
 
