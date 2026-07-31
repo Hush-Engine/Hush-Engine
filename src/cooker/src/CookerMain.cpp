@@ -131,8 +131,8 @@ int main(int argc, char **argv)
 		std::ofstream outFile(outPath, std::ios::binary);
 		outFile.write(reinterpret_cast<const char *>(pakBuffer.data()), pakBuffer.size());
 
-		std::fprintf(stdout, "Bundle written: %s (%zu entries, %zu bytes)\n",
-					 outPath.c_str(), pakInputs.size(), pakBuffer.size());
+		std::fprintf(stdout, "Bundle written: %s (%zu entries, %zu bytes)\n", outPath.c_str(), pakInputs.size(),
+					 pakBuffer.size());
 		return 0;
 	}
 
@@ -182,8 +182,7 @@ int main(int argc, char **argv)
 		if (!metaPath.empty())
 		{
 			std::ifstream metaFile(metaPath);
-			std::string json((std::istreambuf_iterator<char>(metaFile)),
-							 std::istreambuf_iterator<char>());
+			std::string json((std::istreambuf_iterator<char>(metaFile)), std::istreambuf_iterator<char>());
 			auto metaResult = Hush::HMeta::FromJson(json);
 			if (metaResult.has_error())
 			{
@@ -245,9 +244,8 @@ int main(int argc, char **argv)
 							name = std::string_view(pak->stringTable.data() + entry.nameOffset, entry.nameLength);
 						}
 						std::fprintf(stdout, "  [%016llX] %.*s (fmt=%u, comp=%u, size=%llu)\n",
-									 static_cast<unsigned long long>(entry.nameHash),
-									 static_cast<int>(name.size()), name.data(),
-									 static_cast<unsigned>(entry.format),
+									 static_cast<unsigned long long>(entry.nameHash), static_cast<int>(name.size()),
+									 name.data(), static_cast<unsigned>(entry.format),
 									 static_cast<unsigned>(entry.compression),
 									 static_cast<unsigned long long>(entry.dataSize));
 					}
@@ -258,12 +256,11 @@ int main(int argc, char **argv)
 				auto asset = Hush::HAsset::Read(data);
 				if (asset.has_value())
 				{
-					std::fprintf(stdout, "HAsset: format=%u, comp=%u, raw=%llu, compressed=%llu, extra=%u\n",
-								 static_cast<unsigned>(asset->header.format),
-								 static_cast<unsigned>(asset->header.compression),
-								 static_cast<unsigned long long>(asset->header.uncompressedSize),
-								 static_cast<unsigned long long>(asset->header.compressedSize),
-								 asset->header.extraSize);
+					std::fprintf(
+						stdout, "HAsset: format=%u, comp=%u, raw=%llu, compressed=%llu, extra=%u\n",
+						static_cast<unsigned>(asset->header.format), static_cast<unsigned>(asset->header.compression),
+						static_cast<unsigned long long>(asset->header.uncompressedSize),
+						static_cast<unsigned long long>(asset->header.compressedSize), asset->header.extraSize);
 				}
 			}
 			else

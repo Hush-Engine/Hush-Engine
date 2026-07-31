@@ -62,7 +62,8 @@ namespace
 				{
 					for (int sx = sx0; sx < sx1; ++sx)
 					{
-						const size_t si = ((static_cast<size_t>(sy) * static_cast<size_t>(srcW)) + static_cast<size_t>(sx)) * 4U;
+						const size_t si =
+							((static_cast<size_t>(sy) * static_cast<size_t>(srcW)) + static_cast<size_t>(sx)) * 4U;
 						r += std::to_integer<uint32_t>(src[si + 0]);
 						g += std::to_integer<uint32_t>(src[si + 1]);
 						b += std::to_integer<uint32_t>(src[si + 2]);
@@ -196,8 +197,8 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 			if (header.compression == ECompressionFormat::Zstd)
 			{
 				decodedPixels.resize(header.uncompressedSize);
-				size_t result = ZSTD_decompress(decodedPixels.data(), header.uncompressedSize,
-												asset->payload.data(), asset->payload.size());
+				size_t result = ZSTD_decompress(decodedPixels.data(), header.uncompressedSize, asset->payload.data(),
+												asset->payload.size());
 				if (ZSTD_isError(result) != 0)
 				{
 					Hush::LogFormat(ELogLevel::Error, "ResourceManager: ZSTD decompress failed at {}: {}", path,
@@ -235,8 +236,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 		int channels{};
 		static constexpr int kDesiredChannels = 4;
 		stbi_uc *imageData =
-			stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(fileData.data()),
-								  static_cast<int>(fileData.size()),
+			stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(fileData.data()), static_cast<int>(fileData.size()),
 								  &width, &height, &channels, kDesiredChannels);
 
 		if (imageData == nullptr)

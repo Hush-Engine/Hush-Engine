@@ -230,8 +230,8 @@ private:
 		if (asset->header.compression == Hush::ECompressionFormat::Zstd)
 		{
 			shaderBlob.resize(asset->header.uncompressedSize);
-			size_t result = ZSTD_decompress(shaderBlob.data(), asset->header.uncompressedSize,
-											asset->payload.data(), asset->payload.size());
+			size_t result = ZSTD_decompress(shaderBlob.data(), asset->header.uncompressedSize, asset->payload.data(),
+											asset->payload.size());
 			if (ZSTD_isError(result))
 			{
 				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] ZSTD decompress failed: {}",
@@ -325,7 +325,8 @@ private:
 			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader compiled successfully.");
 			if (!compileResult.diagnostics.empty())
 			{
-				Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}", compileResult.diagnostics);
+				Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}",
+								compileResult.diagnostics);
 			}
 
 			const auto *vsStage = compileResult.FindStage(EShaderStage::Vertex);

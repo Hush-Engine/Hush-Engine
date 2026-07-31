@@ -33,8 +33,7 @@ namespace Hush
 		CookedFileSystem(std::string mountPrefix, std::string_view projectRoot, std::string_view cookedDir);
 
 		Result<std::unique_ptr<IFile>, IFile::EError> OpenFile(std::filesystem::path vfsPath,
-															   std::filesystem::path path,
-															   EFileOpenMode mode) override;
+															   std::filesystem::path path, EFileOpenMode mode) override;
 
 		Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view &path) override;
 

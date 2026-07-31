@@ -80,7 +80,10 @@ namespace Hush
 
 		/// Register a callback for SDL_EVENT_DROP_FILE.
 		using DropCallback = std::function<void(const std::filesystem::path &)>;
-		void SetDropCallback(DropCallback cb) { m_dropCallback = std::move(cb); }
+		void SetDropCallback(DropCallback cb)
+		{
+			m_dropCallback = std::move(cb);
+		}
 
 	private:
 		/// @brief Pointer that represents the unique instance of an SDL window associated with this context

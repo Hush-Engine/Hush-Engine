@@ -100,13 +100,12 @@ public:
 		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR));
 
 		// Wire OS file drop → cooker import.
-		m_engine->GetWindowRenderer()->SetDropCallback(
-			[this](const std::filesystem::path &path) {
-				if (m_cookerService)
-				{
-					m_cookerService->ImportFile(path);
-				}
-			});
+		m_engine->GetWindowRenderer()->SetDropCallback([this](const std::filesystem::path &path) {
+			if (m_cookerService)
+			{
+				m_cookerService->ImportFile(path);
+			}
+		});
 
 		// File watcher + lifecycle
 		std::filesystem::path projRoot(HUSH_DEFAULT_PROJECT_DIR);
@@ -172,13 +171,11 @@ public:
 		// Drain file system events → trigger recook
 		if (m_fileWatcher)
 		{
-			m_fileWatcher->DrainEvents(
-				[this](const Hush::FileWatchEvent &ev) {
-					m_cookedDirectory.HandleFileEvent(ev.path,
-													   ev.type == Hush::FileWatchEvent::Type::Added,
-													   ev.type == Hush::FileWatchEvent::Type::Removed,
-													   ev.type == Hush::FileWatchEvent::Type::Modified);
-				});
+			m_fileWatcher->DrainEvents([this](const Hush::FileWatchEvent &ev) {
+				m_cookedDirectory.HandleFileEvent(ev.path, ev.type == Hush::FileWatchEvent::Type::Added,
+												  ev.type == Hush::FileWatchEvent::Type::Removed,
+												  ev.type == Hush::FileWatchEvent::Type::Modified);
+			});
 		}
 
 		this->m_scene->Update(delta);

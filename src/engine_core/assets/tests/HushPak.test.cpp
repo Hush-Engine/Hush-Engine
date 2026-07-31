@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstring>
+#include <limits>
 #include <vector>
 #include <span>
 #include <string>
@@ -84,6 +85,64 @@ TEST_CASE("HushPak round-trip", "[hushpak]")
 		std::vector<std::byte> empty;
 		auto pak = HushPak::Read(empty);
 		REQUIRE_FALSE(pak.has_value());
+	}
+
+	SECTION("Directory offset beyond buffer returns nullopt")
+	{
+		std::vector<std::byte> buffer(sizeof(HushPakHeader));
+		HushPakHeader hdr;
+		hdr.magic = HUSHPAK_MAGIC;
+		hdr.version = HUSHPAK_VERSION;
+		hdr.entryCount = 1;
+		hdr.totalSize = sizeof(HushPakHeader);
+		hdr.directoryOffset = std::numeric_limits<uint64_t>::max();
+		std::memcpy(buffer.data(), &hdr, sizeof(HushPakHeader));
+
+		REQUIRE_FALSE(HushPak::Read(buffer).has_value());
+	}
+
+	SECTION("String table offset beyond buffer returns nullopt")
+	{
+		std::vector<std::byte> buffer(sizeof(HushPakHeader) + sizeof(PakEntry));
+		HushPakHeader hdr;
+		hdr.magic = HUSHPAK_MAGIC;
+		hdr.version = HUSHPAK_VERSION;
+		hdr.entryCount = 1;
+		hdr.totalSize = static_cast<uint64_t>(buffer.size());
+		hdr.directoryOffset = sizeof(HushPakHeader);
+		hdr.stringTableOffset = static_cast<uint64_t>(buffer.size()) + 1;
+		hdr.stringTableSize = 1;
+		std::memcpy(buffer.data(), &hdr, sizeof(HushPakHeader));
+
+		REQUIRE_FALSE(HushPak::Read(buffer).has_value());
+	}
+
+	SECTION("EntryData returns empty span on overflowing offsets")
+	{
+		HAsset dummy;
+		dummy.header.uncompressedSize = 1;
+		dummy.header.compressedSize = 1;
+		dummy.payload = {std::byte{0x00}};
+
+		std::vector<std::byte> blob;
+		HAsset::Write(blob, dummy);
+
+		std::vector<PakInput> inputs;
+		inputs.push_back({"textures/stone.png", blob});
+
+		std::vector<std::byte> pakBuffer;
+		HushPak::Build(pakBuffer, inputs);
+
+		auto pak = HushPak::Read(pakBuffer);
+		REQUIRE(pak.has_value());
+
+		PakEntry corrupted = pak->directory[0];
+		corrupted.dataOffset = std::numeric_limits<uint64_t>::max();
+		REQUIRE(pak->EntryData(corrupted, pakBuffer).empty());
+
+		corrupted = pak->directory[0];
+		corrupted.dataSize = std::numeric_limits<uint64_t>::max();
+		REQUIRE(pak->EntryData(corrupted, pakBuffer).empty());
 	}
 
 	SECTION("ListPath prefix matching")
