@@ -25,6 +25,32 @@ Hush::UI::UI()
 	s_instance = this;
 }
 
+void Hush::UI::LoadFonts()
+{
+	// IBM Plex Serif family. Regular is added first so it becomes ImGui's
+	// default UI font; the other variants live in the same atlas and can be
+	// pushed per-widget with ImGui::PushFont(UI::GetFont(...)).
+	constexpr float kUiFontSize = 18.0f;
+	ImGuiIO &io = ImGui::GetIO();
+
+	s_fonts[static_cast<size_t>(EFontVariant::Regular)] = io.Fonts->AddFontFromFileTTF(
+		HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Regular.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Light)] =
+		io.Fonts->AddFontFromFileTTF(HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Light.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Bold)] =
+		io.Fonts->AddFontFromFileTTF(HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Bold.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Italic)] = io.Fonts->AddFontFromFileTTF(
+		HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Italic.ttf", kUiFontSize);
+
+	HUSH_ASSERT(s_fonts[static_cast<size_t>(EFontVariant::Regular)] != nullptr,
+				"Failed to load the default UI font (IBM Plex Serif). Falling back to ImGui's embedded font.");
+}
+
+ImFont *Hush::UI::GetFont(const EFontVariant variant)
+{
+	return s_fonts[static_cast<size_t>(variant)];
+}
+
 void Hush::UI::Init(Scene *parentScene)
 {
 	this->SetupImGuiStyle();

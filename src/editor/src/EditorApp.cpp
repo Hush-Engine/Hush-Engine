@@ -110,6 +110,10 @@ public:
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+		// Load the custom UI fonts (IBM Plex Serif family) before the backends
+		// are initialized so the font atlas is baked into the first frame.
+		Hush::UI::LoadFonts();
+
 		// Platform backend (SDL3)
 		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
 		ImGui_ImplSDL3_InitForOther(windowRenderer->GetSDLWindow());
