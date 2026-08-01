@@ -10,7 +10,6 @@
 #include "WebGPUBindGroup.hpp"
 #include "Assertions.hpp"
 #include "Profiling.hpp"
-#include <webgpu.h>
 #include <webgpu/webgpu.hpp>
 
 namespace Hush::Graphics

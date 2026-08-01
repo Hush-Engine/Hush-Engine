@@ -106,17 +106,6 @@ namespace Hush::Graphics
 	{
 		wgpu::DeviceDescriptor deviceDesc{};
 		deviceDesc.label = wgpu::StringView("Hush Graphics Device");
-		deviceDesc.uncapturedErrorCallbackInfo = {
-			.nextInChain = nullptr,
-			.callback = ([](WGPUErrorType errorType, const char* message, void* userData){
-			    (void)userData;
-			    (void)errorType;
-				LogFormat(ELogLevel::Info, "Error on WebGPU: {}", message);
-			}, nullptr),
-			.userdata1 = nullptr,
-			.userdata2 = nullptr,
-		};
-
 		m_device = m_adapter.requestDevice(deviceDesc);
 		HUSH_ASSERT(m_device, "Failed to request WebGPU device");
 
