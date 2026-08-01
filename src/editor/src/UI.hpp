@@ -34,6 +34,23 @@ namespace Hush
 
 		void Init(Scene *parentScene);
 
+		/// @brief Load the application fonts (IBM Plex Serif family) into ImGui's font
+		///        atlas. Must be called after ImGui::CreateContext() and before the
+		///        first frame. Regular is registered first and becomes the default UI font.
+		static void LoadFonts();
+
+		enum class EFontVariant
+		{
+			Regular,
+			Light,
+			Bold,
+			Italic,
+		};
+
+		/// @brief Retrieve a loaded UI font (IBM Plex Serif family).
+		/// @return The requested font, or nullptr if it failed to load.
+		static ImFont *GetFont(EFontVariant variant);
+
 		void DrawPanels(float deltaTime);
 
 		/// @brief Forward the native scene texture view to the ScenePanel for display.
@@ -117,6 +134,9 @@ namespace Hush
 
 		// NOLINTNEXTLINE
 		static inline UI *s_instance;
+
+		/// Fonts loaded by @ref LoadFonts, indexed by @ref EFontVariant.
+		static inline ImFont *s_fonts[4] = {};
 
 		template <class T>
 		static std::unique_ptr<T> CreatePanel(Scene *activeScene)
