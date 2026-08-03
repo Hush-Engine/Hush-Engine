@@ -5,6 +5,7 @@
 #include "RHI/ICommandList.hpp"
 #include "RHI/MaterialInstance.hpp"
 #include <cstring>
+#include <span>
 #include <string_view>
 #include <string>
 #include <unordered_map>
@@ -13,6 +14,7 @@
 namespace Hush::Graphics
 {
 	class IGraphicsDevice;
+	class IGraphicsTexture;
 	class IShaderModule;
 	struct ShaderCompilationResult;
 
@@ -23,6 +25,8 @@ namespace Hush::Graphics
 	{
 		uint32_t offset = 0;
 		uint32_t size = 0;
+		uint32_t bindingSet = 0;
+		uint32_t binding = 0;
 	};
 
 	/// @brief Configuration options for initialising a Material3D.
@@ -101,7 +105,7 @@ namespace Hush::Graphics
 		/// @param device     The graphics device to create resources on.
 		/// @param descriptor Material configuration.
 		/// @return Success on success, or the specific EError on failure.
-		std::optional<EError> Init(IGraphicsDevice *device, const Material3DDescriptor &descriptor);
+		EError Init(IGraphicsDevice *device, const Material3DDescriptor &descriptor);
 
 		/// @brief Returns true after a successful call to Init().
 		[[nodiscard]]
@@ -110,6 +114,8 @@ namespace Hush::Graphics
 		// -----------------------------------------------------------------
 		// Uniform property access
 		// -----------------------------------------------------------------
+
+		EError SetPropertyRaw(std::string_view name, const std::span<const std::byte> &value);
 
 		/// @brief Set a uniform property by name.
 		///
@@ -125,25 +131,11 @@ namespace Hush::Graphics
 		///         EError::PropertyNotFound if the name does not exist.
 		template <typename T>
 			requires std::is_trivially_copyable_v<T>
-		std::optional<EError> SetProperty(std::string_view name, const T &value)
+		EError SetProperty(std::string_view name, const T &value)
 		{
-			auto it = m_propertyMap.find(std::string(name));
-			if (it == m_propertyMap.end())
-			{
-				return EError::PropertyNotFound;
-			}
-
-			const MaterialPropertyInfo &info = it->second;
-			const size_t writeSize = sizeof(T) < info.size ? sizeof(T) : info.size;
-
-			if (info.offset + writeSize > m_uniformStagingBuffer.size())
-			{
-				return EError::PropertyNotFound;
-			}
-
-			std::memcpy(m_uniformStagingBuffer.data() + info.offset, &value, writeSize);
-			m_propertiesDirty = true;
-			return {};
+			auto valueView =
+				std::span<const std::byte, sizeof(T)>(reinterpret_cast<const std::byte *>(&value), sizeof(T));
+			return this->SetPropertyRaw(name, valueView);
 		}
 
 		/// @brief Upload the CPU-side uniform staging buffer to the GPU.
@@ -159,8 +151,8 @@ namespace Hush::Graphics
 			requires std::is_trivially_copyable_v<T>
 		std::optional<EError> SetPropertyAndFlush(IGraphicsDevice *device, std::string_view name, const T &value)
 		{
-			auto result = SetProperty(name, value);
-			if (result.has_value())
+			EError result = SetProperty(name, value);
+			if (result != EError::None)
 			{
 				return result;
 			}
@@ -226,7 +218,7 @@ namespace Hush::Graphics
 		IBindGroup *GetBindGroup() const noexcept;
 
 		[[nodiscard]]
-		IBindGroupLayout *GetBindGroupLayout() const noexcept;
+		IBindGroupLayout *GetBindGroupLayout(uint32_t setIndex) const noexcept;
 
 		[[nodiscard]]
 		IGraphicsBuffer *GetUniformBuffer() const noexcept;
@@ -239,16 +231,47 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		uint64_t GetUniformBufferSize() const noexcept;
 
+		/// @brief Get a read-only view of the CPU-side uniform staging buffer.
+		[[nodiscard]]
+		const std::vector<uint8_t> &GetUniformStagingBuffer() const noexcept;
+
+		// -----------------------------------------------------------------
+		// Texture slots (populated from shader reflection)
+		// -----------------------------------------------------------------
+
+		/// @brief Describes a single texture binding discovered via shader reflection.
+		struct TextureSlot
+		{
+			uint32_t binding = 0;
+			uint32_t set = 0;
+			IGraphicsTexture *texture = nullptr;
+		};
+
+		/// @brief Assign a GPU texture to a binding slot.
+		void SetTexture(uint32_t binding, IGraphicsTexture *texture);
+
+		/// @brief Get the texture assigned to a binding slot, or nullptr.
+		[[nodiscard]]
+		IGraphicsTexture *GetTexture(uint32_t binding) const;
+
+		/// @brief All texture slots discovered from reflection.
+		[[nodiscard]]
+		const std::vector<TextureSlot> &GetTextureSlots() const noexcept;
+
 	private:
 		/// @brief Build the property map from the shader's reflected bindings.
 		void BuildPropertyMapFromReflection(const ShaderCompilationResult &result);
 
-		/// @brief Compute the required uniform buffer size from reflected data,
-		///        create the uniform buffer and bind group.
+		/// @brief Create all bind group layout resources from the shader reflection.
+		/// Layouts for all sets use the full reflected layout.
+		EError CreateAllBindGroupLayouts(IGraphicsDevice *device,
+										 const std::vector<BindGroupLayoutDescriptor> &layoutDescs);
+
+		/// @brief Compute the required uniform buffer size from the property map,
+		///        create the GPU uniform buffer and the material's bind group.
 		///
 		/// @return EError::None on success.
-		EError CreateUniformBufferAndBindGroup(IGraphicsDevice *device,
-											   std::vector<BindGroupLayoutDescriptor> &layoutDescs);
+		EError CreateUniformBufferAndBindGroup(IGraphicsDevice *device);
 
 		/// @brief Create the graphics pipeline from the pre-compiled shader
 		///        modules provided via the descriptor.
@@ -267,7 +290,12 @@ namespace Hush::Graphics
 		//       their lifetime and passes non-owning pointers through the
 		//       descriptor.  Only the pipeline and binding resources are owned.
 
-		BindGroupLayoutResource m_bindGroupLayout;
+		/// All bind group layouts, one per set (index matches set number).
+		/// Each layout uses the full reflected layout from the shader.
+		std::vector<BindGroupLayoutResource> m_bindGroupLayouts;
+
+		/// Which set index the material's uniform properties belong to.
+		uint32_t m_materialBindGroupSet = 0;
 		BindGroupResource m_bindGroup;
 		GraphicsPipelineResource m_pipeline;
 		BufferResource m_uniformBuffer;
@@ -280,6 +308,14 @@ namespace Hush::Graphics
 
 		/// Whether the staging buffer has been modified since the last flush.
 		bool m_propertiesDirty = false;
+
+		/// @brief Texture bindings discovered from shader reflection.
+		std::vector<TextureSlot> m_textureSlots;
+
+		/// Layout entries for the material's own bind group set.
+		/// Stored so CreateUniformBufferAndBindGroup can provide entries
+		/// for all bindings matching the full (unfiltered) layout.
+		std::vector<BindGroupLayoutEntry> m_materialSetLayoutEntries;
 
 		EAlphaBlendMode m_alphaBlendMode = EAlphaBlendMode::None;
 		ECullMode m_cullMode = ECullMode::None;

@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
 
 namespace Hush::Graphics
 {
@@ -22,7 +23,7 @@ namespace Hush::Graphics
 	// Initialisation
 	// =====================================================================
 
-	std::optional<Material3D::EError> Material3D::Init(IGraphicsDevice *device, const Material3DDescriptor &descriptor)
+	Material3D::EError Material3D::Init(IGraphicsDevice *device, const Material3DDescriptor &descriptor)
 	{
 		if (device == nullptr)
 		{
@@ -50,18 +51,44 @@ namespace Hush::Graphics
 		{
 			layoutDescs = descriptor.compilationResult->BuildBindGroupLayoutDescriptors();
 			BuildPropertyMapFromReflection(*descriptor.compilationResult);
+
+			// Determine which set the material's uniform properties belong to.
+			if (!m_propertyMap.empty())
+			{
+				m_materialBindGroupSet = m_propertyMap.begin()->second.bindingSet;
+			}
+
+			// Populate texture slots from reflection (non-member, SampledTexture entries).
+			m_textureSlots.clear();
+			for (const auto &b : descriptor.compilationResult->bindings)
+			{
+				if (b.isMember || b.type != EBindingType::SampledTexture)
+				{
+					continue;
+				}
+				TextureSlot slot{};
+				slot.binding = b.binding;
+				slot.set = b.set;
+				m_textureSlots.push_back(slot);
+			}
 		}
 
-		EError bufferAndBindGroupError = CreateUniformBufferAndBindGroup(device, layoutDescs);
-		if (bufferAndBindGroupError != EError::None)
+		EError layoutErr = CreateAllBindGroupLayouts(device, layoutDescs);
+		if (layoutErr != EError::None)
 		{
-			return bufferAndBindGroupError;
+			return layoutErr;
 		}
 
-		EError pipelineError = CreatePipeline(device, descriptor);
-		if (pipelineError != EError::None)
+		EError bufErr = CreateUniformBufferAndBindGroup(device);
+		if (bufErr != EError::None)
 		{
-			return pipelineError;
+			return bufErr;
+		}
+
+		EError pipelineErr = CreatePipeline(device, descriptor);
+		if (pipelineErr != EError::None)
+		{
+			return pipelineErr;
 		}
 
 		m_internalMaterial.pipeline = m_pipeline.Get();
@@ -72,10 +99,11 @@ namespace Hush::Graphics
 
 		LogFormat(ELogLevel::Info,
 				  "[Material3D] '%s': initialised successfully (uniform buffer: %llu bytes, "
-				  "properties: %zu).",
-				  m_name.c_str(), static_cast<unsigned long long>(m_uniformStagingBuffer.size()), m_propertyMap.size());
+				  "properties: %zu, sets: %zu).",
+				  m_name.c_str(), static_cast<unsigned long long>(m_uniformStagingBuffer.size()), m_propertyMap.size(),
+				  m_bindGroupLayouts.size());
 
-		return std::nullopt;
+		return EError::None;
 	}
 
 	bool Material3D::IsInitialized() const noexcept
@@ -83,8 +111,84 @@ namespace Hush::Graphics
 		return m_initialized;
 	}
 
-	Material3D::EError Material3D::CreateUniformBufferAndBindGroup(IGraphicsDevice *device,
-																   std::vector<BindGroupLayoutDescriptor> &layoutDescs)
+	Material3D::EError Material3D::SetPropertyRaw(std::string_view name, const std::span<const std::byte> &value)
+	{
+		auto it = m_propertyMap.find(std::string(name));
+		if (it == m_propertyMap.end())
+		{
+			return EError::PropertyNotFound;
+		}
+
+		const MaterialPropertyInfo &info = it->second;
+		const size_t writeSize = value.size_bytes() < info.size ? value.size_bytes() : info.size;
+
+		if (info.offset + writeSize > m_uniformStagingBuffer.size())
+		{
+			return EError::PropertyNotFound;
+		}
+
+		std::memcpy(m_uniformStagingBuffer.data() + info.offset, value.data(), writeSize);
+		m_propertiesDirty = true;
+		return EError::None;
+	}
+	Material3D::EError Material3D::CreateAllBindGroupLayouts(IGraphicsDevice *device,
+															 const std::vector<BindGroupLayoutDescriptor> &layoutDescs)
+	{
+		const size_t setCount = layoutDescs.size();
+
+		// Fallback: no reflection data — create a single minimal layout.
+		if (setCount == 0)
+		{
+			m_bindGroupLayouts.resize(1);
+
+			BindGroupLayoutDescriptor manualLayout{};
+			manualLayout.debugName = m_name + "_BindGroupLayout";
+
+			BindGroupLayoutEntry uniformEntry{};
+			uniformEntry.binding = 0;
+			uniformEntry.type = EBindingType::UniformBuffer;
+			uniformEntry.stageFlags = EShaderStageFlags::Vertex | EShaderStageFlags::Fragment;
+			manualLayout.entries.push_back(uniformEntry);
+
+			m_bindGroupLayouts[0].CreateResource(manualLayout, device);
+			if (!m_bindGroupLayouts[0].IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create fallback bind group layout.",
+						  m_name.c_str());
+				return EError::BindGroupLayoutCreationFailed;
+			}
+
+			m_materialBindGroupSet = 0;
+			return EError::None;
+		}
+
+		m_bindGroupLayouts.resize(setCount);
+
+		for (size_t i = 0; i < setCount; ++i)
+		{
+			if (i == static_cast<size_t>(m_materialBindGroupSet))
+			{
+				m_materialSetLayoutEntries = layoutDescs[i].entries;
+			}
+
+			m_bindGroupLayouts[i].CreateResource(layoutDescs[i], device);
+		}
+
+		// Validate all layouts.
+		for (size_t i = 0; i < setCount; ++i)
+		{
+			if (!m_bindGroupLayouts[i].IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group layout for set %zu.",
+						  m_name.c_str(), i);
+				return EError::BindGroupLayoutCreationFailed;
+			}
+		}
+
+		return EError::None;
+	}
+
+	Material3D::EError Material3D::CreateUniformBufferAndBindGroup(IGraphicsDevice *device)
 	{
 		// Compute the total uniform buffer size from the property map.
 		uint64_t uniformBufferSize = 0;
@@ -94,48 +198,8 @@ namespace Hush::Graphics
 			uniformBufferSize = std::max(uniformBufferSize, end);
 		}
 
-		// Also honour the reflected buffer size from bind group layout entries.
-		if (!layoutDescs.empty())
-		{
-			for (auto &entry : layoutDescs[0].entries)
-			{
-				if (entry.type == EBindingType::UniformBuffer)
-				{
-					uniformBufferSize = std::max(uniformBufferSize, entry.minBufferBindingSize);
-					if (entry.minBufferBindingSize == 0 && uniformBufferSize > 0)
-					{
-						entry.minBufferBindingSize = uniformBufferSize;
-					}
-				}
-			}
-		}
-
-		// Fallback: if reflection produced nothing, create a minimal layout
-		// with a single uniform buffer entry.
-		if (layoutDescs.empty())
-		{
-			BindGroupLayoutDescriptor manualLayout{};
-			manualLayout.debugName = m_name + "_BindGroupLayout";
-			if (uniformBufferSize > 0)
-			{
-				BindGroupLayoutEntry uniformEntry{};
-				uniformEntry.binding = 0;
-				uniformEntry.type = EBindingType::UniformBuffer;
-				uniformEntry.stageFlags = EShaderStageFlags::Vertex | EShaderStageFlags::Fragment;
-				uniformEntry.minBufferBindingSize = uniformBufferSize;
-				manualLayout.entries.push_back(uniformEntry);
-			}
-			layoutDescs.push_back(std::move(manualLayout));
-		}
-
-		layoutDescs[0].debugName = m_name + "_BindGroupLayout0";
-
-		m_bindGroupLayout.CreateResource(layoutDescs[0], device);
-		if (!m_bindGroupLayout.IsValid())
-		{
-			LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group layout.", m_name.c_str());
-			return EError::BindGroupLayoutCreationFailed;
-		}
+		// Honour the staging buffer size already computed by BuildPropertyMapFromReflection.
+		uniformBufferSize = std::max(uniformBufferSize, static_cast<uint64_t>(m_uniformStagingBuffer.size()));
 
 		// Ensure at least 16 bytes so WebGPU does not reject a zero-size buffer.
 		uniformBufferSize = std::max(uniformBufferSize, static_cast<uint64_t>(16));
@@ -143,13 +207,12 @@ namespace Hush::Graphics
 		// Round up to 16 bytes for GPU alignment.
 		uniformBufferSize = (uniformBufferSize + 15u) & ~static_cast<uint64_t>(15u);
 
-		// Persist the debug name so the pointer stays valid during CreateResource.
 		std::string bufferDebugName = m_name + "_UniformBuffer";
 
 		BufferDescriptor bufferDesc{};
 		bufferDesc.size = uniformBufferSize;
 		bufferDesc.usage = EBufferUsage::Uniform;
-		bufferDesc.memoryAccess = EMemoryAccess::CPUWrite;
+		bufferDesc.memoryAccess = EMemoryAccess::CPUNone;
 		bufferDesc.debugName = bufferDebugName.c_str();
 
 		m_uniformBuffer.CreateResource(bufferDesc, device);
@@ -163,96 +226,77 @@ namespace Hush::Graphics
 		m_uniformStagingBuffer.resize(static_cast<size_t>(uniformBufferSize), 0);
 		device->WriteBuffer(m_uniformBuffer.Get(), 0, m_uniformStagingBuffer.data(), uniformBufferSize);
 
-		// Create the bind group.
-		BindGroupDescriptor bgDesc{};
-		bgDesc.layout = m_bindGroupLayout.Get();
-		bgDesc.debugName = m_name + "_BindGroup";
+		const size_t matSet = static_cast<size_t>(m_materialBindGroupSet);
 
-		BindGroupEntry bufEntry{};
-		bufEntry.binding = 0;
-		bufEntry.buffer = m_uniformBuffer.Get();
-		bufEntry.offset = 0;
-		bufEntry.size = uniformBufferSize;
-		bgDesc.entries.push_back(bufEntry);
-
-		m_bindGroup.CreateResource(bgDesc, device);
-		if (!m_bindGroup.IsValid())
+		// Create the bind group only if the layout contains exclusively entries
+		// that can be fulfilled during Init().  Non‑UBO entries (textures,
+		// samplers) require resources that are set after Init by the caller.
+		// When the layout is mixed, skip the bind group — the rendering system
+		// creates its own per‑material bind groups with the correct resources.
+		bool hasOnlyUBO = true;
+		for (const auto &e : m_materialSetLayoutEntries)
 		{
-			LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group.", m_name.c_str());
-			return EError::BindGroupCreationFailed;
-		}
-
-		return EError::None;
-	}
-
-	Material3D::EError Material3D::CreatePipeline(IGraphicsDevice *device, const Material3DDescriptor &descriptor)
-	{
-		GraphicsPipelineDescriptor pipelineDesc{};
-		pipelineDesc.debugName = m_name + "_Pipeline";
-
-		// Shader stages — non-owning pointers from the descriptor.
-		pipelineDesc.vertexStage.module = descriptor.vertexShader;
-		pipelineDesc.vertexStage.entryPoint = descriptor.vertexEntry;
-
-		pipelineDesc.fragmentStage.module = descriptor.fragmentShader;
-		pipelineDesc.fragmentStage.entryPoint = descriptor.fragmentEntry;
-
-		// Vertex input from reflection (when available).
-		if (descriptor.compilationResult != nullptr && !descriptor.compilationResult->vertexInputs.empty())
-		{
-			VertexBufferLayout vbl{};
-			uint32_t currentOffset = 0;
-			for (const auto &input : descriptor.compilationResult->vertexInputs)
+			if (e.type != EBindingType::UniformBuffer)
 			{
-				VertexAttribute attr{};
-				attr.shaderLocation = input.location;
-				attr.offset = currentOffset;
-				attr.format = input.format;
-				currentOffset += GetVertexFormatSize(input.format);
-				vbl.attributes.push_back(attr);
+				hasOnlyUBO = false;
+				break;
 			}
-			vbl.stride = currentOffset;
-			vbl.stepMode = EVertexStepMode::Vertex;
-			pipelineDesc.vertexBufferLayouts.push_back(std::move(vbl));
 		}
 
-		// Primitive / rasterisation state
-		pipelineDesc.primitive.topology = EPrimitiveTopology::TriangleList;
-		pipelineDesc.primitive.frontFace = EFrontFace::CounterClockwise;
-		pipelineDesc.primitive.cullMode = TranslateCullMode(m_cullMode);
-
-		// Color target
-		pipelineDesc.colorTargets.push_back(
-			BuildColorTarget(descriptor.colorTargetFormat, m_alphaBlendMode, descriptor.blendEnabled));
-
-		// Depth/stencil
-		pipelineDesc.depthStencil = descriptor.depthStencil;
-
-		// Bind group layouts
-		pipelineDesc.bindGroupLayouts[0] = m_bindGroupLayout.Get();
-		pipelineDesc.bindGroupLayoutCount = 1;
-
-		m_pipeline.CreateResource(pipelineDesc, device);
-		if (!m_pipeline.IsValid())
+		if (hasOnlyUBO && !m_materialSetLayoutEntries.empty())
 		{
-			LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create graphics pipeline.", m_name.c_str());
-			return EError::PipelineCreationFailed;
+			BindGroupDescriptor bgDesc{};
+			bgDesc.layout = m_bindGroupLayouts[matSet].Get();
+			bgDesc.debugName = m_name + "_BindGroup";
+
+			for (const auto &layoutEntry : m_materialSetLayoutEntries)
+			{
+				BindGroupEntry entry{};
+				entry.binding = layoutEntry.binding;
+				if (layoutEntry.type == EBindingType::UniformBuffer)
+				{
+					entry.buffer = m_uniformBuffer.Get();
+					entry.offset = 0;
+					entry.size = uniformBufferSize;
+				}
+				bgDesc.entries.push_back(entry);
+			}
+
+			m_bindGroup.CreateResource(bgDesc, device);
+			if (!m_bindGroup.IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create bind group.", m_name.c_str());
+				return EError::BindGroupCreationFailed;
+			}
+		}
+		else if (m_materialSetLayoutEntries.empty())
+		{
+			// Fallback: no reflection data — single UBO entry.
+			uint32_t fallbackBinding = 0;
+			if (!m_propertyMap.empty())
+			{
+				fallbackBinding = m_propertyMap.begin()->second.binding;
+			}
+			BindGroupDescriptor bgDesc{};
+			bgDesc.layout = m_bindGroupLayouts[matSet].Get();
+			bgDesc.debugName = m_name + "_BindGroup";
+
+			BindGroupEntry bufEntry{};
+			bufEntry.binding = fallbackBinding;
+			bufEntry.buffer = m_uniformBuffer.Get();
+			bufEntry.offset = 0;
+			bufEntry.size = uniformBufferSize;
+			bgDesc.entries.push_back(bufEntry);
+
+			m_bindGroup.CreateResource(bgDesc, device);
+			if (!m_bindGroup.IsValid())
+			{
+				LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create fallback bind group.", m_name.c_str());
+				return EError::BindGroupCreationFailed;
+			}
 		}
 
 		return EError::None;
-	}
-
-	void Material3D::FlushProperties(IGraphicsDevice *device)
-	{
-		if (!m_propertiesDirty || !m_initialized || device == nullptr)
-		{
-			return;
-		}
-
-		device->WriteBuffer(m_uniformBuffer.Get(), 0, m_uniformStagingBuffer.data(),
-							static_cast<uint64_t>(m_uniformStagingBuffer.size()));
-
-		m_propertiesDirty = false;
 	}
 
 	// =====================================================================
@@ -275,6 +319,74 @@ namespace Hush::Graphics
 		{
 			cmdList->SetBindGroup(bindGroupIndex, m_bindGroup.Get());
 		}
+	}
+
+	Material3D::EError Material3D::CreatePipeline(IGraphicsDevice *device, const Material3DDescriptor &descriptor)
+	{
+		GraphicsPipelineDescriptor pipelineDesc{};
+		pipelineDesc.debugName = m_name + "_Pipeline";
+
+		pipelineDesc.vertexStage.module = descriptor.vertexShader;
+		pipelineDesc.vertexStage.entryPoint = descriptor.vertexEntry;
+
+		pipelineDesc.fragmentStage.module = descriptor.fragmentShader;
+		pipelineDesc.fragmentStage.entryPoint = descriptor.fragmentEntry;
+
+		if (descriptor.compilationResult != nullptr && !descriptor.compilationResult->vertexInputs.empty())
+		{
+			VertexBufferLayout vbl{};
+			uint32_t currentOffset = 0;
+			for (const auto &input : descriptor.compilationResult->vertexInputs)
+			{
+				VertexAttribute attr{};
+				attr.shaderLocation = input.location;
+				attr.offset = currentOffset;
+				attr.format = input.format;
+				currentOffset += GetVertexFormatSize(input.format);
+				vbl.attributes.push_back(attr);
+			}
+			vbl.stride = currentOffset;
+			vbl.stepMode = EVertexStepMode::Vertex;
+			pipelineDesc.vertexBufferLayouts.push_back(std::move(vbl));
+		}
+
+		pipelineDesc.primitive.topology = EPrimitiveTopology::TriangleList;
+		pipelineDesc.primitive.frontFace = EFrontFace::CounterClockwise;
+		pipelineDesc.primitive.cullMode = TranslateCullMode(m_cullMode);
+
+		pipelineDesc.colorTargets.push_back(
+			BuildColorTarget(descriptor.colorTargetFormat, m_alphaBlendMode, descriptor.blendEnabled));
+
+		pipelineDesc.depthStencil = descriptor.depthStencil;
+
+		const uint32_t layoutCount = std::min(static_cast<uint32_t>(m_bindGroupLayouts.size()), MAX_BIND_GROUPS);
+		for (uint32_t i = 0; i < layoutCount; ++i)
+		{
+			pipelineDesc.bindGroupLayouts[i] = m_bindGroupLayouts[i].Get();
+		}
+		pipelineDesc.bindGroupLayoutCount = layoutCount;
+
+		m_pipeline.CreateResource(pipelineDesc, device);
+		if (!m_pipeline.IsValid())
+		{
+			LogFormat(ELogLevel::Error, "[Material3D] '%s': failed to create graphics pipeline.", m_name.c_str());
+			return EError::PipelineCreationFailed;
+		}
+
+		return EError::None;
+	}
+
+	void Material3D::FlushProperties(IGraphicsDevice *device)
+	{
+		if (!m_propertiesDirty || !m_initialized || device == nullptr)
+		{
+			return;
+		}
+
+		device->WriteBuffer(m_uniformBuffer.Get(), 0, m_uniformStagingBuffer.data(),
+							static_cast<uint64_t>(m_uniformStagingBuffer.size()));
+
+		m_propertiesDirty = false;
 	}
 
 	// =====================================================================
@@ -354,9 +466,13 @@ namespace Hush::Graphics
 		return m_bindGroup.IsValid() ? m_bindGroup.Get() : nullptr;
 	}
 
-	IBindGroupLayout *Material3D::GetBindGroupLayout() const noexcept
+	IBindGroupLayout *Material3D::GetBindGroupLayout(uint32_t setIndex) const noexcept
 	{
-		return m_bindGroupLayout.IsValid() ? m_bindGroupLayout.Get() : nullptr;
+		if (setIndex >= m_bindGroupLayouts.size())
+		{
+			return nullptr;
+		}
+		return m_bindGroupLayouts[setIndex].IsValid() ? m_bindGroupLayouts[setIndex].Get() : nullptr;
 	}
 
 	IGraphicsBuffer *Material3D::GetUniformBuffer() const noexcept
@@ -374,6 +490,44 @@ namespace Hush::Graphics
 		return static_cast<uint64_t>(m_uniformStagingBuffer.size());
 	}
 
+	const std::vector<uint8_t> &Material3D::GetUniformStagingBuffer() const noexcept
+	{
+		return m_uniformStagingBuffer;
+	}
+
+	// =====================================================================
+	// Texture slots
+	// =====================================================================
+
+	void Material3D::SetTexture(uint32_t binding, IGraphicsTexture *texture)
+	{
+		for (auto &slot : m_textureSlots)
+		{
+			if (slot.binding == binding)
+			{
+				slot.texture = texture;
+				return;
+			}
+		}
+	}
+
+	IGraphicsTexture *Material3D::GetTexture(uint32_t binding) const
+	{
+		for (const auto &slot : m_textureSlots)
+		{
+			if (slot.binding == binding)
+			{
+				return slot.texture;
+			}
+		}
+		return nullptr;
+	}
+
+	const std::vector<Material3D::TextureSlot> &Material3D::GetTextureSlots() const noexcept
+	{
+		return m_textureSlots;
+	}
+
 	// =====================================================================
 	// Private helpers
 	// =====================================================================
@@ -382,42 +536,83 @@ namespace Hush::Graphics
 	{
 		m_propertyMap.clear();
 
-		// The Slang-based ShaderCompiler populates `result.bindings` with a flat
-		// list of ReflectedBinding entries.  Uniform buffer members are reported
-		// with their offset (via `binding` index) and size (via `bufferSize`).
-		//
-		// For a ConstantBuffer<Uniforms> with members { float4x4 mvp; float4 tint; float time; }
-		// the compiler may emit one top-level binding of type UniformBuffer whose
-		// `bufferSize` is the total size.  In that case the individual member
-		// offsets are not directly available from the coarse reflection data,
-		// so we store the whole buffer as a single property at offset 0.
-		//
-		// If the compiler emits per-member bindings (some Slang configurations
-		// do), we store each member individually.
+		uint32_t maxEnd = 0;
 
-		uint32_t runningOffset = 0;
-
+		// First pass: process per-member entries (isMember flag set by ShaderCompiler
+		// when reflecting ConstantBuffer struct fields).  These carry exact offsets
+		// reported by Slang and must NOT contribute to a running-offset accumulator
+		// the top-level parent entry already accounts for the full buffer size.
 		for (const auto &b : result.bindings)
 		{
-			if (b.type != EBindingType::UniformBuffer)
+			if (b.type != EBindingType::UniformBuffer || !b.isMember)
 			{
 				continue;
 			}
 
 			MaterialPropertyInfo info{};
-			info.offset = runningOffset;
-			info.size = b.bufferSize > 0 ? static_cast<uint32_t>(b.bufferSize) : 0;
+			info.offset = static_cast<uint32_t>(b.bufferOffset);
+			info.size = static_cast<uint32_t>(b.bufferSize);
+			info.bindingSet = b.set;
+			info.binding = b.binding;
 
 			if (!b.name.empty())
 			{
+				// BUG: Properties with the same name across different structs will collide, we need to create some
+				// referencing behavior like SetProperty("MyStruct.property", value); if it comes to that for now just
+				// try to not repeat names in your shaders lol
 				m_propertyMap[b.name] = info;
 			}
 
-			if (info.size > 0)
-			{
-				runningOffset += info.size;
-			}
+			maxEnd = std::max(maxEnd, info.offset + info.size);
 		}
+
+		// Second pass: process top-level parent entries (isMember == false).
+		// These provide the accurate total size of each ConstantBuffer and also
+		// serve as fallback properties when no per-member entries were emitted.
+		for (const auto &b : result.bindings)
+		{
+			if (b.type != EBindingType::UniformBuffer || b.isMember)
+			{
+				continue;
+			}
+
+			maxEnd = std::max(maxEnd, static_cast<uint32_t>(b.bufferSize));
+
+			if (b.name.empty())
+			{
+				continue;
+			}
+
+			// Check whether per-member entries already exist for this logical buffer.
+			bool hasMembers = false;
+			for (const auto &inner : result.bindings)
+			{
+				if (inner.isMember && inner.set == b.set && inner.binding == b.binding)
+				{
+					hasMembers = true;
+					break;
+				}
+			}
+
+			if (hasMembers)
+			{
+				continue;
+			}
+
+			// No per-member entries — store the whole buffer as one property.
+			MaterialPropertyInfo fallbackInfo{};
+			fallbackInfo.offset = 0;
+			fallbackInfo.size = static_cast<uint32_t>(b.bufferSize);
+			fallbackInfo.bindingSet = b.set;
+			fallbackInfo.binding = b.binding;
+			m_propertyMap[b.name] = fallbackInfo;
+		}
+
+		// Ensure at least 16 bytes and 16-byte alignment for GPU.
+		maxEnd = std::max(maxEnd, 16u);
+		maxEnd = (maxEnd + 15u) & ~static_cast<uint32_t>(15u);
+
+		m_uniformStagingBuffer.resize(maxEnd, 0);
 	}
 
 	ColorTargetState Material3D::BuildColorTarget(ETextureFormat format, EAlphaBlendMode blendMode, bool blendEnabled)

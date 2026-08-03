@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 
 namespace Hush::Renderer
 {
@@ -32,7 +32,7 @@ namespace Hush::Renderer
 					  ///< quota.
 		};
 
-		size_t cpuOffset = 0; ///< Byte offset into the staging buffer where this entity's data is located.
+		uint64_t cpuOffset = 0; ///< Byte offset into the staging buffer where this entity's data is located.
 
 		EUploadMode uploadMode = EUploadMode::Full; ///< Upload mode for this entity's resource.
 	};

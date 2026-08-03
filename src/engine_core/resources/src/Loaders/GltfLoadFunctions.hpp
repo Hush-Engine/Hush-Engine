@@ -21,7 +21,8 @@ namespace Hush::GltfLoadFunctions
 		FileNotFound,
 		InvalidMeshFile,
 		FormatNotSupported,
-		TextureNotFound
+		TextureNotFound,
+		NotImplemented
 	};
 
 	fastgltf::Expected<fastgltf::Asset> GetAssetFromFile(const std::filesystem::path &file);
@@ -33,8 +34,8 @@ namespace Hush::GltfLoadFunctions
 	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image &image, const fastgltf::Asset &asset,
 												  fastgltf::MimeType *outMimeType);
 
-	std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
-															 const fastgltf::Image &image);
+	// std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
+	// 														 const fastgltf::Image &image);
 
 	EError SetMaterialTextures(void *outMaterialResources, const fastgltf::Asset &asset,
 							   const fastgltf::Material &material, const void *loadedTextures);

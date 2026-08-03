@@ -4,11 +4,15 @@
 
 #include "Assertions.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
@@ -135,6 +139,11 @@ public:
 		};
 
 		this->m_scene->Init();
+		// Create a directional light
+		Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
+		dirLightEntity.AddComponent<Hush::WorldTransform>();
+		dirLightEntity.AddComponent<Hush::LocalTransform>();
+		dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
 	}
 
@@ -256,74 +265,7 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		// ── Pass 1: Scene render ────────────────────────────────────
-
-		struct ScenePassData
-		{
-			ResourceId renderTexture;
-		};
-
-		const auto &scenePassData = graph.AddPass<ScenePassData>(
-			EPassType::Graphics, "EditorScenePass",
-
-			// BUILD
-			[this](RenderGraph::BuildContext &ctx, ScenePassData &data) {
-				// Use the scene panel's content size so the render texture
-				// matches the panel 1:1.  Falls back to the window size on
-				// the very first frame (before the panel has reported).
-				const auto bufferSize = m_sceneBufferSize;
-
-				// Ensure we wait for any resource uploads (textures, buffers)
-				// that were queued before this frame.
-				ctx.Read(ctx.GetResourceIdByName(RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
-
-				data.renderTexture = ctx.Create<TextureResource>(
-					"EditorScenePass_RenderTexture", TextureDescriptor{
-														 .width = bufferSize.x,
-														 .height = bufferSize.y,
-														 .format = ETextureFormat::BGRA8_UNORM,
-														 .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
-													 });
-
-				// Never cull this pass — the editor always needs the scene
-				// texture even if nothing else reads it explicitly.
-				ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
-			},
-
-			// EXECUTE
-			[](ScenePassData &data, Hush::Graphics::ICommandList *cmdList,
-			   const Hush::RenderGraph::ResourceManager &resourceManager) {
-				static int32_t counter = 0;
-				counter++;
-				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
-				if (cmd == nullptr)
-				{
-					Hush::LogFormat(Hush::ELogLevel::Error, "[EditorScenePass] Failed to get graphics command list.");
-					return;
-				}
-
-				RenderPassDescriptor renderPass{};
-				renderPass.debugLabel = "EditorScenePass";
-
-				RenderPassColorAttachment colorAttachment{};
-				colorAttachment.texture =
-					resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
-				colorAttachment.loadOp = ELoadOp::Clear;
-				colorAttachment.storeOp = EStoreOp::Store;
-				colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
-				renderPass.AddColorAttachment(colorAttachment);
-
-				cmd->BeginRenderPass(renderPass);
-				// TODO: actual scene rendering commands go here (deferred /
-				//       forward passes, mesh draws, etc.)
-				cmd->EndRenderPass();
-			});
-
-		// Save the scene texture resource ID so we can look it up later
-		// when forwarding the native view to the ScenePanel.
-		m_sceneTextureResourceId = scenePassData.renderTexture;
-
-		// ── Pass 2: ImGui render to backbuffer ──────────────────────
+		// ── ImGui render to backbuffer ──────────────────────────────
 
 		struct ImGuiPassData
 		{
@@ -335,10 +277,10 @@ private:
 			EPassType::Graphics, "EditorImGuiPass",
 
 			// BUILD
-			[&scenePassData, device, this](RenderGraph::BuildContext &ctx, ImGuiPassData &data) {
+			[device, this](RenderGraph::BuildContext &ctx, ImGuiPassData &data) {
 				// Read the scene texture — this creates a dependency so the
-				// ImGui pass is guaranteed to run after ScenePass.
-				data.sceneTexture = ctx.Read(scenePassData.renderTexture);
+				// ImGui pass is guaranteed to run after the scene pass.
+				data.sceneTexture = ctx.Read(ctx.GetResourceIdByName("EditorScenePass_RenderTexture"));
 
 				// Import the swapchain backbuffer as an external resource.
 				data.backbuffer = ctx.Import<ImportedTextureResource>("EditorBackbuffer",
@@ -453,7 +395,13 @@ private:
 
 		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("EditorScenePass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -471,7 +419,13 @@ private:
 
 		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("EditorScenePass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -522,9 +476,6 @@ private:
 	/// Set to true when the scene panel resizes; consumed in OnPreRender
 	/// to invalidate the render graph before the next rebuild.
 	bool m_sceneBufferDirty = false;
-
-	/// Resource ID of the scene render texture (created in ScenePass).
-	Hush::RenderGraph::ResourceId m_sceneTextureResourceId{};
 
 	/// Resource ID of the imported swapchain backbuffer (updated each frame).
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{};
