@@ -9,9 +9,11 @@
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
+#include "HushBindings.hpp"
+
 namespace Hush
 {
-	class Camera
+	class [[hush::export]] Camera
 	{
 	public:
 		Camera() = default;
@@ -40,7 +42,7 @@ namespace Hush
 		void SetPerspectiveProjectionMatrix(const float radFov, const float width, const float height,
 											const float nearP, const float farP);
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		float GetFarPlane() const noexcept;
 
 		/// @brief Update the viewport dimensions (e.g. when the scene panel resizes).
@@ -57,6 +59,14 @@ namespace Hush
 			return m_viewportSize;
 		}
 
+		[[nodiscard]] float GetFOV() const {
+			return this->m_fov;
+		}
+
+		void SetFOV(float fov) {
+			this->m_fov = fov;
+		}
+
 	protected:
 		// NOLINTNEXTLINE
 		float m_exposure = 0.8f; // Aribtrary value (inspired from the Hazel Engine)
@@ -69,4 +79,6 @@ namespace Hush
 		// Currently only needed for shadow maps and ImGuizmo
 		glm::mat4 m_unreversedProjectionMatrix = glm::mat4(1.0f);
 	};
+
+	void Serialize(Camera*);
 } // namespace Hush

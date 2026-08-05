@@ -19,5 +19,8 @@ namespace Hush
 
 	private:
 		void FileMenuOptions();
+
+		Scene* m_activeScene = nullptr;
+
 	};
 } // namespace Hush

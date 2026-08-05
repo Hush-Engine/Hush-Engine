@@ -121,8 +121,7 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
 		Ref<Mesh> meshRef =
-			resourceManager->AllocateRef<Mesh>(mesh.name); // BUG: If there's something with the same name we'll crash
-														   // with this, we'll need to fix it in a future PR
+			resourceManager->AllocateRef<Mesh>(path.string());
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
 		meshRef->SetName(mesh.name);

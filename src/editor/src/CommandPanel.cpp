@@ -343,25 +343,31 @@ void Hush::CommandPanel::AddComponentPopup()
 	popupState.inputId = "##Search";
 	popupState.hint = "i.e Rigidbody";
 
-	// Find built in components
-	using Arr_t = std::array<std::string_view, 2>;
-	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
-	popupState.options = std::vector<std::string_view>(builtinComponents.begin(), builtinComponents.end());
+	// Find all components
+	const std::vector<Entity::EntityId>& registeredComps = this->m_activeScene->GetAllRegisteredComponents();
+	popupState.options.reserve(registeredComps.size());
+	for (Entity::EntityId id : registeredComps) {
+		Entity ent = this->m_activeScene->EntityFromIdUnchecked(id);
+		popupState.options.emplace_back(ent.GetKey());
+	}
 
 	Entity &inspectedEntity = inspectTarget.value();
-	popupState.ctx = &inspectedEntity;
+
+	struct PopupCtx {
+		Entity* entityRef;
+		const std::vector<Entity::EntityId>* compsArr;
+	};
+	PopupCtx popupCtx {
+		.entityRef = &inspectedEntity,
+		.compsArr = &registeredComps
+	};
+
+	popupState.ctx = &popupCtx;
 
 	popupState.onElementClicked = [](size_t idx, PopupListState *state) {
-		auto *inspectTargetRef = reinterpret_cast<Entity *>(state->ctx);
-		switch (idx)
-		{
-		case 0:
-			inspectTargetRef->AddComponent<WorldTransform>();
-			break;
-		case 1:
-			inspectTargetRef->AddComponent<DirectionalLight>();
-			break;
-		}
+		auto *localCtx = reinterpret_cast<PopupCtx*>(state->ctx);
+		Entity::EntityId compId = localCtx->compsArr->at(idx);
+		localCtx->entityRef->AddComponentRaw(compId);
 	};
 
 	DrawSearchPopup(&popupState);

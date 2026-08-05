@@ -1,5 +1,6 @@
 #include "RenderingSystem.hpp"
 #include "Assertions.hpp"
+#include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
@@ -21,6 +22,7 @@
 #include "../components/EditorPanelComponents.hpp"
 #include "RenderGraph/RenderGraph.hpp"
 #include "Scene.hpp"
+#include "Shared/Camera.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
@@ -137,6 +139,19 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 
 void Hush::RenderingSystem::Init()
 {
+	// Register our public rendering comps for editor inspection
+	Entity::EntityId dirLightId = this->GetScene().RegisterComponent<DirectionalLight>();
+	Entity dirLightComp = this->GetScene().EntityFromIdUnchecked(dirLightId);
+	dirLightComp.AddComponent<InspectableComponent>();
+
+	Entity::EntityId meshRefId = this->GetScene().RegisterComponent<DirectionalLight>();
+	Entity meshRefComp = this->GetScene().EntityFromIdUnchecked(meshRefId);
+	meshRefComp.AddComponent<InspectableComponent>();
+
+	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();
+	Entity camRefComp = this->GetScene().EntityFromIdUnchecked(camRefId);
+	camRefComp.AddComponent<InspectableComponent>();
+
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
 	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();

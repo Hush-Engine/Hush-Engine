@@ -10,6 +10,7 @@
 #include "Logger.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Ref.hpp"
+#include "Shared/Camera.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
 #include <array>
@@ -35,6 +36,16 @@ std::string ConcatCStr(const std::string_view &base, const std::string_view &oth
 	return std::string(base) + other.data();
 }
 
+void Hush::Serialize(Camera *cam)
+{
+	ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen);
+	float fov = cam->GetFOV();
+	if (ImGui::SliderFloat("Field Of View", &fov, 0, 100))
+	{
+		cam->SetFOV(fov);
+	}
+}
+
 void Hush::Serialize(DirectionalLight *component)
 {
 	ImGui::CollapsingHeader("Directional Light", ImGuiTreeNodeFlags_DefaultOpen);
@@ -49,7 +60,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 	std::string_view name = component->GetName();
 	ImGui::Text("%s#%zu", name.data(), idx);
 
-	auto drawPropertyFlags = [](const char* label, Graphics::EBindingDataTypeFlags* typeFlags) {
+	auto drawPropertyFlags = [](const char *label, Graphics::EBindingDataTypeFlags *typeFlags) {
 		if (UI::FlagsBegin(label))
 		{
 			UI::FlagItem("As Color", Graphics::EBindingDataTypeFlags::AsColor, typeFlags);
@@ -57,23 +68,23 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			UI::FlagsEnd();
 		}
 		ImGui::SameLine();
-		
 	};
 
-	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName, Graphics::MaterialPropertyInfo *infoRef,
-									std::span<std::byte> uniformRange) {
-
+	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName,
+													  Graphics::MaterialPropertyInfo *infoRef,
+													  std::span<std::byte> uniformRange) {
 		// NYI: We should still show something about this property, but have it collapsed and grayed out or something
-		if (Bitwise::HasCompositeFlag(infoRef->typeFlags, Graphics::EBindingDataTypeFlags::IsPrivate)) {
+		if (Bitwise::HasCompositeFlag(infoRef->typeFlags, Graphics::EBindingDataTypeFlags::IsPrivate))
+		{
 			return false;
 		}
-	    ImGui::PushID(propName.data());
+		ImGui::PushID(propName.data());
 		Graphics::EBindingDataTypeFlags flags = infoRef->typeFlags;
 
-		// This indicates whether the material's CPU-side buffer was modified, NOT the property's flags or any other metadata
+		// This indicates whether the material's CPU-side buffer was modified, NOT the property's flags or any other
+		// metadata
 		bool wasModified = false;
 		bool asColor = Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::AsColor);
-
 
 		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3))
 		{
@@ -196,6 +207,8 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 	return this->m_inspectTarget;
 }
 
+// TODO: This probably should be a query on components that hold a function pointer on how to get serialized
+// Also, every entity in the editor should probably have a list of how they ordered their components ???
 void Hush::InspectorPanel::RenderProperties()
 {
 	Entity::Name *entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
@@ -216,5 +229,11 @@ void Hush::InspectorPanel::RenderProperties()
 	if (meshComponent != nullptr)
 	{
 		Serialize(meshComponent, entityName->name.data());
+	}
+
+	Camera *camComponent = this->m_inspectTarget->GetComponent<Camera>();
+	if (camComponent != nullptr)
+	{
+		Serialize(camComponent);
 	}
 }

@@ -2,6 +2,7 @@
 #include "ApplicationLoader.hpp"
 #include "Logger.hpp"
 #include "ResourceManager.hpp"
+#include "Scene.hpp"
 #include "VirtualFilesystem.hpp"
 #include "Systems/RenderGraphSystem.hpp"
 #include "Systems/ResourceUploadSystem.hpp"
@@ -181,6 +182,18 @@ void Hush::HushEngine::Quit()
 Hush::Scene *Hush::HushEngine::GetScene()
 {
 	return this->m_app->GetScene();
+}
+
+Hush::Scene* Hush::HushEngine::NewScene() {
+	// NYI: scene
+	return nullptr;
+}
+
+[[hush::export]]
+Hush::HushEngine::EError Hush::HushEngine::LoadScene(Scene* scene) {
+	// NYI: Scene
+	(void)scene;
+	return EError::None;
 }
 
 Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept

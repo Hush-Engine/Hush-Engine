@@ -8,6 +8,7 @@
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "HushBindings.hpp"
+#include "Result.hpp"
 #include "executors/ThreadPool.hpp"
 
 #include <memory_resource>
@@ -30,6 +31,11 @@ namespace Hush
 		struct HushEngineInternal;
 
 	public:
+		enum class [[hush::export]] EError {
+			None = 0,
+			InvalidScene,
+		};
+
 		/// Initializes the HushEngine with all its properties
 		HushEngine();
 
@@ -56,8 +62,15 @@ namespace Hush
 
 		void HandleEvents(const SDL_Event &event);
 
+		/// @brief Gets a reference to the currently active running scene
 		[[hush::export]]
 		Scene *GetScene();
+
+		/// @brief Creates a new empty scene
+		Scene* NewScene();
+
+		[[hush::export]]
+		EError LoadScene(Scene* scene);
 
 		/// Returns the engine's default thread pool.
 		/// The default threadpool contains a number of threads equal to the number of hardware threads available on the

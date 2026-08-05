@@ -14,6 +14,7 @@
 #include "Query.hpp"
 #include "HushBindings.hpp"
 #include "QueryBuilder.hpp"
+#include "SceneAsset.hpp"
 #include "executors/ThreadPool.hpp"
 #include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include <array>
@@ -37,6 +38,7 @@
 
 namespace Hush
 {
+	class SceneAsset;
 	enum class [[hush::export]] EComponentObserverType
 	{
 		Add,
@@ -62,6 +64,12 @@ namespace Hush
 		using EntityId = Entity::EntityId;
 
 	public:
+		enum class EError
+		{
+			None = 0,
+			BadSceneFormat
+		};
+
 		/// Constructor.
 		/// @param engine Game engine
 		Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool);
@@ -97,6 +105,11 @@ namespace Hush
 		{
 			m_userSystems.push_back(std::make_unique<S>());
 		}
+
+		/// @brief Parses a scene asset and instantiates all entities and systems in it to this scene
+		EError FromSceneAsset(SceneAsset* asset); // TODO: This should be a Ref<SceneAsset>, but the resources module is one layer above us
+
+		EError ToSceneAsset(SceneAsset* asset);
 
 		/// Remove a system from the scene by name.
 		/// @param name Name of the system to remove.
@@ -195,10 +208,16 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
+		[[hush::export]]
+		void MarkComponentToggleableRaw(EntityId id);
+
 		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
 		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
 		[[nodiscard]]
 		EntityId Lookup(NullTerminatedStringView tag) const;
+
+		[[nodiscard]]
+		const std::vector<Entity::EntityId> &GetAllRegisteredComponents() const;
 
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
@@ -292,6 +311,14 @@ namespace Hush
 			this->m_scriptingInterface = scriptingInterface;
 		}
 
+		// Public interface for registering with templates, we might do more than registerIfNeededSlow later
+		template <class T>
+		[[nodiscard]]
+		EntityId RegisterComponent()
+		{
+			return this->RegisterIfNeededSlow<T>();
+		}
+
 	private:
 		friend class Entity;
 		friend class RawQuery;
@@ -299,7 +326,7 @@ namespace Hush
 
 		template <typename T>
 		[[nodiscard]]
-		EntityId RegisterIfNeededSlow()
+		inline EntityId RegisterIfNeededSlow()
 		{
 			// First, get the entity id, and check if the component is registered.
 			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
@@ -350,6 +377,11 @@ namespace Hush
 
 		/// User systems handled by the scripting host
 		std::vector<uintptr_t> m_scriptingSystems;
+
+		// Small ref array of all registered components, used for editor and scripting
+		// Components will not be unloaded by the scene until it ends, so this works fine as a real-time cache
+		// If this changes, we need to use a flecs query to fetch all entities with the EcsComponent tag
+		mutable std::vector<Entity::EntityId> m_registeredComponents;
 
 		HushEngine *m_engine;
 

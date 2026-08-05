@@ -49,7 +49,6 @@ void Hush::NotificationPanel::OnRender(float deltaTime)
 			break;
 		}
 
-		// TODO: include delta
 		notification.remainingTime -= deltaTime;
 		const auto renderTargetSize = WindowManager::GetMainWindow()->GetWindowSize();
 		constexpr ImVec2 maxDimensions = {400, 100}; // Some way to make height auto grow??

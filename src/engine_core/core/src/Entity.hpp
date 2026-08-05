@@ -342,11 +342,17 @@ namespace Hush
 
 		void EachChild(std::function<void(Entity &)> func) const;
 
+		// Iterates each ID associated with this entity, includiding components and relationships
+		void EachId(std::function<void(Entity::EntityId)>&& func);
+
 		[[hush::export]]
 		void AddRelationship(const Entity &relationship, const Entity &target);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;
+
+		[[nodiscard]]
+		std::string_view GetKey() const;
 
 		[[nodiscard]]
 		inline bool IsValid() const

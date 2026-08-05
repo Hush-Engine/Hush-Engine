@@ -5,14 +5,26 @@
 */
 
 #include "Scene.hpp"
+#include "Assertions.hpp"
+#include "Components/ComponentMetadata.hpp"
+#include "Components/Serializable.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
+#include "SceneAsset.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <array>
+#include <cstdint>
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include "Profiling.hpp"
+#include <flecs/private/api_defines.h>
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <vector>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -43,6 +55,11 @@ Hush::Scene::~Scene()
 void Hush::Scene::Init()
 {
 	ZoneScoped;
+	// Register an observer for our inspectable components
+	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add, [this](Entity::EntityId compId, InspectableComponent*){
+		this->m_registeredComponents.emplace_back(compId);
+	});
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 
@@ -275,6 +292,59 @@ void Hush::Scene::Shutdown()
 	{
 		shutdownFunc(reinterpret_cast<void *>(system));
 	}
+}
+
+Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset* asset) {
+	(void)asset;
+	return EError::None;
+}
+
+
+Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset* asset) {
+	HUSH_ASSERT(asset != nullptr, "Cannot serialize to an invalid scene asset handle");
+	// Serialize every single entity in the world with each of its components
+	// TODO: For now, every entity that has a transform is enough, but there are
+	// use cases where we want to serialize raw entities with no inspectable transoforms
+	auto q = this->CreateQuery<WorldTransform>();
+	auto *world = static_cast<ecs_world_t *>(m_world);
+	EntityId serializableId = this->RegisterComponent<Serializable>();
+
+	q.Each([world, serializableId](Entity& ent, WorldTransform& xform){
+		SceneAsset::SerializedEntity serialEnt{};
+		serialEnt.id = ent.GetId();
+		std::string_view topKey = ent.GetKey();
+		// If there's no key, we save the ID as the key
+		serialEnt.key = topKey.empty() ? std::to_string(ent.GetId()) : topKey;
+
+		constexpr size_t maxComponentBodySize = 1024; // Is this overkill? Maybe
+		std::array<char, maxComponentBodySize> compBuffer{};
+		ent.EachId([world, serializableId, &ent, &compBuffer](Entity::EntityId comp) {
+		    compBuffer.fill(0);
+			const auto* rawComp = reinterpret_cast<const uint8_t*>(ecs_get_id(world, ent.GetId(), comp));
+			// Serialize comp to JSpON
+			SceneAsset::SerializedComponent serializedComp{};
+			const char* key = ecs_get_name(world, comp);
+			// Not likely to be nullptr, but we do it anyways
+			serializedComp.type = key == nullptr ? std::to_string(comp) : key;
+			// Find the serialization comp
+			// NOLINTNEXTLINE
+			const auto* serializer = reinterpret_cast<const Serializable*>(ecs_get_id(world, comp, serializableId));
+
+			// PERF: Make this function also give us the position of the last written byte and we can skip doing char* ops
+			Serializable::EError err = serializer->serialize(rawComp, {compBuffer.data(), compBuffer.size()});
+
+			if (err != Serializable::EError::None) {
+				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", serializedComp.type, magic_enum::enum_name(err));
+				return;
+			}
+
+			serializedComp.jsonData = compBuffer.data();
+		});
+	});
+
+	(void)q;
+	(void)asset;
+	return EError::None;
 }
 
 void Hush::Scene::RemoveSystem(std::string_view name)
@@ -634,18 +704,26 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	// Register the component
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
-	// By default, all components should be able to be toggled on or off (for performance reasons)
-	ecs_add_id(world, componentId, EcsCanToggle);
-
 	LogFormat(ELogLevel::Info, "Registered component with name {} as ID: {}", desc.name, componentId);
 
 	return componentId;
+}
+
+void Hush::Scene::MarkComponentToggleableRaw(EntityId id)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	ecs_add_id(world, id, EcsCanToggle);
 }
 
 Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 {
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	return ecs_lookup(world, tag.c_str());
+}
+
+const std::vector<Hush::Entity::EntityId>& Hush::Scene::GetAllRegisteredComponents() const
+{
+	return this->m_registeredComponents;
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)
