@@ -13,6 +13,7 @@
 #include "ISystem.hpp"
 #include "Logger.hpp"
 #include "SceneAsset.hpp"
+#include "serialization/SerializedEntity.hpp"
 #include "utils/ParallelUtils.hpp"
 #include <array>
 #include <cstdint>
@@ -57,6 +58,9 @@ void Hush::Scene::Init()
 	ZoneScoped;
 	// Register an observer for our inspectable components
 	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add, [this](Entity::EntityId compId, InspectableComponent*){
+	    // HACK: Add the serializable component to it
+	    Entity compEnt = this->EntityFromIdUnchecked(compId);
+	    compEnt.AddComponent<Serializable>();
 		this->m_registeredComponents.emplace_back(compId);
 	});
 
@@ -309,8 +313,9 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset* asset) {
 	auto *world = static_cast<ecs_world_t *>(m_world);
 	EntityId serializableId = this->RegisterComponent<Serializable>();
 
-	q.Each([world, serializableId](Entity& ent, WorldTransform& xform){
-		SceneAsset::SerializedEntity serialEnt{};
+	q.Each([world, serializableId, asset](Entity& ent, WorldTransform& xform){
+	    (void)xform;
+		SerializedEntity serialEnt{};
 		serialEnt.id = ent.GetId();
 		std::string_view topKey = ent.GetKey();
 		// If there's no key, we save the ID as the key
@@ -318,32 +323,38 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset* asset) {
 
 		constexpr size_t maxComponentBodySize = 1024; // Is this overkill? Maybe
 		std::array<char, maxComponentBodySize> compBuffer{};
-		ent.EachId([world, serializableId, &ent, &compBuffer](Entity::EntityId comp) {
+		ent.EachId([world, serializableId, &ent, &compBuffer, &serialEnt](Entity::EntityId comp) {
 		    compBuffer.fill(0);
 			const auto* rawComp = reinterpret_cast<const uint8_t*>(ecs_get_id(world, ent.GetId(), comp));
-			// Serialize comp to JSpON
-			SceneAsset::SerializedComponent serializedComp{};
+			// Serialize comp to JSON
+			SerializedComponent serializedComp{};
 			const char* key = ecs_get_name(world, comp);
 			// Not likely to be nullptr, but we do it anyways
-			serializedComp.type = key == nullptr ? std::to_string(comp) : key;
+			serializedComp.key = key == nullptr ? std::to_string(comp) : key;
 			// Find the serialization comp
 			// NOLINTNEXTLINE
 			const auto* serializer = reinterpret_cast<const Serializable*>(ecs_get_id(world, comp, serializableId));
+
+			if (serializer == nullptr) {
+				// This is okay we just push the fact that this component exists
+				serialEnt.components.emplace_back(serializedComp);
+				return;
+			}
 
 			// PERF: Make this function also give us the position of the last written byte and we can skip doing char* ops
 			Serializable::EError err = serializer->serialize(rawComp, {compBuffer.data(), compBuffer.size()});
 
 			if (err != Serializable::EError::None) {
-				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", serializedComp.type, magic_enum::enum_name(err));
+				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", serializedComp.key.c_str(), magic_enum::enum_name(err));
 				return;
 			}
 
 			serializedComp.jsonData = compBuffer.data();
+			serialEnt.components.emplace_back(serializedComp);
 		});
+	    asset->entities.emplace_back(serialEnt);
 	});
 
-	(void)q;
-	(void)asset;
 	return EError::None;
 }
 

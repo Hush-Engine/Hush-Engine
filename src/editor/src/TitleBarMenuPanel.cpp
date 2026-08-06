@@ -1,6 +1,9 @@
 #include "TitleBarMenuPanel.hpp"
 #include "Assertions.hpp"
 #include "HushEngine.hpp"
+#include "Ref.hpp"
+#include "ResourceManager.hpp"
+#include "SceneAsset.hpp"
 #include "VirtualFilesystem.hpp"
 #include "imguifiledialog/ImGuiFileDialog.h"
 #include "networking/NetworkUtils.hpp"
@@ -38,8 +41,12 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 
 	if (fileDialog->Display("SceneSave", ImGuiWindowFlags_NoCollapse, {800, 600})) {
 		if (fileDialog->IsOk()) {
+			// Create a scene asset
+			ResourceManager* resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
+			Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(fileDialog->GetFilePathName());
 			// Save the scene
-
+			this->m_activeScene->ToSceneAsset(scene.Get());
+			// Serialize asset and save it to a file
 		}
 		fileDialog->Close();
 	}

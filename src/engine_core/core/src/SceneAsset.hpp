@@ -3,49 +3,51 @@
 // the core engine should still know how to convert it to a Hush::Scene*
 
 #include "Entity.hpp"
+#include "serialization/SerializedEntity.hpp"
 #include <cstdint>
 #include <vector>
 
+
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+#include <type_traits>
+#include <Hushgen.hpp>
+
+#if __has_include("SceneAsset.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "SceneAsset.hushgen.hpp"
+#endif
 namespace Hush
 {
 
-	//TODO: This is our first implementation of scene assets, it is highly subject to change
-	// Also, this class allocates like crazy, so, watch out for that
-	class SceneAsset
+	// TODO: This is our first implementation of scene assets, it is highly subject to change
+	//  Also, this class allocates like crazy, so, watch out for that
+	class [[hush::reflect]] SceneAsset
 	{
+		HUSH_GENERATED_BODY
 	public:
-		struct SerializedComponent {
-			std::string type;
-			// JSON needs to be turned into component data at runtime, we shouldn't own a void* or any other templated type into it
-			std::string jsonData;
-		};
 
 
-		// PERF: Allocates quite a bit of memory
-		struct SerializedEntity {
-			Entity::EntityId id;
-			std::string key;
-			std::vector<SerializedComponent> components;
-		};
 
-		struct SerializedSystem {
-			std::string type;
-			int32_t order;
-		};
+		// struct SerializedSystem
+		// {
+		// 	std::string type;
+		// 	int32_t order;
+		// };
 
 		// Some metadata
+		[[hush::property]]
 		uint8_t versionMajor;
+		[[hush::property]]
 		uint8_t versionMinor;
 
 		/// @brief UUID that corresponds to this scene asset
+		[[hush::property]]
 		uint64_t sceneId;
 
-		// Systems
-		std::vector<SerializedSystem> systems;
-
 		// entities
+		[[hush::property]]
 		std::vector<SerializedEntity> entities;
-
 	};
 
 } // namespace Hush

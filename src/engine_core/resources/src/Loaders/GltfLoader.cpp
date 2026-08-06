@@ -120,8 +120,9 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
+		std::string pathPrefix = path.stem().string();
 		Ref<Mesh> meshRef =
-			resourceManager->AllocateRef<Mesh>(path.string());
+			resourceManager->AllocateRef<Mesh>(pathPrefix + std::string(mesh.name));
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
 		meshRef->SetName(mesh.name);
