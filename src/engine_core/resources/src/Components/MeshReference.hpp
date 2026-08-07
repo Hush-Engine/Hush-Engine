@@ -10,12 +10,23 @@
 #include <unordered_map>
 #include <vector>
 
+#include <Hushgen.hpp>
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+#include <type_traits>
+
+#if __has_include("MeshReference.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "MeshReference.hushgen.hpp"
+#endif
+
+
 namespace Hush
 {
 	/// @brief Small wrapper around the `Mesh` data structure, internally, this is useful for caching using our
 	/// reference counting system
 	// This structure is intended as a bridge between cached resource data and the rendering pipeline
-	class MeshReference
+	class [[hush::reflect]] MeshReference
 	{
 	public:
 		MeshReference(Ref<Mesh> &mesh)
@@ -98,6 +109,9 @@ namespace Hush
 		// Will need a safer referencing system later (e.g. material ID or weak handle).
 		std::unordered_map<const Graphics::Material3D *, std::unordered_map<uint32_t, Ref<TextureComponent>>>
 			m_materialTextureRefs;
+
+		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully HushCooker fixes this
+		std::string m_path;
 	};
 
 	void Serialize(MeshReference *component, const char *entityName);

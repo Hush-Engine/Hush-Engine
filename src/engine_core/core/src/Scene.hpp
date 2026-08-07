@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "Components/Serializable.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
@@ -317,6 +318,13 @@ namespace Hush
 		EntityId RegisterComponent()
 		{
 			return this->RegisterIfNeededSlow<T>();
+		}
+
+		template <class T>
+		void RegisterDefaultSerializer() {
+			Entity comp = this->EntityFromIdUnchecked(this->RegisterComponent<T>());
+			Serializable& ser = comp.AddComponent<Serializable>();
+			ser.serialize = &Serializable::DefaultSerialize<T>;
 		}
 
 	private:

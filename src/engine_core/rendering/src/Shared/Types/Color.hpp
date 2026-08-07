@@ -7,10 +7,22 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
+
+#include <Hushgen.hpp>
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+#include <type_traits>
+
+#if __has_include("Color.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "Color.hushgen.hpp"
+#endif
+
 namespace Hush
 {
-	class Color final
+	class [[hush::reflect]] Color final
 	{
+		HUSH_GENERATED_BODY
 	public:
 		enum class EFormat : uint32_t
 		{
@@ -141,6 +153,7 @@ namespace Hush
 		}
 
 	private:
+		[[hush::property]]
 		glm::vec4 m_rgba{0.0F, 0.0F, 0.0F, 1.0F};
 	};
 } // namespace Hush

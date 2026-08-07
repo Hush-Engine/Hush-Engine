@@ -82,9 +82,12 @@ namespace Hush
 		// NOLINTNEXTLINE
 		float m_exposure = 0.8f; // Aribtrary value (inspired from the Hazel Engine)
 	private:
+		[[hush::property]]
 		float m_fov{};
 		glm::vec2 m_viewportSize{};
+		[[hush::property]]
 		float m_nearPlane{};
+		[[hush::property]]
 		float m_farPlane{};
 		glm::mat4 m_projectionMatrix = glm::mat4(1.0f);
 		// Currently only needed for shadow maps and ImGuizmo

@@ -1,12 +1,45 @@
 #include "TransformationSystem.hpp"
 #include "Components/LocalTransform.hpp"
+#include "Components/Serializable.hpp"
+#include "Components/Transform.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Mat4Math.hpp"
 #include "Profiling.hpp"
 #include "Scene.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
+#include <cstdint>
 
 void Hush::TransformationSystem::Init()
 {
+	Scene &scene = this->GetScene();
+	{
+		Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<WorldTransform>());
+		Serializable& ser = comp.AddComponent<Serializable>();
+		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
+			const auto* xform = reinterpret_cast<const WorldTransform*>(self);
+			const Transform* basePtr = xform;
+			Serialization::ESerializationError localErr = ser.Serialize(*basePtr);
+			if (localErr != Serialization::ESerializationError::None) {
+				return Serializable::EError::ParseError;
+			}
+			return Serializable::EError::None;
+		};
+	}
+	{
+		Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<LocalTransform>());
+		Serializable& ser = comp.AddComponent<Serializable>();
+		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
+			const auto* xform = reinterpret_cast<const LocalTransform*>(self);
+			const Transform* basePtr = xform;
+			Serialization::ESerializationError localErr = ser.Serialize(*basePtr);
+			if (localErr != Serialization::ESerializationError::None) {
+				return Serializable::EError::ParseError;
+			}
+			return Serializable::EError::None;
+		};
+	}
+
 	this->m_transformableEntitiesQuery = this->GetScene().CreateQuery<WorldTransform, LocalTransform>();
 }
 

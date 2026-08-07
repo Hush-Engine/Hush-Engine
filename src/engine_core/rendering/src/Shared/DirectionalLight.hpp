@@ -23,7 +23,7 @@ namespace Hush
 	public:
 		[[hush::property]]
 		float intensity = 1.0F;
-		// [[hush::property]]
+		[[hush::property]]
 		Color color = Vector4Math::ONE;
 	};
 
