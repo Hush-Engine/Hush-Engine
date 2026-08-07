@@ -1,14 +1,19 @@
 #include "TitleBarMenuPanel.hpp"
 #include "Assertions.hpp"
 #include "HushEngine.hpp"
+#include "Logger.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "SceneAsset.hpp"
 #include "VirtualFilesystem.hpp"
 #include "imguifiledialog/ImGuiFileDialog.h"
 #include "networking/NetworkUtils.hpp"
+#include <fstream>
 #include <imgui/imgui.h>
+#include <magic_enum/magic_enum.hpp>
 #include "UI.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 
 constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_MenuBar;
 
@@ -39,14 +44,23 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 {
 	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
 
-	if (fileDialog->Display("SceneSave", ImGuiWindowFlags_NoCollapse, {800, 600})) {
-		if (fileDialog->IsOk()) {
+	if (fileDialog->Display("SceneSave", ImGuiWindowFlags_NoCollapse, {800, 600}))
+	{
+		if (fileDialog->IsOk())
+		{
 			// Create a scene asset
-			ResourceManager* resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
-			Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(fileDialog->GetFilePathName());
+			ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
+			std::string path = fileDialog->GetFilePathName();
+			Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
 			// Save the scene
 			this->m_activeScene->ToSceneAsset(scene.Get());
 			// Serialize asset and save it to a file
+			{
+				std::ofstream ostream{};
+				ostream.open(path);
+				ostream << scene->sceneJson;
+				ostream.close();
+			}
 		}
 		fileDialog->Close();
 	}
@@ -71,15 +85,13 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 		// BACKLOG: Use our own file dialog instead of ImGui's
 		IGFD::FileDialogConfig config;
 
-		VirtualFilesystem* vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
+		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
 		auto pathResolveRes = vfs->ResolveVirtualPath("res://");
 		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
 
 		config.path = pathResolveRes.value();
-	    fileDialog->OpenDialog("SceneSave", "Save Scene As...", ".hscene", config);
-
+		fileDialog->OpenDialog("SceneSave", "Save Scene As...", ".hscene", config);
 	}
-
 
 	if (ImGui::BeginMenu("Settings"))
 	{

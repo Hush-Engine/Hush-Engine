@@ -12,6 +12,7 @@
 #include <rapidjson/reader.h>
 #include <string_view>
 #include <span>
+#include <vector>
 #include "../Serialization.hpp"
 #include "../Deserialization.hpp"
 
@@ -50,6 +51,18 @@ namespace Hush::Serialization
 			return m_writer.StartObject() ? ESerializationError::None : ESerializationError::InvalidData;
 		}
 
+		[[nodiscard]]
+		ESerializationError BeginArray()
+		{
+			return this->m_writer.StartArray() ? ESerializationError::None : ESerializationError::InvalidData;
+		}
+
+		[[nodiscard]]
+		ESerializationError EndArray()
+		{
+			return this->m_writer.EndArray() ? ESerializationError::None : ESerializationError::InvalidData;
+		}
+
 		/// Ends an object in the JSON string.
 		/// @return SerializationError
 		[[nodiscard]]
@@ -65,12 +78,17 @@ namespace Hush::Serialization
 		/// @return SerializationError
 		template <IsSerializable<JsonSerializer> T>
 		[[nodiscard]]
-		ESerializationError Serialize(const T &value)
+		ESerializationError Serialize(const T &value, bool wrapInObject = true)
 		{
-			m_writer.StartObject();
-			ESerializationError error = value.Serialize(*this);
-			m_writer.EndObject();
+			if (wrapInObject)
+			{
+				m_writer.StartObject();
+				ESerializationError error = value.Serialize(*this);
+				m_writer.EndObject();
+				return error;
+			}
 
+			ESerializationError error = value.Serialize(*this);
 			return error;
 		}
 
@@ -173,6 +191,42 @@ namespace Hush::Serialization
 			}
 
 			return SerializeArray(values);
+		}
+
+		/// Serializes a vector of values to a JSON array.
+		///
+		/// @tparam T Element type
+		/// @param key Key
+		/// @param values Values
+		/// @return SerializationError
+		template <typename T>
+		[[nodiscard]]
+		ESerializationError Serialize(std::string_view key, const std::vector<T> &values)
+		{
+			if (SetKey(key) != ESerializationError::None)
+			{
+				return ESerializationError::InvalidData;
+			}
+
+			if (!m_writer.StartArray())
+			{
+				return ESerializationError::InvalidData;
+			}
+
+			for (const auto &value : values)
+			{
+				if (Serialize(value) != ESerializationError::None)
+				{
+					return ESerializationError::InvalidData;
+				}
+			}
+
+			if (!m_writer.EndArray())
+			{
+				return ESerializationError::InvalidData;
+			}
+
+			return ESerializationError::None;
 		}
 
 		/// Serializes a map of values to a JSON object.

@@ -24,10 +24,10 @@ namespace Hush
 	//  Also, this class allocates like crazy, so, watch out for that
 	class [[hush::reflect]] SceneAsset
 	{
+	static constexpr uint8_t HSCENE_V_MAJOR = 0;
+	static constexpr uint8_t HSCENE_V_MINOR = 1;
 		HUSH_GENERATED_BODY
 	public:
-
-
 
 		// struct SerializedSystem
 		// {
@@ -37,9 +37,9 @@ namespace Hush
 
 		// Some metadata
 		[[hush::property]]
-		uint8_t versionMajor;
+		uint8_t versionMajor = HSCENE_V_MAJOR;
 		[[hush::property]]
-		uint8_t versionMinor;
+		uint8_t versionMinor = HSCENE_V_MINOR;
 
 		/// @brief UUID that corresponds to this scene asset
 		[[hush::property]]
@@ -48,6 +48,7 @@ namespace Hush
 		// entities
 		[[hush::property]]
 		std::vector<SerializedEntity> entities;
+		std::string sceneJson;
 	};
 
 } // namespace Hush

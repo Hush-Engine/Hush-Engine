@@ -13,6 +13,8 @@
 #include "ISystem.hpp"
 #include "Logger.hpp"
 #include "SceneAsset.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 #include "serialization/SerializedEntity.hpp"
 #include "utils/ParallelUtils.hpp"
 #include <array>
@@ -57,12 +59,11 @@ void Hush::Scene::Init()
 {
 	ZoneScoped;
 	// Register an observer for our inspectable components
-	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add, [this](Entity::EntityId compId, InspectableComponent*){
-	    // HACK: Add the serializable component to it
-	    Entity compEnt = this->EntityFromIdUnchecked(compId);
-	    compEnt.AddComponent<Serializable>();
-		this->m_registeredComponents.emplace_back(compId);
-	});
+	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
+													 [this](Entity::EntityId compId, InspectableComponent *) {
+														 // HACK: Add the serializable component to it
+														 this->m_registeredComponents.emplace_back(compId);
+													 });
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
@@ -298,13 +299,14 @@ void Hush::Scene::Shutdown()
 	}
 }
 
-Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset* asset) {
+Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
+{
 	(void)asset;
 	return EError::None;
 }
 
-
-Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset* asset) {
+Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
+{
 	HUSH_ASSERT(asset != nullptr, "Cannot serialize to an invalid scene asset handle");
 	// Serialize every single entity in the world with each of its components
 	// TODO: For now, every entity that has a transform is enough, but there are
@@ -313,47 +315,59 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset* asset) {
 	auto *world = static_cast<ecs_world_t *>(m_world);
 	EntityId serializableId = this->RegisterComponent<Serializable>();
 
-	q.Each([world, serializableId, asset](Entity& ent, WorldTransform& xform){
-	    (void)xform;
-		SerializedEntity serialEnt{};
-		serialEnt.id = ent.GetId();
+	Serialization::JsonSerializer jsonSerializer{};
+	Serialization::ESerializationError serialErr{};
+	serialErr = jsonSerializer.BeginObject();
+	serialErr = jsonSerializer.SetKey("entities");
+	serialErr = jsonSerializer.BeginArray();
+	q.Each([world, serializableId, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
+		(void)xform;
+		serialErr = jsonSerializer.BeginObject();
+		serialErr = jsonSerializer.Serialize("id", ent.GetId());
 		std::string_view topKey = ent.GetKey();
 		// If there's no key, we save the ID as the key
-		serialEnt.key = topKey.empty() ? std::to_string(ent.GetId()) : topKey;
+		serialErr = jsonSerializer.Serialize("key", topKey.empty() ? std::to_string(ent.GetId()) : topKey);
 
-		constexpr size_t maxComponentBodySize = 1024; // Is this overkill? Maybe
-		std::array<char, maxComponentBodySize> compBuffer{};
-		ent.EachId([world, serializableId, &ent, &compBuffer, &serialEnt](Entity::EntityId comp) {
-		    compBuffer.fill(0);
-			const auto* rawComp = reinterpret_cast<const uint8_t*>(ecs_get_id(world, ent.GetId(), comp));
+		serialErr = jsonSerializer.SetKey("components");
+		serialErr = jsonSerializer.BeginArray();
+		ent.EachId([world, serializableId, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+		    serialErr = jsonSerializer.BeginObject();
+			const auto *rawComp = reinterpret_cast<const uint8_t *>(ecs_get_id(world, ent.GetId(), comp));
 			// Serialize comp to JSON
-			SerializedComponent serializedComp{};
-			const char* key = ecs_get_name(world, comp);
+			const char *key = ecs_get_name(world, comp);
 			// Not likely to be nullptr, but we do it anyways
-			serializedComp.key = key == nullptr ? std::to_string(comp) : key;
+			serialErr = jsonSerializer.Serialize("id", comp);
+			serialErr = jsonSerializer.Serialize("key", key == nullptr ? std::to_string(comp) : key);
 			// Find the serialization comp
 			// NOLINTNEXTLINE
-			const auto* serializer = reinterpret_cast<const Serializable*>(ecs_get_id(world, comp, serializableId));
+			const auto *serializer = reinterpret_cast<const Serializable *>(ecs_get_id(world, comp, serializableId));
 
-			if (serializer == nullptr) {
+			if (serializer == nullptr)
+			{
 				// This is okay we just push the fact that this component exists
-				serialEnt.components.emplace_back(serializedComp);
+				serialErr = jsonSerializer.EndObject();
 				return;
 			}
 
-			// PERF: Make this function also give us the position of the last written byte and we can skip doing char* ops
-			Serializable::EError err = serializer->serialize(rawComp, {compBuffer.data(), compBuffer.size()});
+			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer);
 
-			if (err != Serializable::EError::None) {
-				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", serializedComp.key.c_str(), magic_enum::enum_name(err));
+			serialErr = jsonSerializer.EndObject();
+			if (err != Serializable::EError::None)
+			{
+				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", key,
+						  magic_enum::enum_name(err));
 				return;
 			}
-
-			serializedComp.jsonData = compBuffer.data();
-			serialEnt.components.emplace_back(serializedComp);
 		});
-	    asset->entities.emplace_back(serialEnt);
+		serialErr = jsonSerializer.EndArray();
+		serialErr = jsonSerializer.EndObject();
 	});
+	serialErr = jsonSerializer.EndArray();
+	serialErr = jsonSerializer.EndObject();
+
+	(void)serialErr;
+
+	asset->sceneJson = jsonSerializer.FinishSerialization();
 
 	return EError::None;
 }
@@ -732,7 +746,7 @@ Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 	return ecs_lookup(world, tag.c_str());
 }
 
-const std::vector<Hush::Entity::EntityId>& Hush::Scene::GetAllRegisteredComponents() const
+const std::vector<Hush::Entity::EntityId> &Hush::Scene::GetAllRegisteredComponents() const
 {
 	return this->m_registeredComponents;
 }

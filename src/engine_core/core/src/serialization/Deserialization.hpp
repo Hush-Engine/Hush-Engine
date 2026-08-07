@@ -13,6 +13,8 @@
 #include <string_view>
 #include <map>
 #include <unordered_map>
+#include <optional>
+#include <vector>
 
 namespace Hush::Serialization
 {
@@ -722,6 +724,79 @@ namespace Hush::Serialization
 		Visitor(IVisitor * parent, T * value, EFormatDescribingType describingType)
 			: Parent(parent, value, describingType)
 		{
+		}
+	};
+
+	/// Specialization of @ref Visitor for vectors of reflected (deserializable) element types.
+	/// Each array element is deserialized through a per-element @ref Visitor<T> that is constructed
+	/// when the element object starts. Once the element object ends, control returns to this visitor
+	/// so the next array element (or the array end) can be handled.
+	/// TODO: Only reflected element types are supported right now; vectors of primitive types
+	/// (e.g. std::vector<float>) are not handled yet.
+	template <IsDeserializable T>
+	struct Visitor<std::vector<T>> : public IVisitor
+	{
+		std::vector<T> *value;
+		EFormatDescribingType m_format;
+		bool insideArray{false};
+		std::optional<Visitor<T>> m_elementVisitor;
+
+		Visitor(IVisitor *parent, std::vector<T> *value, EFormatDescribingType describingType)
+			: IVisitor(parent, describingType),
+			  value(value),
+			  m_format(describingType)
+		{
+		}
+
+		Result VisitArrayStart() override
+		{
+			if (insideArray)
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			insideArray = true;
+			value->clear();
+
+			return this;
+		}
+
+		Result VisitArrayEnd() override
+		{
+			if (!insideArray)
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			insideArray = false;
+			m_elementVisitor.reset();
+
+			return GetParentVisitor();
+		}
+
+		Result VisitObjectStart() override
+		{
+			if (!insideArray || m_elementVisitor.has_value())
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			value->emplace_back();
+			m_elementVisitor.emplace(this, &value->back(), m_format);
+
+			return &*m_elementVisitor;
+		}
+
+		Result VisitObjectEnd() override
+		{
+			if (!insideArray || !m_elementVisitor.has_value())
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			m_elementVisitor.reset();
+
+			return this;
 		}
 	};
 

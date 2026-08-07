@@ -21,6 +21,7 @@ hush_add_library(
              src/Shared/Camera.cpp
              # src/Shared/ImageTexture.cpp
              src/Shared/EditorCamera.cpp
+             src/Shared/DirectionalLight.hpp
              # src/Shared/DefaultImages.cpp
 
              # RenderGraph
@@ -35,6 +36,7 @@ hush_add_library(
              src/RHI/GraphicsResources.cpp
 
         PUBLIC_HEADER_DIRS src
+        ENABLE_REFLECTION ON
 )
 
 if (NOT EMSCRIPTEN)

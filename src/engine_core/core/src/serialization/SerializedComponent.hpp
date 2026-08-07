@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <Hushgen.hpp>
 
@@ -17,9 +19,11 @@ namespace Hush
 	{
 		HUSH_GENERATED_BODY
 	public:
+		[[hush::property]]
 		std::string key;
 		// JSON needs to be turned into component data at runtime, we shouldn't own a void* or any other templated
 		// type into it
+		[[hush::property]]
 		std::string jsonData;
 	};
 } // namespace Hush

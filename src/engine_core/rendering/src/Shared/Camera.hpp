@@ -9,12 +9,23 @@
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
+
+#include <Hushgen.hpp>
+#include <reflection/Type.hpp>
+#include <serialization/Serialization.hpp>
+#include <serialization/Deserialization.hpp>
+
+#if __has_include("Camera.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "Camera.hushgen.hpp"
+#endif
+
 #include "HushBindings.hpp"
 
 namespace Hush
 {
-	class [[hush::export]] Camera
+	class [[hush::export, hush::reflect]] Camera
 	{
+	HUSH_GENERATED_BODY
 	public:
 		Camera() = default;
 		Camera(const Camera &) = default;

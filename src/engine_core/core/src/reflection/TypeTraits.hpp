@@ -27,6 +27,11 @@ namespace Hush
 
 	namespace Reflection
 	{
+		// TODO: GetTypeId<T> falls back to an empty TypeId{} for any type that is neither a
+		// reflected type nor one of the explicitly specialized primitives below. This includes
+		// std::string and std::vector<T>, which means all of them currently share the same "no
+		// type" identifier, breaking type-safety in the ReflectionDB. BACKLOG: implement proper
+		// type ids for containers (e.g. via a partial-specializable provider struct).
 		template <typename T>
 		constexpr TypeId GetTypeId()
 		{

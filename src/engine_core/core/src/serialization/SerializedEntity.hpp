@@ -17,8 +17,11 @@ namespace Hush
 	{
 		HUSH_GENERATED_BODY
 	public:
+		[[hush::property]]
 		Entity::EntityId id;
+		[[hush::property]]
 		std::string key;
+		[[hush::property]]
 		std::vector<SerializedComponent> components;
 	};
 } // namespace Hush

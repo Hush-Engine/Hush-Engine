@@ -4,6 +4,7 @@
 #include "Components/GlobalKeys.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
+#include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
 #include "HushEngine.hpp"
 #include "Logger.hpp"
@@ -38,6 +39,8 @@
 #include <string_view>
 
 #include "StringAllocation.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 
 using namespace Hush::Graphics;
 
@@ -143,15 +146,22 @@ void Hush::RenderingSystem::Init()
 	Entity::EntityId dirLightId = this->GetScene().RegisterComponent<DirectionalLight>();
 	Entity dirLightComp = this->GetScene().EntityFromIdUnchecked(dirLightId);
 	dirLightComp.AddComponent<InspectableComponent>();
+	{
+		Serializable& ser = dirLightComp.AddComponent<Serializable>();
+		ser.serialize = &Serializable::DefaultSerialize<DirectionalLight>;
+	}
 
-	Entity::EntityId meshRefId = this->GetScene().RegisterComponent<DirectionalLight>();
+	Entity::EntityId meshRefId = this->GetScene().RegisterComponent<MeshReference>();
 	Entity meshRefComp = this->GetScene().EntityFromIdUnchecked(meshRefId);
 	meshRefComp.AddComponent<InspectableComponent>();
 
 	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();
 	Entity camRefComp = this->GetScene().EntityFromIdUnchecked(camRefId);
 	camRefComp.AddComponent<InspectableComponent>();
-
+	{
+		Serializable& ser = camRefComp.AddComponent<Serializable>();
+		ser.serialize = &Serializable::DefaultSerialize<Camera>;
+	}
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
 	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();
