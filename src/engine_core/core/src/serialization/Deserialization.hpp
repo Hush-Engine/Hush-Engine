@@ -15,6 +15,8 @@
 #include <unordered_map>
 #include <optional>
 #include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Hush::Serialization
 {
@@ -612,6 +614,122 @@ namespace Hush::Serialization
 			Visitor(IVisitor *parent, double *value, EFormatDescribingType describingType)
 				: FloatVisitor<double>(parent, value, describingType)
 			{
+			}
+		};
+
+		template <>
+		struct Visitor<glm::mat4> : public IVisitor
+		{
+			using Exists = std::true_type;
+
+			glm::mat4 *value{};
+			std::int32_t m_index = 0;
+			bool insideArray{false};
+
+			Visitor(IVisitor *parent, glm::mat4 *value, EFormatDescribingType describingType)
+				: IVisitor(parent, describingType),
+				  value(value)
+			{
+			}
+
+			Result VisitArrayStart() override
+			{
+				if (insideArray)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				insideArray = true;
+				m_index = 0;
+
+				return this;
+			}
+
+			Result VisitArrayEnd() override
+			{
+				if (!insideArray || m_index != 16)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				insideArray = false;
+
+				return GetParentVisitor();
+			}
+
+			Result VisitFloat(float v) override
+			{
+				if (!insideArray || m_index >= 16)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				glm::value_ptr(*value)[m_index++] = v;
+
+				return this;
+			}
+
+			Result VisitDouble(double v) override
+			{
+				return VisitFloat(static_cast<float>(v));
+			}
+		};
+
+		template <glm::length_t L, glm::qualifier Q>
+		struct Visitor<glm::vec<L, float, Q>> : public IVisitor
+		{
+			using Exists = std::true_type;
+
+			glm::vec<L, float, Q> *value{};
+			glm::length_t m_index = 0;
+			bool insideArray{false};
+
+			Visitor(IVisitor *parent, glm::vec<L, float, Q> *value, EFormatDescribingType describingType)
+				: IVisitor(parent, describingType),
+				  value(value)
+			{
+			}
+
+			Result VisitArrayStart() override
+			{
+				if (insideArray)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				insideArray = true;
+				m_index = 0;
+
+				return this;
+			}
+
+			Result VisitArrayEnd() override
+			{
+				if (!insideArray || m_index != L)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				insideArray = false;
+
+				return GetParentVisitor();
+			}
+
+			Result VisitFloat(float v) override
+			{
+				if (!insideArray || m_index >= L)
+				{
+					return EDeserializationError::InvalidData;
+				}
+
+				glm::value_ptr(*value)[m_index++] = v;
+
+				return this;
+			}
+
+			Result VisitDouble(double v) override
+			{
+				return VisitFloat(static_cast<float>(v));
 			}
 		};
 

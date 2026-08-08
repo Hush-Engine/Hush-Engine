@@ -125,6 +125,7 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 			resourceManager->AllocateRef<Mesh>(pathPrefix + std::string(mesh.name));
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
+		meshComponent.SetResourcePath(path.string());
 		meshRef->SetName(mesh.name);
 
 		std::filesystem::path basePath = path.parent_path();

@@ -5,14 +5,33 @@
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
 #include <optional>
+#include <string_view>
 #include "Components/LocalTransform.hpp"
+#include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
 #include "UI.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 
 void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 {
+
+	Entity::EntityId nameId = activeScene->RegisterComponent<Entity::Name>();
+	Entity nameComp = activeScene->EntityFromIdUnchecked(nameId);
+	{
+		Serializable& ser = nameComp.AddComponent<Serializable>();
+		ser.serialize = [](const uint8_t* instance, Serialization::JsonSerializer& ser){
+			const auto* nameInstance = reinterpret_cast<const Entity::Name*>(instance);
+			Serialization::ESerializationError err = ser.Serialize("name", std::string_view(nameInstance->name.data()));
+			if (err != Serialization::ESerializationError::None) {
+				return Serializable::EError::ParseError;
+			}
+			return Serializable::EError::None;
+		};
+	}
+
 	this->m_activeScene = activeScene;
 	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }

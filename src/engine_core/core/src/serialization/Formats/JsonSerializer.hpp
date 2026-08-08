@@ -13,6 +13,8 @@
 #include <string_view>
 #include <span>
 #include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "../Serialization.hpp"
 #include "../Deserialization.hpp"
 
@@ -100,6 +102,32 @@ namespace Hush::Serialization
 			static_assert(false, "Type is not serializable");
 
 			return ESerializationError::InvalidType;
+		}
+
+		/// Serializes a GLM vector to a JSON array of floats (contiguous).
+		/// @tparam L Vector length
+		/// @tparam Q Vector qualifier
+		/// @param value Value to serialize
+		/// @return SerializationError
+		template <glm::length_t L, glm::qualifier Q>
+		[[nodiscard]]
+		ESerializationError Serialize(const glm::vec<L, float, Q> &value)
+		{
+			if (BeginArray() != ESerializationError::None)
+			{
+				return ESerializationError::InvalidData;
+			}
+
+			const float *data = glm::value_ptr(value);
+			for (glm::length_t i = 0; i < L; ++i)
+			{
+				if (Serialize(data[i]) != ESerializationError::None)
+				{
+					return ESerializationError::InvalidData;
+				}
+			}
+
+			return EndArray();
 		}
 
 		/// Serializes a span of values to a JSON array.
@@ -500,6 +528,30 @@ namespace Hush::Serialization
 		return !m_writer.String(value.data(), static_cast<rapidjson::SizeType>(value.size()))
 				   ? ESerializationError::InvalidData
 				   : ESerializationError::None;
+	}
+
+	/// Serializes a 4x4 matrix to a JSON array of 16 floats (column-major, contiguous).
+	/// @param value Value to serialize
+	/// @return SerializationError
+	template <>
+	[[nodiscard]]
+	inline ESerializationError JsonSerializer::Serialize(const glm::mat4 &value)
+	{
+		if (BeginArray() != ESerializationError::None)
+		{
+			return ESerializationError::InvalidData;
+		}
+
+		const float *data = glm::value_ptr(value);
+		for (std::size_t i = 0; i < 16; ++i)
+		{
+			if (Serialize(data[i]) != ESerializationError::None)
+			{
+				return ESerializationError::InvalidData;
+			}
+		}
+
+		return EndArray();
 	}
 
 	template <typename T>

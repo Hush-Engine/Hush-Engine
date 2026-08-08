@@ -109,6 +109,7 @@ namespace Hush
 				// NOLINTNEXTLINE
 				this->name[copyLength] = '\0';
 			}
+		private:
 		};
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)
 			: m_entityId(entityId),

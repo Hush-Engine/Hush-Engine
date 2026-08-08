@@ -19,7 +19,7 @@ void Hush::TransformationSystem::Init()
 		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
 			const auto* xform = reinterpret_cast<const WorldTransform*>(self);
 			const Transform* basePtr = xform;
-			Serialization::ESerializationError localErr = ser.Serialize(*basePtr);
+			Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
 			if (localErr != Serialization::ESerializationError::None) {
 				return Serializable::EError::ParseError;
 			}
@@ -32,7 +32,7 @@ void Hush::TransformationSystem::Init()
 		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
 			const auto* xform = reinterpret_cast<const LocalTransform*>(self);
 			const Transform* basePtr = xform;
-			Serialization::ESerializationError localErr = ser.Serialize(*basePtr);
+			Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
 			if (localErr != Serialization::ESerializationError::None) {
 				return Serializable::EError::ParseError;
 			}

@@ -8,6 +8,8 @@
 #include <serialization/Deserialization.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <array>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "serialization/GeneratedSerialization.hpp"
 #include "serialization/GeneratedSerialization2.hpp"
 
@@ -238,6 +240,152 @@ struct SerializableDemo
 	}
 };
 
+struct Mat4Serializable
+{
+	glm::mat4 matrix{1.0f};
+
+	template <typename T>
+	Hush::Serialization::ESerializationError Serialize(T &serializer) const
+	{
+		auto error = serializer.template Serialize<std::string_view>("__type", "Mat4Serializable");
+		if (error != Hush::Serialization::ESerializationError::None)
+		{
+			return error;
+		}
+
+		return serializer.Serialize("matrix", matrix);
+	}
+
+	auto Deserialize(Hush::Serialization::IVisitor *parent, Hush::Serialization::EFormatDescribingType format)
+	{
+		struct Visitor : public Hush::Serialization::IVisitor
+		{
+			Hush::Serialization::Visitor<glm::mat4> matrixVisitor;
+			bool insideObject{false};
+
+			explicit Visitor(IVisitor *parent, Mat4Serializable *instance,
+							 Hush::Serialization::EFormatDescribingType format)
+				: IVisitor(parent, format),
+				  matrixVisitor(this, &instance->matrix, format)
+			{
+				SetStartingVisitor(this);
+			}
+
+			Result VisitObjectStart() override
+			{
+				if (insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				insideObject = true;
+
+				return this;
+			}
+
+			Result VisitObjectEnd() override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				return GetParentVisitor();
+			}
+
+			Result VisitKey(std::string_view value) override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				if (value == "matrix")
+				{
+					return &matrixVisitor;
+				}
+
+				return Hush::Serialization::EDeserializationError::InvalidKey;
+			}
+		};
+
+		return Visitor{parent, this, format};
+	}
+};
+
+struct Vec4Serializable
+{
+	glm::vec4 vector{1.0f};
+
+	template <typename T>
+	Hush::Serialization::ESerializationError Serialize(T &serializer) const
+	{
+		auto error = serializer.template Serialize<std::string_view>("__type", "Vec4Serializable");
+		if (error != Hush::Serialization::ESerializationError::None)
+		{
+			return error;
+		}
+
+		return serializer.Serialize("vector", vector);
+	}
+
+	auto Deserialize(Hush::Serialization::IVisitor *parent, Hush::Serialization::EFormatDescribingType format)
+	{
+		struct Visitor : public Hush::Serialization::IVisitor
+		{
+			Hush::Serialization::Visitor<glm::vec4> vectorVisitor;
+			bool insideObject{false};
+
+			explicit Visitor(IVisitor *parent, Vec4Serializable *instance,
+							 Hush::Serialization::EFormatDescribingType format)
+				: IVisitor(parent, format),
+				  vectorVisitor(this, &instance->vector, format)
+			{
+				SetStartingVisitor(this);
+			}
+
+			Result VisitObjectStart() override
+			{
+				if (insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				insideObject = true;
+
+				return this;
+			}
+
+			Result VisitObjectEnd() override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				return GetParentVisitor();
+			}
+
+			Result VisitKey(std::string_view value) override
+			{
+				if (!insideObject)
+				{
+					return Hush::Serialization::EDeserializationError::InvalidData;
+				}
+
+				if (value == "vector")
+				{
+					return &vectorVisitor;
+				}
+
+				return Hush::Serialization::EDeserializationError::InvalidKey;
+			}
+		};
+
+		return Visitor{parent, this, format};
+	}
+};
+
 TEST_CASE("Serialization", "[serialization]")
 {
 	SECTION("Serialize reflection")
@@ -267,6 +415,37 @@ TEST_CASE("Serialization", "[serialization]")
 		serializationStruct.field.SetValue2(15);
 
 		auto result = Hush::Serialization::SerializeJson(serializationStruct);
+		REQUIRE(result.has_value());
+
+		std::string json = result.value();
+
+		REQUIRE(json == EXPECTED_JSON);
+	}
+
+	SECTION("Serialize glm::mat4")
+	{
+		constexpr std::string_view EXPECTED_JSON =
+			R"([1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0])";
+
+		const glm::mat4 matrix(1.0f);
+
+		auto result = Hush::Serialization::SerializeJson(matrix);
+
+		REQUIRE(result.has_value());
+
+		std::string json = result.value();
+
+		REQUIRE(json == EXPECTED_JSON);
+	}
+
+	SECTION("Serialize glm::vec4")
+	{
+		constexpr std::string_view EXPECTED_JSON = R"([1.0,2.0,3.0,4.0])";
+
+		const glm::vec4 vector(1.0f, 2.0f, 3.0f, 4.0f);
+
+		auto result = Hush::Serialization::SerializeJson(vector);
+
 		REQUIRE(result.has_value());
 
 		std::string json = result.value();
@@ -336,5 +515,49 @@ TEST_CASE("Deserialization", "[serialization]")
 		SerializationAutogenStruct serializationStruct = result.value();
 		REQUIRE(serializationStruct.GetValue1() == 1);
 		REQUIRE(serializationStruct.GetValue2() == 2);
+	}
+
+	SECTION("Deserialize glm::mat4 member")
+	{
+		constexpr std::string_view json = R"( {
+			"matrix": [1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0]
+		})";
+
+		Hush::Result<Mat4Serializable, Hush::Serialization::EDeserializationError> result =
+			Hush::Serialization::DeserializeJson<Mat4Serializable>(json);
+
+		REQUIRE(result.has_value());
+
+		Mat4Serializable value = result.value();
+		const float *got = glm::value_ptr(value.matrix);
+		const glm::mat4 identity(1.0f);
+		const float *want = glm::value_ptr(identity);
+
+		for (int i = 0; i < 16; ++i)
+		{
+			REQUIRE(got[i] == want[i]);
+		}
+	}
+
+	SECTION("Deserialize glm::vec4 member")
+	{
+		constexpr std::string_view json = R"( {
+			"vector": [1.0,2.0,3.0,4.0]
+		})";
+
+		Hush::Result<Vec4Serializable, Hush::Serialization::EDeserializationError> result =
+			Hush::Serialization::DeserializeJson<Vec4Serializable>(json);
+
+		REQUIRE(result.has_value());
+
+		Vec4Serializable value = result.value();
+		const float *got = glm::value_ptr(value.vector);
+		const glm::vec4 expected(1.0f, 2.0f, 3.0f, 4.0f);
+		const float *want = glm::value_ptr(expected);
+
+		for (int i = 0; i < 4; ++i)
+		{
+			REQUIRE(got[i] == want[i]);
+		}
 	}
 }

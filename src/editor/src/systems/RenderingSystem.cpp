@@ -155,7 +155,7 @@ void Hush::RenderingSystem::Init()
 	Entity meshRefComp = this->GetScene().EntityFromIdUnchecked(meshRefId);
 	meshRefComp.AddComponent<InspectableComponent>();
 	{
-		Serializable& ser = dirLightComp.AddComponent<Serializable>();
+		Serializable& ser = meshRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
 	}
 

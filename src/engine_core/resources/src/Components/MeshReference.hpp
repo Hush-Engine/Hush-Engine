@@ -7,6 +7,7 @@
 #include "Ref.hpp"
 
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -20,7 +21,6 @@
 #include "MeshReference.hushgen.hpp"
 #endif
 
-
 namespace Hush
 {
 	/// @brief Small wrapper around the `Mesh` data structure, internally, this is useful for caching using our
@@ -28,6 +28,7 @@ namespace Hush
 	// This structure is intended as a bridge between cached resource data and the rendering pipeline
 	class [[hush::reflect]] MeshReference
 	{
+		HUSH_GENERATED_BODY
 	public:
 		MeshReference(Ref<Mesh> &mesh)
 			: m_mesh(mesh)
@@ -94,6 +95,12 @@ namespace Hush
 			return m_materialTextureRefs;
 		}
 
+		// HACK: Temporary method
+		void SetResourcePath(std::string_view path)
+		{
+			this->m_path = path;
+		}
+
 	private:
 		Ref<Mesh> m_mesh;
 		/// @brief Material references used for this mesh's GeometrySurfaces, see @ref GeoSurface
@@ -110,7 +117,9 @@ namespace Hush
 		std::unordered_map<const Graphics::Material3D *, std::unordered_map<uint32_t, Ref<TextureComponent>>>
 			m_materialTextureRefs;
 
-		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully HushCooker fixes this
+		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully
+		// HushCooker fixes this
+		[[hush::property]]
 		std::string m_path;
 	};
 
