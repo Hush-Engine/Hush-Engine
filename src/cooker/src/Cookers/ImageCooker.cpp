@@ -287,12 +287,12 @@ namespace Hush
 		switch (finalFormat)
 		{
 		case EAssetFormat::RGBA8_UNORM:
-			texExtra.gpuFormat =
-				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::RGBA8_SRGB : Graphics::ETextureFormat::RGBA8_UNORM);
+			texExtra.gpuFormat = static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::RGBA8_SRGB
+															: Graphics::ETextureFormat::RGBA8_UNORM);
 			break;
 		case EAssetFormat::BGRA8_UNORM:
-			texExtra.gpuFormat =
-				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BGRA8_SRGB : Graphics::ETextureFormat::BGRA8_UNORM);
+			texExtra.gpuFormat = static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BGRA8_SRGB
+															: Graphics::ETextureFormat::BGRA8_UNORM);
 			break;
 		case EAssetFormat::DXT1:
 			texExtra.gpuFormat =

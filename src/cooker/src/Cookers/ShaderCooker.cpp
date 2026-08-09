@@ -212,7 +212,8 @@ namespace Hush
 				}
 			}
 
-			compileResult = compiler->CompileFromSource(NullTerminatedStringView(sourceStr), ctx.sourceVPath, entryPoints);
+			compileResult =
+				compiler->CompileFromSource(NullTerminatedStringView(sourceStr), ctx.sourceVPath, entryPoints);
 		}
 
 		if (!compileResult.success)

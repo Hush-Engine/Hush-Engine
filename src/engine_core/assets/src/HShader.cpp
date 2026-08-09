@@ -44,9 +44,8 @@ namespace Hush
 								 reinterpret_cast<const std::byte *>(&stageEntry + 1));
 
 				// Write entry name
-				stageMeta.insert(
-					stageMeta.end(), reinterpret_cast<const std::byte *>(stage.entryName.data()),
-					reinterpret_cast<const std::byte *>(stage.entryName.data() + stage.entryName.size()));
+				stageMeta.insert(stageMeta.end(), reinterpret_cast<const std::byte *>(stage.entryName.data()),
+								 reinterpret_cast<const std::byte *>(stage.entryName.data() + stage.entryName.size()));
 
 				// Pad to 8 bytes after entry name
 				const size_t pad = (8 - (sizeof(StageEntry) + stage.entryName.size()) % 8) % 8;

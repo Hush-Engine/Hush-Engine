@@ -136,8 +136,7 @@ Hush::TextureComponent *Hush::ContentPanel::ResolveThumbnail(const std::string &
 	// ResourceUploadSystem has also removed GpuUploadComponent (OnPostRender) so we
 	// never destroy an entity the upload system still references this frame.
 	auto holderIt = this->m_thumbnailHolders.find(vpath);
-	if (holderIt != this->m_thumbnailHolders.end() &&
-		!holderIt->second.HasComponent<Renderer::GpuUploadComponent>())
+	if (holderIt != this->m_thumbnailHolders.end() && !holderIt->second.HasComponent<Renderer::GpuUploadComponent>())
 	{
 		this->m_scene->DestroyEntity(holderIt->second);
 		this->m_thumbnailHolders.erase(holderIt);

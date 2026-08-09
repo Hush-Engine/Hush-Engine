@@ -90,7 +90,8 @@ TEST_CASE("HShader rejects malformed input", "[hshader]")
 		shader.header.version = HSHADER_VERSION;
 
 		HShader::BackendData wgsl;
-		wgsl.stages.push_back(HShader::StageData{.stage = 0, .entryName = "vertexMain", .codeOffset = 0, .codeSize = 1});
+		wgsl.stages.push_back(
+			HShader::StageData{.stage = 0, .entryName = "vertexMain", .codeOffset = 0, .codeSize = 1});
 		wgsl.bytecode = {std::byte{'v'}};
 
 		shader.backends.push_back({.backendType = EShaderBackend::WebGPU_WGSL, .stageCount = 1});
@@ -113,7 +114,8 @@ TEST_CASE("HShader rejects malformed input", "[hshader]")
 		shader.header.version = HSHADER_VERSION;
 
 		HShader::BackendData wgsl;
-		wgsl.stages.push_back(HShader::StageData{.stage = 0, .entryName = "vertexMain", .codeOffset = 0, .codeSize = 2});
+		wgsl.stages.push_back(
+			HShader::StageData{.stage = 0, .entryName = "vertexMain", .codeOffset = 0, .codeSize = 2});
 		wgsl.bytecode = {std::byte{'v'}, std::byte{'s'}};
 
 		shader.backends.push_back({.backendType = EShaderBackend::WebGPU_WGSL, .stageCount = 1});

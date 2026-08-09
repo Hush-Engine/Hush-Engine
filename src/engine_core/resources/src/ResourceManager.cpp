@@ -211,8 +211,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 				texExtra.width > kMaxTextureDimension || texExtra.height > kMaxTextureDimension ||
 				texExtra.depth > kMaxTextureDimension)
 			{
-				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has invalid dimensions",
-								path);
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has invalid dimensions", path);
 				return EError::InvalidData;
 			}
 
@@ -279,8 +278,9 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 				}
 				if (result != expectedSize)
 				{
-					Hush::LogFormat(ELogLevel::Error, "ResourceManager: truncated ZSTD payload at {} (expected {} "
-													  "bytes, got {})",
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: truncated ZSTD payload at {} (expected {} "
+									"bytes, got {})",
 									path, expectedSize, result);
 					return EError::InvalidData;
 				}
