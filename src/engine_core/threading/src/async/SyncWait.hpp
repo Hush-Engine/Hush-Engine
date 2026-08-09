@@ -8,6 +8,7 @@
 
 // NOLINTBEGIN(readability-identifier-naming, modernize-use-nodiscard)
 
+#include "Hush/Memory/CoroutineFrameResource.hpp"
 #include "TaskTraits.hpp"
 #include <atomic>
 #include <coroutine>
@@ -22,6 +23,8 @@ namespace Hush::Threading
 	{
 		struct SyncWaitPromiseBase
 		{
+			HUSH_COROUTINE_FRAME_ALLOCATOR()
+
 			SyncWaitPromiseBase() noexcept = default;
 
 			SyncWaitPromiseBase(const SyncWaitPromiseBase &) = default;

@@ -229,5 +229,8 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 		// RenderGraphSystem::OnPreRender() will handle the full Reset + rebuild.
 		this->m_renderDevice->Invalidate();
 		break;
+	default:
+		// Not handled
+		break;
 	}
 }

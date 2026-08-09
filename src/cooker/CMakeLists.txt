@@ -45,6 +45,7 @@ target_link_libraries(HushCookerCli PRIVATE
     Hush::Threading
     Hush::Rendering
     Hush::Input
+    Hush::Memory
 )
 hush_deploy_runtime_dlls(HushCookerCli)
 
@@ -63,5 +64,5 @@ add_test_target(
 if (TARGET HushCookerTest)
     target_link_libraries(HushCookerTest PRIVATE
         Hush::Assets Hush::Filesystem Hush::Core Hush::Utils
-        Hush::Threading Hush::Input Hush::Rendering)
+        Hush::Threading Hush::Input Hush::Rendering Hush::Memory)
 endif()

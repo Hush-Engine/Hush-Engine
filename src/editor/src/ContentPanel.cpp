@@ -1,20 +1,31 @@
 #include "ContentPanel.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "Components/Material3D.hpp"
 #include "Entity.hpp"
 #include "IFile.hpp"
 #include "Query.hpp"
+#include "RHI/IGraphicsDevice.hpp"
 #include "RHI/IGraphicsTexture.hpp"
+#include "Result.hpp"
 #include "Scene.hpp"
 #include "UI.hpp"
 #include "VirtualFilesystem.hpp"
+#include "WindowRenderer.hpp"
 #include "components/EditorInfo.hpp"
+#include "Loaders/GltfLoader.hpp"
+#include "crypto/Hashing.hpp"
+#include "Assertions.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 #include <cctype>
+#include <cstddef>
 #include <filesystem>
 #include <imgui/imgui.h>
 #include <string>
 #include <vector>
 #include "HushEngine.hpp"
+#include "systems/RenderingSystem.hpp"
 
 constexpr ImGuiWindowFlags CONTENT_PANEL_FLAGS = ImGuiWindowFlags_NoFocusOnAppearing;
 
@@ -41,29 +52,29 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 			UI::S_INITIALIZED = true;
 		}
 		ImGui::Text("Current Working Directory: %s", this->m_currentWorkingDirectory.c_str());
+
 		bool isMouseInScene = this->m_editorInfoRef.GetData<EditorInfo>()->isMouseOnScene;
 		this->DrawFiles(isMouseInScene);
+
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
-		if (isMouseInScene && payload != nullptr && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		if (isMouseInScene && payload != nullptr && payload->DataSize == sizeof(FileInfo) &&
+			ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
 			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
-				// GLTFLoader::GenerateMeshEntities(this->m_scene, this->m_resourceManager, data->path);
-				// Create the mesh resources (?
-				// A mesh is just data, we can represent that on disk (except GPUMeshBuffers)
-				// GLBs and other model files have hierarchy data attached to them, we need a way to handle that
+				Entity renderingSystemEnt = this->m_scene->CreateEntityWithKey("RenderingSystem");
+				auto *systemRef = *renderingSystemEnt.GetComponent<RenderingSystem *>();
 
-				// auto result = this->m_modelLoader.LoadMeshes(renderer, data->path, this->m_scene);
-				// HUSH_RESULT_ASSERT(result, "Failed to load meshes!");
-				// // Use the Model Loader interface to get entities and then forward that to the renderer
-				// LogFormat(ELogLevel::Info, "Dropped payload {}!", data->path.filename().string());
-				// // Very very bad code, we should change it before a PR
-				// for (Entity &entt : result.value())
-				// {
-				// 	renderer->PushMesh(entt.GetComponent<WorldTransform>(),
-				// 					   entt.GetComponent<MeshReference>()->GetMesh().Get());
-				// }
+				HushEngine *engine = this->m_scene->GetEngine();
+				Graphics::IGraphicsDevice *device = engine->GetWindowRenderer()->GetGraphicsDevice();
+				RenderingContext ctx = {.materialDescriptor = &systemRef->GetPBRDescriptor(),
+										.activeScene = this->m_scene,
+										.resourceManager = this->m_resourceManager,
+										.device = device};
+
+				Entity rootEntity = GLTFLoader::GenerateMeshEntities(ctx, data->path);
+				HUSH_ASSERT(rootEntity.IsValid(), "Failed to create meshes from the GLTF file!");
 			}
 		}
 	}

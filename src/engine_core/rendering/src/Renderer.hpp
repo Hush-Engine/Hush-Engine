@@ -12,7 +12,6 @@
 #include "Shared/EditorCamera.hpp"
 #include "Shared/GpuAllocatedImage.hpp"
 #include "Shared/Mesh.hpp"
-#include "../../resources/src/Ref.hpp"
 #include "Shared/Types/Color.hpp"
 #include "Shared/Types/ImageExtent3D.hpp"
 #include <SDL3/SDL.h>

@@ -346,6 +346,49 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	return {this, textureComponent};
 }
 
+Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::
+	LoadTextureFromData(std::string_view name, std::span<const std::byte> data)
+{
+	const uint64_t nameHash = Hashing::Fnv1a64(name);
+	const auto &iterator = this->m_loadedResources.find(nameHash);
+	if (iterator != this->m_loadedResources.end())
+	{
+		HandleId handle = this->m_loadedResources[nameHash];
+		auto *texture = reinterpret_cast<TextureComponent *>(handle);
+		return {this, texture};
+	}
+
+	int32_t width{};
+	int32_t height{};
+	int32_t channels{};
+	static constexpr int kDesiredChannels = 4;
+	stbi_uc *imageData =
+		stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(data.data()), static_cast<int>(data.size()), &width,
+							  &height, &channels, kDesiredChannels);
+
+	if (imageData == nullptr)
+	{
+		Hush::LogFormat(ELogLevel::Error, "ResourceManager: Failed to decode image data for '{}'", name);
+		return EError::LoadFailed;
+	}
+
+	const Graphics::ETextureFormat format = Graphics::ETextureFormat::RGBA8_UNORM;
+	constexpr int depth = 1;
+
+	const size_t pixelDataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * kDesiredChannels;
+	std::vector<std::byte> decodedPixels(pixelDataSize);
+	std::memcpy(decodedPixels.data(), imageData, pixelDataSize);
+	stbi_image_free(imageData);
+
+	auto image = std::make_unique<Image>(std::move(decodedPixels), width, height, depth, format);
+	auto *textureComponent = new TextureComponent(nullptr, std::move(image));
+
+	const auto handle = reinterpret_cast<HandleId>(textureComponent);
+	this->m_loadedResources[nameHash] = handle;
+
+	return {this, textureComponent};
+}
+
 // Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view &name, const std::byte *data,
 // 																 const size_t &size)
 // {

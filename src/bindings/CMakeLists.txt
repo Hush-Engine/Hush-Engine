@@ -26,4 +26,5 @@ target_link_libraries(HushBindings PUBLIC
         Hush::Engine
         Hush::Input
         Hush::Core
+        Hush::Memory
 )

@@ -4,6 +4,7 @@
 	\brief WebGPU buffer implementation
 */
 #include "WebGPUBuffer.hpp"
+#include "RHI/GraphicsTypes.hpp"
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "Assertions.hpp"
 #include "Logger.hpp"
@@ -24,6 +25,15 @@ namespace Hush::Graphics
 	}
 
 	WebGPUBuffer::~WebGPUBuffer()
+	{
+		if (m_mappedData != nullptr)
+		{
+			Unmap();
+		}
+		m_buffer.destroy();
+	}
+
+	void WebGPUBuffer::Destroy()
 	{
 		if (m_mappedData != nullptr)
 		{

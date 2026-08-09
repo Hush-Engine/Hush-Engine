@@ -25,7 +25,9 @@
 #include <zstd.h>
 
 // NOLINTBEGIN(*-avoid-c-arrays)
-static constexpr const char *FULLSCREEN_SHADER_SOURCE = R"(
+// A `const char[]` array (not a `const char *`) so it binds to NullTerminatedStringView's
+// literal-array constructor when passed to ShaderCompiler::CompileFromSource.
+static constexpr char FULLSCREEN_SHADER_SOURCE[] = R"(
 struct Uniforms
 {
     float4x4 mvp;
