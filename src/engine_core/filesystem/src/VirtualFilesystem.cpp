@@ -98,6 +98,24 @@ Hush::Result<std::string_view, Hush::VirtualFilesystem::EError> Hush::VirtualFil
 	return resolvedPath->path;
 }
 
+Hush::Result<std::filesystem::path, Hush::VirtualFilesystem::EError> Hush::VirtualFilesystem::ResolveHostPath(
+	std::string_view path)
+{
+	std::optional<ResolvedPath> resolvedPath = this->ResolveFileSystem(path);
+	if (!resolvedPath)
+	{
+		LogFormat(ELogLevel::Debug, "Mount point for {} not found", path);
+		return EError::FileDoesntExist;
+	}
+
+	std::optional<std::filesystem::path> hostPath = resolvedPath->filesystem->GetHostPath(resolvedPath->path);
+	if (!hostPath)
+	{
+		return EError::OperationNotSupported;
+	}
+	return *hostPath;
+}
+
 std::optional<Hush::VirtualFilesystem::ResolvedPath> Hush::VirtualFilesystem::ResolveFileSystem(std::string_view path)
 {
 	if (std::filesystem::path(path).is_absolute())

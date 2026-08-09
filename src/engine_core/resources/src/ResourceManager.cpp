@@ -1,6 +1,7 @@
 #include "ResourceManager.hpp"
 #include "Assertions.hpp"
 #include "Components/TextureComponent.hpp"
+#include "HAsset.hpp"
 #include "IFile.hpp"
 #include "IResourceManager.hpp"
 #include "Logger.hpp"
@@ -10,13 +11,77 @@
 #include "Shared/ImageTexture.hpp"
 #include "VirtualFilesystem.hpp"
 #include "crypto/Hashing.hpp"
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
+#include <vector>
+#include <zstd.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
+
+namespace
+{
+	/// Box-average downscale of tightly-packed RGBA8 pixels so the longest side is at most
+	/// maxSize. Returns the (possibly unchanged) pixel buffer and writes the resulting
+	/// dimensions to outW/outH. Non-RGBA8 / already-small inputs are returned unchanged.
+	std::vector<std::byte> DownscaleRGBA8(const std::vector<std::byte> &src, int srcW, int srcH, uint32_t maxSize,
+										  int &outW, int &outH)
+	{
+		const int longest = std::max(srcW, srcH);
+		if (srcW <= 0 || srcH <= 0 || maxSize == 0 || longest <= static_cast<int>(maxSize) ||
+			src.size() < static_cast<size_t>(srcW) * static_cast<size_t>(srcH) * 4U)
+		{
+			outW = srcW;
+			outH = srcH;
+			return src;
+		}
+
+		outW = std::max(1, srcW * static_cast<int>(maxSize) / longest);
+		outH = std::max(1, srcH * static_cast<int>(maxSize) / longest);
+
+		std::vector<std::byte> dst(static_cast<size_t>(outW) * static_cast<size_t>(outH) * 4U);
+
+		for (int y = 0; y < outH; ++y)
+		{
+			const int sy0 = y * srcH / outH;
+			const int sy1 = std::max(sy0 + 1, (y + 1) * srcH / outH);
+			for (int x = 0; x < outW; ++x)
+			{
+				const int sx0 = x * srcW / outW;
+				const int sx1 = std::max(sx0 + 1, (x + 1) * srcW / outW);
+
+				uint32_t r = 0;
+				uint32_t g = 0;
+				uint32_t b = 0;
+				uint32_t a = 0;
+				uint32_t count = 0;
+				for (int sy = sy0; sy < sy1; ++sy)
+				{
+					for (int sx = sx0; sx < sx1; ++sx)
+					{
+						const size_t si =
+							((static_cast<size_t>(sy) * static_cast<size_t>(srcW)) + static_cast<size_t>(sx)) * 4U;
+						r += std::to_integer<uint32_t>(src[si + 0]);
+						g += std::to_integer<uint32_t>(src[si + 1]);
+						b += std::to_integer<uint32_t>(src[si + 2]);
+						a += std::to_integer<uint32_t>(src[si + 3]);
+						++count;
+					}
+				}
+
+				const size_t di = ((static_cast<size_t>(y) * static_cast<size_t>(outW)) + static_cast<size_t>(x)) * 4U;
+				dst[di + 0] = static_cast<std::byte>(r / count);
+				dst[di + 1] = static_cast<std::byte>(g / count);
+				dst[di + 2] = static_cast<std::byte>(b / count);
+				dst[di + 3] = static_cast<std::byte>(a / count);
+			}
+		}
+		return dst;
+	}
+} // namespace
 
 void Hush::ResourceManager::Init(VirtualFilesystem *filesystem)
 {
@@ -59,9 +124,15 @@ void Hush::ResourceManager::FreePending()
 }
 
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::LoadTexture(
-	const std::string_view path, const TextureComponent::ECpuUnloadStrategy unloadStrategy)
+	const std::string_view path, const TextureComponent::ECpuUnloadStrategy unloadStrategy, uint32_t maxSize)
 {
-	const uint64_t nameHash = Hashing::Fnv1a64(path);
+	uint64_t nameHash = Hashing::Fnv1a64(path);
+	if (maxSize != 0)
+	{
+		// Cache a downscaled (e.g. thumbnail) load separately from the full-resolution
+		// load of the same path so the two don't collide.
+		nameHash ^= (static_cast<uint64_t>(maxSize) * 0x9E3779B97F4A7C15ULL);
+	}
 	const auto &iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end())
 	{
@@ -101,38 +172,167 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 		return EError::LoadFailed;
 	}
 
-	// Now, we need to decode the image data and create a TextureComponent
+	// Check if this is a cooked HAsset blob
 	int width{};
 	int height{};
-	int channels{};
-	// Force 4-channel (RGBA) decode so the pixel data always matches a
-	// GPU-supported format.  WebGPU has no RGB8 texture format, so loading
-	// as 3-channel would cause a format mismatch and validation errors.
-	static constexpr int kDesiredChannels = 4;
-	stbi_uc *imageData =
-		stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(fileData.data()), static_cast<int>(fileData.size()),
-							  &width, &height, &channels, kDesiredChannels);
+	int depth = 1;
+	Graphics::ETextureFormat format = Graphics::ETextureFormat::RGBA8_UNORM;
+	std::vector<std::byte> decodedPixels;
 
-	if (imageData == nullptr)
+	if (fileData.size() >= sizeof(uint32_t))
 	{
-		Hush::LogFormat(ELogLevel::Error, "ResourceManager: Failed to decode image data at {}", path);
-		return EError::LoadFailed;
+		uint32_t magic;
+		std::memcpy(&magic, fileData.data(), sizeof(uint32_t));
+		if (magic == HASSET_MAGIC)
+		{
+			// Cooked HAsset. Decompress and use directly
+			auto asset = HAsset::Read(fileData);
+			if (!asset.has_value())
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: Invalid HAsset at {}", path);
+				return EError::InvalidData;
+			}
+
+			// Read texture extra first — cooked textures must carry it; guessing
+			// dimensions from the payload size would silently corrupt.
+			if (asset->extra.size() < sizeof(HTextureExtra))
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} is missing HTextureExtra",
+								path);
+				return EError::InvalidData;
+			}
+
+			HTextureExtra texExtra;
+			std::memcpy(&texExtra, asset->extra.data(), sizeof(HTextureExtra));
+
+			// Untrusted dims: bound them so derived sizes (and allocations) stay sane.
+			constexpr uint32_t kMaxTextureDimension = 16384;
+			if (texExtra.width == 0 || texExtra.height == 0 || texExtra.depth == 0 ||
+				texExtra.width > kMaxTextureDimension || texExtra.height > kMaxTextureDimension ||
+				texExtra.depth > kMaxTextureDimension)
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has invalid dimensions", path);
+				return EError::InvalidData;
+			}
+
+			auto gpuFormat = magic_enum::enum_cast<Graphics::ETextureFormat>(texExtra.gpuFormat);
+			if (!gpuFormat.has_value())
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has unknown GPU format {}",
+								path, texExtra.gpuFormat);
+				return EError::InvalidData;
+			}
+			format = gpuFormat.value();
+			width = static_cast<int>(texExtra.width);
+			height = static_cast<int>(texExtra.height);
+			depth = static_cast<int>(texExtra.depth);
+
+			// The upload path currently supports single-level textures only.
+			if (texExtra.mipCount != 1)
+			{
+				Hush::LogFormat(ELogLevel::Error,
+								"ResourceManager: cooked texture at {} has {} mip levels, only 1 is supported", path,
+								texExtra.mipCount);
+				return EError::InvalidData;
+			}
+
+			// Expected payload size derived from the metadata, NOT from header sizes:
+			// this is what keeps a corrupted header from forcing a huge allocation.
+			uint64_t expectedSize;
+			if (format == Graphics::ETextureFormat::BC1_UNORM || format == Graphics::ETextureFormat::BC1_SRGB ||
+				format == Graphics::ETextureFormat::BC3_UNORM || format == Graphics::ETextureFormat::BC3_SRGB ||
+				format == Graphics::ETextureFormat::BC4_UNORM || format == Graphics::ETextureFormat::BC5_UNORM ||
+				format == Graphics::ETextureFormat::BC7_UNORM || format == Graphics::ETextureFormat::BC7_SRGB)
+			{
+				// 4x4 blocks; GetBytesPerPixel returns the block size for BC formats.
+				const uint64_t blocks = (static_cast<uint64_t>(texExtra.width) + 3) / 4 *
+										((static_cast<uint64_t>(texExtra.height) + 3) / 4);
+				expectedSize = blocks * texExtra.depth * Graphics::GetBytesPerPixel(format);
+			}
+			else
+			{
+				expectedSize = static_cast<uint64_t>(texExtra.width) * texExtra.height * texExtra.depth *
+							   Graphics::GetBytesPerPixel(format);
+			}
+
+			auto &header = asset->header;
+			if (header.compression == ECompressionFormat::Zstd)
+			{
+				if (header.uncompressedSize != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: HAsset at {} declares a decompressed size that does not match "
+									"its texture metadata",
+									path);
+					return EError::InvalidData;
+				}
+
+				decodedPixels.resize(static_cast<size_t>(expectedSize));
+				size_t result = ZSTD_decompress(decodedPixels.data(), static_cast<size_t>(expectedSize),
+												asset->payload.data(), asset->payload.size());
+				if (ZSTD_isError(result) != 0)
+				{
+					Hush::LogFormat(ELogLevel::Error, "ResourceManager: ZSTD decompress failed at {}: {}", path,
+									ZSTD_getErrorName(result));
+					return EError::LoadFailed;
+				}
+				if (result != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: truncated ZSTD payload at {} (expected {} "
+									"bytes, got {})",
+									path, expectedSize, result);
+					return EError::InvalidData;
+				}
+			}
+			else
+			{
+				if (asset->payload.size() != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: cooked texture at {} payload size does not match its metadata",
+									path);
+					return EError::InvalidData;
+				}
+				decodedPixels = std::move(asset->payload);
+			}
+		}
 	}
-	// We can now create the TextureComponent and store it in the loaded resources.
-	// To do that, we need to create an Image and a Texture.
-	//
-	// Because we forced 4-channel decode above, the pixel data is always
-	// RGBA regardless of the original file's channel count.
-	const Graphics::ETextureFormat format = Graphics::ETextureFormat::RGBA8_UNORM;
 
-	const auto depth = 1; // stbi_load only loads 2D images, so depth is always 1
+	if (decodedPixels.empty())
+	{
+		// Not a cooked blob, decode with stb_image
+		int channels{};
+		static constexpr int kDesiredChannels = 4;
+		stbi_uc *imageData =
+			stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(fileData.data()), static_cast<int>(fileData.size()),
+								  &width, &height, &channels, kDesiredChannels);
 
-	// Copy the decoded pixel data into a std::vector so the Image owns it.
-	// stbi allocated imageData — we must free it after the copy.
-	const size_t pixelDataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * kDesiredChannels;
-	std::vector<std::byte> decodedPixels(pixelDataSize);
-	std::memcpy(decodedPixels.data(), imageData, pixelDataSize);
-	stbi_image_free(imageData);
+		if (imageData == nullptr)
+		{
+			Hush::LogFormat(ELogLevel::Error, "ResourceManager: Failed to decode image data at {}", path);
+			return EError::LoadFailed;
+		}
+
+		const size_t pixelDataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * kDesiredChannels;
+		decodedPixels.resize(pixelDataSize);
+		std::memcpy(decodedPixels.data(), imageData, pixelDataSize);
+		stbi_image_free(imageData);
+
+		format = Graphics::ETextureFormat::RGBA8_UNORM;
+		depth = 1;
+	}
+
+	// Optionally box-downscale the decoded RGBA8 image (e.g. for thumbnails) so we upload a
+	// small GPU texture instead of the full-resolution one.
+	if (maxSize != 0 && depth == 1)
+	{
+		int newWidth = width;
+		int newHeight = height;
+		decodedPixels = DownscaleRGBA8(decodedPixels, width, height, maxSize, newWidth, newHeight);
+		width = newWidth;
+		height = newHeight;
+	}
 
 	auto image = std::make_unique<Image>(std::move(decodedPixels), width, height, depth, format);
 

@@ -77,11 +77,16 @@ namespace Hush
 		/// As part of this member function, another Ref<> will be created, but it will store the
 		///
 		/// @param path The path to the texture file, relative to the virtual filesystem root.
+		/// @param unloadStrategy Whether to keep the CPU image resident after GPU upload.
+		/// @param maxSize If non-zero, the decoded RGBA8 image is box-downscaled so its longest
+		///        side is at most this many pixels (e.g. for thumbnails). Textures loaded with a
+		///        given maxSize are cached separately from the full-resolution load of the same path.
 		///
 		/// @return A reference to the loaded texture, or an error if the texture could not be loaded.
 		Result<Ref<TextureComponent>, EError> LoadTexture(std::string_view path,
 														  TextureComponent::ECpuUnloadStrategy unloadStrategy =
-															  TextureComponent::ECpuUnloadStrategy::UnloadAfterUpload);
+															  TextureComponent::ECpuUnloadStrategy::UnloadAfterUpload,
+														  uint32_t maxSize = 0);
 
 		/// @brief Loads a texture from the given raw data.
 		///

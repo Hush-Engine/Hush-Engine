@@ -13,6 +13,7 @@
 
 #include <SDL3/SDL.h>
 #include <InputManager.hpp>
+#include <filesystem>
 #include <functional>
 #include <memory>
 
@@ -77,6 +78,13 @@ namespace Hush
 			return this->m_windowPtr;
 		}
 
+		/// Register a callback for SDL_EVENT_DROP_FILE.
+		using DropCallback = std::function<void(const std::filesystem::path &)>;
+		void SetDropCallback(DropCallback cb)
+		{
+			m_dropCallback = std::move(cb);
+		}
+
 	private:
 		/// @brief Pointer that represents the unique instance of an SDL window associated with this context
 		/// (This is declared as a raw pointer for compatibility with C)
@@ -89,6 +97,8 @@ namespace Hush
 		std::unique_ptr<Hush::RenderGraph::RenderDevice> m_renderDevice;
 
 		bool m_isActive = false;
+
+		DropCallback m_dropCallback;
 
 		bool InitSDLIfNotStarted() noexcept;
 

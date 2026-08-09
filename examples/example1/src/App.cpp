@@ -1,5 +1,9 @@
 #include "Components/TextureComponent.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
+#include "HAsset.hpp"
+#include "HShader.hpp"
+#include "HShaderUtil.hpp"
+#include "HushPak.hpp"
 #include "HushEngine.hpp"
 #include "WindowRenderer.hpp"
 #include "IApplication.hpp"
@@ -15,7 +19,10 @@
 #include "RenderGraph/RenderGraph.hpp"
 #include "ResourceManager.hpp"
 #include "Scene.hpp"
+#include "crypto/Hashing.hpp"
+#include <fstream>
 #include <memory>
+#include <zstd.h>
 
 // NOLINTBEGIN(*-avoid-c-arrays)
 // A `const char[]` array (not a `const char *`) so it binds to NullTerminatedStringView's
@@ -180,6 +187,96 @@ public:
 	}
 
 private:
+	/// Try loading cooked shaders from the bundle.
+	/// Returns true if the bundle was found and shaders were loaded.
+	bool TryLoadCookedShaders(Hush::Graphics::IGraphicsDevice *device)
+	{
+		using namespace Hush::Graphics;
+
+		// Try to open the bundle file next to the executable
+		std::ifstream bundleFile("game.hushpak", std::ios::binary | std::ios::ate);
+		if (!bundleFile)
+		{
+			return false;
+		}
+
+		auto bundleSize = static_cast<size_t>(bundleFile.tellg());
+		bundleFile.seekg(0);
+		std::vector<std::byte> bundleData(bundleSize);
+		bundleFile.read(reinterpret_cast<char *>(bundleData.data()), bundleSize);
+
+		auto pak = Hush::HushPak::Read(bundleData);
+		if (!pak.has_value())
+		{
+			return false;
+		}
+
+		// Look for the cooked shader
+		constexpr std::string_view shaderVPath = "fullscreen_texture.slang";
+		uint64_t shaderHash = Hush::Hashing::Fnv1a64(shaderVPath);
+		const auto *entry = pak->FindEntry(shaderHash);
+		if (entry == nullptr)
+		{
+			return false;
+		}
+
+		auto entryData = pak->EntryData(*entry, bundleData);
+		auto asset = Hush::HAsset::Read(entryData);
+		if (!asset.has_value())
+		{
+			return false;
+		}
+
+		// Decompress the HShader blob
+		std::vector<std::byte> shaderBlob;
+		if (asset->header.compression == Hush::ECompressionFormat::Zstd)
+		{
+			shaderBlob.resize(asset->header.uncompressedSize);
+			size_t result = ZSTD_decompress(shaderBlob.data(), asset->header.uncompressedSize, asset->payload.data(),
+											asset->payload.size());
+			if (ZSTD_isError(result))
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] ZSTD decompress failed: {}",
+								ZSTD_getErrorName(result));
+				return false;
+			}
+		}
+		else
+		{
+			shaderBlob = asset->payload;
+		}
+
+		auto hshader = Hush::HShader::Read(shaderBlob);
+		if (!hshader.has_value())
+		{
+			return false;
+		}
+
+		auto descriptors = Hush::HShaderToModuleDescriptors(hshader.value());
+		if (descriptors.size() < 2)
+		{
+			return false;
+		}
+
+		// Find vertex and fragment stages
+		bool foundVs = false, foundFs = false;
+		for (const auto &desc : descriptors)
+		{
+			if (desc.stage == EShaderStage::Vertex && !foundVs)
+			{
+				m_vertexShader.CreateResource(desc, device);
+				foundVs = m_vertexShader.IsValid();
+			}
+			else if (desc.stage == EShaderStage::Fragment && !foundFs)
+			{
+				m_fragmentShader.CreateResource(desc, device);
+				foundFs = m_fragmentShader.IsValid();
+			}
+		}
+
+		return foundVs && foundFs;
+	}
+
 	bool InitShaderResources()
 	{
 		using namespace Hush::Graphics;
@@ -191,62 +288,75 @@ private:
 			return false;
 		}
 
-		ShaderCompilerOptions compilerOpts{};
-		compilerOpts.target = ShaderCompiler::GetTargetForAPI(device->GetAPI());
-		compilerOpts.optimizationLevel = 0; // No optimisation for easier debugging
-		compilerOpts.generateDebugInfo = true;
-
-		m_shaderCompiler = std::make_unique<ShaderCompiler>();
-		if (!m_shaderCompiler->Initialize(compilerOpts))
+		// Try loading cooked shaders from the bundle first
+		if (TryLoadCookedShaders(device))
 		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to initialise Slang shader compiler.");
-			return false;
+			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Loaded cooked shaders from bundle.");
+			goto common_setup;
 		}
 
-		std::vector<ShaderEntryPointRequest> entryPoints = {
-			{.stage = EShaderStage::Vertex, .entryPointName = "vertexMain"},
-			{.stage = EShaderStage::Fragment, .entryPointName = "fragmentMain"},
-		};
+		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Compiling shader from source.");
 
-		ShaderCompilationResult compileResult =
-			m_shaderCompiler->CompileFromSource(FULLSCREEN_SHADER_SOURCE, "fullscreen_texture.slang", entryPoints);
-
-		if (!compileResult.success)
 		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Shader compilation failed.");
-			return false;
+			ShaderCompilerOptions compilerOpts{};
+			compilerOpts.target = ShaderCompiler::GetTargetForAPI(device->GetAPI());
+			compilerOpts.optimizationLevel = 0;
+			compilerOpts.generateDebugInfo = true;
+
+			m_shaderCompiler = std::make_unique<ShaderCompiler>();
+			if (!m_shaderCompiler->Initialize(compilerOpts))
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to initialise Slang shader compiler.");
+				return false;
+			}
+
+			std::vector<ShaderEntryPointRequest> entryPoints = {
+				{.stage = EShaderStage::Vertex, .entryPointName = "vertexMain"},
+				{.stage = EShaderStage::Fragment, .entryPointName = "fragmentMain"},
+			};
+
+			ShaderCompilationResult compileResult =
+				m_shaderCompiler->CompileFromSource(FULLSCREEN_SHADER_SOURCE, "fullscreen_texture.slang", entryPoints);
+
+			if (!compileResult.success)
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Shader compilation failed.");
+				return false;
+			}
+
+			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader compiled successfully.");
+			if (!compileResult.diagnostics.empty())
+			{
+				Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}",
+								compileResult.diagnostics);
+			}
+
+			const auto *vsStage = compileResult.FindStage(EShaderStage::Vertex);
+			const auto *fsStage = compileResult.FindStage(EShaderStage::Fragment);
+
+			if (vsStage == nullptr || fsStage == nullptr)
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error,
+								"[ExampleApp] Missing vertex or fragment stage in compilation result.");
+				return false;
+			}
+
+			m_vertexShader.CreateResource(vsStage->moduleDesc, device);
+			m_fragmentShader.CreateResource(fsStage->moduleDesc, device);
+
+			if (!m_vertexShader.IsValid())
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create vertex shader module.");
+				return false;
+			}
+			if (!m_fragmentShader.IsValid())
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create fragment shader module.");
+				return false;
+			}
 		}
 
-		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader compiled successfully.");
-		if (!compileResult.diagnostics.empty())
-		{
-			Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader diagnostics: {}", compileResult.diagnostics);
-		}
-
-		const auto *vsStage = compileResult.FindStage(EShaderStage::Vertex);
-		const auto *fsStage = compileResult.FindStage(EShaderStage::Fragment);
-
-		if (vsStage == nullptr || fsStage == nullptr)
-		{
-			Hush::LogFormat(Hush::ELogLevel::Error,
-							"[ExampleApp] Missing vertex or fragment stage in compilation result.");
-			return false;
-		}
-
-		m_vertexShader.CreateResource(vsStage->moduleDesc, device);
-		m_fragmentShader.CreateResource(fsStage->moduleDesc, device);
-
-		if (!m_vertexShader.IsValid())
-		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create vertex shader module.");
-			return false;
-		}
-		if (!m_fragmentShader.IsValid())
-		{
-			Hush::LogFormat(Hush::ELogLevel::Error, "[ExampleApp] Failed to create fragment shader module.");
-			return false;
-		}
-
+	common_setup:
 		Hush::LogFormat(Hush::ELogLevel::Info, "[ExampleApp] Shader modules created.");
 
 		m_uniformBuffer.CreateResource(
@@ -277,22 +387,19 @@ private:
 		BindGroupLayoutDescriptor layoutDesc{};
 		layoutDesc.debugName = "ExampleApp_BindGroupLayout";
 		layoutDesc.entries = {
-			// binding 0: Uniform buffer
 			BindGroupLayoutEntry{
 				.binding = 0,
 				.type = EBindingType::UniformBuffer,
 				.stageFlags = EShaderStageFlags::Vertex | EShaderStageFlags::Fragment,
 				.minBufferBindingSize = sizeof(GpuUniforms),
 			},
-			// binding 1: Sampled texture
 			BindGroupLayoutEntry{
 				.binding = 1,
 				.type = EBindingType::SampledTexture,
 				.stageFlags = EShaderStageFlags::Fragment,
 				.textureSampleType = ETextureSampleType::Float,
-				.textureViewDimension = 2, // 2D
+				.textureViewDimension = 2,
 			},
-			// binding 2: Sampler
 			BindGroupLayoutEntry{
 				.binding = 2,
 				.type = EBindingType::Sampler,
@@ -323,13 +430,11 @@ private:
 			.entryPoint = "fragmentMain",
 		};
 
-		// No vertex buffer layouts — we generate vertices in the shader via SV_VertexID
 		pipelineDesc.primitive = PrimitiveState{
 			.topology = EPrimitiveTopology::TriangleList,
 			.cullMode = ECullModeFlags::None,
 		};
 
-		// Single color target matching the render texture format
 		ColorTargetState colorTarget{};
 		colorTarget.format = ETextureFormat::BGRA8_UNORM;
 		colorTarget.blendEnabled = true;
@@ -346,7 +451,6 @@ private:
 		colorTarget.writeMask = EColorWriteMask::All;
 		pipelineDesc.colorTargets.push_back(colorTarget);
 
-		// Bind group layout
 		pipelineDesc.bindGroupLayouts[0] = m_bindGroupLayout.Get();
 		pipelineDesc.bindGroupLayoutCount = 1;
 

@@ -343,3 +343,50 @@ function(add_hush_module)
 
     set(_HUSH_MODULES_LIST ${_HUSH_MODULES_LIST} ${MODULE_MODULE_NAME} PARENT_SCOPE)
 endfunction()
+
+# hush_add_resources — cook assets into a bundle via hush-cooker CLI
+# TARGET: target to attach the dependency to
+# CONTENT_DIR: directory containing source assets (relative to CMAKE_CURRENT_SOURCE_DIR)
+# OUTPUT: output bundle filename (e.g. "game.hushpak")
+# COMPRESSION: "zstd" or "none" (default "zstd")
+function(hush_add_resources)
+    cmake_parse_arguments(RES "" "TARGET;CONTENT_DIR;OUTPUT;COMPRESSION" "" ${ARGN})
+
+    if (NOT RES_COMPRESSION)
+        set(RES_COMPRESSION "zstd")
+    endif()
+
+    file(GLOB_RECURSE RES_SRC CONFIGURE_DEPENDS
+        ${RES_CONTENT_DIR}/*.png ${RES_CONTENT_DIR}/*.jpg ${RES_CONTENT_DIR}/*.jpeg
+        ${RES_CONTENT_DIR}/*.slang ${RES_CONTENT_DIR}/*.hmeta
+    )
+
+    set(_bundle "${CMAKE_CURRENT_BINARY_DIR}/${RES_TARGET}_${RES_OUTPUT}")
+
+    add_custom_command(OUTPUT "${_bundle}"
+        COMMAND $<TARGET_FILE:HushCookerCli> cook
+                --content-dir ${RES_CONTENT_DIR}
+                --out "${_bundle}"
+                --compression ${RES_COMPRESSION}
+        DEPENDS ${RES_SRC} HushCookerCli
+        COMMENT "Hush Cooker: cooking resources for ${RES_TARGET}"
+        VERBATIM
+    )
+
+    add_custom_target(${RES_TARGET}_resources DEPENDS "${_bundle}")
+    add_custom_target(${RES_TARGET}_resources_deploy
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_FILE_DIR:${RES_TARGET}>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${_bundle}"
+                "$<TARGET_FILE_DIR:${RES_TARGET}>/${RES_OUTPUT}"
+        DEPENDS ${RES_TARGET}_resources
+        COMMENT "Hush Cooker: deploying ${RES_OUTPUT} for ${RES_TARGET}"
+        VERBATIM
+    )
+    add_dependencies(${RES_TARGET} ${RES_TARGET}_resources_deploy)
+
+    if(EMSCRIPTEN)
+        target_link_options(${RES_TARGET} PRIVATE "--embed-file" "${_bundle}@${RES_OUTPUT}")
+    endif()
+endfunction()
