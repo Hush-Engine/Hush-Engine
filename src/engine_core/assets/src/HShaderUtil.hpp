@@ -2,10 +2,7 @@
 
 #include "HShader.hpp"
 #include "RHI/IShaderModule.hpp"
-#include <algorithm>
-#include <cctype>
 #include <cstddef>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -14,7 +11,7 @@ namespace Hush
 
 	/// Helper: convert an HShader blob (WGSL backend) to ShaderModuleDescriptors
 	/// that can be passed to IGraphicsDevice::CreateShaderModule().
-	/// Returns descriptors for all stages found in the WGSL backend.
+	/// Returns one descriptor per stage, each with its own sliced WGSL module.
 	inline std::vector<Graphics::ShaderModuleDescriptor> HShaderToModuleDescriptors(const HShader &shader)
 	{
 		std::vector<Graphics::ShaderModuleDescriptor> descriptors;
@@ -31,25 +28,21 @@ namespace Hush
 			if (bd.bytecode.empty())
 				continue;
 
-			// Convert the raw bytecode to WGSL text
-			std::string wgslText(reinterpret_cast<const char *>(bd.bytecode.data()), bd.bytecode.size());
-
-			for (size_t s = 0; s < bd.entryNames.size(); ++s)
+			for (const auto &stage : bd.stages)
 			{
-				Graphics::ShaderModuleDescriptor desc;
-				// Infer stage from entry name
-				auto lower = bd.entryNames[s];
-				std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-				if (lower.find("vertex") != std::string::npos)
-					desc.stage = Graphics::EShaderStage::Vertex;
-				else if (lower.find("fragment") != std::string::npos || lower.find("pixel") != std::string::npos)
-					desc.stage = Graphics::EShaderStage::Fragment;
-				else if (lower.find("compute") != std::string::npos)
-					desc.stage = Graphics::EShaderStage::Compute;
+				// Slice this stage's WGSL module out of the backend blob, guarding
+				// against malformed ranges.
+				if (stage.codeOffset > bd.bytecode.size() || stage.codeSize > bd.bytecode.size() - stage.codeOffset)
+					continue;
 
-				desc.entryPoint = bd.entryNames[s];
-				desc.bytecode.content = Graphics::ShaderBytecode::TextContent{wgslText};
-				desc.debugName = bd.entryNames[s];
+				std::string wgslText(reinterpret_cast<const char *>(bd.bytecode.data() + stage.codeOffset),
+									 static_cast<size_t>(stage.codeSize));
+
+				Graphics::ShaderModuleDescriptor desc;
+				desc.stage = static_cast<Graphics::EShaderStage>(stage.stage);
+				desc.entryPoint = stage.entryName;
+				desc.bytecode.content = Graphics::ShaderBytecode::TextContent{std::move(wgslText)};
+				desc.debugName = stage.entryName;
 
 				descriptors.push_back(std::move(desc));
 			}

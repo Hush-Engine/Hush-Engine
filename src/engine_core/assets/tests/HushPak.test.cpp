@@ -117,6 +117,30 @@ TEST_CASE("HushPak round-trip", "[hushpak]")
 		REQUIRE_FALSE(HushPak::Read(buffer).has_value());
 	}
 
+	SECTION("Directory beyond declared totalSize returns nullopt")
+	{
+		HAsset dummy;
+		dummy.header.uncompressedSize = 1;
+		dummy.header.compressedSize = 1;
+		dummy.payload = {std::byte{0x00}};
+
+		std::vector<std::byte> blob;
+		HAsset::Write(blob, dummy);
+
+		std::vector<PakInput> inputs;
+		inputs.push_back({"textures/stone.png", blob});
+
+		std::vector<std::byte> pakBuffer;
+		HushPak::Build(pakBuffer, inputs);
+
+		// Shrink the declared container so the directory lands past it, while the
+		// physical buffer still holds it.
+		const uint64_t shrunk = sizeof(HushPakHeader);
+		std::memcpy(pakBuffer.data() + offsetof(HushPakHeader, totalSize), &shrunk, sizeof(shrunk));
+
+		REQUIRE_FALSE(HushPak::Read(pakBuffer).has_value());
+	}
+
 	SECTION("EntryData returns empty span on overflowing offsets")
 	{
 		HAsset dummy;

@@ -216,8 +216,22 @@ namespace Hush
 
 			const std::filesystem::path cookedPath = cookedDir / (std::to_string(meta.id) + ".hasset");
 			std::ofstream outFile(cookedPath, std::ios::binary);
+			if (!outFile)
+			{
+				LogFormat(ELogLevel::Error, "AssetCooker: cannot open cooked output {}", cookedPath.string());
+				return ECookError::WriteFailed;
+			}
 			outFile.write(reinterpret_cast<const char *>(blob.value().data()),
 						  static_cast<std::streamsize>(blob.value().size()));
+			if (!outFile)
+			{
+				// Don't leave a truncated .hasset behind for the pak builder to pick up.
+				outFile.close();
+				std::error_code removeEc;
+				std::filesystem::remove(cookedPath, removeEc);
+				LogFormat(ELogLevel::Error, "AssetCooker: failed to write cooked output {}", cookedPath.string());
+				return ECookError::WriteFailed;
+			}
 		}
 
 		return Success();

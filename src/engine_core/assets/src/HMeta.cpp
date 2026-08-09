@@ -60,7 +60,22 @@ namespace Hush
 		writer.Key("entryPoints");
 		writer.StartArray();
 		for (const auto &ep : this->shader.entryPoints)
-			writer.String(ep.c_str());
+		{
+			if (ep.stage.empty())
+			{
+				// Name-only form (stage inferred downstream).
+				writer.String(ep.name.c_str());
+			}
+			else
+			{
+				writer.StartObject();
+				writer.Key("name");
+				writer.String(ep.name.c_str());
+				writer.Key("stage");
+				writer.String(ep.stage.c_str());
+				writer.EndObject();
+			}
+		}
 		writer.EndArray();
 
 		writer.Key("defines");
@@ -160,7 +175,20 @@ namespace Hush
 				for (auto &v : settings["entryPoints"].GetArray())
 				{
 					if (v.IsString())
-						meta.shader.entryPoints.push_back(v.GetString());
+					{
+						// Name-only form: stage inferred downstream.
+						meta.shader.entryPoints.push_back(HMeta::ShaderEntryPoint{.name = v.GetString(), .stage = {}});
+					}
+					else if (v.IsObject())
+					{
+						HMeta::ShaderEntryPoint ep;
+						if (v.HasMember("name") && v["name"].IsString())
+							ep.name = v["name"].GetString();
+						if (v.HasMember("stage") && v["stage"].IsString())
+							ep.stage = v["stage"].GetString();
+						if (!ep.name.empty())
+							meta.shader.entryPoints.push_back(std::move(ep));
+					}
 				}
 			}
 			if (settings.HasMember("defines") && settings["defines"].IsArray())
@@ -178,7 +206,7 @@ namespace Hush
 				meta.model.importMaterials = settings["importMaterials"].GetBool();
 			if (settings.HasMember("generateLods") && settings["generateLods"].IsBool())
 				meta.model.generateLods = settings["generateLods"].GetBool();
-			if (settings.HasMember("scaleFactor") && settings["scaleFactor"].IsDouble())
+			if (settings.HasMember("scaleFactor") && settings["scaleFactor"].IsNumber())
 				meta.model.scaleFactor = static_cast<float>(settings["scaleFactor"].GetDouble());
 		}
 

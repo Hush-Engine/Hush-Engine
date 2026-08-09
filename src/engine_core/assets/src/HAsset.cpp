@@ -40,8 +40,13 @@ namespace Hush
 			return std::nullopt;
 		}
 
-		const size_t totalMin = sizeof(HAssetHeader) + header.extraSize + header.compressedSize;
-		if (data.size() < totalMin)
+		// Subtraction-based checks: header fields are untrusted, so avoid addition overflow.
+		const size_t payloadRegion = data.size() - sizeof(HAssetHeader);
+		if (header.extraSize > payloadRegion)
+		{
+			return std::nullopt;
+		}
+		if (header.compressedSize > payloadRegion - header.extraSize)
 		{
 			return std::nullopt;
 		}

@@ -129,10 +129,13 @@ namespace Hush
 			return std::nullopt;
 		}
 
-		if (data.size() < hdr.totalSize)
+		// Enforce the declared container size: trailing bytes past totalSize are not
+		// part of this pak and must not be reachable through internal offsets.
+		if (hdr.totalSize < sizeof(HushPakHeader) || data.size() < hdr.totalSize)
 		{
 			return std::nullopt;
 		}
+		data = data.first(static_cast<size_t>(hdr.totalSize));
 
 		HushPak pak;
 		pak.header = hdr;

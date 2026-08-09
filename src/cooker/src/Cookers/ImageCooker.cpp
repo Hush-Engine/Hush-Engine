@@ -1,8 +1,10 @@
 #include "ImageCooker.hpp"
 #include "HAsset.hpp"
+#include "RHI/GraphicsTypes.hpp"
 #include "crypto/Hashing.hpp"
 #include "Logger.hpp"
 #include <cstring>
+#include <optional>
 #include <vector>
 
 #include <stb/stb_image.h>
@@ -86,9 +88,11 @@ namespace Hush
 	}
 
 	/// Encode RGBA8 pixels to BCn format (if bc7enc is available).
-	/// Returns the input data unchanged if bc7enc is not available.
-	static std::vector<std::byte> EncodeBCn(std::span<const std::byte> rgba, int w, int h,
-											const std::string &gpuCompression)
+	/// Returns std::nullopt when the encoder is unavailable or the format is
+	/// unsupported, so the caller can fall back to the raw RGBA8 payload instead
+	/// of mislabeling it as BCn.
+	static std::optional<std::vector<std::byte>> EncodeBCn(std::span<const std::byte> rgba, int w, int h,
+														   const std::string &gpuCompression)
 	{
 #if defined(HUSH_HAS_BC7ENC)
 		(void)w;
@@ -121,7 +125,7 @@ namespace Hush
 		else if (gpuCompression == "BC7")
 			fmt = BCNFormat::BC7;
 		else
-			return std::vector<std::byte>(rgba.begin(), rgba.end()); // unsupported, pass through
+			return std::nullopt; // unsupported format string
 
 		// Determine block size
 		const size_t numBlocks = (static_cast<size_t>(w + 3) / 4) * (static_cast<size_t>(h + 3) / 4);
@@ -189,10 +193,11 @@ namespace Hush
 
 		return result;
 #else
+		(void)rgba;
 		(void)w;
 		(void)h;
 		(void)gpuCompression;
-		return std::vector<std::byte>(rgba.begin(), rgba.end());
+		return std::nullopt;
 #endif
 	}
 
@@ -232,23 +237,36 @@ namespace Hush
 			mipData = std::move(pixels);
 		}
 
-		// Apply BCn compression (if requested and available)
+		// Apply BCn compression (if requested and available). The payload stays RGBA8
+		// unless the encoder actually ran, so finalFormat/gpuFormat never mislabel it.
 		std::vector<std::byte> finalData;
-		EAssetFormat finalFormat = meta.outputFormat;
+		EAssetFormat finalFormat = EAssetFormat::RGBA8_UNORM;
 
 		if (meta.texture.gpuCompression != "none")
 		{
-			finalData = EncodeBCn(mipData, width, height, meta.texture.gpuCompression);
+			auto encoded = EncodeBCn(mipData, width, height, meta.texture.gpuCompression);
+			if (encoded.has_value())
+			{
+				finalData = std::move(encoded.value());
 
-			// Map compression string to format enum
-			if (meta.texture.gpuCompression == "BC1")
-				finalFormat = EAssetFormat::DXT1;
-			else if (meta.texture.gpuCompression == "BC3")
-				finalFormat = EAssetFormat::DXT5;
-			else if (meta.texture.gpuCompression == "BC5")
-				finalFormat = EAssetFormat::BC5;
-			else if (meta.texture.gpuCompression == "BC7")
-				finalFormat = EAssetFormat::BC7;
+				// Map compression string to format enum
+				if (meta.texture.gpuCompression == "BC1")
+					finalFormat = EAssetFormat::DXT1;
+				else if (meta.texture.gpuCompression == "BC3")
+					finalFormat = EAssetFormat::DXT5;
+				else if (meta.texture.gpuCompression == "BC5")
+					finalFormat = EAssetFormat::BC5;
+				else if (meta.texture.gpuCompression == "BC7")
+					finalFormat = EAssetFormat::BC7;
+			}
+			else
+			{
+				LogFormat(ELogLevel::Warn,
+						  "ImageCooker: GPU compression '{}' requested for {} but BCn encoding is unavailable; "
+						  "storing raw RGBA8",
+						  meta.texture.gpuCompression, ctx.sourceVPath);
+				finalData = std::move(mipData);
+			}
 		}
 		else
 		{
@@ -262,25 +280,37 @@ namespace Hush
 		texExtra.depth = 1;
 		texExtra.mipCount = mipCount;
 
+		// Store the real Graphics::ETextureFormat value (documented on the field) so
+		// runtime loaders upload with the correct GPU format. BC5 is a two-channel
+		// normal-map style format and has no sRGB variant.
+		const bool sRGB = meta.texture.sRGB;
 		switch (finalFormat)
 		{
 		case EAssetFormat::RGBA8_UNORM:
-			texExtra.gpuFormat = 1;
+			texExtra.gpuFormat =
+				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::RGBA8_SRGB : Graphics::ETextureFormat::RGBA8_UNORM);
 			break;
 		case EAssetFormat::BGRA8_UNORM:
-			texExtra.gpuFormat = 2;
+			texExtra.gpuFormat =
+				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BGRA8_SRGB : Graphics::ETextureFormat::BGRA8_UNORM);
 			break;
 		case EAssetFormat::DXT1:
-			texExtra.gpuFormat = 3;
+			texExtra.gpuFormat =
+				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BC1_SRGB : Graphics::ETextureFormat::BC1_UNORM);
 			break;
 		case EAssetFormat::DXT5:
-			texExtra.gpuFormat = 4;
+			texExtra.gpuFormat =
+				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BC3_SRGB : Graphics::ETextureFormat::BC3_UNORM);
+			break;
+		case EAssetFormat::BC5:
+			texExtra.gpuFormat = static_cast<uint32_t>(Graphics::ETextureFormat::BC5_UNORM);
 			break;
 		case EAssetFormat::BC7:
-			texExtra.gpuFormat = 5;
+			texExtra.gpuFormat =
+				static_cast<uint32_t>(sRGB ? Graphics::ETextureFormat::BC7_SRGB : Graphics::ETextureFormat::BC7_UNORM);
 			break;
 		default:
-			texExtra.gpuFormat = 1;
+			texExtra.gpuFormat = static_cast<uint32_t>(Graphics::ETextureFormat::RGBA8_UNORM);
 			break;
 		}
 

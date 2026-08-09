@@ -51,10 +51,12 @@ target_compile_definitions(HushEditor PRIVATE
 
 # thomasmonkman-filewatch (header-only, no CMake config)
 find_path(FILEWATCH_INCLUDE_DIR "thomasmonkman-filewatch/FileWatch.hpp")
-if(FILEWATCH_INCLUDE_DIR)
-    target_include_directories(HushEditor PRIVATE ${FILEWATCH_INCLUDE_DIR})
-    message(STATUS "Found filewatch: ${FILEWATCH_INCLUDE_DIR}")
+if(NOT FILEWATCH_INCLUDE_DIR)
+    message(FATAL_ERROR "filewatch headers not found (thomasmonkman-filewatch/FileWatch.hpp). "
+                        "Install the thomasmonkman-filewatch package (e.g. via vcpkg) and re-run CMake.")
 endif()
+target_include_directories(HushEditor PRIVATE ${FILEWATCH_INCLUDE_DIR})
+message(STATUS "Found filewatch: ${FILEWATCH_INCLUDE_DIR}")
 
 target_link_libraries(HushEditor PRIVATE Hush::Engine Hush::Cooker imgui imguizmo)
 

@@ -33,10 +33,17 @@ namespace Hush
 		};
 		TextureSettings texture;
 
+		struct ShaderEntryPoint
+		{
+			std::string name;
+			/// "vertex" | "fragment" | "compute". Empty means: infer from the name.
+			std::string stage;
+		};
+
 		struct ShaderSettings
 		{
 			std::vector<EShaderBackend> backends = {EShaderBackend::WebGPU_WGSL};
-			std::vector<std::string> entryPoints;
+			std::vector<ShaderEntryPoint> entryPoints;
 			std::vector<std::string> defines;
 		};
 		ShaderSettings shader;

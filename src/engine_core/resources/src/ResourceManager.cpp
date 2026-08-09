@@ -193,39 +193,108 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 				return EError::InvalidData;
 			}
 
+			// Read texture extra first — cooked textures must carry it; guessing
+			// dimensions from the payload size would silently corrupt.
+			if (asset->extra.size() < sizeof(HTextureExtra))
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} is missing HTextureExtra",
+								path);
+				return EError::InvalidData;
+			}
+
+			HTextureExtra texExtra;
+			std::memcpy(&texExtra, asset->extra.data(), sizeof(HTextureExtra));
+
+			// Untrusted dims: bound them so derived sizes (and allocations) stay sane.
+			constexpr uint32_t kMaxTextureDimension = 16384;
+			if (texExtra.width == 0 || texExtra.height == 0 || texExtra.depth == 0 ||
+				texExtra.width > kMaxTextureDimension || texExtra.height > kMaxTextureDimension ||
+				texExtra.depth > kMaxTextureDimension)
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has invalid dimensions",
+								path);
+				return EError::InvalidData;
+			}
+
+			auto gpuFormat = magic_enum::enum_cast<Graphics::ETextureFormat>(texExtra.gpuFormat);
+			if (!gpuFormat.has_value())
+			{
+				Hush::LogFormat(ELogLevel::Error, "ResourceManager: cooked texture at {} has unknown GPU format {}",
+								path, texExtra.gpuFormat);
+				return EError::InvalidData;
+			}
+			format = gpuFormat.value();
+			width = static_cast<int>(texExtra.width);
+			height = static_cast<int>(texExtra.height);
+			depth = static_cast<int>(texExtra.depth);
+
+			// The upload path currently supports single-level textures only.
+			if (texExtra.mipCount != 1)
+			{
+				Hush::LogFormat(ELogLevel::Error,
+								"ResourceManager: cooked texture at {} has {} mip levels, only 1 is supported", path,
+								texExtra.mipCount);
+				return EError::InvalidData;
+			}
+
+			// Expected payload size derived from the metadata, NOT from header sizes:
+			// this is what keeps a corrupted header from forcing a huge allocation.
+			uint64_t expectedSize;
+			if (format == Graphics::ETextureFormat::BC1_UNORM || format == Graphics::ETextureFormat::BC1_SRGB ||
+				format == Graphics::ETextureFormat::BC3_UNORM || format == Graphics::ETextureFormat::BC3_SRGB ||
+				format == Graphics::ETextureFormat::BC4_UNORM || format == Graphics::ETextureFormat::BC5_UNORM ||
+				format == Graphics::ETextureFormat::BC7_UNORM || format == Graphics::ETextureFormat::BC7_SRGB)
+			{
+				// 4x4 blocks; GetBytesPerPixel returns the block size for BC formats.
+				const uint64_t blocks = (static_cast<uint64_t>(texExtra.width) + 3) / 4 *
+										((static_cast<uint64_t>(texExtra.height) + 3) / 4);
+				expectedSize = blocks * texExtra.depth * Graphics::GetBytesPerPixel(format);
+			}
+			else
+			{
+				expectedSize = static_cast<uint64_t>(texExtra.width) * texExtra.height * texExtra.depth *
+							   Graphics::GetBytesPerPixel(format);
+			}
+
 			auto &header = asset->header;
 			if (header.compression == ECompressionFormat::Zstd)
 			{
-				decodedPixels.resize(header.uncompressedSize);
-				size_t result = ZSTD_decompress(decodedPixels.data(), header.uncompressedSize, asset->payload.data(),
-												asset->payload.size());
+				if (header.uncompressedSize != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: HAsset at {} declares a decompressed size that does not match "
+									"its texture metadata",
+									path);
+					return EError::InvalidData;
+				}
+
+				decodedPixels.resize(static_cast<size_t>(expectedSize));
+				size_t result = ZSTD_decompress(decodedPixels.data(), static_cast<size_t>(expectedSize),
+												asset->payload.data(), asset->payload.size());
 				if (ZSTD_isError(result) != 0)
 				{
 					Hush::LogFormat(ELogLevel::Error, "ResourceManager: ZSTD decompress failed at {}: {}", path,
 									ZSTD_getErrorName(result));
 					return EError::LoadFailed;
 				}
+				if (result != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error, "ResourceManager: truncated ZSTD payload at {} (expected {} "
+													  "bytes, got {})",
+									path, expectedSize, result);
+					return EError::InvalidData;
+				}
 			}
 			else
 			{
+				if (asset->payload.size() != expectedSize)
+				{
+					Hush::LogFormat(ELogLevel::Error,
+									"ResourceManager: cooked texture at {} payload size does not match its metadata",
+									path);
+					return EError::InvalidData;
+				}
 				decodedPixels = std::move(asset->payload);
-			}
-
-			// Read texture extra for dimensions
-			if (asset->extra.size() >= sizeof(HTextureExtra))
-			{
-				HTextureExtra texExtra;
-				std::memcpy(&texExtra, asset->extra.data(), sizeof(HTextureExtra));
-				width = static_cast<int>(texExtra.width);
-				height = static_cast<int>(texExtra.height);
-				depth = static_cast<int>(texExtra.depth);
-			}
-			else
-			{
-				// Fallback: infer from data size (RGBA8)
-				const size_t px = decodedPixels.size() / 4;
-				width = static_cast<int>(std::sqrt(px));
-				height = width;
 			}
 		}
 	}

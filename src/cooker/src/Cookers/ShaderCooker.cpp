@@ -126,16 +126,47 @@ namespace Hush
 			// Use entry points from HMeta
 			for (const auto &ep : meta.shader.entryPoints)
 			{
-				// Infer stage from common naming conventions
 				Graphics::EShaderStage stage = Graphics::EShaderStage::Vertex;
-				std::string lower = ep;
-				std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-				if (lower.find("fragment") != std::string::npos || lower.find("pixel") != std::string::npos)
-					stage = Graphics::EShaderStage::Fragment;
-				else if (lower.find("compute") != std::string::npos)
-					stage = Graphics::EShaderStage::Compute;
 
-				entryPoints.push_back({.stage = stage, .entryPointName = ep});
+				std::string lower = ep.stage.empty() ? ep.name : ep.stage;
+				std::transform(lower.begin(), lower.end(), lower.begin(),
+							   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
+				if (!ep.stage.empty())
+				{
+					// Explicit stage from meta — unknown values are a config error.
+					if (lower == "vertex")
+					{
+						stage = Graphics::EShaderStage::Vertex;
+					}
+					else if (lower == "fragment" || lower == "pixel")
+					{
+						stage = Graphics::EShaderStage::Fragment;
+					}
+					else if (lower == "compute")
+					{
+						stage = Graphics::EShaderStage::Compute;
+					}
+					else
+					{
+						LogFormat(ELogLevel::Error, "ShaderCooker: unknown stage '{}' for entry point '{}' in {}",
+								  ep.stage, ep.name, ctx.sourceVPath);
+						return ECookError::InvalidMeta;
+					}
+				}
+				else
+				{
+					// Infer stage from common naming conventions
+					if (lower.find("fragment") != std::string::npos || lower.find("pixel") != std::string::npos)
+					{
+						stage = Graphics::EShaderStage::Fragment;
+					}
+					else if (lower.find("compute") != std::string::npos)
+					{
+						stage = Graphics::EShaderStage::Compute;
+					}
+				}
+				entryPoints.push_back({.stage = stage, .entryPointName = ep.name});
 			}
 		}
 		else
@@ -196,7 +227,8 @@ namespace Hush
 		shader.header.magic = HSHADER_MAGIC;
 		shader.header.version = HSHADER_VERSION;
 
-		// Collect WGSL backend data
+		// Collect WGSL backend data, recording each stage's code range so the
+		// serialized HShader can recover per-stage modules.
 		HShader::BackendData backendData;
 
 		for (const auto &stage : compileResult.stages)
@@ -223,13 +255,19 @@ namespace Hush
 				continue;
 			}
 
-			backendData.entryNames.push_back(stage.entryPoint);
+			HShader::StageData stageData;
+			stageData.stage = static_cast<uint32_t>(stage.stage);
+			stageData.entryName = stage.entryPoint;
+			stageData.codeOffset = backendData.bytecode.size();
+			stageData.codeSize = wgslCode.size();
+			backendData.stages.push_back(std::move(stageData));
+
 			backendData.bytecode.insert(backendData.bytecode.end(),
 										reinterpret_cast<const std::byte *>(wgslCode.data()),
 										reinterpret_cast<const std::byte *>(wgslCode.data() + wgslCode.size()));
 		}
 
-		if (backendData.entryNames.empty())
+		if (backendData.stages.empty())
 		{
 			LogFormat(ELogLevel::Error, "ShaderCooker: no usable bytecode for {}", ctx.sourceVPath);
 			return ECookError::DecodeFailed;
@@ -237,7 +275,7 @@ namespace Hush
 
 		BackendEntry be{};
 		be.backendType = EShaderBackend::WebGPU_WGSL;
-		be.stageCount = static_cast<uint32_t>(backendData.entryNames.size());
+		be.stageCount = static_cast<uint32_t>(backendData.stages.size());
 
 		shader.backends.push_back(be);
 		shader.backendData.push_back(std::move(backendData));

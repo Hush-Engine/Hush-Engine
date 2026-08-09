@@ -291,6 +291,10 @@ namespace Hush
 
 	Result<std::size_t, IFile::EError> PakFile::Read(std::span<std::byte> data)
 	{
+		if (m_position >= m_data.size())
+		{
+			return static_cast<std::size_t>(0);
+		}
 		const size_t toRead = std::min(data.size(), m_data.size() - m_position);
 		std::memcpy(data.data(), m_data.data() + m_position, toRead);
 		m_position += toRead;
@@ -299,6 +303,10 @@ namespace Hush
 
 	Result<std::span<std::byte>, IFile::EError> PakFile::Read(std::size_t size)
 	{
+		if (m_position >= m_data.size())
+		{
+			return std::span<std::byte>{};
+		}
 		if (m_position + size > m_data.size())
 		{
 			size = m_data.size() - m_position;

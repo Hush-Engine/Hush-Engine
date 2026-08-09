@@ -18,6 +18,7 @@ namespace Hush
 		CompressFailed,
 		InvalidMeta,
 		FileNotFound,
+		WriteFailed,
 		Unknown,
 	};
 

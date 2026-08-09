@@ -1,5 +1,6 @@
 #include "ContentPanel.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/GpuUploadComponent.hpp"
 #include "Entity.hpp"
 #include "IFile.hpp"
 #include "Query.hpp"
@@ -100,8 +101,10 @@ Hush::TextureComponent *Hush::ContentPanel::ResolveThumbnail(const std::string &
 		// Attach the Ref to a lightweight, unnamed entity (no transform/name, so it stays
 		// out of the hierarchy and is never rendered). Adding a Ref<TextureComponent> is
 		// what triggers the ResourceUploadSystem's observer to schedule the GPU upload.
+		// The holder is tracked and destroyed once the upload completes.
 		Entity holder = this->m_scene->CreateEntity();
 		holder.EmplaceComponent<Ref<TextureComponent>>(texture);
+		this->m_thumbnailHolders.emplace(vpath, std::move(holder));
 
 		it = this->m_thumbnailCache.emplace(vpath, std::move(texture)).first;
 	}
@@ -116,6 +119,17 @@ Hush::TextureComponent *Hush::ContentPanel::ResolveThumbnail(const std::string &
 	if (component == nullptr || component->GetGpuTexture() == nullptr)
 	{
 		return nullptr;
+	}
+
+	// Upload completed: the holder entity has served its purpose. Wait until the
+	// ResourceUploadSystem has also removed GpuUploadComponent (OnPostRender) so we
+	// never destroy an entity the upload system still references this frame.
+	auto holderIt = this->m_thumbnailHolders.find(vpath);
+	if (holderIt != this->m_thumbnailHolders.end() &&
+		!holderIt->second.HasComponent<Renderer::GpuUploadComponent>())
+	{
+		this->m_scene->DestroyEntity(holderIt->second);
+		this->m_thumbnailHolders.erase(holderIt);
 	}
 	return component;
 }

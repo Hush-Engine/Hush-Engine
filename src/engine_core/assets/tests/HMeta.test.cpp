@@ -68,8 +68,50 @@ TEST_CASE("HMeta JSON round-trip", "[hmeta]")
 		REQUIRE(meta.shader.backends.size() == 1);
 		REQUIRE(meta.shader.backends[0] == EShaderBackend::WebGPU_WGSL);
 		REQUIRE(meta.shader.entryPoints.size() == 1);
-		REQUIRE(meta.shader.entryPoints[0] == "main");
+		REQUIRE(meta.shader.entryPoints[0].name == "main");
+		REQUIRE(meta.shader.entryPoints[0].stage.empty());
 		REQUIRE(meta.texture.sRGB == true); // default
+	}
+
+	SECTION("Entry points with explicit stages round-trip")
+	{
+		HMeta meta;
+		meta.assetType = "shader";
+		meta.outputFormat = EAssetFormat::Shader;
+		meta.shader.entryPoints.push_back(HMeta::ShaderEntryPoint{.name = "vsMain", .stage = "vertex"});
+		meta.shader.entryPoints.push_back(HMeta::ShaderEntryPoint{.name = "fsMain", .stage = "fragment"});
+		meta.shader.entryPoints.push_back(HMeta::ShaderEntryPoint{.name = "main", .stage = {}});
+
+		auto jsonResult = meta.ToJson();
+		REQUIRE(jsonResult.has_value());
+
+		auto readResult = HMeta::FromJson(jsonResult.value());
+		REQUIRE(readResult.has_value());
+
+		auto &readBack = readResult.value();
+		REQUIRE(readBack.shader.entryPoints.size() == 3);
+		REQUIRE(readBack.shader.entryPoints[0].name == "vsMain");
+		REQUIRE(readBack.shader.entryPoints[0].stage == "vertex");
+		REQUIRE(readBack.shader.entryPoints[1].name == "fsMain");
+		REQUIRE(readBack.shader.entryPoints[1].stage == "fragment");
+		REQUIRE(readBack.shader.entryPoints[2].name == "main");
+		REQUIRE(readBack.shader.entryPoints[2].stage.empty());
+	}
+
+	SECTION("Integral scaleFactor is accepted")
+	{
+		std::string_view json = R"({
+			"version": 1,
+			"id": 7,
+			"assetType": "model",
+			"importSettings": {
+				"scaleFactor": 2
+			}
+		})";
+
+		auto result = HMeta::FromJson(json);
+		REQUIRE(result.has_value());
+		REQUIRE(result.value().model.scaleFactor == 2.0f);
 	}
 
 	SECTION("Invalid JSON returns error")

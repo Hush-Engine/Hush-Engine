@@ -67,5 +67,11 @@ namespace Hush
 		/// Image-asset thumbnails, keyed by virtual path. A null Ref caches a failed load
 		/// so it isn't retried every frame. The backing Ref keeps the texture alive.
 		std::unordered_map<std::string, Ref<TextureComponent>> m_thumbnailCache;
+
+		/// Holder entities that carry each thumbnail's Ref<TextureComponent> so the
+		/// ResourceUploadSystem observer picks them up for GPU upload. Each holder is
+		/// destroyed once its upload completes, so the scene doesn't accumulate one
+		/// entity per displayed thumbnail.
+		std::unordered_map<std::string, Entity> m_thumbnailHolders;
 	};
 } // namespace Hush

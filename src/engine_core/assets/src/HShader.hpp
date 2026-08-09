@@ -49,10 +49,21 @@ namespace Hush
 		HShaderHeader header;
 		std::vector<BackendEntry> backends;
 
+		/// Per-stage metadata within a backend. Stage is the raw Graphics::EShaderStage
+		/// value (stored as uint32 so HushAssets stays renderer-agnostic). Offsets are
+		/// relative to the owning backend's bytecode blob.
+		struct StageData
+		{
+			uint32_t stage = 0; // Graphics::EShaderStage value
+			std::string entryName;
+			uint64_t codeOffset = 0; // into the owning BackendData::bytecode
+			uint64_t codeSize = 0;
+		};
+
 		// Per-backend stage data
 		struct BackendData
 		{
-			std::vector<std::string> entryNames;
+			std::vector<StageData> stages;
 			std::vector<std::byte> bytecode;
 		};
 		std::vector<BackendData> backendData;

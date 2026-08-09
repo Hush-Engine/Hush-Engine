@@ -31,13 +31,13 @@ namespace Hush
 			stageMetaOffsets[b] = currentStageMetaOffset;
 			const auto &bd = shader.backendData[b];
 
-			for (size_t s = 0; s < bd.entryNames.size(); ++s)
+			for (const auto &stage : bd.stages)
 			{
 				StageEntry stageEntry{};
-				stageEntry.stage = 0; // caller should set this
-				stageEntry.entryNameLen = static_cast<uint32_t>(bd.entryNames[s].size());
-				stageEntry.codeOffset = currentCodeOffset;
-				stageEntry.codeSize = static_cast<uint64_t>(bd.bytecode.size());
+				stageEntry.stage = stage.stage;
+				stageEntry.entryNameLen = static_cast<uint32_t>(stage.entryName.size());
+				stageEntry.codeOffset = stage.codeOffset; // relative to this backend's data block
+				stageEntry.codeSize = stage.codeSize;
 
 				// Write stage entry header
 				stageMeta.insert(stageMeta.end(), reinterpret_cast<const std::byte *>(&stageEntry),
@@ -45,14 +45,14 @@ namespace Hush
 
 				// Write entry name
 				stageMeta.insert(
-					stageMeta.end(), reinterpret_cast<const std::byte *>(bd.entryNames[s].data()),
-					reinterpret_cast<const std::byte *>(bd.entryNames[s].data() + bd.entryNames[s].size()));
+					stageMeta.end(), reinterpret_cast<const std::byte *>(stage.entryName.data()),
+					reinterpret_cast<const std::byte *>(stage.entryName.data() + stage.entryName.size()));
 
 				// Pad to 8 bytes after entry name
-				const size_t pad = (8 - (sizeof(StageEntry) + bd.entryNames[s].size()) % 8) % 8;
+				const size_t pad = (8 - (sizeof(StageEntry) + stage.entryName.size()) % 8) % 8;
 				stageMeta.insert(stageMeta.end(), pad, std::byte{0});
 
-				currentStageMetaOffset += sizeof(StageEntry) + bd.entryNames[s].size() + pad;
+				currentStageMetaOffset += sizeof(StageEntry) + stage.entryName.size() + pad;
 			}
 
 			backendDataOffsets[b] = currentCodeOffset;
@@ -112,10 +112,13 @@ namespace Hush
 			return std::nullopt;
 		}
 
-		if (data.size() < hdr.totalSize)
+		// Enforce the declared container size: trailing bytes past totalSize are not
+		// part of this shader and must not be reachable through internal offsets.
+		if (hdr.totalSize < sizeof(HShaderHeader) || data.size() < hdr.totalSize)
 		{
 			return std::nullopt;
 		}
+		data = data.first(hdr.totalSize);
 
 		HShader shader;
 		shader.header = hdr;
@@ -162,15 +165,27 @@ namespace Hush
 				std::memcpy(&stageEntry, data.data() + cursor, sizeof(StageEntry));
 				cursor += sizeof(StageEntry);
 
+				// Per-stage code ranges must stay within this backend's data block.
+				if (stageEntry.codeOffset > be.dataSize || stageEntry.codeSize > be.dataSize - stageEntry.codeOffset)
+				{
+					return std::nullopt;
+				}
+
 				// Read entry name
 				if (cursor + stageEntry.entryNameLen > data.size())
 				{
 					return std::nullopt;
 				}
-				std::string entryName(reinterpret_cast<const char *>(data.data() + cursor), stageEntry.entryNameLen);
+
+				HShader::StageData stageData;
+				stageData.stage = stageEntry.stage;
+				stageData.entryName =
+					std::string(reinterpret_cast<const char *>(data.data() + cursor), stageEntry.entryNameLen);
+				stageData.codeOffset = stageEntry.codeOffset;
+				stageData.codeSize = stageEntry.codeSize;
 				cursor += stageEntry.entryNameLen;
 
-				bd.entryNames.push_back(std::move(entryName));
+				bd.stages.push_back(std::move(stageData));
 
 				// Padding
 				const size_t pad = (8 - (sizeof(StageEntry) + stageEntry.entryNameLen) % 8) % 8;
@@ -208,10 +223,10 @@ namespace Hush
 		size_t size = sizeof(HShaderHeader) + backends.size() * sizeof(BackendEntry);
 		for (const auto &bd : backendData)
 		{
-			for (const auto &name : bd.entryNames)
+			for (const auto &stage : bd.stages)
 			{
-				size += sizeof(StageEntry) + name.size();
-				const size_t pad = (8 - (sizeof(StageEntry) + name.size()) % 8) % 8;
+				size += sizeof(StageEntry) + stage.entryName.size();
+				const size_t pad = (8 - (sizeof(StageEntry) + stage.entryName.size()) % 8) % 8;
 				size += pad;
 			}
 			size += bd.bytecode.size();
