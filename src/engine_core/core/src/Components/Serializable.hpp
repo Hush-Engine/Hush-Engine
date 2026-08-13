@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Entity.hpp"
+#include "serialization/Deserialization.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include <cstdint>
 #include <span>
@@ -20,7 +21,7 @@ namespace Hush
 		};
 
 		EError (*serialize)(const uint8_t *self, Serialization::JsonSerializer &serializer);
-		EError (*deserialize)(uint8_t *instance, const std::string_view &data);
+		EError (*deserialize)(uint8_t *instance, Serialization::JsonDeserializer& deserializer);
 
 		/// @brief Component type this serializable references
 		Entity::EntityId type;
@@ -38,6 +39,26 @@ namespace Hush
 			Serialization::ESerializationError err = serializer.Serialize(*comp, false);
 
 			if (err != Serialization::ESerializationError::None)
+			{
+				return Serializable::EError::ParseError;
+			}
+
+			return Serializable::EError::None;
+		}
+
+		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough
+		template <class T>
+		static EError DefaultDeserialize(uint8_t *self, Serialization::JsonDeserializer& serializer)
+		{
+			if (self == nullptr)
+			{
+				return Serializable::EError::BadInstance;
+			}
+
+			auto *comp = reinterpret_cast<T *>(self);
+			Serialization::EDeserializationError res = serializer.Deserialize<T>(comp);
+
+			if (res != Serialization::EDeserializationError::None)
 			{
 				return Serializable::EError::ParseError;
 			}

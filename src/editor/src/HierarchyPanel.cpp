@@ -24,10 +24,29 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 		Serializable& ser = nameComp.AddComponent<Serializable>();
 		ser.serialize = [](const uint8_t* instance, Serialization::JsonSerializer& ser){
 			const auto* nameInstance = reinterpret_cast<const Entity::Name*>(instance);
-			Serialization::ESerializationError err = ser.Serialize("name", std::string_view(nameInstance->name.data()));
+			Serialization::ESerializationError err = ser.Serialize("name", nameInstance->GetName());
 			if (err != Serialization::ESerializationError::None) {
 				return Serializable::EError::ParseError;
 			}
+			return Serializable::EError::None;
+		};
+		ser.deserialize = [](uint8_t* instance, Serialization::JsonDeserializer& deser) {
+			auto* nameInstance = reinterpret_cast<Entity::Name*>(instance);
+
+			std::string_view k;
+			int64_t i;
+			// HACK: Skip these
+			(void)deser.Next();
+			(void)deser.ReadKey(k);
+			(void)deser.ReadInt(i);
+			(void)deser.ReadKey(k);
+			(void)deser.ReadString(k);
+			
+			(void)deser.ReadKey(k);
+			(void)deser.ReadString(k);
+
+			nameInstance->SetName(k);
+			(void)deser.Next();
 			return Serializable::EError::None;
 		};
 	}
@@ -74,7 +93,7 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, co
 		flags |= ImGuiTreeNodeFlags_Leaf;
 	}
 
-	bool isNodeOpen = ImGui::TreeNodeEx(name.name.data(), flags);
+	bool isNodeOpen = ImGui::TreeNodeEx(name.GetName().data(), flags);
 	if (ImGui::IsItemClicked())
 	{
 		inspector->SetInspectTarget(entity.GetId());

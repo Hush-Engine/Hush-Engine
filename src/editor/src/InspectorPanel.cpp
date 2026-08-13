@@ -213,7 +213,7 @@ void Hush::InspectorPanel::RenderProperties()
 {
 	Entity::Name *entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
 	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
-	ImGui::SeparatorText(entityName->name.data());
+	ImGui::SeparatorText(entityName->GetName().data());
 	LocalTransform *transform = this->m_inspectTarget->GetComponent<LocalTransform>();
 	HUSH_ASSERT(transform != nullptr, "Trying to render an entity without a Transform component!");
 	Serialize(transform);
@@ -228,7 +228,7 @@ void Hush::InspectorPanel::RenderProperties()
 	MeshReference *meshComponent = this->m_inspectTarget->GetComponent<MeshReference>();
 	if (meshComponent != nullptr)
 	{
-		Serialize(meshComponent, entityName->name.data());
+		Serialize(meshComponent, entityName->GetName().data());
 	}
 
 	Camera *camComponent = this->m_inspectTarget->GetComponent<Camera>();

@@ -477,7 +477,7 @@ void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 								   [[maybe_unused]]
 								   WorldTransform &transform) {
 		(void)(entity);
-		std::string_view currEntityName = name.name.data();
+		std::string_view currEntityName = name.GetName();
 		state.options.emplace_back(currEntityName);
 		idsByIdx.emplace_back(entity.GetId());
 	});

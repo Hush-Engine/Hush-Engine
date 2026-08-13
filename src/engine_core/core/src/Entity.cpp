@@ -211,11 +211,13 @@ Hush::Entity::EntityId Hush::Entity::GetId() const
 	return m_entityId;
 }
 
+constexpr const char* EMPTY_STR = "";
+
 std::string_view Hush::Entity::GetKey() const {
 	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
 	const char* rawName = ecs_get_name(world, this->m_entityId);
 	if (rawName == nullptr) {
-		return {};
+		return {EMPTY_STR};
 	}
 	return std::string_view{rawName};
 }

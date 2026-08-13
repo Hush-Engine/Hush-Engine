@@ -753,6 +753,13 @@ namespace Hush::Serialization
 			}
 		};
 
+		// BUG: This visitor's @ref VisitKey returns `this` (line 792) even though it
+		// handles the key+value itself (the value arrives via @ref VisitString). The
+		// JsonDeserializer::RapidjsonVisitor bridge interprets "VisitKey returned the
+		// same visitor" as an unknown member and skips the following value, so this
+		// visitor's values would never be consumed. It is currently unused anywhere
+		// in the codebase; if it is ever needed, VisitKey must instead return a
+		// dedicated sub-visitor (or otherwise signal that the value is handled).
 		template <>
 		struct Visitor<std::map<std::string, std::string>> : public IVisitor
 		{

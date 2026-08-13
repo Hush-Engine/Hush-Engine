@@ -25,6 +25,7 @@
 #include <flecs/private/api_defines.h>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -299,8 +300,84 @@ void Hush::Scene::Shutdown()
 	}
 }
 
+// Free helper function
+inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
+												 Hush::Serialization::JsonDeserializer &deserializer,
+												 Hush::Entity &entity)
+{
+	using namespace Hush;
+	std::string_view currKey;
+	int64_t compId{};
+	std::string_view compKey{};
+	while (deserializer.GetToken() != Serialization::JsonDeserializer::EToken::ArrayEnd)
+	{
+		std::string_view objectJson;
+		deserializer.PeekObject(objectJson);
+		Serialization::JsonDeserializer localDeser{objectJson};
+
+		deserializer.Next();
+
+		deserializer.ReadKey(currKey);
+		deserializer.ReadInt(compId);
+
+		deserializer.ReadKey(currKey);
+		deserializer.ReadString(compKey);
+
+		// Get the component with that key
+		Entity comp = scene->CreateEntityWithKey(compKey);
+		void *instance = entity.AddComponentRaw(comp.GetId());
+
+		// Deserialize it
+		Serializable *serComp = comp.GetComponent<Serializable>();
+		if (serComp != nullptr && serComp->deserialize != nullptr)
+		{
+			serComp->deserialize(reinterpret_cast<uint8_t *>(instance), localDeser);
+		}
+
+		deserializer.SkipObject();
+	}
+	return Scene::EError::None;
+}
+
 Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
 {
+	Serialization::JsonDeserializer deserializer{asset->sceneJson};
+	// Enter the object
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	std::string_view currKey{};
+	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
+	// This should be the entities array now
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	// We are now on our object
+	while (deserializer.Next())
+	{
+		// Entity structure
+		// {"id": ##, "key": "...", "components": [...]}
+		int64_t id{}; // The ID is not entirely irrelevant, but for now it kinda is
+		deserializer.ReadKey(currKey);
+		deserializer.ReadInt(id);
+		std::string_view entKey;
+		deserializer.ReadKey(currKey);
+		deserializer.ReadString(entKey);
+
+		Entity ent;
+		if (entKey.empty())
+		{
+			ent = this->CreateEntity();
+		}
+		else
+		{
+			ent = this->CreateEntityWithKey(entKey);
+		}
+		(void)ent;
+
+		// We don't care abt this one
+		deserializer.ReadKey(currKey);
+		// Then we can go for comps related to that entity
+		deserializer.Next(); // Skip the [
+							 // Probably the default deserializer assumes we are wrapped in an object, idk
+		DeserializeComponents(this, deserializer, ent);
+	}
 	(void)asset;
 	return EError::None;
 }
@@ -326,18 +403,18 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
 		serialErr = jsonSerializer.Serialize("id", ent.GetId());
 		std::string_view topKey = ent.GetKey();
 		// If there's no key, we save the ID as the key
-		serialErr = jsonSerializer.Serialize("key", topKey.empty() ? std::to_string(ent.GetId()) : topKey);
+		serialErr = jsonSerializer.Serialize("key", topKey);
 
 		serialErr = jsonSerializer.SetKey("components");
 		serialErr = jsonSerializer.BeginArray();
 		ent.EachId([world, serializableId, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
-		    serialErr = jsonSerializer.BeginObject();
+			serialErr = jsonSerializer.BeginObject();
 			const auto *rawComp = reinterpret_cast<const uint8_t *>(ecs_get_id(world, ent.GetId(), comp));
 			// Serialize comp to JSON
 			const char *key = ecs_get_name(world, comp);
 			// Not likely to be nullptr, but we do it anyways
 			serialErr = jsonSerializer.Serialize("id", comp);
-			serialErr = jsonSerializer.Serialize("key", key == nullptr ? std::to_string(comp) : key);
+			serialErr = jsonSerializer.Serialize("key", key == nullptr ? std::string_view{} : std::string_view(key));
 			// Find the serialization comp
 			// NOLINTNEXTLINE
 			const auto *serializer = reinterpret_cast<const Serializable *>(ecs_get_id(world, comp, serializableId));

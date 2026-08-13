@@ -325,6 +325,7 @@ namespace Hush
 			Entity comp = this->EntityFromIdUnchecked(this->RegisterComponent<T>());
 			Serializable& ser = comp.AddComponent<Serializable>();
 			ser.serialize = &Serializable::DefaultSerialize<T>;
+			ser.deserialize = &Serializable::DefaultDeserialize<T>;
 		}
 
 	private:

@@ -10,35 +10,40 @@
 #include "serialization/Serialization.hpp"
 #include <cstdint>
 
+// Helper function so things don't get repetitive, this is needed bc World and Local xform derive from the Transform class
+template <class T>
+inline void RegisterSerializerForXformComp(Hush::Scene &scene)
+{
+	using namespace Hush;
+	Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<T>());
+	Serializable &ser = comp.AddComponent<Serializable>();
+	ser.serialize = [](const uint8_t *self, Serialization::JsonSerializer &ser) {
+		const auto *xform = reinterpret_cast<const T *>(self);
+		const Transform *basePtr = xform;
+		Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
+		if (localErr != Serialization::ESerializationError::None)
+		{
+			return Serializable::EError::ParseError;
+		}
+		return Serializable::EError::None;
+	};
+	ser.deserialize = [](uint8_t* self, Serialization::JsonDeserializer &deser) {
+		auto *xform = reinterpret_cast<T *>(self);
+		Transform *basePtr = xform;
+		auto res = deser.Deserialize<Transform>();
+		if (res.has_error()) {
+			return Serializable::EError::ParseError;
+		}
+		*basePtr = res.value();
+		return Serializable::EError::None;
+	};
+}
+
 void Hush::TransformationSystem::Init()
 {
 	Scene &scene = this->GetScene();
-	{
-		Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<WorldTransform>());
-		Serializable& ser = comp.AddComponent<Serializable>();
-		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
-			const auto* xform = reinterpret_cast<const WorldTransform*>(self);
-			const Transform* basePtr = xform;
-			Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
-			if (localErr != Serialization::ESerializationError::None) {
-				return Serializable::EError::ParseError;
-			}
-			return Serializable::EError::None;
-		};
-	}
-	{
-		Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<LocalTransform>());
-		Serializable& ser = comp.AddComponent<Serializable>();
-		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& ser){
-			const auto* xform = reinterpret_cast<const LocalTransform*>(self);
-			const Transform* basePtr = xform;
-			Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
-			if (localErr != Serialization::ESerializationError::None) {
-				return Serializable::EError::ParseError;
-			}
-			return Serializable::EError::None;
-		};
-	}
+	RegisterSerializerForXformComp<WorldTransform>(scene);
+	RegisterSerializerForXformComp<LocalTransform>(scene);
 
 	this->m_transformableEntitiesQuery = this->GetScene().CreateQuery<WorldTransform, LocalTransform>();
 }

@@ -10,6 +10,7 @@
 #include "networking/NetworkUtils.hpp"
 #include <fstream>
 #include <imgui/imgui.h>
+#include <ios>
 #include <magic_enum/magic_enum.hpp>
 #include "UI.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
@@ -40,29 +41,63 @@ void Hush::TitleBarMenuPanel::OnRender([[maybe_unused]] float deltaTime) noexcep
 	// TODO: Also render the play options here
 }
 
+void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
+{
+	if (fileDialog->IsOk())
+	{
+		// Create a scene asset
+		ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
+		std::string path = fileDialog->GetFilePathName();
+		Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
+		// Save the scene
+		this->m_activeScene->ToSceneAsset(scene.Get());
+		// Serialize asset and save it to a file
+		// I hate std::fstreams
+		{
+			std::ofstream ostream{};
+			ostream.open(path);
+			ostream << scene->sceneJson;
+			ostream.close();
+		}
+	}
+	fileDialog->Close();
+}
+
+void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
+{
+	if (fileDialog->IsOk())
+	{
+		// Create a scene asset
+		ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
+		std::string path = fileDialog->GetFilePathName();
+		Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
+		// I hate std::fstreams
+		{
+			std::ifstream istream(path, std::ios::binary | std::ios::ate);
+			std::streamsize size = istream.tellg();
+			istream.seekg(0, std::ios::beg);
+
+			scene->sceneJson.resize(size);
+			istream.read(scene->sceneJson.data(), size);
+			istream.close();
+		}
+		// Load the scene
+		this->m_activeScene->FromSceneAsset(scene.Get());
+	}
+	fileDialog->Close();
+}
+
 void Hush::TitleBarMenuPanel::FileMenuOptions()
 {
 	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
 
 	if (fileDialog->Display("SceneSave", ImGuiWindowFlags_NoCollapse, {800, 600}))
 	{
-		if (fileDialog->IsOk())
-		{
-			// Create a scene asset
-			ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
-			std::string path = fileDialog->GetFilePathName();
-			Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
-			// Save the scene
-			this->m_activeScene->ToSceneAsset(scene.Get());
-			// Serialize asset and save it to a file
-			{
-				std::ofstream ostream{};
-				ostream.open(path);
-				ostream << scene->sceneJson;
-				ostream.close();
-			}
-		}
-		fileDialog->Close();
+		this->SaveSceneDialog(fileDialog);
+	}
+	else if (fileDialog->Display("LoadScene", ImGuiWindowFlags_NoCollapse, {800, 600}))
+	{
+		this->LoadSceneDialog(fileDialog);
 	}
 
 	if (!ImGui::BeginMenu("File"))
@@ -75,6 +110,16 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 	}
 	if (ImGui::MenuItem("Open Scene", "Ctrl+O"))
 	{
+		// BACKLOG: Use our own file dialog instead of ImGui's
+		IGFD::FileDialogConfig config;
+
+		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
+		auto pathResolveRes = vfs->ResolveVirtualPath("res://");
+		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
+
+		config.path = pathResolveRes.value();
+		fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
+
 	}
 	if (ImGui::MenuItem("Save", "Ctrl+S"))
 	{
