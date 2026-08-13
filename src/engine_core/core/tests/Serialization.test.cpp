@@ -1196,4 +1196,118 @@ TEST_CASE("Deserialization", "[serialization]")
 		REQUIRE(err == Hush::Serialization::EDeserializationError::None);
 		REQUIRE(instance.intensity == 3.0f);
 	}
+
+	SECTION("Raw walker peek array")
+	{
+		constexpr std::string_view json = R"({ "items": [1, [2, 3], { "a": 4 }], "after": true })";
+
+		Hush::Serialization::JsonDeserializer deserializer(json);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectStart);
+
+		std::string_view key;
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "items");
+
+		std::string_view arr;
+		REQUIRE(deserializer.PeekArray(arr));
+		REQUIRE(arr == R"([1, [2, 3], { "a": 4 }])");
+
+		// Peeking again returns the same array without consuming it.
+		std::string_view arr2;
+		REQUIRE(deserializer.PeekArray(arr2));
+		REQUIRE(arr2 == arr);
+
+		// The array-start token is still buffered; Next() consumes it.
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ArrayStart);
+
+		// Skip the array contents to reach the next key.
+		REQUIRE(deserializer.SkipArray());
+
+		bool b = false;
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "after");
+		REQUIRE(deserializer.ReadBool(b));
+		REQUIRE(b);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectEnd);
+		REQUIRE(!deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::EndOfInput);
+		REQUIRE(!deserializer.HasError());
+	}
+
+	SECTION("Raw walker skip array mid-scope")
+	{
+		constexpr std::string_view json = R"({ "a": 1, "keep": [1, { "x": [2, 3] }, 4], "b": 2 })";
+
+		Hush::Serialization::JsonDeserializer deserializer(json);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectStart);
+
+		std::string_view key;
+		double num = 0.0;
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "a");
+		REQUIRE(deserializer.ReadDouble(num));
+		REQUIRE(num == 1.0);
+
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "keep");
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ArrayStart);
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::Uint);
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectStart);
+
+		// In the middle of the "keep" array; skip the rest of it.
+		REQUIRE(deserializer.SkipArray());
+
+		// Back in the root object, on the next key.
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "b");
+		REQUIRE(deserializer.ReadDouble(num));
+		REQUIRE(num == 2.0);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectEnd);
+		REQUIRE(!deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::EndOfInput);
+		REQUIRE(!deserializer.HasError());
+	}
+
+	SECTION("Raw walker read array")
+	{
+		constexpr std::string_view json = R"({ "items": [1, 2], "after": 3 })";
+
+		Hush::Serialization::JsonDeserializer deserializer(json);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectStart);
+
+		std::string_view key;
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "items");
+
+		std::string_view arr;
+		REQUIRE(deserializer.ReadArray(arr));
+		REQUIRE(arr == R"([1, 2])");
+
+		// The walker advanced past the array, back inside the root.
+		double num = 0.0;
+		REQUIRE(deserializer.ReadKey(key));
+		REQUIRE(key == "after");
+		REQUIRE(deserializer.ReadDouble(num));
+		REQUIRE(num == 3.0);
+
+		REQUIRE(deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::ObjectEnd);
+		REQUIRE(!deserializer.Next());
+		REQUIRE(deserializer.GetToken() == Hush::Serialization::JsonDeserializer::EToken::EndOfInput);
+		REQUIRE(!deserializer.HasError());
+	}
 }

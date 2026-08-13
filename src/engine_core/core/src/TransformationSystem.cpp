@@ -6,6 +6,7 @@
 #include "Mat4Math.hpp"
 #include "Profiling.hpp"
 #include "Scene.hpp"
+#include "serialization/Deserialization.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
 #include <cstdint>
@@ -30,11 +31,10 @@ inline void RegisterSerializerForXformComp(Hush::Scene &scene)
 	ser.deserialize = [](uint8_t* self, Serialization::JsonDeserializer &deser) {
 		auto *xform = reinterpret_cast<T *>(self);
 		Transform *basePtr = xform;
-		auto res = deser.Deserialize<Transform>();
-		if (res.has_error()) {
+		auto err = deser.Deserialize<Transform>(basePtr);
+		if (err != Serialization::EDeserializationError::None) {
 			return Serializable::EError::ParseError;
 		}
-		*basePtr = res.value();
 		return Serializable::EError::None;
 	};
 }

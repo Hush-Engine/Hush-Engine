@@ -5,6 +5,7 @@
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
 #include "SceneAsset.hpp"
+#include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
 #include "imguifiledialog/ImGuiFileDialog.h"
 #include "networking/NetworkUtils.hpp"
@@ -50,7 +51,8 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 		std::string path = fileDialog->GetFilePathName();
 		Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
 		// Save the scene
-		this->m_activeScene->ToSceneAsset(scene.Get());
+		Scene::EError err = this->m_activeScene->ToSceneAsset(scene.Get());
+
 		// Serialize asset and save it to a file
 		// I hate std::fstreams
 		{
@@ -58,6 +60,14 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 			ostream.open(path);
 			ostream << scene->sceneJson;
 			ostream.close();
+		}
+		if (err == Scene::EError::None) {
+			Entity notificationEnt = this->m_activeScene->CreateEntity();
+			notificationEnt.EmplaceComponent<ToastNotification>(
+				"Scene saved succesfully!",
+				2.f,
+				ToastNotification::EToastType::Info
+			);
 		}
 	}
 	fileDialog->Close();

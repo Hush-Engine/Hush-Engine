@@ -300,28 +300,45 @@ void Hush::Scene::Shutdown()
 	}
 }
 
-// Free helper function
+// Free helper functions
+inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk) {
+	using JsonEToken_t = Hush::Serialization::JsonDeserializer::EToken;
+	return tk != JsonEToken_t::ArrayEnd && tk != JsonEToken_t::Error && tk != JsonEToken_t::EndOfInput;
+}
+
+// Local macro helper
+#define BREAK_LOOP_IF_NEEDED currToken = deserializer.GetToken();\
+if (!ShouldContinueReadingCompsArray(currToken)) { break; }
+
 inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 												 Hush::Serialization::JsonDeserializer &deserializer,
 												 Hush::Entity &entity)
 {
 	using namespace Hush;
+	deserializer.Next(); // Skip the start of the array
 	std::string_view currKey;
 	int64_t compId{};
 	std::string_view compKey{};
-	while (deserializer.GetToken() != Serialization::JsonDeserializer::EToken::ArrayEnd)
+	Serialization::JsonDeserializer::EToken currToken{};
+	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken); currToken = deserializer.GetToken())
 	{
 		std::string_view objectJson;
 		deserializer.PeekObject(objectJson);
+
 		Serialization::JsonDeserializer localDeser{objectJson};
 
 		deserializer.Next();
+		BREAK_LOOP_IF_NEEDED;
 
 		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
 		deserializer.ReadInt(compId);
+		BREAK_LOOP_IF_NEEDED;
 
 		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
 		deserializer.ReadString(compKey);
+		BREAK_LOOP_IF_NEEDED;
 
 		// Get the component with that key
 		Entity comp = scene->CreateEntityWithKey(compKey);
@@ -335,9 +352,11 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 		}
 
 		deserializer.SkipObject();
+		BREAK_LOOP_IF_NEEDED;
 	}
 	return Scene::EError::None;
 }
+
 
 Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
 {
@@ -374,13 +393,19 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
 		// We don't care abt this one
 		deserializer.ReadKey(currKey);
 		// Then we can go for comps related to that entity
-		deserializer.Next(); // Skip the [
-							 // Probably the default deserializer assumes we are wrapped in an object, idk
-		DeserializeComponents(this, deserializer, ent);
+		std::string_view compsArray;
+		if (!deserializer.ReadArray(compsArray)) {
+			continue;
+		}
+		Serialization::JsonDeserializer arrayDeser{compsArray};
+		DeserializeComponents(this, arrayDeser, ent);
+		deserializer.Next();
 	}
 	(void)asset;
 	return EError::None;
 }
+
+#undef BREAK_LOOP_IF_NEEDED
 
 Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
 {

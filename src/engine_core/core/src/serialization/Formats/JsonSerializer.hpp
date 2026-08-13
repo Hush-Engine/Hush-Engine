@@ -652,6 +652,47 @@ namespace Hush::Serialization
 		/// @return true and sets @p out on success, false otherwise.
 		bool ReadObject(std::string_view &out);
 
+		/// Peeks the next token as an array scope.
+		///
+		/// The array counterpart of @ref PeekObject: if the next token is an array
+		/// start, @p out is set to the raw JSON of that array, including its opening
+		/// and closing brackets (e.g. `[1, 2, 3]`), without consuming it. The walker
+		/// is left in place with the array-start token buffered, so a subsequent
+		/// @ref Next returns the same `ArrayStart` token. Repeated calls return the
+		/// same view.
+		///
+		/// Note: the returned view is not null-terminated. Pass it to a new
+		/// @ref JsonDeserializer only after copying it into a null-terminated buffer.
+		/// @return true and sets @p out on success, false otherwise.
+		bool PeekArray(std::string_view &out);
+
+		/// Skips the current array scope.
+		///
+		/// The array counterpart of @ref SkipObject: if the walker is inside an
+		/// array — whether the current token is the array's start or any token in
+		/// the middle of it — the rest of the innermost enclosing array scope is
+		/// consumed, including nested arrays and objects. The walker is left
+		/// positioned on the token that follows that array's closing bracket.
+		///
+		/// If the walker is not inside any array scope, the walker is left in place
+		/// and this function returns false.
+		/// @return true if an array scope was skipped, false otherwise.
+		bool SkipArray();
+
+		/// Reads the next array scope, returning its raw JSON and advancing the walker.
+		///
+		/// Combines @ref PeekArray and @ref SkipArray: if the next token is an array
+		/// start, @p out is set to the raw JSON of that array (including its
+		/// brackets, same view @ref PeekArray would return), and the array is then
+		/// consumed so the walker is left positioned on the token that follows the
+		/// array's closing bracket.
+		///
+		/// The returned view points into the original input buffer and remains valid
+		/// while that buffer is alive. It is not null-terminated; copy it into a
+		/// null-terminated buffer before passing it to a new @ref JsonDeserializer.
+		/// @return true and sets @p out on success, false otherwise.
+		bool ReadArray(std::string_view &out);
+
 		/// @return true if a parse error occurred while walking the JSON.
 		[[nodiscard]]
 		bool HasError() const
@@ -689,6 +730,7 @@ namespace Hush::Serialization
 		bool m_walkerInitialized = false;
 		bool m_peekedToken = false;
 		int32_t m_walkerObjectDepth = 0;
+		int32_t m_walkerArrayDepth = 0;
 	};
 
 	/// Serializes a double value to a JSON string.

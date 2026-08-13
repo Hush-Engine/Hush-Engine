@@ -478,6 +478,12 @@ bool Hush::Serialization::JsonDeserializer::Next()
 		case EToken::ObjectEnd:
 			--m_walkerObjectDepth;
 			break;
+		case EToken::ArrayStart:
+			++m_walkerArrayDepth;
+			break;
+		case EToken::ArrayEnd:
+			--m_walkerArrayDepth;
+			break;
 		case EToken::Key:
 			m_walkerKey = m_walker.key;
 			break;
@@ -668,6 +674,59 @@ std::optional<std::string_view> Hush::Serialization::JsonDeserializer::PeekKey()
 	return std::string_view(m_walkerKey);
 }
 
+namespace
+{
+	/// Finds the index of the closing character that matches `openCh` at
+	/// `input[openIndex]`, skipping string literals and escapes. Returns
+	/// std::string_view::npos if no matching closing character exists.
+	/// Nested containers of the same opening character are counted.
+	size_t FindMatchingContainer(std::string_view input, size_t openIndex, char openCh, char closeCh)
+	{
+		int32_t depth = 0;
+		bool inString = false;
+		bool escaped = false;
+		size_t i = openIndex;
+		while (i < input.size())
+		{
+			const char c = input[i];
+			if (inString)
+			{
+				if (escaped)
+				{
+					escaped = false;
+				}
+				else if (c == '\\')
+				{
+					escaped = true;
+				}
+				else if (c == '"')
+				{
+					inString = false;
+				}
+			}
+			else
+			{
+				if (c == '"')
+				{
+					inString = true;
+				}
+				else if (c == openCh)
+				{
+					++depth;
+				}
+				else if (c == closeCh && --depth == 0)
+				{
+					return i;
+				}
+			}
+
+			++i;
+		}
+
+		return std::string_view::npos;
+	}
+} // namespace
+
 bool Hush::Serialization::JsonDeserializer::PeekObject(std::string_view &out)
 {
 	if (!m_peekedToken)
@@ -693,50 +752,49 @@ bool Hush::Serialization::JsonDeserializer::PeekObject(std::string_view &out)
 	// the walker.
 	const size_t begin = m_stream.Tell() - 1;
 
-	size_t closingBrace = begin;
-	int32_t depth = 0;
-	bool inString = false;
-	bool escaped = false;
-	while (closingBrace < m_input.size())
+	const size_t closingBrace = FindMatchingContainer(m_input, begin, '{', '}');
+	if (closingBrace == std::string_view::npos)
 	{
-		const char c = m_input[closingBrace];
-		if (inString)
-		{
-			if (escaped)
-			{
-				escaped = false;
-			}
-			else if (c == '\\')
-			{
-				escaped = true;
-			}
-			else if (c == '"')
-			{
-				inString = false;
-			}
-		}
-		else
-		{
-			if (c == '"')
-			{
-				inString = true;
-			}
-			else if (c == '{')
-			{
-				++depth;
-			}
-			else if (c == '}' && --depth == 0)
-			{
-				out = std::string_view(m_input.data() + begin, closingBrace - begin + 1);
-				return true;
-			}
-		}
-
-		++closingBrace;
+		return false;
 	}
 
-	// No matching closing brace found.
-	return false;
+	out = std::string_view(m_input.data() + begin, closingBrace - begin + 1);
+	return true;
+}
+
+bool Hush::Serialization::JsonDeserializer::PeekArray(std::string_view &out)
+{
+	if (!m_peekedToken)
+	{
+		// Advance to the next token and buffer it so it can be replayed if it is
+		// not an array start.
+		if (!Next())
+		{
+			return false;
+		}
+		m_peekedToken = true;
+	}
+
+	if (GetToken() != EToken::ArrayStart)
+	{
+		// Leave the token buffered so a later @ref Next / @ref ReadKey consumes it.
+		return false;
+	}
+
+	// The opening bracket was just consumed (or peeked), so the stream is one byte
+	// past it. The reader has not consumed any of the array's contents, so scan
+	// the raw input directly to find the matching closing bracket without moving
+	// the walker.
+	const size_t begin = m_stream.Tell() - 1;
+
+	const size_t closingBracket = FindMatchingContainer(m_input, begin, '[', ']');
+	if (closingBracket == std::string_view::npos)
+	{
+		return false;
+	}
+
+	out = std::string_view(m_input.data() + begin, closingBracket - begin + 1);
+	return true;
 }
 
 bool Hush::Serialization::JsonDeserializer::SkipObject()
@@ -786,4 +844,53 @@ bool Hush::Serialization::JsonDeserializer::ReadObject(std::string_view &out)
 	}
 
 	return SkipObject();
+}
+
+bool Hush::Serialization::JsonDeserializer::SkipArray()
+{
+	if (GetToken() == EToken::ArrayEnd)
+	{
+		// Already at the end of the current array scope.
+		return true;
+	}
+
+	if (GetToken() == EToken::None || GetToken() == EToken::EndOfInput || GetToken() == EToken::Error)
+	{
+		return false;
+	}
+
+	if (m_walkerArrayDepth == 0)
+	{
+		// The walker is not inside any array scope.
+		return false;
+	}
+
+	// Skip the innermost open array scope that contains the current token. The
+	// depth counter already reflects the current token (whether it was pulled by
+	// @ref Next or buffered by @ref PeekKey/@ref PeekArray), so consume tokens
+	// until the enclosing array's closing bracket brings the depth back down.
+	const int32_t targetDepth = m_walkerArrayDepth;
+
+	// If the current token was peeked, consume the buffered token.
+	m_peekedToken = false;
+
+	while (m_walkerArrayDepth >= targetDepth)
+	{
+		if (!Next())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool Hush::Serialization::JsonDeserializer::ReadArray(std::string_view &out)
+{
+	if (!PeekArray(out))
+	{
+		return false;
+	}
+
+	return SkipArray();
 }
