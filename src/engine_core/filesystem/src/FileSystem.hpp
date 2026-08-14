@@ -10,7 +10,9 @@
 #include "crypto/Hashing.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <functional>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -57,6 +59,16 @@ namespace Hush
 		/// Lists all the contents of a specific path
 		virtual Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view &path) = 0;
 
+		/// Returns the host (OS) path backing a mount-relative path, when this filesystem
+		/// is backed by the real filesystem. Virtual backends (e.g. pak bundles) return
+		/// nullopt. Used by VirtualFilesystem::ResolveHostPath.
+		[[nodiscard]]
+		virtual std::optional<std::filesystem::path> GetHostPath(const std::filesystem::path &rel) const
+		{
+			(void)rel;
+			return std::nullopt;
+		}
+
 		EFileExtension ToKnownExtension(const std::string_view &extensionUppercase)
 		{
 			switch (Hashing::Fnv1a(extensionUppercase))
@@ -83,6 +95,16 @@ namespace Hush
 				return EFileExtension::GLTF;
 			case Hashing::Fnv1a("FBX"):
 				return EFileExtension::FBX;
+			case Hashing::Fnv1a("SLANG"):
+				return EFileExtension::SLANG;
+			case Hashing::Fnv1a("HMETA"):
+				return EFileExtension::HMETA;
+			case Hashing::Fnv1a("HASSET"):
+				return EFileExtension::HASSET;
+			case Hashing::Fnv1a("HSHADER"):
+				return EFileExtension::HSHADER;
+			case Hashing::Fnv1a("HUSHPAK"):
+				return EFileExtension::HUSHPAK;
 			default:
 				return EFileExtension::UNKNOWN;
 			}

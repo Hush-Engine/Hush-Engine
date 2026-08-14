@@ -29,6 +29,9 @@ find_package(flecs CONFIG REQUIRED)
 # RapidJSON
 find_package(RapidJSON CONFIG REQUIRED)
 
+# zstd
+find_package(zstd CONFIG REQUIRED)
+
 # Boost unordered
 find_package(boost_unordered REQUIRED CONFIG)
 

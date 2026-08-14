@@ -20,6 +20,8 @@
 #if __has_include("MeshReference.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
 #include "MeshReference.hushgen.hpp"
 #endif
+#include <unordered_map>
+#include <vector>
 
 namespace Hush
 {

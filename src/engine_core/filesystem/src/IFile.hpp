@@ -42,6 +42,11 @@ namespace Hush
 		GLB,
 		GLTF,
 		FBX,
+		SLANG,
+		HMETA,
+		HASSET,
+		HSHADER,
+		HUSHPAK,
 	};
 
 	/// Metadata for a file.

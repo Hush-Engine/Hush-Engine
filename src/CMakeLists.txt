@@ -13,6 +13,7 @@ add_subdirectory(engine_core)
 
 add_subdirectory(bindings)
 
+add_subdirectory(cooker)
 add_subdirectory(editor)
 
 hush_add_library(
@@ -21,6 +22,7 @@ hush_add_library(
         SRCS engine_core/src/main.cpp
              engine_core/src/HushEngine.cpp
              engine_core/src/AllocatorOverrides.cpp
+             engine_core/src/stb_impl.cpp
         PUBLIC_HEADER_DIRS engine_core/src
 )
 

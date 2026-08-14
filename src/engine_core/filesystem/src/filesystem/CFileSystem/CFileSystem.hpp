@@ -43,6 +43,12 @@ namespace Hush
 
 		Result<std::vector<FileInfo>, IFile::EError> ListPath(const std::string_view &path) override;
 
+		[[nodiscard]]
+		std::optional<std::filesystem::path> GetHostPath(const std::filesystem::path &rel) const override
+		{
+			return m_root / rel;
+		}
+
 	private:
 		std::filesystem::path m_root;
 		std::unordered_map<std::byte *, std::unique_ptr<std::byte[]>> m_loadedFiles;

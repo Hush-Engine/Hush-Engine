@@ -19,6 +19,7 @@
 #include "Assertions.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_video.h>
+#include <cstdint>
 #include <sdl3webgpu/sdl3webgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include <webgpu/webgpu.hpp>
@@ -105,17 +106,6 @@ namespace Hush::Graphics
 	{
 		wgpu::DeviceDescriptor deviceDesc{};
 		deviceDesc.label = wgpu::StringView("Hush Graphics Device");
-		deviceDesc.uncapturedErrorCallbackInfo = {
-			.nextInChain = nullptr,
-			.callback = ([](WGPUErrorType errorType, const char* message, void* userData){
-			    (void)userData;
-			    (void)errorType;
-				LogFormat(ELogLevel::Info, "Error on WebGPU: {}", message);
-			}, nullptr),
-			.userdata1 = nullptr,
-			.userdata2 = nullptr,
-		};
-
 		m_device = m_adapter.requestDevice(deviceDesc);
 		HUSH_ASSERT(m_device, "Failed to request WebGPU device");
 

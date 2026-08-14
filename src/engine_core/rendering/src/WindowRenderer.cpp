@@ -149,6 +149,12 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		// Send 0 as acceleration bc it will be calculated manually
 		InputManager::SendWheelEvent(event.wheel.x, event.wheel.y);
 		break;
+	case SDL_EVENT_DROP_FILE:
+		if (m_dropCallback && event.drop.data)
+		{
+			m_dropCallback(std::filesystem::path(event.drop.data));
+		}
+		break;
 	default:
 		if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
 		{
@@ -210,6 +216,9 @@ void Hush::WindowRenderer::CheckWindowState(const SDL_WindowEvent windowEvent, b
 		// Invalidate() does not clear graph data mid-frame — the slow path in
 		// RenderGraphSystem::OnPreRender() will handle the full Reset + rebuild.
 		this->m_renderDevice->Invalidate();
+		break;
+	default:
+		// Not handled
 		break;
 	}
 }
