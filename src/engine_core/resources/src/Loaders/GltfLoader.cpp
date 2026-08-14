@@ -101,8 +101,9 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 /// @brief This is a temporary function, we need to move this behavior to HushCooker, but this will work to prove we can
 /// already load and render objects
 Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &renderingContext,
-													const std::filesystem::path &path)
+													const std::string_view &path)
 {
+	// TODO: Use the vfs
 	// Open the file and parse it with the gltf loader functions
 	auto assetRes = GltfLoadFunctions::GetAssetFromFile(path);
 	HUSH_COND_FAIL_MSG_V(assetRes, Entity::Null(), "Could not load mesh at {}, error: {}", path.string(),
@@ -120,12 +121,11 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
-		std::string pathPrefix = path.stem().string();
 		Ref<Mesh> meshRef =
-			resourceManager->AllocateRef<Mesh>(pathPrefix + std::string(mesh.name));
+			resourceManager->AllocateRef<Mesh>(std::string(path) + std::string(mesh.name));
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
-		meshComponent.SetResourcePath(path.string());
+		meshComponent.SetResourcePath(path, mesh.name);
 		meshRef->SetName(mesh.name);
 
 		std::filesystem::path basePath = path.parent_path();

@@ -95,10 +95,12 @@ namespace Hush
 			return m_materialTextureRefs;
 		}
 
-		// HACK: Temporary method
-		void SetResourcePath(std::string_view path)
+		// HACK: Temporary method, will allow us to load data from deserialization
+		void SetResourcePath(std::string_view path, std::string_view name)
 		{
 			this->m_path = path;
+			this->m_path += "#";
+			this->m_path += name;
 		}
 
 	private:

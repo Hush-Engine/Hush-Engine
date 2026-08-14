@@ -9,6 +9,7 @@
 #include "VirtualFilesystem.hpp"
 #include "imguifiledialog/ImGuiFileDialog.h"
 #include "networking/NetworkUtils.hpp"
+#include <cstdio>
 #include <fstream>
 #include <imgui/imgui.h>
 #include <ios>
@@ -61,13 +62,17 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 			ostream << scene->sceneJson;
 			ostream.close();
 		}
-		if (err == Scene::EError::None) {
-			Entity notificationEnt = this->m_activeScene->CreateEntity();
-			notificationEnt.EmplaceComponent<ToastNotification>(
-				"Scene saved succesfully!",
-				2.f,
-				ToastNotification::EToastType::Info
-			);
+		Entity notificationEnt = this->m_activeScene->CreateEntity();
+		if (err == Scene::EError::None)
+		{
+			notificationEnt.EmplaceComponent<ToastNotification>("Scene saved succesfully!", 2.f,
+																ToastNotification::EToastType::Info);
+		}
+		else
+		{
+			std::string message = "Failed to save scene: ";
+			message += magic_enum::enum_name(err);
+			notificationEnt.EmplaceComponent<ToastNotification>(message, 2.f, ToastNotification::EToastType::Error);
 		}
 	}
 	fileDialog->Close();
@@ -92,7 +97,19 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 			istream.close();
 		}
 		// Load the scene
-		this->m_activeScene->FromSceneAsset(scene.Get());
+		Scene::EError err = this->m_activeScene->FromSceneAsset(scene.Get());
+		Entity notificationEnt = this->m_activeScene->CreateEntity();
+		if (err == Scene::EError::None)
+		{
+			notificationEnt.EmplaceComponent<ToastNotification>("Scene loaded succesfully!", 2.f,
+																ToastNotification::EToastType::Info);
+		}
+		else
+		{
+			std::string message = "Failed to load scene: ";
+			message += magic_enum::enum_name(err);
+			notificationEnt.EmplaceComponent<ToastNotification>(message, 2.f, ToastNotification::EToastType::Error);
+		}
 	}
 	fileDialog->Close();
 }
@@ -129,7 +146,6 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 
 		config.path = pathResolveRes.value();
 		fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
-
 	}
 	if (ImGui::MenuItem("Save", "Ctrl+S"))
 	{

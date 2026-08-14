@@ -12,6 +12,7 @@
 
 constexpr ImU32 INFO_TOAST_COLOR = IM_COL32(3, 182, 252, 255);
 constexpr ImU32 WARN_TOAST_COLOR = Hush::Color::WarnYellow().ToColor32ABGR();
+constexpr ImU32 ERROR_TOAST_COLOR = Hush::Color::Red().ToColor32ABGR();
 constexpr ImU32 UPDATE_TOAST_COLOR = IM_COL32(3, 182, 252, 255);
 constexpr ImGuiWindowFlags_ TOAST_FLAGS = ImGuiWindowFlags_NoScrollbar;
 
@@ -46,6 +47,11 @@ void Hush::NotificationPanel::OnRender(float deltaTime)
 			ImGui::PushStyleColor(ImGuiCol_WindowBg, UPDATE_TOAST_COLOR);
 			ImGui::PushStyleColor(ImGuiCol_TitleBg, UPDATE_TOAST_COLOR);
 			ImGui::PushStyleColor(ImGuiCol_TitleBgActive, UPDATE_TOAST_COLOR);
+			break;
+		case ToastNotification::EToastType::Error:
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, ERROR_TOAST_COLOR);
+			ImGui::PushStyleColor(ImGuiCol_TitleBg, ERROR_TOAST_COLOR);
+			ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ERROR_TOAST_COLOR);
 			break;
 		}
 
