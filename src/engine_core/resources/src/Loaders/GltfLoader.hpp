@@ -68,7 +68,7 @@ namespace Hush::GLTFLoader
 	{
 		// 63 + null
 		static constexpr size_t MAX_MAT_NAME = 64;
-		uint64_t resource;
+		uint32_t resource;
 		glm::vec4 albedo;
 		char name[MAX_MAT_NAME];
 	};
@@ -79,7 +79,7 @@ namespace Hush::GLTFLoader
 	{
 		static constexpr size_t MAX_TEX_NAME = 64;
 		/// @brief If not 0, this is the cooked texture this texture points to
-		uint64_t resource;
+		uint32_t resource;
 		/// @brief Byte offset of the texture data within the original glb file
 		uint64_t offset;
 		/// @brief Byte length of the texture data within the original glb file

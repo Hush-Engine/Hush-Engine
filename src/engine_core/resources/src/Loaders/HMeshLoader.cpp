@@ -10,8 +10,8 @@
 
 using namespace Hush;
 
-
-// Intentionally keeping these structs only in this compilation unit, they are supposed to mirror the Mesh Cooker's, but we do not want to have a dependency to that module here
+// Intentionally keeping these structs only in this compilation unit, they are supposed to mirror the Mesh Cooker's, but
+// we do not want to have a dependency to that module here
 
 struct HMeshHeader
 {
@@ -24,12 +24,13 @@ struct HMeshMaterialInfo
 {
 	// 63 + null
 	static constexpr size_t MAX_MAT_NAME = 64;
-	uint64_t resource;
+	uint32_t resource;
 	glm::vec4 albedo;
 	char name[MAX_MAT_NAME];
 };
 
-bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshReference* outRef, ResourceManager* resourceManager)
+bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshReference *outRef,
+									 ResourceManager *resourceManager)
 {
 	HUSH_ASSERT(outRef != nullptr, "Cannot load a mesh into a null mesh reference component!");
 	std::optional<HAsset> asset = HAsset::Read(data);
@@ -39,10 +40,10 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 	}
 
 	const std::vector<std::byte> &modelData = asset.value().payload;
-	const std::byte* rawData = modelData.data();
+	const std::byte *rawData = modelData.data();
 
-	Ref<Mesh>& innerMesh = outRef->GetMesh();
-	const auto* header = reinterpret_cast<const HMeshHeader*>(rawData);
+	Ref<Mesh> &innerMesh = outRef->GetMesh();
+	const auto *header = reinterpret_cast<const HMeshHeader *>(rawData);
 	rawData += sizeof(HMeshHeader);
 
 	std::vector<Mesh::Vertex> &vb = innerMesh->GetVertexBuffer();
@@ -59,12 +60,15 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 	std::memcpy(ib.data(), rawData, indexDataSize);
 	rawData += indexDataSize;
 
-	const auto* materialInfo = reinterpret_cast<const HMeshMaterialInfo*>(rawData);
-	for (uint32_t i = 0; i < header->materialCount; i++) {
+	const auto *materialInfo = reinterpret_cast<const HMeshMaterialInfo *>(rawData);
+	for (uint32_t i = 0; i < header->materialCount; i++)
+	{
 		// If a material info has a resource id and it exists in the disk resources, we can load it directly.
 		// Otherwise we get/create a new one.
-		Ref<Graphics::Material3D> existingMat = resourceManager->GetRefOrNull<Graphics::Material3D>(materialInfo->resource);
-		if (!existingMat.IsNull()) {
+		Ref<Graphics::Material3D> existingMat =
+			resourceManager->GetRefOrNull<Graphics::Material3D>(materialInfo->resource);
+		if (!existingMat.IsNull())
+		{
 			// Push the material
 			continue;
 		}
@@ -72,9 +76,4 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		auto matName = std::string_view(&materialInfo->name[0]);
 		existingMat = resourceManager->AllocateRef<Graphics::Material3D>(matName);
 	}
-
-
-	
-
-
 }

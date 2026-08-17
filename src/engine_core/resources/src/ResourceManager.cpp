@@ -126,12 +126,12 @@ void Hush::ResourceManager::FreePending()
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::LoadTexture(
 	const std::string_view path, const TextureComponent::ECpuUnloadStrategy unloadStrategy, uint32_t maxSize)
 {
-	uint64_t nameHash = Hashing::Fnv1a64(path);
+	uint32_t nameHash = Hashing::Fnv1a(path);
 	if (maxSize != 0)
 	{
 		// Cache a downscaled (e.g. thumbnail) load separately from the full-resolution
 		// load of the same path so the two don't collide.
-		nameHash ^= (static_cast<uint64_t>(maxSize) * 0x9E3779B97F4A7C15ULL);
+		nameHash ^= (static_cast<uint32_t>(maxSize) * 0x9E3779B9U);
 	}
 	const auto &iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end())
@@ -349,7 +349,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::
 	LoadTextureFromData(std::string_view name, std::span<const std::byte> data)
 {
-	const uint64_t nameHash = Hashing::Fnv1a64(name);
+	const uint32_t nameHash = Hashing::Fnv1a(name);
 	const auto &iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end())
 	{

@@ -17,9 +17,9 @@ namespace Hush
 		writer.Key("version");
 		writer.Uint(this->version);
 		writer.Key("id");
-		writer.Uint64(this->id);
+		writer.Uint(this->id);
 		writer.Key("sourceHash");
-		writer.Uint64(this->sourceHash);
+		writer.Uint(this->sourceHash);
 		writer.Key("sourceMTime");
 		writer.Uint64(this->sourceMTime);
 		writer.Key("assetType");
@@ -120,8 +120,8 @@ namespace Hush
 			meta.version = static_cast<uint16_t>(doc["version"].GetUint());
 		if (doc.HasMember("id") && doc["id"].IsUint())
 			meta.id = doc["id"].GetUint();
-		if (doc.HasMember("sourceHash") && doc["sourceHash"].IsUint64())
-			meta.sourceHash = doc["sourceHash"].GetUint64();
+		if (doc.HasMember("sourceHash") && doc["sourceHash"].IsUint())
+			meta.sourceHash = doc["sourceHash"].GetUint();
 		if (doc.HasMember("sourceMTime") && doc["sourceMTime"].IsUint64())
 			meta.sourceMTime = doc["sourceMTime"].GetUint64();
 		if (doc.HasMember("assetType") && doc["assetType"].IsString())

@@ -305,7 +305,7 @@ namespace Hush
 				continue;
 			}
 
-			const uint64_t id = parsed.value().id;
+			const uint32_t id = parsed.value().id;
 			std::filesystem::path cookedPath = cookedDir / (std::to_string(id) + ".hasset");
 			if (!std::filesystem::exists(cookedPath, ec))
 			{

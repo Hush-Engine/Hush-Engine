@@ -107,9 +107,8 @@ namespace Hush
 
 		Ref<Mesh> LoadMesh(const std::string_view &path);
 
-
 		template <class T, class... Args>
-		Ref<T> AllocateRefKnwonID(uint64_t id, Args &&...args)
+		Ref<T> AllocateRefKnwonID(uint32_t id, Args &&...args)
 		{
 			const auto &iterator = this->m_loadedResources.find(id);
 			if (iterator != this->m_loadedResources.end())
@@ -128,13 +127,13 @@ namespace Hush
 		template <class T, class... Args>
 		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
 		{
-			uint64_t hash = Hashing::Fnv1a64(identifier);
+			uint32_t hash = Hashing::Fnv1a(identifier);
 			return AllocateRefKnwonID<T>(hash, std::forward<Args>(args)...);
 		}
 
 		template <class T>
 		[[nodiscard]]
-		Ref<T> GetRefOrNull(uint64_t identifier)
+		Ref<T> GetRefOrNull(uint32_t identifier)
 		{
 			const auto &iterator = this->m_loadedResources.find(identifier);
 			if (iterator != this->m_loadedResources.end())
@@ -148,16 +147,16 @@ namespace Hush
 
 		template <class T>
 		[[nodiscard]]
-		Ref<T> GetRefOrNull(const std::string_view &identifier) const
+		Ref<T> GetRefOrNull(const std::string_view &identifier)
 		{
-			uint64_t hash = Hashing::Fnv1a64(identifier);
+			uint32_t hash = Hashing::Fnv1a(identifier);
 			return GetRefOrNull<T>(hash);
 		}
 
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;
-		std::unordered_map<uint64_t, HandleId> m_loadedResources;
+		std::unordered_map<uint32_t, HandleId> m_loadedResources;
 
 		VirtualFilesystem *m_filesystem = nullptr;
 	};

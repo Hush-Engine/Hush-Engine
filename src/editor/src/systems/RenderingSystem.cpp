@@ -154,7 +154,7 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	auto *instance = reinterpret_cast<MeshReference *>(self);
 	auto *scene = reinterpret_cast<Scene *>(ctx);
 
-	uint64_t resourceId = instance->GetResourceId();
+	uint32_t resourceId = instance->GetResourceId();
 	ResourceManager *resourceManager = scene->GetEngine()->GetResourceManager();
 
 	Ref<Mesh> existingMesh = resourceManager->GetRefOrNull<Mesh>(resourceId);
@@ -164,7 +164,7 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	{
 		instance->SetMesh(existingMesh);
 		// Also set the material refs
-		for (uint64_t materialId : instance->GetMaterialIds())
+		for (uint32_t materialId : instance->GetMaterialIds())
 		{
 			Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(materialId);
 			HUSH_ASSERT(!mat.IsNull(), "Material {} was not properly created in the first step of serialization",

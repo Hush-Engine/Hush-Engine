@@ -30,7 +30,7 @@ Hush::HMeta Hush::MeshCooker::DefaultMeta(EFileExtension ext, std::string_view s
 	(void)srcVPath;
 	HMeta result{};
 	result.assetType = "model";
-	result.id = Hashing::Fnv1a64(srcVPath);
+	result.id = Hashing::Fnv1a(srcVPath);
 	// MAYBE: Perhaps in the future we might want compression for large meshes?
 	result.compression = ECompressionFormat::None;
 	result.outputFormat = EAssetFormat::Mesh;

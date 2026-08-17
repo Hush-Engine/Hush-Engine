@@ -97,9 +97,9 @@ namespace Hush
 			return this->m_materials;
 		}
 
-		/// @brief Fnv1a64 resource ids of the materials in @ref GetMaterials, in the same order.
+		/// @brief Fnv1a resource ids of the materials in @ref GetMaterials, in the same order.
 		[[nodiscard]]
-		const std::vector<uint64_t> &GetMaterialIds() const
+		const std::vector<uint32_t> &GetMaterialIds() const
 		{
 			return this->m_materialIds;
 		}
@@ -114,13 +114,13 @@ namespace Hush
 		void SetResourcePath(std::string_view path, std::string_view name)
 		{
 			(void)name;
-			this->m_resourceId = Hashing::Fnv1a64(path);
+			this->m_resourceId = Hashing::Fnv1a(path);
 			// this->m_path += "#";
 			// this->m_path += name;
 		}
 
 		[[nodiscard]]
-		uint64_t GetResourceId() const
+		uint32_t GetResourceId() const
 		{
 			return this->m_resourceId;
 		}
@@ -134,7 +134,7 @@ namespace Hush
 		// keep the material resource ids in a plain vector for serialization. Remove this once
 		// the reflection tool supports the Ref class.
 		[[hush::property]]
-		std::vector<uint64_t> m_materialIds;
+		std::vector<uint32_t> m_materialIds;
 
 		/// @brief GPU vertex buffer, owned by this component and populated by ResourceUploadSystem.
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
@@ -150,7 +150,7 @@ namespace Hush
 		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully
 		// HushCooker fixes this
 		[[hush::property]]
-		uint64_t m_resourceId;
+		uint32_t m_resourceId;
 	};
 
 	// Inspector facing serialize

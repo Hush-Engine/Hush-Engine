@@ -47,10 +47,10 @@ namespace Hush
 			return this->m_element == INVALID_HANDLE || this->m_resourceManager->GetRefCount(this->m_element).IsNull();
 		}
 
-		/// @brief Fnv1a64 hash of the identifier the resource is stored under in the resource manager.
+		/// @brief Fnv1a hash of the identifier the resource is stored under in the resource manager.
 		/// Zero when the reference was created without an identifier.
 		[[nodiscard]]
-		uint64_t GetResourceId() const
+		uint32_t GetResourceId() const
 		{
 			return this->m_resourceId;
 		}
@@ -150,7 +150,7 @@ namespace Hush
 		{
 		}
 
-		Ref(IResourceManager *resourceManager, T *resource, uint64_t resourceId)
+		Ref(IResourceManager *resourceManager, T *resource, uint32_t resourceId)
 			: m_resourceId(resourceId),
 			  m_element(reinterpret_cast<HandleId>(resource)),
 			  m_resourceManager(resourceManager)
@@ -165,7 +165,7 @@ namespace Hush
 		}
 
 	private:
-		uint64_t m_resourceId = 0;
+		uint32_t m_resourceId = 0;
 		HandleId m_element = INVALID_HANDLE;
 		IResourceManager *m_resourceManager = nullptr;
 	};
