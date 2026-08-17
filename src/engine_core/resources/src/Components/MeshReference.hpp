@@ -5,7 +5,9 @@
 #include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
+#include "crypto/Hashing.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
@@ -20,8 +22,6 @@
 #if __has_include("MeshReference.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
 #include "MeshReference.hushgen.hpp"
 #endif
-#include <unordered_map>
-#include <vector>
 
 namespace Hush
 {
@@ -40,6 +40,10 @@ namespace Hush
 		Ref<Mesh> &GetMesh()
 		{
 			return this->m_mesh;
+		}
+
+		void SetMesh(Ref<Mesh>& mesh) {
+			this->m_mesh = mesh;
 		}
 
 		[[nodiscard]]
@@ -100,9 +104,16 @@ namespace Hush
 		// HACK: Temporary method, will allow us to load data from deserialization
 		void SetResourcePath(std::string_view path, std::string_view name)
 		{
-			this->m_path = path;
-			this->m_path += "#";
-			this->m_path += name;
+			(void)name;
+			this->m_resourceId = Hashing::Fnv1a64(path);
+			// this->m_path += "#";
+			// this->m_path += name;
+		}
+
+		[[nodiscard]]
+		uint32_t GetResourceId() const
+		{
+			return this->m_resourceId;
 		}
 
 	private:
@@ -124,8 +135,9 @@ namespace Hush
 		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully
 		// HushCooker fixes this
 		[[hush::property]]
-		std::string m_path;
+		uint64_t m_resourceId;
 	};
 
+	// Inspector facing serialize
 	void Serialize(MeshReference *component, const char *entityName);
 } // namespace Hush

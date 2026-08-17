@@ -21,7 +21,9 @@
 #include "RHI/ISampler.hpp"
 #include "RHI/ICommandQueue.hpp"
 #include "../components/EditorPanelComponents.hpp"
+#include "Ref.hpp"
 #include "RenderGraph/RenderGraph.hpp"
+#include "ResourceManager.hpp"
 #include "Scene.hpp"
 #include "Shared/Camera.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -140,6 +142,31 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 		});
 }
 
+Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Serialization::JsonDeserializer &serializer,
+													void *ctx)
+{
+	using namespace Hush;
+	// Raw deserialize to get the resourceId
+	Serializable::DefaultDeserialize<MeshReference>(self, serializer);
+	auto *instance = reinterpret_cast<MeshReference *>(self);
+	auto *scene = reinterpret_cast<Scene *>(ctx);
+
+	uint64_t resourceId = instance->GetResourceId();
+	ResourceManager *resourceManager = scene->GetEngine()->GetResourceManager();
+
+	Ref<Mesh> existingMesh = resourceManager->GetRefOrNull<Mesh>(resourceId);
+
+	if (!existingMesh.IsNull())
+	{
+		instance->SetMesh(existingMesh);
+		// Also set the material refs
+	}
+
+	// Then we check if there exists any Ref<Mesh> with this identifier
+
+	// If it does not exist, we read the asset file and create the mesh references
+}
+
 void Hush::RenderingSystem::Init()
 {
 	// Register our public rendering comps for editor inspection
@@ -154,15 +181,17 @@ void Hush::RenderingSystem::Init()
 	Entity meshRefComp = this->GetScene().EntityFromIdUnchecked(meshRefId);
 	meshRefComp.AddComponent<InspectableComponent>();
 	{
-		Serializable& ser = meshRefComp.AddComponent<Serializable>();
+		Serializable &ser = meshRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
+		ser.deserialize = &::MeshReferenceDeserialize;
+		ser.ctx = this->m_cookerService;
 	}
 
 	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();
 	Entity camRefComp = this->GetScene().EntityFromIdUnchecked(camRefId);
 	camRefComp.AddComponent<InspectableComponent>();
 	{
-		Serializable& ser = camRefComp.AddComponent<Serializable>();
+		Serializable &ser = camRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<Camera>;
 	}
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them

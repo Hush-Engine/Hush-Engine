@@ -141,10 +141,10 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 		IGFD::FileDialogConfig config;
 
 		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
-		auto pathResolveRes = vfs->ResolveVirtualPath("res://");
+		auto pathResolveRes = vfs->ResolveHostPath("res://");
 		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
 
-		config.path = pathResolveRes.value();
+		config.path = pathResolveRes.value().string();
 		fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
 	}
 	if (ImGui::MenuItem("Save", "Ctrl+S"))
@@ -157,10 +157,10 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 		IGFD::FileDialogConfig config;
 
 		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
-		auto pathResolveRes = vfs->ResolveVirtualPath("res://");
+		auto pathResolveRes = vfs->ResolveHostPath("res://");
 		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
 
-		config.path = pathResolveRes.value();
+		config.path = pathResolveRes.value().string();
 		fileDialog->OpenDialog("SceneSave", "Save Scene As...", ".hscene", config);
 	}
 

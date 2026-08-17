@@ -125,6 +125,29 @@ namespace Hush
 			return {this, instance};
 		}
 
+		template <class T>
+		[[nodiscard]]
+		Ref<T> GetRefOrNull(uint64_t identifier) const
+		{
+			const auto &iterator = this->m_loadedResources.find(identifier);
+			if (iterator != this->m_loadedResources.end())
+			{
+				HandleId handle = iterator->second;
+				auto *instance = reinterpret_cast<T *>(handle);
+				return {this, instance};
+			}
+			return {this, INVALID_HANDLE};
+		}
+
+		template <class T>
+		[[nodiscard]]
+		Ref<T> GetRefOrNull(const std::string_view &identifier) const
+		{
+			uint64_t hash = Hashing::Fnv1a64(identifier);
+			return GetRefOrNull<T>(hash);
+		}
+
+
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;

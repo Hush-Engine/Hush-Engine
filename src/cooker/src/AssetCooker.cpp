@@ -1,8 +1,10 @@
 #include "AssetCooker.hpp"
 #include "Cookers/ImageCooker.hpp"
+#include "Cookers/MeshCooker.hpp"
 #include "Cookers/ShaderCooker.hpp"
 #include "HAsset.hpp"
 #include "HushPak.hpp"
+#include "IFile.hpp"
 #include "crypto/Hashing.hpp"
 #include "Result.hpp"
 #include "Logger.hpp"
@@ -26,6 +28,7 @@ namespace Hush
 	{
 		RegisterCooker(std::make_unique<ImageCooker>());
 		RegisterCooker(std::make_unique<ShaderCooker>());
+		RegisterCooker(std::make_unique<MeshCooker>());
 	}
 
 	void AssetCooker::RegisterCooker(std::unique_ptr<ICooker> cooker)
@@ -72,6 +75,10 @@ namespace Hush
 			return EFileExtension::HSHADER;
 		if (ext == "HUSHPAK")
 			return EFileExtension::HUSHPAK;
+		if (ext == "GLB")
+			return EFileExtension::GLB;
+		if (ext == "GLTF")
+			return EFileExtension::GLTF;
 		return EFileExtension::UNKNOWN;
 	}
 	Result<std::vector<std::byte>, ECookError> AssetCooker::CookToBlob(std::span<const std::byte> input,

@@ -10,6 +10,8 @@
 namespace Hush
 {
 
+	class ResourceManager;
+
 	enum class ECookError
 	{
 		None,
@@ -19,12 +21,14 @@ namespace Hush
 		InvalidMeta,
 		FileNotFound,
 		WriteFailed,
+		InvalidData,
 		Unknown,
 	};
 
 	struct CookContext
 	{
 		std::string sourceVPath;
+		ResourceManager* resourceManager;
 	};
 
 	/// Interface for cooking a specific asset type.
@@ -56,6 +60,7 @@ namespace Hush
 			std::vector<std::byte> payload;
 			std::vector<std::byte> extra;
 			EAssetFormat format;
+			// TODO: Maybe add multiple payloads / offsets so that we can generate more than one file
 		};
 		virtual Result<CookResult, ECookError> Cook(std::span<const std::byte> input, const HMeta &meta,
 													const CookContext &ctx) = 0;

@@ -20,15 +20,16 @@ namespace Hush
 			BufferOutOfMemory
 		};
 
-		EError (*serialize)(const uint8_t *self, Serialization::JsonSerializer &serializer);
-		EError (*deserialize)(uint8_t *instance, Serialization::JsonDeserializer& deserializer);
+		EError (*serialize)(const uint8_t *self, Serialization::JsonSerializer &serializer, void* ctx);
+		EError (*deserialize)(uint8_t *instance, Serialization::JsonDeserializer& deserializer, void* ctx);
+		void* ctx;
 
 		/// @brief Component type this serializable references
 		Entity::EntityId type;
 
 		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough
 		template <class T>
-		static EError DefaultSerialize(const uint8_t *self, Serialization::JsonSerializer &serializer)
+		static EError DefaultSerialize(const uint8_t *self, Serialization::JsonSerializer &serializer, void* ctx = nullptr)
 		{
 			if (self == nullptr)
 			{
@@ -48,7 +49,7 @@ namespace Hush
 
 		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough
 		template <class T>
-		static EError DefaultDeserialize(uint8_t *self, Serialization::JsonDeserializer& serializer)
+		static EError DefaultDeserialize(uint8_t *self, Serialization::JsonDeserializer& serializer, void* ctx = nullptr)
 		{
 			if (self == nullptr)
 			{
