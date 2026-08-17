@@ -8,14 +8,13 @@ namespace Hush
 {
 	class MeshCooker final : public ICooker
 	{
-
 		struct Header
 		{
 			uint32_t vertexCount;
 			uint32_t indexCount;
+			uint32_t surfaceCount;
 			uint32_t materialCount;
 		};
-
 		static constexpr std::array<EFileExtension, 2> EXTENSIONS = {EFileExtension::GLB, EFileExtension::GLTF};
 
 		[[nodiscard]]

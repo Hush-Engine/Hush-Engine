@@ -138,7 +138,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	{
 		HandleId handle = this->m_loadedResources[nameHash];
 		auto *texture = reinterpret_cast<TextureComponent *>(handle);
-		return {this, texture};
+		return Ref<TextureComponent>{this, texture, nameHash};
 	}
 
 	// We don't have the texture loaded, so we need to load it
@@ -343,7 +343,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	const auto handle = reinterpret_cast<HandleId>(textureComponent);
 	this->m_loadedResources[nameHash] = handle;
 
-	return {this, textureComponent};
+	return {this, textureComponent, nameHash};
 }
 
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::
@@ -355,7 +355,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	{
 		HandleId handle = this->m_loadedResources[nameHash];
 		auto *texture = reinterpret_cast<TextureComponent *>(handle);
-		return {this, texture};
+		return {this, texture, nameHash};
 	}
 
 	int32_t width{};
@@ -386,7 +386,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	const auto handle = reinterpret_cast<HandleId>(textureComponent);
 	this->m_loadedResources[nameHash] = handle;
 
-	return {this, textureComponent};
+	return {this, textureComponent, nameHash};
 }
 
 // Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view &name, const std::byte *data,
@@ -398,7 +398,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 // 	{
 // 		HandleId handle = this->m_loadedResources[nameHash];
 // 		auto *texture = reinterpret_cast<ImageTexture *>(handle);
-// 		return {this, texture};
+// 		return {this, texture, nameHash};
 // 	}
 // 	auto *texture = new ImageTexture(data, size);
 // 	return {this, texture};
@@ -418,7 +418,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 // 	{
 // 		HandleId handle = this->m_loadedResources[pathHash];
 // 		auto *texture = reinterpret_cast<ImageTexture *>(handle);
-// 		return {this, texture};
+// 		return {this, texture, nameHash};
 // 	}
 // 	auto *texture = new ImageTexture(resolvedPath.value());
 // 	const auto handle = reinterpret_cast<HandleId>(texture);

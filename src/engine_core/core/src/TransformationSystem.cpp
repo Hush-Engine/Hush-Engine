@@ -18,7 +18,8 @@ inline void RegisterSerializerForXformComp(Hush::Scene &scene)
 	using namespace Hush;
 	Entity comp = scene.EntityFromIdUnchecked(scene.RegisterComponent<T>());
 	Serializable &ser = comp.AddComponent<Serializable>();
-	ser.serialize = [](const uint8_t *self, Serialization::JsonSerializer &ser) {
+	ser.serialize = [](const uint8_t *self, Serialization::JsonSerializer &ser, void* ctx) {
+		(void)ctx;
 		const auto *xform = reinterpret_cast<const T *>(self);
 		const Transform *basePtr = xform;
 		Serialization::ESerializationError localErr = ser.Serialize(*basePtr, false);
@@ -28,7 +29,8 @@ inline void RegisterSerializerForXformComp(Hush::Scene &scene)
 		}
 		return Serializable::EError::None;
 	};
-	ser.deserialize = [](uint8_t* self, Serialization::JsonDeserializer &deser) {
+	ser.deserialize = [](uint8_t* self, Serialization::JsonDeserializer &deser, void* ctx) {
+		(void)ctx;
 		auto *xform = reinterpret_cast<T *>(self);
 		Transform *basePtr = xform;
 		auto err = deser.Deserialize<Transform>(basePtr);

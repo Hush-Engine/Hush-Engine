@@ -17,6 +17,7 @@ namespace Hush
 			None = 0,
 			ParseError,
 			BadInstance,
+			MissingInternalResource,
 			BufferOutOfMemory
 		};
 
@@ -31,6 +32,7 @@ namespace Hush
 		template <class T>
 		static EError DefaultSerialize(const uint8_t *self, Serialization::JsonSerializer &serializer, void* ctx = nullptr)
 		{
+			(void)ctx;
 			if (self == nullptr)
 			{
 				return Serializable::EError::BadInstance;
@@ -51,6 +53,7 @@ namespace Hush
 		template <class T>
 		static EError DefaultDeserialize(uint8_t *self, Serialization::JsonDeserializer& serializer, void* ctx = nullptr)
 		{
+			(void)ctx;
 			if (self == nullptr)
 			{
 				return Serializable::EError::BadInstance;

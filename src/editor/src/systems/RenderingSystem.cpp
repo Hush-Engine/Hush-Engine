@@ -2,6 +2,7 @@
 #include "Assertions.hpp"
 #include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
 #include "Components/Serializable.hpp"
@@ -38,6 +39,8 @@
 #include <glm/matrix.hpp>
 #include <cstddef>
 #include <cstring>
+#include <span>
+#include <string>
 #include <string_view>
 
 #include "StringAllocation.hpp"
@@ -156,15 +159,44 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 
 	Ref<Mesh> existingMesh = resourceManager->GetRefOrNull<Mesh>(resourceId);
 
+	// Then we check if there exists any Ref<Mesh> with this identifier
 	if (!existingMesh.IsNull())
 	{
 		instance->SetMesh(existingMesh);
 		// Also set the material refs
+		for (uint64_t materialId : instance->GetMaterialIds())
+		{
+			Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(materialId);
+			HUSH_ASSERT(!mat.IsNull(), "Material {} was not properly created in the first step of serialization",
+						materialId);
+			instance->PushMaterial(mat);
+		}
+		return Serializable::EError::None;
 	}
 
-	// Then we check if there exists any Ref<Mesh> with this identifier
-
 	// If it does not exist, we read the asset file and create the mesh references
+	// This is the slow path but it'll run only once per mesh
+	VirtualFilesystem *vfs = scene->GetEngine()->GetVirtualFilesystem();
+	auto openRes = vfs->OpenFile(std::string("res://.hcooked/") + std::to_string(resourceId) + ".hasset");
+
+	if (openRes.has_error())
+	{
+		return Serializable::EError::MissingInternalResource;
+	}
+
+	// Pass this to the hush mesh parser
+	constexpr size_t meshMaxSize = 1024 * 5;
+	std::pmr::memory_resource *allocator = scene->GetEngine()->GetFrameScopeMemoryResource();
+	auto *meshFileBuffer = reinterpret_cast<std::byte *>(allocator->allocate(meshMaxSize));
+	auto buffer = std::span<std::byte>{meshFileBuffer, meshMaxSize};
+	auto readFileRes = openRes.value()->Read(buffer);
+	if (readFileRes.has_error())
+	{
+		return Serializable::EError::MissingInternalResource;
+	}
+	allocator->deallocate(meshFileBuffer, meshMaxSize, alignof(std::byte *));
+
+	return Serializable::EError::None;
 }
 
 void Hush::RenderingSystem::Init()
@@ -184,7 +216,7 @@ void Hush::RenderingSystem::Init()
 		Serializable &ser = meshRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
 		ser.deserialize = &::MeshReferenceDeserialize;
-		ser.ctx = this->m_cookerService;
+		ser.ctx = &this->GetScene();
 	}
 
 	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();

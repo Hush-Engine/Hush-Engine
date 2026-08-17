@@ -17,7 +17,7 @@ namespace Hush
 		writer.Key("version");
 		writer.Uint(this->version);
 		writer.Key("id");
-		writer.Uint(this->id);
+		writer.Uint64(this->id);
 		writer.Key("sourceHash");
 		writer.Uint64(this->sourceHash);
 		writer.Key("sourceMTime");

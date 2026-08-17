@@ -348,7 +348,7 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 		Serializable *serComp = comp.GetComponent<Serializable>();
 		if (serComp != nullptr && serComp->deserialize != nullptr)
 		{
-			serComp->deserialize(reinterpret_cast<uint8_t *>(instance), localDeser);
+			serComp->deserialize(reinterpret_cast<uint8_t *>(instance), localDeser, serComp->ctx);
 		}
 
 		deserializer.SkipObject();
@@ -451,7 +451,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
 				return;
 			}
 
-			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer);
+			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer, serializer->ctx);
 
 			serialErr = jsonSerializer.EndObject();
 			if (err != Serializable::EError::None)

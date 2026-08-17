@@ -42,7 +42,8 @@ namespace Hush
 			return this->m_mesh;
 		}
 
-		void SetMesh(Ref<Mesh>& mesh) {
+		void SetMesh(Ref<Mesh> &mesh)
+		{
 			this->m_mesh = mesh;
 		}
 
@@ -81,6 +82,7 @@ namespace Hush
 		void PushMaterial(Ref<Graphics::Material3D> &material)
 		{
 			this->m_materials.push_back(material);
+			this->m_materialIds.push_back(material.GetResourceId());
 		}
 
 		// Temporary: raw Material3D* key, not safe if a material is destroyed mid-frame.
@@ -93,6 +95,13 @@ namespace Hush
 		const std::vector<Ref<Graphics::Material3D>> &GetMaterials()
 		{
 			return this->m_materials;
+		}
+
+		/// @brief Fnv1a64 resource ids of the materials in @ref GetMaterials, in the same order.
+		[[nodiscard]]
+		const std::vector<uint64_t> &GetMaterialIds() const
+		{
+			return this->m_materialIds;
 		}
 
 		[[nodiscard]]
@@ -111,7 +120,7 @@ namespace Hush
 		}
 
 		[[nodiscard]]
-		uint32_t GetResourceId() const
+		uint64_t GetResourceId() const
 		{
 			return this->m_resourceId;
 		}
@@ -120,6 +129,12 @@ namespace Hush
 		Ref<Mesh> m_mesh;
 		/// @brief Material references used for this mesh's GeometrySurfaces, see @ref GeoSurface
 		std::vector<Ref<Graphics::Material3D>> m_materials;
+
+		// HACK: The reflection tool cannot generate code for the templated Ref<T> class, so we
+		// keep the material resource ids in a plain vector for serialization. Remove this once
+		// the reflection tool supports the Ref class.
+		[[hush::property]]
+		std::vector<uint64_t> m_materialIds;
 
 		/// @brief GPU vertex buffer, owned by this component and populated by ResourceUploadSystem.
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;

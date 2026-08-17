@@ -22,7 +22,8 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 	Entity nameComp = activeScene->EntityFromIdUnchecked(nameId);
 	{
 		Serializable& ser = nameComp.AddComponent<Serializable>();
-		ser.serialize = [](const uint8_t* instance, Serialization::JsonSerializer& ser){
+		ser.serialize = [](const uint8_t* instance, Serialization::JsonSerializer& ser, void* ctx){
+			(void)ctx;
 			const auto* nameInstance = reinterpret_cast<const Entity::Name*>(instance);
 			Serialization::ESerializationError err = ser.Serialize("name", nameInstance->GetName());
 			if (err != Serialization::ESerializationError::None) {
@@ -30,11 +31,12 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 			}
 			return Serializable::EError::None;
 		};
-		ser.deserialize = [](uint8_t* instance, Serialization::JsonDeserializer& deser) {
+		ser.deserialize = [](uint8_t* instance, Serialization::JsonDeserializer& deser, void* ctx) {
+			(void)ctx;
 			auto* nameInstance = reinterpret_cast<Entity::Name*>(instance);
 
 			std::string_view k;
-			int64_t i;
+			int64_t i = 0;
 			// HACK: Skip these
 			(void)deser.Next();
 			(void)deser.ReadKey(k);

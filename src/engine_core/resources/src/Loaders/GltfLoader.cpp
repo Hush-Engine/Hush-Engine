@@ -5,6 +5,7 @@
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "crypto/Hashing.hpp"
 #include <algorithm>
 #include <cstring>
 #include <fastgltf/tools.hpp>
@@ -27,10 +28,9 @@
 // static_assert(Hush::GLTFLoader::AssetHandle::ASSET_CONTAINER_ALIGN == alignof(fastgltf::Asset),
 // 			  "Opaque asset handle alignment does not match real fastgltf asset");
 
-
 void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
 									std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
-									std::vector<std::vector<TextureInfo>> *outTexturesByMat)
+									std::vector<std::vector<TextureInfo>> *outTexturesByMat, std::vector<GeoSurface> *outSurfaces)
 {
 	HUSH_ASSERT(asset != nullptr, "Unable to fill mesh data with a null asset!");
 
@@ -95,9 +95,15 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 
 			const fastgltf::Material &rawMaterial = gltfAsset->materials[meshMatIdx];
 			auto albedo = rawMaterial.pbrData.baseColorFactor;
-			MaterialInfo mat = {.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
+			const uint64_t materialResourceId = Hashing::Fnv1a64(rawMaterial.name);
+			MaterialInfo mat = {.resource = materialResourceId,
+								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);
+
+			// Encode the material as its resource id rather than a raw pointer, so the cooked
+			// surface array can be iterated and resolved against the resource manager on load.
+			surfaceToAdd.material = reinterpret_cast<Graphics::Material3D *>(materialResourceId);
 
 			// Collect the default PBR texture slots. Each texture is referenced, for now, by its
 			// byte offset + size into the original glb file, so the runtime can slice the texture
@@ -151,7 +157,7 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			// innerMeshRef->CalculateNormals();
 		}
 
-		// innerMeshRef->AddSurface(std::move(surfaceToAdd));
+		outSurfaces->push_back(surfaceToAdd);
 	}
 }
 
@@ -160,7 +166,7 @@ Hush::GltfLoadFunctions::EError Hush::GLTFLoader::LoadAssetFromBinary(std::span<
 {
 	HUSH_ASSERT(outAsset != nullptr, "Can't load asset into null handle!");
 	// Placement new on the asset handle
-	new(outAsset) fastgltf::Asset;
+	new (outAsset) fastgltf::Asset;
 	auto res = Hush::GltfLoadFunctions::GetAssetFromBinary(data);
 	if (!res)
 	{

@@ -91,7 +91,7 @@ namespace Hush::GLTFLoader
 
 	void FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
 					  std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
-					  std::vector<std::vector<TextureInfo>> *outTexturesByMat);
+					  std::vector<std::vector<TextureInfo>> *outTexturesByMat, std::vector<GeoSurface> *outSurfaces);
 
 	GltfLoadFunctions::EError LoadAssetFromBinary(std::span<const std::byte> data, AssetHandle *outAsset);
 

@@ -107,36 +107,43 @@ namespace Hush
 
 		Ref<Mesh> LoadMesh(const std::string_view &path);
 
+
 		template <class T, class... Args>
-		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
+		Ref<T> AllocateRefKnwonID(uint64_t id, Args &&...args)
 		{
-			uint64_t hash = Hashing::Fnv1a64(identifier);
-			const auto &iterator = this->m_loadedResources.find(hash);
+			const auto &iterator = this->m_loadedResources.find(id);
 			if (iterator != this->m_loadedResources.end())
 			{
 				HandleId handle = iterator->second;
 				auto *instance = reinterpret_cast<T *>(handle);
-				return {this, instance};
+				return {this, instance, id};
 			}
 			// NOLINTNEXTLINE
 			T *instance = new T(std::forward<Args>(args)...);
 			const auto handle = reinterpret_cast<HandleId>(instance);
-			this->m_loadedResources[hash] = handle;
-			return {this, instance};
+			this->m_loadedResources[id] = handle;
+			return {this, instance, id};
+		}
+
+		template <class T, class... Args>
+		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
+		{
+			uint64_t hash = Hashing::Fnv1a64(identifier);
+			return AllocateRefKnwonID<T>(hash, std::forward<Args>(args)...);
 		}
 
 		template <class T>
 		[[nodiscard]]
-		Ref<T> GetRefOrNull(uint64_t identifier) const
+		Ref<T> GetRefOrNull(uint64_t identifier)
 		{
 			const auto &iterator = this->m_loadedResources.find(identifier);
 			if (iterator != this->m_loadedResources.end())
 			{
 				HandleId handle = iterator->second;
 				auto *instance = reinterpret_cast<T *>(handle);
-				return {this, instance};
+				return {this, instance, identifier};
 			}
-			return {this, INVALID_HANDLE};
+			return {this, nullptr};
 		}
 
 		template <class T>
@@ -146,7 +153,6 @@ namespace Hush
 			uint64_t hash = Hashing::Fnv1a64(identifier);
 			return GetRefOrNull<T>(hash);
 		}
-
 
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;

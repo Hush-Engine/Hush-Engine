@@ -8,6 +8,7 @@
 #include "crypto/Hashing.hpp"
 #include "Result.hpp"
 #include "Logger.hpp"
+#include <cstdint>
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
@@ -304,7 +305,7 @@ namespace Hush
 				continue;
 			}
 
-			const uint32_t id = parsed.value().id;
+			const uint64_t id = parsed.value().id;
 			std::filesystem::path cookedPath = cookedDir / (std::to_string(id) + ".hasset");
 			if (!std::filesystem::exists(cookedPath, ec))
 			{

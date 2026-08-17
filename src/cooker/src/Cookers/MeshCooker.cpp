@@ -34,6 +34,7 @@ Hush::HMeta Hush::MeshCooker::DefaultMeta(EFileExtension ext, std::string_view s
 	// MAYBE: Perhaps in the future we might want compression for large meshes?
 	result.compression = ECompressionFormat::None;
 	result.outputFormat = EAssetFormat::Mesh;
+	result.sourceHash = result.id;
 	// The default one seems to do just fine
 	result.model = {};
 	return result;
@@ -62,8 +63,9 @@ Hush::Result<Hush::ICooker::CookResult, Hush::ECookError> Hush::MeshCooker::Cook
 	std::vector<uint32_t> indexBuff;
 	std::vector<GLTFLoader::MaterialInfo> mats;
 	std::vector<std::vector<GLTFLoader::TextureInfo>> texturesByMaterial;
+	std::vector<GeoSurface> surfaces;
 
-	GLTFLoader::FillMeshData(&modelAsset, 0, &vertexBuff, &indexBuff, &mats, &texturesByMaterial);
+	GLTFLoader::FillMeshData(&modelAsset, 0, &vertexBuff, &indexBuff, &mats, &texturesByMaterial, &surfaces);
 
 	// For now we'll do just one
 
@@ -74,12 +76,14 @@ Hush::Result<Hush::ICooker::CookResult, Hush::ECookError> Hush::MeshCooker::Cook
 	Header header{};
 	header.vertexCount = static_cast<uint32_t>(vertexBuff.size());
 	header.indexCount = static_cast<uint32_t>(indexBuff.size());
+	header.surfaceCount = static_cast<uint32_t>(surfaces.size());
 	header.materialCount = static_cast<uint32_t>(mats.size());
 
 	const size_t vertexBuffByteSize = (sizeof(Mesh::Vertex) * vertexBuff.size());
 	const size_t indexBuffByteSize = (sizeof(uint32_t) * indexBuff.size());
 	const size_t matsByteSize = (sizeof(GLTFLoader::MaterialInfo) * mats.size());
-	const size_t fileSize = sizeof(Header) + vertexBuffByteSize + indexBuffByteSize + matsByteSize;
+	const size_t surfacesByteSize = (sizeof(GeoSurface) * surfaces.size());
+	const size_t fileSize = sizeof(Header) + vertexBuffByteSize + indexBuffByteSize + matsByteSize + surfacesByteSize;
 
 	payload->resize(fileSize);
 	std::byte *targetMem = payload->data();
@@ -98,6 +102,9 @@ Hush::Result<Hush::ICooker::CookResult, Hush::ECookError> Hush::MeshCooker::Cook
 
 	std::memcpy(targetMem, mats.data(), matsByteSize);
 	targetMem += matsByteSize;
+
+	std::memcpy(targetMem, surfaces.data(), surfacesByteSize);
+	targetMem += surfacesByteSize;
 
 	result.format = EAssetFormat::Mesh;
 
