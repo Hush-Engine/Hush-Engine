@@ -48,18 +48,17 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 	if (fileDialog->IsOk())
 	{
 		// Create a scene asset
-		ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
 		std::string path = fileDialog->GetFilePathName();
-		Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
 		// Save the scene
-		Scene::EError err = this->m_activeScene->ToSceneAsset(scene.Get());
+		std::string sceneJson{};
+		Scene::EError err = this->m_activeScene->ToSceneAsset(sceneJson);
 
 		// Serialize asset and save it to a file
 		// I hate std::fstreams
 		{
 			std::ofstream ostream{};
 			ostream.open(path);
-			ostream << scene->sceneJson;
+			ostream << sceneJson;
 			ostream.close();
 		}
 		Entity notificationEnt = this->m_activeScene->CreateEntity();
@@ -83,21 +82,20 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 	if (fileDialog->IsOk())
 	{
 		// Create a scene asset
-		ResourceManager *resourceManager = this->m_activeScene->GetEngine()->GetResourceManager();
 		std::string path = fileDialog->GetFilePathName();
-		Ref<SceneAsset> scene = resourceManager->AllocateRef<SceneAsset>(path);
+		std::string sceneJson;
 		// I hate std::fstreams
 		{
 			std::ifstream istream(path, std::ios::binary | std::ios::ate);
 			std::streamsize size = istream.tellg();
 			istream.seekg(0, std::ios::beg);
 
-			scene->sceneJson.resize(size);
-			istream.read(scene->sceneJson.data(), size);
+			sceneJson.resize(size);
+			istream.read(sceneJson.data(), size);
 			istream.close();
 		}
 		// Load the scene
-		Scene::EError err = this->m_activeScene->FromSceneAsset(scene.Get());
+		Scene::EError err = this->m_activeScene->FromSceneAsset(sceneJson);
 		Entity notificationEnt = this->m_activeScene->CreateEntity();
 		if (err == Scene::EError::None)
 		{

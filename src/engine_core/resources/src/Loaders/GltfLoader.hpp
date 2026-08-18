@@ -1,8 +1,10 @@
 #pragma once
 #include "Components/Material3D.hpp"
 #include "Entity.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
 #include "Loaders/GltfLoadFunctions.hpp"
 #include "Ref.hpp"
+#include "Shared/MaterialPass.hpp"
 #include "Shared/Mesh.hpp"
 #include "VirtualFilesystem.hpp"
 #include <cstdint>
@@ -19,33 +21,8 @@ namespace fastgltf
 	struct Mesh;
 } // namespace fastgltf
 
-namespace Hush
-{
-	class ResourceManager;
-	class MeshReference;
-	namespace Graphics
-	{
-		class IGraphicsTexture;
-		class IGraphicsDevice;
-		class Material3D;
-		struct Material3DDescriptor;
-	} // namespace Graphics
-
-	// TODO: Move to its own file
-	struct RenderingContext
-	{
-		const Graphics::Material3DDescriptor *materialDescriptor;
-		Scene *activeScene; // Optional for asset cooking pipeline, required for direct loads where we instance comps
-		ResourceManager *resourceManager;
-		VirtualFilesystem *virtualFilesystem;
-		Graphics::IGraphicsDevice *device;
-	};
-
-} // namespace Hush
-
 namespace Hush::GLTFLoader
 {
-
 	// Opaque handle into the fastgltf::Asset struct
 	struct AssetHandle
 	{
@@ -68,7 +45,9 @@ namespace Hush::GLTFLoader
 	{
 		// 63 + null
 		static constexpr size_t MAX_MAT_NAME = 64;
+		EMaterialPass pass;
 		uint32_t resource;
+		float alphaCutoff;
 		glm::vec4 albedo;
 		char name[MAX_MAT_NAME];
 	};

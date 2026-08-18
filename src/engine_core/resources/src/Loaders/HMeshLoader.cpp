@@ -3,7 +3,10 @@
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "HAsset.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
 #include "ResourceManager.hpp"
+#include "Shared/MaterialPass.hpp"
+#include "Shared/Mesh.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -17,6 +20,7 @@ struct HMeshHeader
 {
 	uint32_t vertexCount;
 	uint32_t indexCount;
+	uint32_t surfaceCount;
 	uint32_t materialCount;
 };
 
@@ -24,13 +28,15 @@ struct HMeshMaterialInfo
 {
 	// 63 + null
 	static constexpr size_t MAX_MAT_NAME = 64;
+	EMaterialPass pass;
 	uint32_t resource;
+	float alphaCutoff;
 	glm::vec4 albedo;
 	char name[MAX_MAT_NAME];
 };
 
 bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshReference *outRef,
-									 ResourceManager *resourceManager)
+									 const RenderingContext* renderingCtx)
 {
 	HUSH_ASSERT(outRef != nullptr, "Cannot load a mesh into a null mesh reference component!");
 	std::optional<HAsset> asset = HAsset::Read(data);
@@ -38,6 +44,7 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 	{
 		return false;
 	}
+	ResourceManager* resourceManager = renderingCtx->resourceManager;
 
 	const std::vector<std::byte> &modelData = asset.value().payload;
 	const std::byte *rawData = modelData.data();
@@ -69,11 +76,29 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 			resourceManager->GetRefOrNull<Graphics::Material3D>(materialInfo->resource);
 		if (!existingMat.IsNull())
 		{
-			// Push the material
+			// Push the material 
+			outRef->PushMaterial(existingMat);
 			continue;
 		}
 		// Otherwise, create it
 		auto matName = std::string_view(&materialInfo->name[0]);
-		existingMat = resourceManager->AllocateRef<Graphics::Material3D>(matName);
+		existingMat = resourceManager->AllocateRefKnwonID<Graphics::Material3D>(materialInfo->resource);
+		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
+		existingMat->SetMaterialPass(materialInfo->pass);
+		// TODO: Make these reflect the .hshader metadata
+		existingMat->SetProperty("colorFactors", materialInfo->albedo);
+		existingMat->SetProperty("alphaCutoff", materialInfo->alphaCutoff);
+		existingMat->SetName(matName);
+		outRef->PushMaterial(existingMat);
 	}
+	const size_t matDataSize = sizeof(HMeshMaterialInfo) * header->materialCount;
+	rawData += matDataSize;
+
+	const auto* rawSurfaces = reinterpret_cast<const GeoSurface*>(rawData);
+	std::vector<GeoSurface> &matSurfaces = innerMesh->GetSurfaces();
+	matSurfaces.resize(header->surfaceCount);
+	std::memcpy(matSurfaces.data(), rawSurfaces, sizeof(GeoSurface) * header->surfaceCount);
+
+	// That should be it c:
+	return true;
 }

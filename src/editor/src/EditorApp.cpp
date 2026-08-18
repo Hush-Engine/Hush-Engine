@@ -173,10 +173,10 @@ public:
 
 		this->m_scene->Init();
 		// Create a directional light
-		Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
-		dirLightEntity.AddComponent<Hush::WorldTransform>();
-		dirLightEntity.AddComponent<Hush::LocalTransform>();
-		dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
+		// Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
+		// dirLightEntity.AddComponent<Hush::WorldTransform>();
+		// dirLightEntity.AddComponent<Hush::LocalTransform>();
+		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
 	}
 

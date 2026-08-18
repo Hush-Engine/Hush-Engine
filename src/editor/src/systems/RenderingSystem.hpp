@@ -6,6 +6,7 @@
 #include "CookerService.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -119,6 +120,9 @@ namespace Hush
 		// Mesh rendering
 		Graphics::Material3DDescriptor m_pbrMaterialDescriptor;
 		Graphics::ShaderCompilationResult m_pbrCompilationData;
+		// Context passed down to mesh or texture loaders
+		// MAYBE: Could this be a component?
+		RenderingContext m_renderingContext;
 		std::unique_ptr<Graphics::IShaderModule> m_meshVertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_meshFragModule;
 		std::unique_ptr<Graphics::IGraphicsPipeline> m_meshPipeline;

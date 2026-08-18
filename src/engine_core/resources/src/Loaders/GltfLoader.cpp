@@ -97,15 +97,16 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			const fastgltf::Material &rawMaterial = gltfAsset->materials[meshMatIdx];
 			auto albedo = rawMaterial.pbrData.baseColorFactor;
 			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
-			MaterialInfo mat = {.resource = materialResourceId,
+			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
+								.resource = materialResourceId,
+								.alphaCutoff = rawMaterial.alphaCutoff,
 								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);
 
 			// Encode the material as its resource id rather than a raw pointer, so the cooked
 			// surface array can be iterated and resolved against the resource manager on load.
-			surfaceToAdd.material =
-				reinterpret_cast<Graphics::Material3D *>(static_cast<uintptr_t>(materialResourceId));
+			surfaceToAdd.materialResource = materialResourceId;
 
 			// Collect the default PBR texture slots. Each texture is referenced, for now, by its
 			// byte offset + size into the original glb file, so the runtime can slice the texture
@@ -258,7 +259,7 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 			}
 
 			// Non-owning ref on the surface
-			surfaceToAdd.material = materialInstance.Get();
+			surfaceToAdd.materialResource = materialInstance.GetResourceId();
 		}
 
 		// Correct normals if empty

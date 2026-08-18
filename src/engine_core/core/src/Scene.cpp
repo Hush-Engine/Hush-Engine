@@ -301,14 +301,19 @@ void Hush::Scene::Shutdown()
 }
 
 // Free helper functions
-inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk) {
+inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk)
+{
 	using JsonEToken_t = Hush::Serialization::JsonDeserializer::EToken;
 	return tk != JsonEToken_t::ArrayEnd && tk != JsonEToken_t::Error && tk != JsonEToken_t::EndOfInput;
 }
 
 // Local macro helper
-#define BREAK_LOOP_IF_NEEDED currToken = deserializer.GetToken();\
-if (!ShouldContinueReadingCompsArray(currToken)) { break; }
+#define BREAK_LOOP_IF_NEEDED                                                                                           \
+	currToken = deserializer.GetToken();                                                                               \
+	if (!ShouldContinueReadingCompsArray(currToken))                                                                   \
+	{                                                                                                                  \
+		break;                                                                                                         \
+	}
 
 inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 												 Hush::Serialization::JsonDeserializer &deserializer,
@@ -320,7 +325,8 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 	int64_t compId{};
 	std::string_view compKey{};
 	Serialization::JsonDeserializer::EToken currToken{};
-	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken); currToken = deserializer.GetToken())
+	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken);
+		 currToken = deserializer.GetToken())
 	{
 		std::string_view objectJson;
 		deserializer.PeekObject(objectJson);
@@ -348,7 +354,12 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 		Serializable *serComp = comp.GetComponent<Serializable>();
 		if (serComp != nullptr && serComp->deserialize != nullptr)
 		{
-			serComp->deserialize(reinterpret_cast<uint8_t *>(instance), localDeser, serComp->ctx);
+			auto *rawInstance = reinterpret_cast<uint8_t *>(instance);
+			serComp->deserialize(rawInstance, localDeser, serComp->ctx);
+			if (serComp->postDeserialize != nullptr)
+			{
+				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
+			}
 		}
 
 		deserializer.SkipObject();
@@ -357,10 +368,9 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 	return Scene::EError::None;
 }
 
-
-Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
+Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string& asset)
 {
-	Serialization::JsonDeserializer deserializer{asset->sceneJson};
+	Serialization::JsonDeserializer deserializer{asset};
 	// Enter the object
 	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
 	std::string_view currKey{};
@@ -394,7 +404,8 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
 		deserializer.ReadKey(currKey);
 		// Then we can go for comps related to that entity
 		std::string_view compsArray;
-		if (!deserializer.ReadArray(compsArray)) {
+		if (!deserializer.ReadArray(compsArray))
+		{
 			continue;
 		}
 		Serialization::JsonDeserializer arrayDeser{compsArray};
@@ -407,9 +418,9 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(SceneAsset *asset)
 
 #undef BREAK_LOOP_IF_NEEDED
 
-Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
+Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string& asset)
 {
-	HUSH_ASSERT(asset != nullptr, "Cannot serialize to an invalid scene asset handle");
+	// HUSH_ASSERT(asset != nullptr, "Cannot serialize to an invalid scene asset handle");
 	// Serialize every single entity in the world with each of its components
 	// TODO: For now, every entity that has a transform is enough, but there are
 	// use cases where we want to serialize raw entities with no inspectable transoforms
@@ -469,7 +480,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(SceneAsset *asset)
 
 	(void)serialErr;
 
-	asset->sceneJson = jsonSerializer.FinishSerialization();
+	asset.assign(jsonSerializer.FinishSerialization());
 
 	return EError::None;
 }

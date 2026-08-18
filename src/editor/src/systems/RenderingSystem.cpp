@@ -2,12 +2,16 @@
 #include "Assertions.hpp"
 #include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/GpuUploadComponent.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
 #include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
+#include "Loaders/HMeshLoader.hpp"
 #include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
 #include "Profiling.hpp"
@@ -33,6 +37,7 @@
 #include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
+#include <cstdint>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
@@ -152,7 +157,8 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	// Raw deserialize to get the resourceId
 	Serializable::DefaultDeserialize<MeshReference>(self, serializer);
 	auto *instance = reinterpret_cast<MeshReference *>(self);
-	auto *scene = reinterpret_cast<Scene *>(ctx);
+	auto *renderCtx = reinterpret_cast<RenderingContext*>(ctx);
+	Scene *scene = renderCtx->activeScene;
 
 	uint32_t resourceId = instance->GetResourceId();
 	ResourceManager *resourceManager = scene->GetEngine()->GetResourceManager();
@@ -172,6 +178,12 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 			instance->PushMaterial(mat);
 		}
 		return Serializable::EError::None;
+	}
+
+	{
+		// Do not keep this one around
+		auto mesh = resourceManager->AllocateRefKnwonID<Mesh>(resourceId);
+		instance->SetMesh(mesh);
 	}
 
 	// If it does not exist, we read the asset file and create the mesh references
@@ -194,9 +206,24 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	{
 		return Serializable::EError::MissingInternalResource;
 	}
+
+	HMeshLoader::LoadMeshFromBinary(buffer, instance, renderCtx);
+
 	allocator->deallocate(meshFileBuffer, meshMaxSize, alignof(std::byte *));
 
 	return Serializable::EError::None;
+}
+
+void MeshReferencePostDeserialize(uint8_t *instance, Hush::Entity::EntityId entity, Hush::Entity::EntityId comp, void* ctx)
+{
+	using namespace Hush;
+	(void)instance;
+	(void)comp;
+	// Add the GPU upload comp
+	auto* renderCtx = reinterpret_cast<RenderingContext*>(ctx);
+	Scene* scene = renderCtx->activeScene;
+	Entity ent = scene->EntityFromIdUnchecked(entity);
+	ent.AddComponent<Renderer::GpuUploadComponent>();
 }
 
 void Hush::RenderingSystem::Init()
@@ -216,7 +243,8 @@ void Hush::RenderingSystem::Init()
 		Serializable &ser = meshRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
 		ser.deserialize = &::MeshReferenceDeserialize;
-		ser.ctx = &this->GetScene();
+		ser.postDeserialize = &::MeshReferencePostDeserialize;
+		ser.ctx = &this->m_renderingContext;
 	}
 
 	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();
@@ -280,6 +308,14 @@ void Hush::RenderingSystem::Init()
 		.compilationResult = &this->m_pbrCompilationData,
 		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
 	};
+
+	HushEngine* engine = this->GetScene().GetEngine();
+	this->m_renderingContext.virtualFilesystem = engine->GetVirtualFilesystem();
+	this->m_renderingContext.activeScene = &this->GetScene();
+	this->m_renderingContext.device = engine->GetWindowRenderer()->GetGraphicsDevice();
+	this->m_renderingContext.materialDescriptor = &this->m_pbrMaterialDescriptor;
+	this->m_renderingContext.resourceManager = engine->GetResourceManager();
+
 }
 
 void Hush::RenderingSystem::OnShutdown()
@@ -351,8 +387,10 @@ void Hush::RenderingSystem::OnPreRender()
 		this->CreateMeshSceneBindGroup(device);
 	}
 
+	ResourceManager *resourceManager = this->GetScene().GetEngine()->GetResourceManager();
+
 	m_renderableTargetsQuery.Each(
-		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
+		[this, device, &slotIndex, resourceManager](const MeshReference &meshRef, const WorldTransform &xform) {
 			const auto *mesh = meshRef.GetMesh().Get();
 			if (mesh == nullptr)
 			{
@@ -374,7 +412,8 @@ void Hush::RenderingSystem::OnPreRender()
 			for (const auto &surface : mesh->GetSurfaces())
 			{
 				Graphics::IBindGroup *matBindGroup = nullptr;
-				auto *mat = surface.material;
+
+				auto *mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource).Get();
 				if (mat != nullptr)
 				{
 					mat->FlushProperties(device);

@@ -108,9 +108,9 @@ namespace Hush
 		}
 
 		/// @brief Parses a scene asset and instantiates all entities and systems in it to this scene
-		EError FromSceneAsset(SceneAsset* asset); // TODO: This should be a Ref<SceneAsset>, but the resources module is one layer above us
+		EError FromSceneAsset(const std::string& asset); // TODO: This should be a Ref<SceneAsset>, but the resources module is one layer above us
 
-		EError ToSceneAsset(SceneAsset* asset);
+		EError ToSceneAsset(std::string& asset);
 
 		/// Remove a system from the scene by name.
 		/// @param name Name of the system to remove.

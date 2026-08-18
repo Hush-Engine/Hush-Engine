@@ -32,6 +32,8 @@ namespace Hush
 	{
 		HUSH_GENERATED_BODY
 	public:
+		MeshReference() = default;
+
 		MeshReference(Ref<Mesh> &mesh)
 			: m_mesh(mesh)
 		{
@@ -150,7 +152,7 @@ namespace Hush
 		// HACK: Maybe temporary, maybe not, points to the file used to generate this MeshReference, hopefully
 		// HushCooker fixes this
 		[[hush::property]]
-		uint32_t m_resourceId;
+		uint32_t m_resourceId{};
 	};
 
 	// Inspector facing serialize

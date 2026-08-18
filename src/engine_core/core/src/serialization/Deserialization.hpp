@@ -856,8 +856,8 @@ namespace Hush::Serialization
 	/// Each array element is deserialized through a per-element @ref Visitor<T> that is constructed
 	/// when the element object starts. Once the element object ends, control returns to this visitor
 	/// so the next array element (or the array end) can be handled.
-	/// TODO: Only reflected element types are supported right now; vectors of primitive types
-	/// (e.g. std::vector<float>) are not handled yet.
+	/// For vectors of primitive element types, see @ref Visitor<std::vector<BuiltinVisitors::ExistsBuiltinVisitor>>
+	/// below.
 	template <IsDeserializable T>
 	struct Visitor<std::vector<T>> : public IVisitor
 	{
@@ -917,6 +917,116 @@ namespace Hush::Serialization
 			if (!insideArray || !m_elementVisitor.has_value())
 			{
 				return EDeserializationError::InvalidData;
+			}
+
+			m_elementVisitor.reset();
+
+			return this;
+		}
+	};
+
+	/// Specialization of @ref Visitor for vectors of builtin (primitive) element types.
+	/// Scalar array elements are deserialized through a per-element
+	/// @ref BuiltinVisitors::Visitor<T> that writes into `value->back()` and then hands
+	/// control back to this visitor so the next element (or the array end) can be handled.
+	template <BuiltinVisitors::ExistsBuiltinVisitor T>
+		requires(!IsDeserializable<T>)
+	struct Visitor<std::vector<T>> : public IVisitor
+	{
+		std::vector<T> *value;
+		EFormatDescribingType m_format;
+		bool insideArray{false};
+		std::optional<BuiltinVisitors::Visitor<T>> m_elementVisitor;
+
+		Visitor(IVisitor *parent, std::vector<T> *value, EFormatDescribingType describingType)
+			: IVisitor(parent, describingType),
+			  value(value),
+			  m_format(describingType)
+		{
+		}
+
+		Result VisitArrayStart() override
+		{
+			if (insideArray)
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			insideArray = true;
+			value->clear();
+
+			return this;
+		}
+
+		Result VisitArrayEnd() override
+		{
+			if (!insideArray)
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			insideArray = false;
+			m_elementVisitor.reset();
+
+			return GetParentVisitor();
+		}
+
+		Result VisitInt32(std::int32_t v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitInt32(v); });
+		}
+
+		Result VisitUInt32(std::uint32_t v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitUInt32(v); });
+		}
+
+		Result VisitInt64(std::int64_t v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitInt64(v); });
+		}
+
+		Result VisitUInt64(std::uint64_t v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitUInt64(v); });
+		}
+
+		Result VisitFloat(float v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitFloat(v); });
+		}
+
+		Result VisitDouble(double v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitDouble(v); });
+		}
+
+		Result VisitBool(bool v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitBool(v); });
+		}
+
+		Result VisitString(std::string_view v) override
+		{
+			return ConsumeElement([&](BuiltinVisitors::Visitor<T> &element) { return element.VisitString(v); });
+		}
+
+	private:
+		template <typename ConsumeFn>
+		Result ConsumeElement(ConsumeFn &&consume)
+		{
+			if (!insideArray || m_elementVisitor.has_value())
+			{
+				return EDeserializationError::InvalidData;
+			}
+
+			value->emplace_back();
+			m_elementVisitor.emplace(this, &value->back(), m_format);
+
+			Result consumed = std::forward<ConsumeFn>(consume)(*m_elementVisitor);
+			if (consumed.has_error())
+			{
+				return consumed.error();
 			}
 
 			m_elementVisitor.reset();
