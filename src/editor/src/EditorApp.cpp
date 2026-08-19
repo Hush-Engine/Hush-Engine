@@ -102,7 +102,7 @@ public:
 
 		// Cooker service for import pipeline (EditorApp-owned; no longer an ECS component)
 		m_cookerService = std::make_unique<Hush::CookerService>();
-		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR));
+		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR), this->m_engine->GetFrameScopeMemoryResource());
 
 		// Wire OS file drop → cooker import.
 		m_engine->GetWindowRenderer()->SetDropCallback([this](const std::filesystem::path &path) {
@@ -117,7 +117,7 @@ public:
 		m_fileWatcher = std::make_unique<Hush::FileWatcher>(projRoot);
 		// Let the import service suppress the watcher events its own writes cause.
 		m_cookerService->SetFileWatcher(m_fileWatcher.get());
-		m_cookedDirectory.Init(projRoot, vfs);
+		m_cookedDirectory.Init(projRoot, vfs, m_engine->GetFrameScopeMemoryResource());
 		m_cookedDirectory.Reconcile();
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();

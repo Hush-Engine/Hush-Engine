@@ -2,6 +2,7 @@
 
 #include "AssetCooker.hpp"
 #include "HMeta.hpp"
+#include <memory_resource>
 
 namespace Hush
 {
@@ -27,7 +28,7 @@ namespace Hush
 		CookedDirectory &operator=(const CookedDirectory &) = delete;
 
 		/// Initialize with the project root and register built-in cookers.
-		void Init(std::filesystem::path projectRoot, VirtualFilesystem *vfs);
+		void Init(std::filesystem::path projectRoot, VirtualFilesystem *vfs, std::pmr::memory_resource* allocator);
 
 		/// Scan .hmeta files on startup, recook any stale/missing outputs.
 		void Reconcile();
@@ -61,6 +62,7 @@ namespace Hush
 		std::filesystem::path m_projectRoot;
 		std::filesystem::path m_cookedDir;
 		VirtualFilesystem *m_vfs = nullptr;
+		std::pmr::memory_resource* m_frameAllocator;
 		AssetCooker m_cooker;
 		std::vector<TrackedAsset> m_assets;
 	};

@@ -51,7 +51,7 @@ namespace Hush
 		/// Walk a content directory: for each source file, refresh .hmeta if needed,
 		/// cook to .hcooked/{id}.hasset.
 		Result<void, ECookError> CookDirectory(const std::filesystem::path &contentDir,
-											   ECompressionFormat compression = ECompressionFormat::Zstd);
+											   ECompressionFormat compression = ECompressionFormat::Zstd, std::pmr::memory_resource* allocator = nullptr);
 
 		/// Build a .hushpak from a set of cooked blobs.
 		Result<void, ECookError> BuildPak(std::span<const PakInput> inputs, IFile &out);

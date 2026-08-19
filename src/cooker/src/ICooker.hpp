@@ -3,6 +3,7 @@
 #include "IFile.hpp"
 #include "HMeta.hpp"
 #include "Result.hpp"
+#include <memory_resource>
 #include <span>
 #include <vector>
 #include <string_view>
@@ -29,6 +30,8 @@ namespace Hush
 	{
 		std::string sourceVPath;
 		ResourceManager* resourceManager;
+		// An allocator
+		std::pmr::memory_resource* frameAllocator;
 	};
 
 	/// Interface for cooking a specific asset type.

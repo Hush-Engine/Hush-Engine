@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iterator>
+#include <memory_resource>
 #include <string>
 #include <zstd.h>
 
@@ -141,7 +142,7 @@ namespace Hush
 	}
 
 	Result<void, ECookError> AssetCooker::CookDirectory(const std::filesystem::path &contentDir,
-														ECompressionFormat compression)
+														ECompressionFormat compression, std::pmr::memory_resource* allocator)
 	{
 		std::error_code ec;
 		if (!std::filesystem::exists(contentDir, ec))
@@ -214,6 +215,7 @@ namespace Hush
 
 			CookContext ctx;
 			ctx.sourceVPath = relVPath;
+			ctx.frameAllocator = allocator; 
 
 			auto blob = CookToBlob(srcData, ext, meta, ctx);
 			if (blob.has_error())

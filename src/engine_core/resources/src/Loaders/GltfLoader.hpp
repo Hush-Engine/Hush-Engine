@@ -9,6 +9,7 @@
 #include "VirtualFilesystem.hpp"
 #include <cstdint>
 #include <filesystem>
+#include <memory_resource>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -26,9 +27,12 @@ namespace Hush::GLTFLoader
 	// Opaque handle into the fastgltf::Asset struct
 	struct AssetHandle
 	{
-		constexpr static size_t ASSET_CONTAINER_SIZE = 584;
-		constexpr static size_t ASSET_CONTAINER_ALIGN = 8;
-		alignas(ASSET_CONTAINER_ALIGN) std::array<std::byte, ASSET_CONTAINER_SIZE> backing;
+		std::byte* backing;
+		std::pmr::memory_resource* allocator;
+
+		void Alloc(std::pmr::memory_resource* pAllocator);
+
+		void Dispose();
 
 		[[nodiscard]]
 		size_t MeshCount() const;
@@ -37,11 +41,12 @@ namespace Hush::GLTFLoader
 		size_t PrimitiveCount(size_t meshIndex) const;
 	};
 
-	// HACK: Refactor the Material and Texture info to a stream of entries with binding names, the current setup only
-	// works if we assume the mesh is running the default PBR shader
+		// HACK: Refactor the Material and Texture info to a stream of entries with binding names, the current setup
+		// only works if we assume the mesh is running the default PBR shader
 
-	/// @brief Describes all relevant information about the default PBR GLTF material, this is NOT meant for rendering
-	struct MaterialInfo
+		/// @brief Describes all relevant information about the default PBR GLTF material, this is NOT meant for
+		/// rendering
+		struct MaterialInfo
 	{
 		// 63 + null
 		static constexpr size_t MAX_MAT_NAME = 64;
@@ -59,12 +64,12 @@ namespace Hush::GLTFLoader
 		static constexpr size_t MAX_TEX_NAME = 64;
 		/// @brief If not 0, this is the cooked texture this texture points to
 		uint32_t resource;
+		/// @brief PBR binding index this texture is assigned to (1 = albedo, 2 = metalRough, 3 = normal, 4 = emissive)
+		uint32_t binding;
 		/// @brief Byte offset of the texture data within the original glb file
 		uint64_t offset;
 		/// @brief Byte length of the texture data within the original glb file
 		uint64_t size;
-		int32_t width;
-		int32_t height;
 		char name[MAX_TEX_NAME];
 	};
 

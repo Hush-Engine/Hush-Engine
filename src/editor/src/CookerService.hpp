@@ -28,7 +28,7 @@ namespace Hush
 		/// Initialize with the VFS and the project root path.
 		/// @param vfs  The engine's virtual filesystem.
 		/// @param projectRoot  OS path to the project content directory (HUSH_DEFAULT_PROJECT_DIR).
-		void Init(VirtualFilesystem *vfs, std::filesystem::path projectRoot);
+		void Init(VirtualFilesystem *vfs, std::filesystem::path projectRoot, std::pmr::memory_resource* allocator = nullptr);
 
 		/// Import a file dropped onto the editor.
 		/// Copies the source file under res://, creates .hmeta, and cooks it.
@@ -55,6 +55,8 @@ namespace Hush
 	private:
 		AssetCooker m_cooker;
 		VirtualFilesystem *m_vfs = nullptr;
+		// Our allocator
+		std::pmr::memory_resource* m_frameAllocator = nullptr;
 		std::filesystem::path m_projectRoot;
 		FileWatcher *m_watcher = nullptr;
 	};

@@ -23,10 +23,22 @@
 #include "GltfLoadFunctions.hpp"
 #include "Scene.hpp"
 
-// static_assert(Hush::GLTFLoader::AssetHandle::ASSET_CONTAINER_SIZE == sizeof(fastgltf::Asset),
-// 			  "Opaque asset handle size does not match real fastgltf asset");
-// static_assert(Hush::GLTFLoader::AssetHandle::ASSET_CONTAINER_ALIGN == alignof(fastgltf::Asset),
-// 			  "Opaque asset handle alignment does not match real fastgltf asset");
+
+void Hush::GLTFLoader::AssetHandle::Alloc(std::pmr::memory_resource* pAllocator) {
+	this->allocator = pAllocator;
+	this->backing = reinterpret_cast<std::byte*>(allocator->allocate(sizeof(fastgltf::Asset), alignof(fastgltf::Asset)));
+	// Placement new on the asset handle
+	new (this->backing) fastgltf::Asset;
+}
+
+void Hush::GLTFLoader::AssetHandle::Dispose() {
+	using namespace fastgltf;
+	// Placement new on the asset handle
+	auto* asset = reinterpret_cast<fastgltf::Asset*>(this->backing);
+	asset->~Asset();
+	this->allocator->deallocate(this->backing, sizeof(Asset), alignof(Asset));
+	this->backing = nullptr;
+}
 
 void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
 									std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
@@ -34,8 +46,7 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 									std::vector<GeoSurface> *outSurfaces)
 {
 	HUSH_ASSERT(asset != nullptr, "Unable to fill mesh data with a null asset!");
-
-	auto *gltfAsset = reinterpret_cast<fastgltf::Asset *>(asset->backing.data());
+	auto *gltfAsset = reinterpret_cast<fastgltf::Asset *>(asset->backing);
 	fastgltf::Mesh &mesh = gltfAsset->meshes[meshIndex];
 	outTexturesByMat->resize(gltfAsset->materials.size());
 
@@ -111,21 +122,35 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			// Collect the default PBR texture slots. Each texture is referenced, for now, by its
 			// byte offset + size into the original glb file, so the runtime can slice the texture
 			// bytes straight out of the file without re-parsing the whole asset.
-			auto collectTexture = [&](std::string_view bindingName, const auto &textureInfoOpt) -> void {
+			// HACK: The PBR binding indices (1..4) are hardcoded here and mirrored in
+			// RenderingSystem::OnPreRender and HMeshLoader. This should be driven by the PBR
+			// shader reflection instead so the binding numbers are defined in a single place.
+			// TODO: Derive the texture bindings from the shader reflection (BindGroupLayoutDescriptor)
+			// and propagate them through MaterialInfo / TextureInfo instead of hardcoding them.
+			auto collectTexture = [gltfAsset, materialResourceId, &rawMaterial, meshMatIdx, outTexturesByMat](uint32_t binding, std::string_view bindingName,
+									  const auto &textureInfoOpt) -> void {
 				if (!textureInfoOpt.has_value())
 				{
 					return;
 				}
 
-				const fastgltf::Texture &texture = gltfAsset->textures[textureInfoOpt->textureIndex];
+				const std::vector<fastgltf::Texture> &assetTextures = gltfAsset->textures;
+				const fastgltf::Texture &texture = assetTextures.at(textureInfoOpt->textureIndex);
 				if (!texture.imageIndex.has_value())
 				{
 					return;
 				}
 
-				const fastgltf::Image &image = gltfAsset->images[texture.imageIndex.value()];
+				size_t imageIdx = texture.imageIndex.value();
+				const std::vector<fastgltf::Image> &images = gltfAsset->images;
+
+				const fastgltf::Image &image = images.at(imageIdx);
 
 				TextureInfo texInfo{};
+				texInfo.binding = binding;
+				// The owning material's resource id, so the cooker can pair each texture back to
+				// the material it belongs to without a separate index mapping.
+				texInfo.resource = materialResourceId;
 				std::memcpy(&(texInfo.name[0]), bindingName.data(), bindingName.size());
 				if (!GltfLoadFunctions::GetImageBufferOffsetAndSize(image, *gltfAsset, &texInfo.offset, &texInfo.size))
 				{
@@ -147,10 +172,10 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 				materialTextures.push_back(std::move(texInfo));
 			};
 
-			collectTexture("albedo", rawMaterial.pbrData.baseColorTexture);
-			collectTexture("metalRough", rawMaterial.pbrData.metallicRoughnessTexture);
-			collectTexture("normal", rawMaterial.normalTexture);
-			collectTexture("emissive", rawMaterial.emissiveTexture);
+			collectTexture(1, "albedo", rawMaterial.pbrData.baseColorTexture);
+			collectTexture(2, "metalRough", rawMaterial.pbrData.metallicRoughnessTexture);
+			collectTexture(3, "normal", rawMaterial.normalTexture);
+			collectTexture(4, "emissive", rawMaterial.emissiveTexture);
 		}
 
 		// Correct normals if empty
@@ -168,14 +193,12 @@ Hush::GltfLoadFunctions::EError Hush::GLTFLoader::LoadAssetFromBinary(std::span<
 																	  Hush::GLTFLoader::AssetHandle *outAsset)
 {
 	HUSH_ASSERT(outAsset != nullptr, "Can't load asset into null handle!");
-	// Placement new on the asset handle
-	new (outAsset) fastgltf::Asset;
 	auto res = Hush::GltfLoadFunctions::GetAssetFromBinary(data);
 	if (!res)
 	{
 		return Hush::GltfLoadFunctions::EError::InvalidMeshFile;
 	}
-	auto *assetInPlace = reinterpret_cast<fastgltf::Asset *>(outAsset->backing.data());
+	auto *assetInPlace = reinterpret_cast<fastgltf::Asset *>(outAsset->backing);
 	*assetInPlace = std::move(res.get());
 
 	return Hush::GltfLoadFunctions::EError::None;

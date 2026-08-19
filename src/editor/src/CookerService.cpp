@@ -7,6 +7,7 @@
 #include "serialization/Formats/JsonSerializer.hpp"
 #include <filesystem>
 #include <fstream>
+#include <memory_resource>
 
 namespace Hush
 {
@@ -18,10 +19,11 @@ namespace Hush
 
 	CookerService::~CookerService() = default;
 
-	void CookerService::Init(VirtualFilesystem *vfs, std::filesystem::path projectRoot)
+	void CookerService::Init(VirtualFilesystem *vfs, std::filesystem::path projectRoot, std::pmr::memory_resource* allocator)
 	{
 		m_vfs = vfs;
 		m_projectRoot = std::move(projectRoot);
+		m_frameAllocator = allocator;
 	}
 
 	void CookerService::ImportFile(const std::filesystem::path &sourcePath)
@@ -154,6 +156,7 @@ namespace Hush
 
 		CookContext ctx;
 		ctx.sourceVPath = std::string(vpath);
+		ctx.frameAllocator = m_frameAllocator;
 
 		auto cookResult = m_cooker.CookToBlob(fileData, AssetCooker::ExtensionFromPath(osPath), meta, ctx);
 		if (cookResult.has_error())

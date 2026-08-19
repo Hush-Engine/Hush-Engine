@@ -157,7 +157,7 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	// Raw deserialize to get the resourceId
 	Serializable::DefaultDeserialize<MeshReference>(self, serializer);
 	auto *instance = reinterpret_cast<MeshReference *>(self);
-	auto *renderCtx = reinterpret_cast<RenderingContext*>(ctx);
+	auto *renderCtx = reinterpret_cast<RenderingContext *>(ctx);
 	Scene *scene = renderCtx->activeScene;
 
 	uint32_t resourceId = instance->GetResourceId();
@@ -197,10 +197,10 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 	}
 
 	// Pass this to the hush mesh parser
-	constexpr size_t meshMaxSize = 1024 * 5;
 	std::pmr::memory_resource *allocator = scene->GetEngine()->GetFrameScopeMemoryResource();
-	auto *meshFileBuffer = reinterpret_cast<std::byte *>(allocator->allocate(meshMaxSize));
-	auto buffer = std::span<std::byte>{meshFileBuffer, meshMaxSize};
+	const size_t meshFileSize = openRes.value()->GetFileInfo().size;
+	auto *meshFileBuffer = reinterpret_cast<std::byte *>(allocator->allocate(meshFileSize));
+	auto buffer = std::span<std::byte>{meshFileBuffer, meshFileSize};
 	auto readFileRes = openRes.value()->Read(buffer);
 	if (readFileRes.has_error())
 	{
@@ -209,19 +209,20 @@ Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Seriali
 
 	HMeshLoader::LoadMeshFromBinary(buffer, instance, renderCtx);
 
-	allocator->deallocate(meshFileBuffer, meshMaxSize, alignof(std::byte *));
+	allocator->deallocate(meshFileBuffer, meshFileSize, alignof(std::byte *));
 
 	return Serializable::EError::None;
 }
 
-void MeshReferencePostDeserialize(uint8_t *instance, Hush::Entity::EntityId entity, Hush::Entity::EntityId comp, void* ctx)
+void MeshReferencePostDeserialize(uint8_t *instance, Hush::Entity::EntityId entity, Hush::Entity::EntityId comp,
+								  void *ctx)
 {
 	using namespace Hush;
 	(void)instance;
 	(void)comp;
 	// Add the GPU upload comp
-	auto* renderCtx = reinterpret_cast<RenderingContext*>(ctx);
-	Scene* scene = renderCtx->activeScene;
+	auto *renderCtx = reinterpret_cast<RenderingContext *>(ctx);
+	Scene *scene = renderCtx->activeScene;
 	Entity ent = scene->EntityFromIdUnchecked(entity);
 	ent.AddComponent<Renderer::GpuUploadComponent>();
 }
@@ -309,13 +310,12 @@ void Hush::RenderingSystem::Init()
 		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
 	};
 
-	HushEngine* engine = this->GetScene().GetEngine();
+	HushEngine *engine = this->GetScene().GetEngine();
 	this->m_renderingContext.virtualFilesystem = engine->GetVirtualFilesystem();
 	this->m_renderingContext.activeScene = &this->GetScene();
 	this->m_renderingContext.device = engine->GetWindowRenderer()->GetGraphicsDevice();
 	this->m_renderingContext.materialDescriptor = &this->m_pbrMaterialDescriptor;
 	this->m_renderingContext.resourceManager = engine->GetResourceManager();
-
 }
 
 void Hush::RenderingSystem::OnShutdown()
