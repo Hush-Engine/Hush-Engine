@@ -1,4 +1,5 @@
 #include "CommandPanel.hpp"
+#include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Entity.hpp"
@@ -6,6 +7,7 @@
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
+#include "ScenePanel.hpp"
 #include "ScriptingHost.hpp"
 #include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
@@ -19,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <flecs.h>
+#include <glm/ext/vector_uint2_sized.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <string>
@@ -78,8 +81,8 @@ void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->AddComponentPopup();
 		break;
 	case EState::AddSystemMode: {
-		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost,
-																 &this->m_selectedSystem);
+		bool popupOpen =
+			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedItem);
 		if (!popupOpen)
 		{
 			this->CloseCommandMode();
@@ -111,6 +114,7 @@ void Hush::CommandPanel::HandleInput()
 		return;
 	}
 	char pressedChar = 0;
+	// FIX: FetchCharThisFrame from InputManager was not working, switched to the ImGui one
 	if (InputManager::FetchCharThisFrame(&pressedChar) && pressedChar == ':')
 	{
 		this->m_currState = EState::Editing;
@@ -150,6 +154,7 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_currState = EState::None;
 	this->m_panelText = DEFAULT_CMD_PANEL_TEXT.data();
 	this->m_selectedCommandIdx = -1;
+	this->m_selectedItem = -1;
 	this->m_keyboardFocusSet = false;
 	if (this->m_editorInfo->currentState == EEditorState::CommandMode)
 	{
@@ -330,80 +335,165 @@ void Hush::CommandPanel::AddComponentPopup()
 		this->FindEntityPopup("No selected entity in the inspector, please select one...");
 		return;
 	}
-	UI::BeginCenterPopup("Add Component", true);
-	ImGui::Text("Select a component to add");
+	PopupListState popupState{};
+	popupState.label = "Add Component";
+	popupState.leftInstruction = "Select a component to add";
+	popupState.selected = this->m_selectedItem;
+	popupState.filter = &(this->m_searchInputText[0]);
+	popupState.inputId = "##Search";
+	popupState.hint = "i.e Rigidbody";
+
+	// Find all components
+	const std::vector<Entity::EntityId>& registeredComps = this->m_activeScene->GetAllRegisteredComponents();
+	popupState.options.reserve(registeredComps.size());
+	for (Entity::EntityId id : registeredComps) {
+		Entity ent = this->m_activeScene->EntityFromIdUnchecked(id);
+		popupState.options.emplace_back(ent.GetKey());
+	}
+
+	Entity &inspectedEntity = inspectTarget.value();
+
+	struct PopupCtx {
+		Entity* entityRef;
+		const std::vector<Entity::EntityId>* compsArr;
+	};
+	PopupCtx popupCtx {
+		.entityRef = &inspectedEntity,
+		.compsArr = &registeredComps
+	};
+
+	popupState.ctx = &popupCtx;
+
+	popupState.onElementClicked = [](size_t idx, PopupListState *state) {
+		auto *localCtx = reinterpret_cast<PopupCtx*>(state->ctx);
+		Entity::EntityId compId = localCtx->compsArr->at(idx);
+		localCtx->entityRef->AddComponentRaw(compId);
+	};
+
+	DrawSearchPopup(&popupState);
+
+	this->m_selectedItem = popupState.selected;
+}
+
+void Hush::CommandPanel::DrawSearchPopup(PopupListState *state)
+{
+	auto &scenePanel = UI::Get().GetPanel<ScenePanel>();
+	glm::u32vec2 scenePanelSize = scenePanel.GetPanelSize();
+
+	// At least 1/3 of the scene width
+	ImVec2 minPopupSize = {(float)scenePanelSize.x / 3.f, (float)scenePanelSize.y / 2.f};
+	ImGui::SetNextWindowSize(minPopupSize);
+
+	UI::BeginCenterPopup(state->label, true);
+	ImGui::Text("%s", state->leftInstruction);
 	if (this->m_keyboardFocusSet)
 	{
-		memset(static_cast<void *>(this->m_searchInputText), 0, MAX_ALLOWED_ENTITY_NAME);
-		this->m_keyboardFocusSet = false;
+		ImGui::SetKeyboardFocusHere();
+		memset(this->m_searchInputText, 0, MAX_TEXT_INPUT_STR_SIZE);
 	}
-	UI::InputTextWithHint("##Search", "i.e. Rigidbody", static_cast<char *>(this->m_searchInputText),
-						  MAX_ALLOWED_ENTITY_NAME, true);
-	// Find built in components
-	using Arr_t = std::array<std::string_view, 2>;
-	constexpr Arr_t builtinComponents = {"Transform", "DirectionalLight"};
-	std::vector<std::string_view> componentNames =
-		ArrayUtils::FuzzyFind<Arr_t, std::string_view>(builtinComponents, static_cast<char *>(this->m_searchInputText));
-	for (const std::string_view &componentName : componentNames)
+	bool receivedInput = false;
+	UI::InputTextWithHint(state->inputId, state->hint, static_cast<char *>(this->m_searchInputText),
+						  MAX_TEXT_INPUT_STR_SIZE, true, &receivedInput);
+
+	if (receivedInput)
 	{
-		if (!ImGui::Selectable(componentName.data()))
+		state->selected = -1;
+	}
+
+	std::string filterStr = state->filter;
+
+	ImDrawList *drawList = ImGui::GetWindowDrawList();
+	bool hovered = false;
+	std::vector<size_t> indices;
+	size_t maxOptionsSize = state->options.size();
+	if (filterStr.empty())
+	{
+		for (size_t i = 0; i < state->options.size(); i++)
 		{
-			continue;
+			if (UI::CustomSelectable(state->options[i].data(), &hovered, drawList, i == state->selected))
+			{
+				state->onElementClicked(i, state);
+				state->selected = -1;
+				this->CloseCommandMode();
+			}
 		}
-		LogFormat(ELogLevel::Info, "Selected {}", componentName);
-		// Add the component to the currently selected entity
-		switch (Hashing::Fnv1a(componentName))
+	}
+	else
+	{
+		indices =
+			ArrayUtils::FuzzyFindIndices<std::vector<std::string_view>, std::string_view>(state->options, filterStr);
+		maxOptionsSize = indices.size();
+		for (size_t i = 0; i < indices.size(); i++)
 		{
-		case Hashing::Fnv1a("Transform"):
-			inspectTarget.value().AddComponent<WorldTransform>();
-			break;
-		case Hashing::Fnv1a("DirectionalLight"):
-			inspectTarget.value().AddComponent<DirectionalLight>();
-			break;
+			size_t indexOnOptionsArr = indices[i];
+			if (UI::CustomSelectable(state->options[indexOnOptionsArr].data(), &hovered, drawList,
+									 i == state->selected))
+			{
+				state->onElementClicked(indexOnOptionsArr, state);
+				state->selected = -1;
+				this->CloseCommandMode();
+			}
 		}
-		this->CloseCommandMode();
 	}
 
 	ImGui::End();
+	if (maxOptionsSize <= 0)
+	{
+		return;
+	}
+
+	if (ImGui::IsKeyPressed(ImGuiKey_DownArrow, true) || ImGui::IsKeyPressed(ImGuiKey_Tab, true))
+	{
+		state->selected++;
+		state->selected = state->selected % static_cast<int32_t>(maxOptionsSize);
+	}
+	else if (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ||
+			 (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_Tab, true)))
+	{
+		state->selected--;
+		if (state->selected < 0)
+		{
+			state->selected = static_cast<int32_t>(maxOptionsSize - 1);
+		}
+	}
 }
 
 void Hush::CommandPanel::FindEntityPopup(const char *overrideLabel)
 {
-	const char *label = overrideLabel != nullptr ? overrideLabel : "Entity search";
-	UI::BeginCenterPopup(label, true);
-	ImGui::Text("Search for an entity");
-	if (this->m_keyboardFocusSet)
-	{
-		ImGui::SetKeyboardFocusHere();
-		memset(this->m_searchInputText, 0, MAX_ALLOWED_ENTITY_NAME);
-	}
-	UI::InputTextWithHint("##Search", "i.e. Player", static_cast<char *>(this->m_searchInputText),
-						  MAX_ALLOWED_ENTITY_NAME, true);
+	PopupListState state{};
+	state.label = overrideLabel != nullptr ? overrideLabel : "Entity search";
+	state.filter = &(this->m_searchInputText[0]);
+	state.selected = this->m_selectedItem;
+	state.inputId = "##SearchEntity";
+	state.hint = "i.e Player";
+	state.leftInstruction = "Find any entity";
+
+	// TODO: Allocate this on a small arena
+	std::vector<Entity::EntityId> idsByIdx;
+
 	// Then find all entities in the scene here
 	Query<Entity::Name, WorldTransform> query = this->m_activeScene->CreateQuery<Entity::Name, WorldTransform>();
-	std::vector<std::string> entityNames;
-	std::string_view searchEntityName(static_cast<char *>(this->m_searchInputText));
-	entityNames.reserve(query.begin().Size());
-	query.Each([&entityNames, &searchEntityName, this](Entity &entity, Entity::Name &name,
-													   [[maybe_unused]]
-													   WorldTransform &transform) {
-		std::string_view currEntityName = name.name.data();
-		if (searchEntityName.empty())
-		{
-			RenderEntitySelectable(currEntityName, entity.GetId());
-		}
-		entityNames.emplace_back(currEntityName);
+	query.Each([&state, &idsByIdx](Entity &entity, Entity::Name &name,
+								   [[maybe_unused]]
+								   WorldTransform &transform) {
+		(void)(entity);
+		std::string_view currEntityName = name.GetName();
+		state.options.emplace_back(currEntityName);
+		idsByIdx.emplace_back(entity.GetId());
 	});
 
-	std::vector<size_t> indices =
-		ArrayUtils::FuzzyFindIndices<std::vector<std::string>, std::string>(entityNames, this->m_searchInputText);
+	state.ctx = &idsByIdx;
+	state.onElementClicked = [](size_t idx, PopupListState *state) {
+		auto *localIdsByIdx = reinterpret_cast<std::vector<Entity::EntityId> *>(state->ctx);
+		Entity::EntityId targetId = localIdsByIdx->at(idx);
+		// TODO: Turn this into an event the inspector panel listens for
+		UI::Get().GetPanel<InspectorPanel>().SetInspectTarget(targetId);
+	};
 
-	for (size_t idx : indices)
-	{
-		RenderEntitySelectable(entityNames.at(idx), query.begin().GetEntityId(idx));
-	}
+	DrawSearchPopup(&state);
 
-	ImGui::End();
+	// Update the selected item on the global state
+	this->m_selectedItem = state.selected;
 }
 
 void Hush::CommandPanel::RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId)

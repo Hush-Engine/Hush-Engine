@@ -2,12 +2,14 @@
 #include "ApplicationLoader.hpp"
 #include "Logger.hpp"
 #include "ResourceManager.hpp"
+#include "Scene.hpp"
 #include "VirtualFilesystem.hpp"
 #include "Systems/RenderGraphSystem.hpp"
 #include "Systems/ResourceUploadSystem.hpp"
 #include "WindowRenderer.hpp"
 #include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
+#include <SDL3/SDL_keyboard.h>
 #include <WindowManager.hpp>
 #include <algorithm>
 #include <cstdint>
@@ -139,6 +141,8 @@ void Hush::HushEngine::Run()
 	this->m_app->OnPostRender();
 	this->m_app->DisposeFrame();
 
+	// ImGUI's SDL3 impl will sometimes disable text input for some reason, this is here to counter that
+	SDL_StartTextInput(this->GetWindowRenderer()->GetSDLWindow());
 	this->m_internal->frameMemoryPool.Reset();
 
 	// Publish this frame's frame-arena usage to Tracy (no-op when profiling is off). The plots
@@ -178,6 +182,18 @@ void Hush::HushEngine::Quit()
 Hush::Scene *Hush::HushEngine::GetScene()
 {
 	return this->m_app->GetScene();
+}
+
+Hush::Scene* Hush::HushEngine::NewScene() {
+	// NYI: scene
+	return nullptr;
+}
+
+[[hush::export]]
+Hush::HushEngine::EError Hush::HushEngine::LoadScene(Scene* scene) {
+	// NYI: Scene
+	(void)scene;
+	return EError::None;
 }
 
 Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept

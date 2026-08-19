@@ -6,6 +6,7 @@
 #include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "CookedFileSystem.hpp"
 #include "CookerService.hpp"
 #include "CookedDirectory.hpp"
@@ -101,7 +102,7 @@ public:
 
 		// Cooker service for import pipeline (EditorApp-owned; no longer an ECS component)
 		m_cookerService = std::make_unique<Hush::CookerService>();
-		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR));
+		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR), this->m_engine->GetFrameScopeMemoryResource());
 
 		// Wire OS file drop → cooker import.
 		m_engine->GetWindowRenderer()->SetDropCallback([this](const std::filesystem::path &path) {
@@ -116,7 +117,7 @@ public:
 		m_fileWatcher = std::make_unique<Hush::FileWatcher>(projRoot);
 		// Let the import service suppress the watcher events its own writes cause.
 		m_cookerService->SetFileWatcher(m_fileWatcher.get());
-		m_cookedDirectory.Init(projRoot, vfs);
+		m_cookedDirectory.Init(projRoot, vfs, m_engine->GetFrameScopeMemoryResource());
 		m_cookedDirectory.Reconcile();
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
@@ -137,6 +138,10 @@ public:
 		ImGuiIO &io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		// Load the custom UI fonts (IBM Plex Serif family) before the backends
+		// are initialized so the font atlas is baked into the first frame.
+		Hush::UI::LoadFonts();
 
 		// Platform backend (SDL3)
 		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
@@ -168,10 +173,10 @@ public:
 
 		this->m_scene->Init();
 		// Create a directional light
-		Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
-		dirLightEntity.AddComponent<Hush::WorldTransform>();
-		dirLightEntity.AddComponent<Hush::LocalTransform>();
-		dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
+		// Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
+		// dirLightEntity.AddComponent<Hush::WorldTransform>();
+		// dirLightEntity.AddComponent<Hush::LocalTransform>();
+		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
 	}
 

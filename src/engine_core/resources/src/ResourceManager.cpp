@@ -126,19 +126,19 @@ void Hush::ResourceManager::FreePending()
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::LoadTexture(
 	const std::string_view path, const TextureComponent::ECpuUnloadStrategy unloadStrategy, uint32_t maxSize)
 {
-	uint64_t nameHash = Hashing::Fnv1a64(path);
+	uint32_t nameHash = Hashing::Fnv1a(path);
 	if (maxSize != 0)
 	{
 		// Cache a downscaled (e.g. thumbnail) load separately from the full-resolution
 		// load of the same path so the two don't collide.
-		nameHash ^= (static_cast<uint64_t>(maxSize) * 0x9E3779B97F4A7C15ULL);
+		nameHash ^= (static_cast<uint32_t>(maxSize) * 0x9E3779B9U);
 	}
 	const auto &iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end())
 	{
 		HandleId handle = this->m_loadedResources[nameHash];
 		auto *texture = reinterpret_cast<TextureComponent *>(handle);
-		return {this, texture};
+		return Ref<TextureComponent>{this, texture, nameHash};
 	}
 
 	// We don't have the texture loaded, so we need to load it
@@ -343,19 +343,19 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	const auto handle = reinterpret_cast<HandleId>(textureComponent);
 	this->m_loadedResources[nameHash] = handle;
 
-	return {this, textureComponent};
+	return {this, textureComponent, nameHash};
 }
 
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::
 	LoadTextureFromData(std::string_view name, std::span<const std::byte> data)
 {
-	const uint64_t nameHash = Hashing::Fnv1a64(name);
+	const uint32_t nameHash = Hashing::Fnv1a(name);
 	const auto &iterator = this->m_loadedResources.find(nameHash);
 	if (iterator != this->m_loadedResources.end())
 	{
 		HandleId handle = this->m_loadedResources[nameHash];
 		auto *texture = reinterpret_cast<TextureComponent *>(handle);
-		return {this, texture};
+		return {this, texture, nameHash};
 	}
 
 	int32_t width{};
@@ -386,7 +386,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 	const auto handle = reinterpret_cast<HandleId>(textureComponent);
 	this->m_loadedResources[nameHash] = handle;
 
-	return {this, textureComponent};
+	return {this, textureComponent, nameHash};
 }
 
 // Hush::Ref<Hush::ImageTexture> Hush::ResourceManager::LoadTexture(const std::string_view &name, const std::byte *data,
@@ -398,7 +398,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 // 	{
 // 		HandleId handle = this->m_loadedResources[nameHash];
 // 		auto *texture = reinterpret_cast<ImageTexture *>(handle);
-// 		return {this, texture};
+// 		return {this, texture, nameHash};
 // 	}
 // 	auto *texture = new ImageTexture(data, size);
 // 	return {this, texture};
@@ -418,7 +418,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 // 	{
 // 		HandleId handle = this->m_loadedResources[pathHash];
 // 		auto *texture = reinterpret_cast<ImageTexture *>(handle);
-// 		return {this, texture};
+// 		return {this, texture, nameHash};
 // 	}
 // 	auto *texture = new ImageTexture(resolvedPath.value());
 // 	const auto handle = reinterpret_cast<HandleId>(texture);

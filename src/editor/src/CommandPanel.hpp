@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace Hush
 {
+
 	class CommandPanel : public IEditorPanel
 	{
 	public:
@@ -31,6 +33,22 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
+		// For any pop up list, including (later on) the commands themselves
+		struct PopupListState;
+		using OnElementClickedFn_t = void (*)(size_t, PopupListState *);
+		struct PopupListState
+		{
+			std::vector<std::string_view> options;
+			const char *filter;
+			int32_t selected;
+			const char *label = nullptr;
+			const char *leftInstruction = nullptr;
+			const char *inputId = nullptr;
+			const char *hint = nullptr;
+			OnElementClickedFn_t onElementClicked = nullptr;
+			void *ctx = nullptr;
+		};
+
 		static inline constexpr std::string_view DEFAULT_CMD_PANEL_TEXT = "Type \":\" to enter command mode";
 
 		void HandleInput();
@@ -44,6 +62,8 @@ namespace Hush
 		void AddComponentPopup();
 
 		void FindEntityPopup(const char *overrideLabel = nullptr);
+
+		void DrawSearchPopup(PopupListState *state);
 
 		void RenderEntitySelectable(const std::string_view &entityName, Entity::EntityId entityId);
 
@@ -69,14 +89,14 @@ namespace Hush
 
 		ScriptingHost *m_scriptingHost;
 
-		// For the system selection state
-		int32_t m_selectedSystem = -1;
+		// For the selection state of any pop up
+		int32_t m_selectedItem = -1;
 
 		bool m_keyboardFocusSet = false;
 
 		std::vector<std::string_view> m_currentlyAvailableCommands;
 
-		static constexpr size_t MAX_ALLOWED_ENTITY_NAME = 30;
-		char m_searchInputText[MAX_ALLOWED_ENTITY_NAME] = {0};
+		static constexpr size_t MAX_TEXT_INPUT_STR_SIZE = 64;
+		char m_searchInputText[MAX_TEXT_INPUT_STR_SIZE] = {0};
 	};
 } // namespace Hush

@@ -5,14 +5,30 @@
 */
 
 #include "Scene.hpp"
+#include "Assertions.hpp"
+#include "Components/ComponentMetadata.hpp"
+#include "Components/Serializable.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
+#include "SceneAsset.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
+#include "serialization/SerializedEntity.hpp"
 #include "utils/ParallelUtils.hpp"
+#include <array>
+#include <cstdint>
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include "Profiling.hpp"
+#include <flecs/private/api_defines.h>
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
@@ -43,6 +59,13 @@ Hush::Scene::~Scene()
 void Hush::Scene::Init()
 {
 	ZoneScoped;
+	// Register an observer for our inspectable components
+	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
+													 [this](Entity::EntityId compId, InspectableComponent *) {
+														 // HACK: Add the serializable component to it
+														 this->m_registeredComponents.emplace_back(compId);
+													 });
+
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
 
@@ -275,6 +298,191 @@ void Hush::Scene::Shutdown()
 	{
 		shutdownFunc(reinterpret_cast<void *>(system));
 	}
+}
+
+// Free helper functions
+inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk)
+{
+	using JsonEToken_t = Hush::Serialization::JsonDeserializer::EToken;
+	return tk != JsonEToken_t::ArrayEnd && tk != JsonEToken_t::Error && tk != JsonEToken_t::EndOfInput;
+}
+
+// Local macro helper
+#define BREAK_LOOP_IF_NEEDED                                                                                           \
+	currToken = deserializer.GetToken();                                                                               \
+	if (!ShouldContinueReadingCompsArray(currToken))                                                                   \
+	{                                                                                                                  \
+		break;                                                                                                         \
+	}
+
+inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
+												 Hush::Serialization::JsonDeserializer &deserializer,
+												 Hush::Entity &entity)
+{
+	using namespace Hush;
+	deserializer.Next(); // Skip the start of the array
+	std::string_view currKey;
+	int64_t compId{};
+	std::string_view compKey{};
+	Serialization::JsonDeserializer::EToken currToken{};
+	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken);
+		 currToken = deserializer.GetToken())
+	{
+		std::string_view objectJson;
+		deserializer.PeekObject(objectJson);
+
+		Serialization::JsonDeserializer localDeser{objectJson};
+
+		deserializer.Next();
+		BREAK_LOOP_IF_NEEDED;
+
+		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
+		deserializer.ReadInt(compId);
+		BREAK_LOOP_IF_NEEDED;
+
+		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
+		deserializer.ReadString(compKey);
+		BREAK_LOOP_IF_NEEDED;
+
+		// Get the component with that key
+		Entity comp = scene->CreateEntityWithKey(compKey);
+		void *instance = entity.AddComponentRaw(comp.GetId());
+
+		// Deserialize it
+		Serializable *serComp = comp.GetComponent<Serializable>();
+		if (serComp != nullptr && serComp->deserialize != nullptr)
+		{
+			auto *rawInstance = reinterpret_cast<uint8_t *>(instance);
+			serComp->deserialize(rawInstance, localDeser, serComp->ctx);
+			if (serComp->postDeserialize != nullptr)
+			{
+				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
+			}
+		}
+
+		deserializer.SkipObject();
+		BREAK_LOOP_IF_NEEDED;
+	}
+	return Scene::EError::None;
+}
+
+Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string& asset)
+{
+	Serialization::JsonDeserializer deserializer{asset};
+	// Enter the object
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	std::string_view currKey{};
+	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
+	// This should be the entities array now
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	// We are now on our object
+	while (deserializer.Next())
+	{
+		// Entity structure
+		// {"id": ##, "key": "...", "components": [...]}
+		int64_t id{}; // The ID is not entirely irrelevant, but for now it kinda is
+		deserializer.ReadKey(currKey);
+		deserializer.ReadInt(id);
+		std::string_view entKey;
+		deserializer.ReadKey(currKey);
+		deserializer.ReadString(entKey);
+
+		Entity ent;
+		if (entKey.empty())
+		{
+			ent = this->CreateEntity();
+		}
+		else
+		{
+			ent = this->CreateEntityWithKey(entKey);
+		}
+		(void)ent;
+
+		// We don't care abt this one
+		deserializer.ReadKey(currKey);
+		// Then we can go for comps related to that entity
+		std::string_view compsArray;
+		if (!deserializer.ReadArray(compsArray))
+		{
+			continue;
+		}
+		Serialization::JsonDeserializer arrayDeser{compsArray};
+		DeserializeComponents(this, arrayDeser, ent);
+		deserializer.Next();
+	}
+	(void)asset;
+	return EError::None;
+}
+
+#undef BREAK_LOOP_IF_NEEDED
+
+Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string& asset)
+{
+	// HUSH_ASSERT(asset != nullptr, "Cannot serialize to an invalid scene asset handle");
+	// Serialize every single entity in the world with each of its components
+	// TODO: For now, every entity that has a transform is enough, but there are
+	// use cases where we want to serialize raw entities with no inspectable transoforms
+	auto q = this->CreateQuery<WorldTransform>();
+	auto *world = static_cast<ecs_world_t *>(m_world);
+	EntityId serializableId = this->RegisterComponent<Serializable>();
+
+	Serialization::JsonSerializer jsonSerializer{};
+	Serialization::ESerializationError serialErr{};
+	serialErr = jsonSerializer.BeginObject();
+	serialErr = jsonSerializer.SetKey("entities");
+	serialErr = jsonSerializer.BeginArray();
+	q.Each([world, serializableId, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
+		(void)xform;
+		serialErr = jsonSerializer.BeginObject();
+		serialErr = jsonSerializer.Serialize("id", ent.GetId());
+		std::string_view topKey = ent.GetKey();
+		// If there's no key, we save the ID as the key
+		serialErr = jsonSerializer.Serialize("key", topKey);
+
+		serialErr = jsonSerializer.SetKey("components");
+		serialErr = jsonSerializer.BeginArray();
+		ent.EachId([world, serializableId, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+			serialErr = jsonSerializer.BeginObject();
+			const auto *rawComp = reinterpret_cast<const uint8_t *>(ecs_get_id(world, ent.GetId(), comp));
+			// Serialize comp to JSON
+			const char *key = ecs_get_name(world, comp);
+			// Not likely to be nullptr, but we do it anyways
+			serialErr = jsonSerializer.Serialize("id", comp);
+			serialErr = jsonSerializer.Serialize("key", key == nullptr ? std::string_view{} : std::string_view(key));
+			// Find the serialization comp
+			// NOLINTNEXTLINE
+			const auto *serializer = reinterpret_cast<const Serializable *>(ecs_get_id(world, comp, serializableId));
+
+			if (serializer == nullptr)
+			{
+				// This is okay we just push the fact that this component exists
+				serialErr = jsonSerializer.EndObject();
+				return;
+			}
+
+			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer, serializer->ctx);
+
+			serialErr = jsonSerializer.EndObject();
+			if (err != Serializable::EError::None)
+			{
+				LogFormat(ELogLevel::Error, "Failed to serialize component {}, error: {}. Skipping!", key,
+						  magic_enum::enum_name(err));
+				return;
+			}
+		});
+		serialErr = jsonSerializer.EndArray();
+		serialErr = jsonSerializer.EndObject();
+	});
+	serialErr = jsonSerializer.EndArray();
+	serialErr = jsonSerializer.EndObject();
+
+	(void)serialErr;
+
+	asset.assign(jsonSerializer.FinishSerialization());
+
+	return EError::None;
 }
 
 void Hush::Scene::RemoveSystem(std::string_view name)
@@ -634,18 +842,26 @@ Hush::Entity::EntityId Hush::Scene::RegisterComponentRaw(const ComponentTraits::
 	// Register the component
 	ecs_entity_t componentId = ecs_component_init(world, &componentDesc);
 
-	// By default, all components should be able to be toggled on or off (for performance reasons)
-	ecs_add_id(world, componentId, EcsCanToggle);
-
 	LogFormat(ELogLevel::Info, "Registered component with name {} as ID: {}", desc.name, componentId);
 
 	return componentId;
+}
+
+void Hush::Scene::MarkComponentToggleableRaw(EntityId id)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	ecs_add_id(world, id, EcsCanToggle);
 }
 
 Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 {
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	return ecs_lookup(world, tag.c_str());
+}
+
+const std::vector<Hush::Entity::EntityId> &Hush::Scene::GetAllRegisteredComponents() const
+{
+	return this->m_registeredComponents;
 }
 
 Hush::RawQuery Hush::Scene::CreateRawQuery(std::span<Entity::EntityId> components, RawQuery::ECacheMode cacheMode)

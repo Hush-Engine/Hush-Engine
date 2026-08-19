@@ -3,12 +3,15 @@
 #include "IFile.hpp"
 #include "HMeta.hpp"
 #include "Result.hpp"
+#include <memory_resource>
 #include <span>
 #include <vector>
 #include <string_view>
 
 namespace Hush
 {
+
+	class ResourceManager;
 
 	enum class ECookError
 	{
@@ -19,12 +22,16 @@ namespace Hush
 		InvalidMeta,
 		FileNotFound,
 		WriteFailed,
+		InvalidData,
 		Unknown,
 	};
 
 	struct CookContext
 	{
 		std::string sourceVPath;
+		ResourceManager* resourceManager;
+		// An allocator
+		std::pmr::memory_resource* frameAllocator;
 	};
 
 	/// Interface for cooking a specific asset type.
@@ -56,6 +63,7 @@ namespace Hush
 			std::vector<std::byte> payload;
 			std::vector<std::byte> extra;
 			EAssetFormat format;
+			// TODO: Maybe add multiple payloads / offsets so that we can generate more than one file
 		};
 		virtual Result<CookResult, ECookError> Cook(std::span<const std::byte> input, const HMeta &meta,
 													const CookContext &ctx) = 0;

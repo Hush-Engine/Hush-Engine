@@ -57,10 +57,10 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->DrawFiles(isMouseInScene);
 
 		const ImGuiPayload *payload = ImGui::GetDragDropPayload();
-		if (isMouseInScene && payload != nullptr && payload->DataSize == sizeof(FileInfo) &&
+		if (isMouseInScene && payload != nullptr && payload->DataSize == sizeof(DroppableFile) &&
 			ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			const auto *data = reinterpret_cast<const FileInfo *>(payload->Data);
+			const auto *data = reinterpret_cast<const DroppableFile *>(payload->Data);
 			if (CanBeDroppedToScene(*data))
 			{
 				Entity renderingSystemEnt = this->m_scene->CreateEntityWithKey("RenderingSystem");
@@ -71,9 +71,10 @@ void Hush::ContentPanel::OnRender([[maybe_unused]] float deltaTime)
 				RenderingContext ctx = {.materialDescriptor = &systemRef->GetPBRDescriptor(),
 										.activeScene = this->m_scene,
 										.resourceManager = this->m_resourceManager,
+										.virtualFilesystem = this->m_filesystem,
 										.device = device};
 
-				Entity rootEntity = GLTFLoader::GenerateMeshEntities(ctx, data->path);
+				Entity rootEntity = GLTFLoader::GenerateMeshEntities(ctx, data->virtualPath);
 				HUSH_ASSERT(rootEntity.IsValid(), "Failed to create meshes from the GLTF file!");
 			}
 		}
@@ -199,8 +200,11 @@ void Hush::ContentPanel::DrawFiles(bool isMouseInScene)
 		// Drag-and-drop source (e.g. drag a model onto the scene).
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
-			ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &item, sizeof(FileInfo));
-			if (isMouseInScene && CanBeDroppedToScene(item))
+
+			this->m_currentDroppable = {.virtualPath = this->m_currentWorkingDirectory + fileName, .fileInfo = &item};
+
+			ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", &this->m_currentDroppable, sizeof(DroppableFile));
+			if (isMouseInScene && CanBeDroppedToScene(this->m_currentDroppable))
 			{
 				ImGui::Text("Import to scene...");
 			}
@@ -230,9 +234,9 @@ void Hush::ContentPanel::DrawFiles(bool isMouseInScene)
 	}
 }
 
-bool Hush::ContentPanel::CanBeDroppedToScene(const FileInfo &fileData) const
+bool Hush::ContentPanel::CanBeDroppedToScene(const DroppableFile &fileData) const
 {
-	return fileData.flags == EFileFlags::File && fileData.IsModelFile();
+	return fileData.fileInfo->flags == EFileFlags::File && fileData.fileInfo->IsModelFile();
 }
 
 void Hush::ContentPanel::RefreshDirectory()

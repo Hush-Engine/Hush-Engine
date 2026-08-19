@@ -78,6 +78,7 @@ namespace Hush
 		glm::mat4 operator*(const Transform &other) const;
 
 	private:
+		[[hush::property]]
 		mutable glm::mat4 m_transform = Mat4Math::IDENTITY;
 		glm::vec3 m_scale = Vector3Math::ONE;
 		glm::quat m_rotation{};

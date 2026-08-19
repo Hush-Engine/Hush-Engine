@@ -3,6 +3,7 @@
 #include "Logger.hpp"
 #include "IFile.hpp"
 #include <fstream>
+#include <memory_resource>
 
 namespace Hush
 {
@@ -14,11 +15,12 @@ namespace Hush
 
 	CookedDirectory::~CookedDirectory() = default;
 
-	void CookedDirectory::Init(std::filesystem::path projectRoot, VirtualFilesystem *vfs)
+	void CookedDirectory::Init(std::filesystem::path projectRoot, VirtualFilesystem *vfs, std::pmr::memory_resource* allocator)
 	{
 		m_projectRoot = std::move(projectRoot);
 		m_cookedDir = m_projectRoot / ".hcooked";
 		m_vfs = vfs;
+		m_frameAllocator = allocator;
 
 		std::error_code ec;
 		std::filesystem::create_directories(m_cookedDir, ec);
@@ -208,6 +210,7 @@ namespace Hush
 		auto &meta = metaResult.value();
 		CookContext ctx;
 		ctx.sourceVPath = std::filesystem::relative(asset.sourcePath, m_projectRoot).generic_string();
+		ctx.frameAllocator = this->m_frameAllocator;
 
 		auto result = m_cooker.CookToBlob(srcData, AssetCooker::ExtensionFromPath(asset.sourcePath), meta, ctx);
 		if (result.has_error())

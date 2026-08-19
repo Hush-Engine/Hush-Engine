@@ -5,11 +5,17 @@
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "crypto/Hashing.hpp"
+#include <algorithm>
+#include <cstring>
 #include <fastgltf/tools.hpp>
+#include <glm/ext/vector_float4.hpp>
 #include <magic_enum/magic_enum.hpp>
+#include <string>
 #include <vector>
 #include <fstream>
 #include <optional>
+#include "Logger.hpp"
 #include "RHI/IGraphicsDevice.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
@@ -17,11 +23,198 @@
 #include "GltfLoadFunctions.hpp"
 #include "Scene.hpp"
 
-void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
-										 const fastgltf::Mesh &mesh, MeshReference &meshRef,
-										 const std::filesystem::path &basePath)
+
+void Hush::GLTFLoader::AssetHandle::Alloc(std::pmr::memory_resource* pAllocator) {
+	this->allocator = pAllocator;
+	this->backing = reinterpret_cast<std::byte*>(allocator->allocate(sizeof(fastgltf::Asset), alignof(fastgltf::Asset)));
+	// Placement new on the asset handle
+	new (this->backing) fastgltf::Asset;
+}
+
+void Hush::GLTFLoader::AssetHandle::Dispose() {
+	using namespace fastgltf;
+	// Placement new on the asset handle
+	auto* asset = reinterpret_cast<fastgltf::Asset*>(this->backing);
+	asset->~Asset();
+	this->allocator->deallocate(this->backing, sizeof(Asset), alignof(Asset));
+	this->backing = nullptr;
+}
+
+void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
+									std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
+									std::vector<std::vector<TextureInfo>> *outTexturesByMat,
+									std::vector<GeoSurface> *outSurfaces)
 {
-	Ref<Mesh> &innerMeshRef = meshRef.GetMesh();
+	HUSH_ASSERT(asset != nullptr, "Unable to fill mesh data with a null asset!");
+	auto *gltfAsset = reinterpret_cast<fastgltf::Asset *>(asset->backing);
+	fastgltf::Mesh &mesh = gltfAsset->meshes[meshIndex];
+	outTexturesByMat->resize(gltfAsset->materials.size());
+
+	for (const fastgltf::Primitive &primitive : mesh.primitives)
+	{
+		size_t initialVertex = outVertexBuffer->size();
+		GeoSurface surfaceToAdd{};
+		surfaceToAdd.startIndex = static_cast<uint32_t>(outIndexBuffer->size());
+		const fastgltf::Accessor &primitiveIdxAccessor = gltfAsset->accessors[primitive.indicesAccessor.value()];
+		surfaceToAdd.count = static_cast<uint32_t>(primitiveIdxAccessor.count);
+
+		fastgltf::iterateAccessor<uint32_t>(*gltfAsset, primitiveIdxAccessor, [&](uint32_t idx) {
+			outIndexBuffer->push_back(idx + static_cast<uint32_t>(initialVertex));
+		});
+
+		std::vector<glm::vec3> vertexBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, *gltfAsset, "POSITION");
+		for (const glm::vec3 &v : vertexBuffer)
+		{
+			Mesh::Vertex vertexToAdd{};
+			vertexToAdd.position = v;
+			outVertexBuffer->push_back(vertexToAdd);
+		}
+
+		std::vector<glm::vec3> normalBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, *gltfAsset, "NORMAL");
+		for (uint32_t i = 0; i < normalBuffer.size(); i++)
+		{
+			outVertexBuffer->at(i + initialVertex).normal = normalBuffer.at(i);
+		}
+
+		// Load the UVs here
+		// TODO: LOADUVS()
+
+		std::vector<glm::vec2> texBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec2>(primitive, *gltfAsset, "TEXCOORD_0");
+
+		for (uint32_t i = 0; i < texBuffer.size(); i++)
+		{
+			outVertexBuffer->at(i + initialVertex).uv = {texBuffer.at(i).x, texBuffer.at(i).y};
+		}
+
+		// load vertex colors
+		std::vector<glm::vec4> colors =
+			GltfLoadFunctions::FindAttributeByName<glm::vec4>(primitive, *gltfAsset, "COLOR_0");
+
+		for (uint32_t i = 0; i < colors.size(); i++)
+		{
+			outVertexBuffer->at(i + initialVertex).color = colors.at(i);
+		}
+
+		if (primitive.materialIndex.has_value())
+		{
+			size_t meshMatIdx = primitive.materialIndex.value();
+
+			// Ref<Graphics::Material3D> materialInstance =
+			// MakeMaterial(renderingContext, materialIdx, asset, {}, basePath, meshRef);
+
+			const fastgltf::Material &rawMaterial = gltfAsset->materials[meshMatIdx];
+			auto albedo = rawMaterial.pbrData.baseColorFactor;
+			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
+			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
+								.resource = materialResourceId,
+								.alphaCutoff = rawMaterial.alphaCutoff,
+								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
+			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
+			outMaterials->push_back(mat);
+
+			// Encode the material as its resource id rather than a raw pointer, so the cooked
+			// surface array can be iterated and resolved against the resource manager on load.
+			surfaceToAdd.materialResource = materialResourceId;
+
+			// Collect the default PBR texture slots. Each texture is referenced, for now, by its
+			// byte offset + size into the original glb file, so the runtime can slice the texture
+			// bytes straight out of the file without re-parsing the whole asset.
+			// HACK: The PBR binding indices (1..4) are hardcoded here and mirrored in
+			// RenderingSystem::OnPreRender and HMeshLoader. This should be driven by the PBR
+			// shader reflection instead so the binding numbers are defined in a single place.
+			// TODO: Derive the texture bindings from the shader reflection (BindGroupLayoutDescriptor)
+			// and propagate them through MaterialInfo / TextureInfo instead of hardcoding them.
+			auto collectTexture = [gltfAsset, materialResourceId, &rawMaterial, meshMatIdx, outTexturesByMat](uint32_t binding, std::string_view bindingName,
+									  const auto &textureInfoOpt) -> void {
+				if (!textureInfoOpt.has_value())
+				{
+					return;
+				}
+
+				const std::vector<fastgltf::Texture> &assetTextures = gltfAsset->textures;
+				const fastgltf::Texture &texture = assetTextures.at(textureInfoOpt->textureIndex);
+				if (!texture.imageIndex.has_value())
+				{
+					return;
+				}
+
+				size_t imageIdx = texture.imageIndex.value();
+				const std::vector<fastgltf::Image> &images = gltfAsset->images;
+
+				const fastgltf::Image &image = images.at(imageIdx);
+
+				TextureInfo texInfo{};
+				texInfo.binding = binding;
+				// The owning material's resource id, so the cooker can pair each texture back to
+				// the material it belongs to without a separate index mapping.
+				texInfo.resource = materialResourceId;
+				std::memcpy(&(texInfo.name[0]), bindingName.data(), bindingName.size());
+				if (!GltfLoadFunctions::GetImageBufferOffsetAndSize(image, *gltfAsset, &texInfo.offset, &texInfo.size))
+				{
+					LogFormat(ELogLevel::Warn,
+							  "Texture '{}' of material '{}' is not embedded in the glb file; skipping", bindingName,
+							  std::string_view(rawMaterial.name.data(), rawMaterial.name.size()));
+					return;
+				}
+
+				// Avoid collecting a slot that a previous primitive sharing this material already filled.
+				auto &materialTextures = (*outTexturesByMat)[meshMatIdx];
+				for (const TextureInfo &existing : materialTextures)
+				{
+					if (std::string_view(&(existing.name[0])) == bindingName)
+					{
+						return;
+					}
+				}
+				materialTextures.push_back(std::move(texInfo));
+			};
+
+			collectTexture(1, "albedo", rawMaterial.pbrData.baseColorTexture);
+			collectTexture(2, "metalRough", rawMaterial.pbrData.metallicRoughnessTexture);
+			collectTexture(3, "normal", rawMaterial.normalTexture);
+			collectTexture(4, "emissive", rawMaterial.emissiveTexture);
+		}
+
+		// Correct normals if empty
+		if (normalBuffer.empty())
+		{
+			LogWarn("Normals empty and not generated!");
+			// innerMeshRef->CalculateNormals();
+		}
+
+		outSurfaces->push_back(surfaceToAdd);
+	}
+}
+
+Hush::GltfLoadFunctions::EError Hush::GLTFLoader::LoadAssetFromBinary(std::span<const std::byte> data,
+																	  Hush::GLTFLoader::AssetHandle *outAsset)
+{
+	HUSH_ASSERT(outAsset != nullptr, "Can't load asset into null handle!");
+	auto res = Hush::GltfLoadFunctions::GetAssetFromBinary(data);
+	if (!res)
+	{
+		return Hush::GltfLoadFunctions::EError::InvalidMeshFile;
+	}
+	auto *assetInPlace = reinterpret_cast<fastgltf::Asset *>(outAsset->backing);
+	*assetInPlace = std::move(res.get());
+
+	return Hush::GltfLoadFunctions::EError::None;
+}
+
+void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
+										 const fastgltf::Mesh &mesh, const std::filesystem::path &basePath,
+										 Ref<Mesh> &innerMeshRef, MeshReference *meshRef)
+{
+#ifdef DEBUG
+	if (meshRef != nullptr)
+	{
+		HUSH_ASSERT(meshRef->GetMesh().Get() == innerMeshRef.Get(),
+					"Mesh and inner mesh should point to the same resource!");
+	}
+#endif
 	std::vector<uint32_t> &indexRef = innerMeshRef->GetIndexBuffer();
 	std::vector<Mesh::Vertex> &vertexRef = innerMeshRef->GetVertexBuffer();
 	indexRef.clear();
@@ -81,11 +274,15 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 			size_t materialIdx = primitive.materialIndex.value();
 
 			Ref<Graphics::Material3D> materialInstance =
-				MakeMaterial(renderingContext, materialIdx, asset, {}, meshRef, basePath);
+				MakeMaterial(renderingContext, materialIdx, asset, {}, basePath, meshRef);
 			// Keep alive on the Mesh component
-			meshRef.PushMaterial(materialInstance);
+			if (meshRef != nullptr)
+			{
+				meshRef->PushMaterial(materialInstance);
+			}
+
 			// Non-owning ref on the surface
-			surfaceToAdd.material = materialInstance.Get();
+			surfaceToAdd.materialResource = materialInstance.GetResourceId();
 		}
 
 		// Correct normals if empty
@@ -101,11 +298,13 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 /// @brief This is a temporary function, we need to move this behavior to HushCooker, but this will work to prove we can
 /// already load and render objects
 Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &renderingContext,
-													const std::filesystem::path &path)
+													const std::string_view &virtualPath)
 {
+	auto hostPathRes = renderingContext.virtualFilesystem->ResolveHostPath(virtualPath);
+	HUSH_RESULT_ASSERT(hostPathRes, "Could not resolve virtual path of meshes!");
 	// Open the file and parse it with the gltf loader functions
-	auto assetRes = GltfLoadFunctions::GetAssetFromFile(path);
-	HUSH_COND_FAIL_MSG_V(assetRes, Entity::Null(), "Could not load mesh at {}, error: {}", path.string(),
+	auto assetRes = GltfLoadFunctions::GetAssetFromFile(hostPathRes.value());
+	HUSH_COND_FAIL_MSG_V(assetRes, Entity::Null(), "Could not load mesh at {}, error: {}", virtualPath,
 						 magic_enum::enum_name(assetRes.error()));
 	std::vector<Entity> entities;
 
@@ -120,20 +319,18 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		entity.AddComponent<WorldTransform>();
 		entity.AddComponent<LocalTransform>();
 		// Create the mesh
-		Ref<Mesh> meshRef =
-			resourceManager->AllocateRef<Mesh>(mesh.name); // BUG: If there's something with the same name we'll crash
-														   // with this, we'll need to fix it in a future PR
+		Ref<Mesh> meshRef = resourceManager->AllocateRef<Mesh>(std::string(virtualPath) + std::string(mesh.name));
 		auto &meshComponent = entity.EmplaceComponent<MeshReference>(meshRef);
 
+		meshComponent.SetResourcePath(virtualPath, mesh.name);
 		meshRef->SetName(mesh.name);
 
-		std::filesystem::path basePath = path.parent_path();
-		ProcessPrimitives(renderingContext, assetRes.get(), mesh, meshComponent, basePath);
+		std::filesystem::path basePath = hostPathRes.value().parent_path();
+		ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
 
 		// Generate the material per primitive here
 
 		meshRef->CalculateTangentBasis();
-		// meshRef->SetMeshBuffers(rendererImpl->UploadMesh(indexRef, vertexRef)); // Here the pipeline layout dies(?
 
 		// Load everything into Mesh components
 		// Add a GpuUploadComponent for the UploadResourceSystem to pick it up
@@ -150,7 +347,7 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 	// Create at origin, this should potentially be at the mouse's world position later on
 	if (generatedEntities > 1)
 	{
-		fatherEntity = activeScene->CreateEntityWithName(path.stem().string());
+		fatherEntity = activeScene->CreateEntityWithName(hostPathRes.value().stem().string());
 		fatherEntity.AddComponent<WorldTransform>();
 		fatherEntity.AddComponent<LocalTransform>();
 	}
@@ -192,6 +389,46 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 	return std::move(entities[0]);
 }
 
+bool Hush::GLTFLoader::LoadMeshes(const RenderingContext &renderingContext, const std::string_view &virtualPath)
+{
+	auto hostPathRes = renderingContext.virtualFilesystem->ResolveHostPath(virtualPath);
+	HUSH_RESULT_ASSERT(hostPathRes, "Could not resolve virtual path of meshes!");
+	// Open the file and parse it with the gltf loader functions
+	auto assetRes = GltfLoadFunctions::GetAssetFromFile(hostPathRes.value());
+	HUSH_COND_FAIL_MSG_V(assetRes, false, "Could not load mesh at {}, error: {}", virtualPath,
+						 magic_enum::enum_name(assetRes.error()));
+
+	ResourceManager *resourceManager = renderingContext.resourceManager;
+
+	for (const fastgltf::Mesh &mesh : assetRes->meshes)
+	{
+		// NOTE: Create the mesh, this will live until the deletion of the frame if unclaimed
+		Ref<Mesh> meshRef = resourceManager->AllocateRef<Mesh>(std::string(virtualPath) + std::string(mesh.name));
+
+		// Rudamentary check to see if the mesh was loaded before
+		if (!meshRef->GetIndexBuffer().empty())
+		{
+			return true;
+		}
+
+		meshRef->SetName(mesh.name);
+		std::filesystem::path basePath = hostPathRes.value().parent_path();
+		ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef);
+
+		// Generate the material per primitive here
+
+		meshRef->CalculateTangentBasis();
+
+		// Load everything into Mesh components
+		// Add a GpuUploadComponent for the UploadResourceSystem to pick it up
+		// entity.AddComponent<Renderer::GpuUploadComponent>();
+
+		// entities.emplace_back(std::move(entity));
+		// generatedEntities++;
+	}
+	return true;
+}
+
 namespace
 {
 
@@ -228,8 +465,8 @@ namespace
 
 Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	const RenderingContext &renderingContext, size_t materialIdx, const fastgltf::Asset &asset,
-	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures, MeshReference &meshRef,
-	const std::filesystem::path &basePath)
+	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures, const std::filesystem::path &basePath,
+	MeshReference *meshRefComp)
 {
 	(void)loadedTextures;
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
@@ -285,7 +522,7 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 		std::string texUniqueName = std::string(material.name) + "_" + texName;
 
 		// Check if already loaded for this material in the mesh reference
-		auto &texRefs = meshRef.GetMaterialTextureRefs()[materialInstance.Get()];
+		auto &texRefs = meshRefComp->GetMaterialTextureRefs()[materialInstance.Get()];
 		auto existingIt = texRefs.find(binding);
 		if (existingIt != texRefs.end())
 		{

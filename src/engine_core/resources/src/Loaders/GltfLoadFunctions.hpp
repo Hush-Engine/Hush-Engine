@@ -1,6 +1,7 @@
 #pragma once
 #include <fastgltf/core.hpp>
 #include <fastgltf/types.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <glm/mat4x4.hpp>
 #include <span>
@@ -27,12 +28,26 @@ namespace Hush::GltfLoadFunctions
 
 	fastgltf::Expected<fastgltf::Asset> GetAssetFromFile(const std::filesystem::path &file);
 
+	fastgltf::Expected<fastgltf::Asset> GetAssetFromBinary(const std::span<const std::byte> &data);
+
 	glm::mat4 GetNodeTransform(const fastgltf::Node &node);
 
 	EMaterialPass GetMaterialPassFromFastGltfPass(fastgltf::AlphaMode pass);
 
 	std::span<const std::byte> ExtractImageBuffer(const fastgltf::Image &image, const fastgltf::Asset &asset,
 												  fastgltf::MimeType *outMimeType);
+
+	/// @brief Get the byte offset and size of an image stored inside a buffer of a glb file.
+	/// @param image The image whose data offset is requested.
+	/// @param asset The parsed glTF asset.
+	/// @param outOffset On success, the byte offset of the image data within the glb file (the buffer view's
+	///                  offset). May be nullptr.
+	/// @param outSize On success, the byte length of the image data. May be nullptr.
+	/// @return true when the image is stored inside the same glb file (as a buffer view), and @p outOffset/@p outSize
+	///         have been written. Returns false when the image is not within the same glb file (e.g. an external URI
+	///         or base64-embedded data), in which case the outputs are left untouched.
+	bool GetImageBufferOffsetAndSize(const fastgltf::Image &image, const fastgltf::Asset &asset, uint64_t *outOffset,
+									 uint64_t *outSize);
 
 	// std::shared_ptr<ImageTexture> TextureFromImageDataSource(const fastgltf::Asset &asset,
 	// 														 const fastgltf::Image &image);

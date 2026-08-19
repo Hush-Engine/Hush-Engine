@@ -49,6 +49,7 @@ target_compile_definitions(HushEditor PRIVATE
     "HUSH_ENGINE_RES_DIR=R\"(${CMAKE_SOURCE_DIR})\""
 )
 
+target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo imguifiledialog)
 # thomasmonkman-filewatch (header-only, no CMake config)
 find_path(FILEWATCH_INCLUDE_DIR "thomasmonkman-filewatch/FileWatch.hpp")
 if(NOT FILEWATCH_INCLUDE_DIR)

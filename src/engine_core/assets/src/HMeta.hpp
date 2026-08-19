@@ -17,7 +17,7 @@ namespace Hush
 
 		uint16_t version = VERSION;
 		uint32_t id = 0;
-		uint64_t sourceHash = 0;
+		uint32_t sourceHash = 0;
 		uint64_t sourceMTime = 0;
 		std::string assetType; // "texture" | "shader" | "model" | "unknown"
 

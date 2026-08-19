@@ -3,8 +3,10 @@
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
+#include "CookerService.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -52,12 +54,12 @@ namespace Hush
 	/// @brief Single draw command populated each frame from MeshReference + WorldTransform
 	struct MeshDraw
 	{
-		glm::mat4 modelMatrix;
-		Graphics::IGraphicsBuffer *vertexBuffer;
-		Graphics::IGraphicsBuffer *indexBuffer;
-		uint32_t indexCount;
-		uint32_t firstIndex;
-		uint32_t dynamicOffset; // byte offset into per-draw model uniform buffer
+		glm::mat4 modelMatrix{};
+		Graphics::IGraphicsBuffer *vertexBuffer{};
+		Graphics::IGraphicsBuffer *indexBuffer{};
+		uint32_t indexCount{};
+		uint32_t firstIndex{};
+		uint32_t dynamicOffset{}; // byte offset into per-draw model uniform buffer
 		Graphics::IBindGroup *materialBindGroup = nullptr;
 	};
 
@@ -100,8 +102,8 @@ namespace Hush
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
 
-		GridViewUniforms m_cachedViewUniforms;
-		SceneData m_cachedSceneData;
+		GridViewUniforms m_cachedViewUniforms{};
+		SceneData m_cachedSceneData{};
 		glm::u32vec2 m_cachedViewportSize{1, 1};
 
 		// Lighting
@@ -118,6 +120,9 @@ namespace Hush
 		// Mesh rendering
 		Graphics::Material3DDescriptor m_pbrMaterialDescriptor;
 		Graphics::ShaderCompilationResult m_pbrCompilationData;
+		// Context passed down to mesh or texture loaders
+		// MAYBE: Could this be a component?
+		RenderingContext m_renderingContext;
 		std::unique_ptr<Graphics::IShaderModule> m_meshVertModule;
 		std::unique_ptr<Graphics::IShaderModule> m_meshFragModule;
 		std::unique_ptr<Graphics::IGraphicsPipeline> m_meshPipeline;
@@ -138,7 +143,7 @@ namespace Hush
 		std::unique_ptr<Graphics::IGraphicsTexture> m_defaultEmissiveTex;
 		std::unique_ptr<Graphics::ISampler> m_defaultSampler;
 
-		// This is a terrible map to keep here because we need to delete the entries when the resource manager frees up
+		// HACK: This is a terrible map to keep here because we need to delete the entries when the resource manager frees up
 		// the pointer
 		// ... That is not yet implemented and we should really pay attention to it later on
 		struct CachedMaterialBindGroup

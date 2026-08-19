@@ -96,19 +96,34 @@ namespace Hush
 			HUSH_GENERATED_BODY
 		public:
 			// NOLINTNEXTLINE
-			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> name{}; // Handle null terminator!!!
 
 			Name() = default;
 
-			Name(const std::string_view &name)
+			Name(std::string_view name)
+			{
+				SetName(name);
+			}
+
+			void SetName(std::string_view name)
 			{
 				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH,
 								   "Maximum character length for entity name was exceeded");
 				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
-				std::copy_n(name.data(), copyLength, this->name.data());
+				std::copy_n(name.data(), copyLength, this->m_name.data());
 				// NOLINTNEXTLINE
-				this->name[copyLength] = '\0';
+				this->m_name[copyLength] = '\0';
+				this->m_length = copyLength;
 			}
+
+			[[nodiscard]]
+			std::string_view GetName() const
+			{
+				return {this->m_name.data(), this->m_length};
+			}
+
+		private:
+			std::array<char, MAX_ENTITY_NAME_LENGTH + 1> m_name{}; // Handle null terminator!!!
+			size_t m_length{};
 		};
 		explicit Entity(Scene *ownerScene, std::uint64_t entityId)
 			: m_entityId(entityId),
@@ -342,11 +357,17 @@ namespace Hush
 
 		void EachChild(std::function<void(Entity &)> func) const;
 
+		// Iterates each ID associated with this entity, includiding components and relationships
+		void EachId(std::function<void(Entity::EntityId)> &&func);
+
 		[[hush::export]]
 		void AddRelationship(const Entity &relationship, const Entity &target);
 
 		[[nodiscard]] [[hush::export]]
 		EntityId GetId() const;
+
+		[[nodiscard]]
+		std::string_view GetKey() const;
 
 		[[nodiscard]]
 		inline bool IsValid() const

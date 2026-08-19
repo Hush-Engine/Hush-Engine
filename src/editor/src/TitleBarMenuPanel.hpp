@@ -8,6 +8,11 @@
 
 #include "IEditorPanel.hpp"
 
+namespace IGFD
+{
+	class FileDialog;
+}
+
 namespace Hush
 {
 	class TitleBarMenuPanel final : public IEditorPanel
@@ -19,5 +24,11 @@ namespace Hush
 
 	private:
 		void FileMenuOptions();
+
+		void SaveSceneDialog(IGFD::FileDialog* fileDialog);
+
+		void LoadSceneDialog(IGFD::FileDialog* fileDialog);
+
+		Scene *m_activeScene = nullptr;
 	};
 } // namespace Hush

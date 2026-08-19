@@ -13,6 +13,7 @@
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include <flecs/private/api_types.h>
+#include <string_view>
 
 void *Hush::ComponentRef::GetDataRaw()
 {
@@ -134,6 +135,7 @@ void Hush::Entity::Destroy(Entity &&entity)
 
 void Hush::Entity::SetParent(const Entity &parent)
 {
+	// NYI: for testing purposes this isn't implemented
 	(void)parent;
 	LogError("Set Parent Not Yet Implemented");
 }
@@ -164,6 +166,17 @@ void Hush::Entity::EachChild(std::function<void(Entity &)> func) const
 		}
 	}
 }
+
+void Hush::Entity::EachId(std::function<void(Entity::EntityId)>&& func) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+
+	const ecs_type_t* archetype = ecs_get_type(world, this->m_entityId);
+	for (int32_t i = 0; i < archetype->count; i++) {
+		Entity::EntityId id = archetype->array[i];
+		func(id);
+	}
+}
+
 
 Hush::Entity Hush::Entity::GetChildAt(int32_t index) const
 {
@@ -196,6 +209,17 @@ void Hush::Entity::AddRelationship(const Entity &relationship, const Entity &tar
 Hush::Entity::EntityId Hush::Entity::GetId() const
 {
 	return m_entityId;
+}
+
+constexpr const char* EMPTY_STR = "";
+
+std::string_view Hush::Entity::GetKey() const {
+	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
+	const char* rawName = ecs_get_name(world, this->m_entityId);
+	if (rawName == nullptr) {
+		return {EMPTY_STR};
+	}
+	return std::string_view{rawName};
 }
 
 bool Hush::Entity::IsAlive() const

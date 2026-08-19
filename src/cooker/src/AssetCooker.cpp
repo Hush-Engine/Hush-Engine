@@ -1,16 +1,20 @@
 #include "AssetCooker.hpp"
 #include "Cookers/ImageCooker.hpp"
+#include "Cookers/MeshCooker.hpp"
 #include "Cookers/ShaderCooker.hpp"
 #include "HAsset.hpp"
 #include "HushPak.hpp"
+#include "IFile.hpp"
 #include "crypto/Hashing.hpp"
 #include "Result.hpp"
 #include "Logger.hpp"
+#include <cstdint>
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
 #include <cctype>
 #include <iterator>
+#include <memory_resource>
 #include <string>
 #include <zstd.h>
 
@@ -26,6 +30,7 @@ namespace Hush
 	{
 		RegisterCooker(std::make_unique<ImageCooker>());
 		RegisterCooker(std::make_unique<ShaderCooker>());
+		RegisterCooker(std::make_unique<MeshCooker>());
 	}
 
 	void AssetCooker::RegisterCooker(std::unique_ptr<ICooker> cooker)
@@ -72,6 +77,10 @@ namespace Hush
 			return EFileExtension::HSHADER;
 		if (ext == "HUSHPAK")
 			return EFileExtension::HUSHPAK;
+		if (ext == "GLB")
+			return EFileExtension::GLB;
+		if (ext == "GLTF")
+			return EFileExtension::GLTF;
 		return EFileExtension::UNKNOWN;
 	}
 	Result<std::vector<std::byte>, ECookError> AssetCooker::CookToBlob(std::span<const std::byte> input,
@@ -133,7 +142,7 @@ namespace Hush
 	}
 
 	Result<void, ECookError> AssetCooker::CookDirectory(const std::filesystem::path &contentDir,
-														ECompressionFormat compression)
+														ECompressionFormat compression, std::pmr::memory_resource* allocator)
 	{
 		std::error_code ec;
 		if (!std::filesystem::exists(contentDir, ec))
@@ -206,6 +215,7 @@ namespace Hush
 
 			CookContext ctx;
 			ctx.sourceVPath = relVPath;
+			ctx.frameAllocator = allocator; 
 
 			auto blob = CookToBlob(srcData, ext, meta, ctx);
 			if (blob.has_error())

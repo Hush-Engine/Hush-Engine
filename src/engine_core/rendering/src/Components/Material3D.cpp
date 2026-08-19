@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <span>
 #include <string>
 
 namespace Hush::Graphics
@@ -124,13 +125,31 @@ namespace Hush::Graphics
 
 		if (info.offset + writeSize > m_uniformStagingBuffer.size())
 		{
-			return EError::PropertyNotFound;
+			return EError::OutOfBoundsWrite;
 		}
 
 		std::memcpy(m_uniformStagingBuffer.data() + info.offset, value.data(), writeSize);
 		m_propertiesDirty = true;
 		return EError::None;
 	}
+
+	Material3D::EError Material3D::GetPropertyRaw(std::string_view name, std::byte* outValue, size_t size) {
+		auto it = m_propertyMap.find(std::string(name));
+		if (it == m_propertyMap.end())
+		{
+			return EError::PropertyNotFound;
+		}
+
+		const MaterialPropertyInfo &info = it->second;
+		if (info.size != size) {
+			return EError::OutOfBoundsRead;
+		}
+
+		std::memcpy(outValue, this->m_uniformStagingBuffer.data() + info.offset, info.size);
+
+		return EError::None;
+	}
+
 	Material3D::EError Material3D::CreateAllBindGroupLayouts(IGraphicsDevice *device,
 															 const std::vector<BindGroupLayoutDescriptor> &layoutDescs)
 	{
@@ -480,9 +499,16 @@ namespace Hush::Graphics
 		return m_uniformBuffer.IsValid() ? m_uniformBuffer.Get() : nullptr;
 	}
 
-	const std::unordered_map<std::string, MaterialPropertyInfo> &Material3D::GetPropertyMap() const noexcept
-	{
-		return m_propertyMap;
+	void Material3D::OnEachPropertyMut(std::function<bool(std::string_view, MaterialPropertyInfo*, std::span<std::byte>)> callback) {
+		for (auto& entry : this->m_propertyMap) {
+			// Get this uniform range
+			auto* start = reinterpret_cast<std::byte*>(this->m_uniformStagingBuffer.data() + entry.second.offset);
+			bool mutated = callback(entry.first, &entry.second, {start, entry.second.size});
+			// Only on true
+			if (mutated) {
+				this->m_propertiesDirty = true;
+			}
+		}
 	}
 
 	uint64_t Material3D::GetUniformBufferSize() const noexcept
@@ -554,6 +580,7 @@ namespace Hush::Graphics
 			info.size = static_cast<uint32_t>(b.bufferSize);
 			info.bindingSet = b.set;
 			info.binding = b.binding;
+			info.typeFlags = b.dataType;
 
 			if (!b.name.empty())
 			{

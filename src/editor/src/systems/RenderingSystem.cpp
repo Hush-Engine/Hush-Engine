@@ -1,10 +1,17 @@
 #include "RenderingSystem.hpp"
 #include "Assertions.hpp"
+#include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/GpuUploadComponent.hpp"
+#include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
+#include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
+#include "Loaders/CrossLoaderDefinitions.hpp"
+#include "Loaders/HMeshLoader.hpp"
 #include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
 #include "Profiling.hpp"
@@ -19,23 +26,31 @@
 #include "RHI/ISampler.hpp"
 #include "RHI/ICommandQueue.hpp"
 #include "../components/EditorPanelComponents.hpp"
+#include "Ref.hpp"
 #include "RenderGraph/RenderGraph.hpp"
+#include "ResourceManager.hpp"
 #include "Scene.hpp"
+#include "Shared/Camera.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
 #include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
+#include <cstdint>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/matrix.hpp>
 #include <cstddef>
 #include <cstring>
+#include <span>
+#include <string>
 #include <string_view>
 
 #include "StringAllocation.hpp"
+#include "serialization/Formats/JsonSerializer.hpp"
+#include "serialization/Serialization.hpp"
 
 using namespace Hush::Graphics;
 
@@ -135,8 +150,111 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 		});
 }
 
+Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Serialization::JsonDeserializer &serializer,
+													void *ctx)
+{
+	using namespace Hush;
+	// Raw deserialize to get the resourceId
+	Serializable::DefaultDeserialize<MeshReference>(self, serializer);
+	auto *instance = reinterpret_cast<MeshReference *>(self);
+	auto *renderCtx = reinterpret_cast<RenderingContext *>(ctx);
+	Scene *scene = renderCtx->activeScene;
+
+	uint32_t resourceId = instance->GetResourceId();
+	ResourceManager *resourceManager = scene->GetEngine()->GetResourceManager();
+
+	Ref<Mesh> existingMesh = resourceManager->GetRefOrNull<Mesh>(resourceId);
+
+	// Then we check if there exists any Ref<Mesh> with this identifier
+	if (!existingMesh.IsNull())
+	{
+		instance->SetMesh(existingMesh);
+		// Also set the material refs
+		for (uint32_t materialId : instance->GetMaterialIds())
+		{
+			Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(materialId);
+			HUSH_ASSERT(!mat.IsNull(), "Material {} was not properly created in the first step of serialization",
+						materialId);
+			instance->PushMaterial(mat);
+		}
+		return Serializable::EError::None;
+	}
+
+	{
+		// Do not keep this one around
+		auto mesh = resourceManager->AllocateRefKnwonID<Mesh>(resourceId);
+		instance->SetMesh(mesh);
+	}
+
+	// If it does not exist, we read the asset file and create the mesh references
+	// This is the slow path but it'll run only once per mesh
+	VirtualFilesystem *vfs = scene->GetEngine()->GetVirtualFilesystem();
+	auto openRes = vfs->OpenFile(std::string("res://.hcooked/") + std::to_string(resourceId) + ".hasset");
+
+	if (openRes.has_error())
+	{
+		return Serializable::EError::MissingInternalResource;
+	}
+
+	// Pass this to the hush mesh parser
+	std::pmr::memory_resource *allocator = scene->GetEngine()->GetFrameScopeMemoryResource();
+	const size_t meshFileSize = openRes.value()->GetFileInfo().size;
+	auto *meshFileBuffer = reinterpret_cast<std::byte *>(allocator->allocate(meshFileSize));
+	auto buffer = std::span<std::byte>{meshFileBuffer, meshFileSize};
+	auto readFileRes = openRes.value()->Read(buffer);
+	if (readFileRes.has_error())
+	{
+		return Serializable::EError::MissingInternalResource;
+	}
+
+	HMeshLoader::LoadMeshFromBinary(buffer, instance, renderCtx);
+
+	allocator->deallocate(meshFileBuffer, meshFileSize, alignof(std::byte *));
+
+	return Serializable::EError::None;
+}
+
+void MeshReferencePostDeserialize(uint8_t *instance, Hush::Entity::EntityId entity, Hush::Entity::EntityId comp,
+								  void *ctx)
+{
+	using namespace Hush;
+	(void)instance;
+	(void)comp;
+	// Add the GPU upload comp
+	auto *renderCtx = reinterpret_cast<RenderingContext *>(ctx);
+	Scene *scene = renderCtx->activeScene;
+	Entity ent = scene->EntityFromIdUnchecked(entity);
+	ent.AddComponent<Renderer::GpuUploadComponent>();
+}
+
 void Hush::RenderingSystem::Init()
 {
+	// Register our public rendering comps for editor inspection
+	Entity::EntityId dirLightId = this->GetScene().RegisterComponent<DirectionalLight>();
+	Entity dirLightComp = this->GetScene().EntityFromIdUnchecked(dirLightId);
+	dirLightComp.AddComponent<InspectableComponent>();
+	{
+		this->GetScene().RegisterDefaultSerializer<DirectionalLight>();
+	}
+
+	Entity::EntityId meshRefId = this->GetScene().RegisterComponent<MeshReference>();
+	Entity meshRefComp = this->GetScene().EntityFromIdUnchecked(meshRefId);
+	meshRefComp.AddComponent<InspectableComponent>();
+	{
+		Serializable &ser = meshRefComp.AddComponent<Serializable>();
+		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
+		ser.deserialize = &::MeshReferenceDeserialize;
+		ser.postDeserialize = &::MeshReferencePostDeserialize;
+		ser.ctx = &this->m_renderingContext;
+	}
+
+	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();
+	Entity camRefComp = this->GetScene().EntityFromIdUnchecked(camRefId);
+	camRefComp.AddComponent<InspectableComponent>();
+	{
+		Serializable &ser = camRefComp.AddComponent<Serializable>();
+		ser.serialize = &Serializable::DefaultSerialize<Camera>;
+	}
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
 	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();
@@ -191,6 +309,13 @@ void Hush::RenderingSystem::Init()
 		.compilationResult = &this->m_pbrCompilationData,
 		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
 	};
+
+	HushEngine *engine = this->GetScene().GetEngine();
+	this->m_renderingContext.virtualFilesystem = engine->GetVirtualFilesystem();
+	this->m_renderingContext.activeScene = &this->GetScene();
+	this->m_renderingContext.device = engine->GetWindowRenderer()->GetGraphicsDevice();
+	this->m_renderingContext.materialDescriptor = &this->m_pbrMaterialDescriptor;
+	this->m_renderingContext.resourceManager = engine->GetResourceManager();
 }
 
 void Hush::RenderingSystem::OnShutdown()
@@ -262,8 +387,10 @@ void Hush::RenderingSystem::OnPreRender()
 		this->CreateMeshSceneBindGroup(device);
 	}
 
+	ResourceManager *resourceManager = this->GetScene().GetEngine()->GetResourceManager();
+
 	m_renderableTargetsQuery.Each(
-		[this, device, &slotIndex](const MeshReference &meshRef, const WorldTransform &xform) {
+		[this, device, &slotIndex, resourceManager](const MeshReference &meshRef, const WorldTransform &xform) {
 			const auto *mesh = meshRef.GetMesh().Get();
 			if (mesh == nullptr)
 			{
@@ -285,7 +412,8 @@ void Hush::RenderingSystem::OnPreRender()
 			for (const auto &surface : mesh->GetSurfaces())
 			{
 				Graphics::IBindGroup *matBindGroup = nullptr;
-				auto *mat = surface.material;
+
+				auto *mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource).Get();
 				if (mat != nullptr)
 				{
 					mat->FlushProperties(device);

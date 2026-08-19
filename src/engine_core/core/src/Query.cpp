@@ -106,7 +106,7 @@ Hush::RawQuery::QueryIterator::~QueryIterator()
 		return;
 	}
 
-	LogFormat(ELogLevel::Info, "Destroyed query iterator on: {}", (void *)this);
+	// LogFormat(ELogLevel::Info, "Destroyed query iterator on: {}", (void *)this);
 	auto *queryIter = reinterpret_cast<ecs_iter_t *>(m_iterData.data());
 
 	ecs_iter_fini(queryIter);
@@ -138,7 +138,7 @@ Hush::RawQuery::~RawQuery() noexcept
 		return;
 	}
 
-	LogFormat(ELogLevel::Info, "Called raw query destructor on inner query {}!", (void *)this);
+	// LogFormat(ELogLevel::Info, "Called raw query destructor on inner query {}!", (void *)this);
 	ecs_query_fini(query);
 }
 

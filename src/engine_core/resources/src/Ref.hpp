@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "IResourceManager.hpp"
 
 namespace Hush
@@ -45,20 +47,31 @@ namespace Hush
 			return this->m_element == INVALID_HANDLE || this->m_resourceManager->GetRefCount(this->m_element).IsNull();
 		}
 
+		/// @brief Fnv1a hash of the identifier the resource is stored under in the resource manager.
+		/// Zero when the reference was created without an identifier.
+		[[nodiscard]]
+		uint32_t GetResourceId() const
+		{
+			return this->m_resourceId;
+		}
+
 		Ref() = default;
 
 		Ref(const Ref &other)
-			: m_element(other.m_element),
+			: m_resourceId(other.m_resourceId),
+			  m_element(other.m_element),
 			  m_resourceManager(other.m_resourceManager)
 		{
 			m_resourceManager->IncreaseRefCount(m_element);
 		}
 
 		Ref(Ref &&other) noexcept
-			: m_element(other.m_element),
+			: m_resourceId(other.m_resourceId),
+			  m_element(other.m_element),
 			  m_resourceManager(other.m_resourceManager)
 		{
 			// Invalidate source to prevent decrement on destruction
+			other.m_resourceId = 0;
 			other.m_element = INVALID_HANDLE;
 			other.m_resourceManager = nullptr;
 		}
@@ -93,6 +106,36 @@ namespace Hush
 				this->m_resourceManager = nullptr;
 			}
 
+			this->m_resourceId = other.m_resourceId;
+
+			// Release previous resource
+			if (previousElement != INVALID_HANDLE && previousMananger != nullptr)
+			{
+				previousMananger->DecreaseRefCount(previousElement);
+			}
+
+			return *this;
+		}
+
+		Ref &operator=(Ref &&other) noexcept
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			HandleId previousElement = this->m_element;
+			IResourceManager *previousMananger = this->m_resourceManager;
+
+			this->m_resourceId = other.m_resourceId;
+			this->m_element = other.m_element;
+			this->m_resourceManager = other.m_resourceManager;
+
+			// Invalidate source to prevent decrement on destruction
+			other.m_resourceId = 0;
+			other.m_element = INVALID_HANDLE;
+			other.m_resourceManager = nullptr;
+
 			// Release previous resource
 			if (previousElement != INVALID_HANDLE && previousMananger != nullptr)
 			{
@@ -103,9 +146,15 @@ namespace Hush
 		}
 
 		Ref(IResourceManager *resourceManager, T *resource)
+			: Ref(resourceManager, resource, 0)
 		{
-			this->m_element = reinterpret_cast<HandleId>(resource);
-			this->m_resourceManager = resourceManager;
+		}
+
+		Ref(IResourceManager *resourceManager, T *resource, uint32_t resourceId)
+			: m_resourceId(resourceId),
+			  m_element(reinterpret_cast<HandleId>(resource)),
+			  m_resourceManager(resourceManager)
+		{
 			// Internally creates/increases the count at RefCounted for this handle
 			RefCounted *count = this->m_resourceManager->IncreaseRefCount(this->m_element);
 			count->element = static_cast<void *>(resource);
@@ -116,6 +165,7 @@ namespace Hush
 		}
 
 	private:
+		uint32_t m_resourceId = 0;
 		HandleId m_element = INVALID_HANDLE;
 		IResourceManager *m_resourceManager = nullptr;
 	};

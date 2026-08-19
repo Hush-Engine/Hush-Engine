@@ -22,8 +22,8 @@ namespace Hush
 	{
 		uint32_t startIndex;
 		uint32_t count;
-		// Lifetime of this material is handled by the MeshReference component
-		Graphics::Material3D *material;
+		// Lifetime of this material is handled by the MeshReference component, this is the identifier of the Ref<Material3D>
+		uint32_t materialResource;
 	};
 
 	/// @brief Simple CPU representation of a mesh "component", holds index and vertex buffers, as well as the
@@ -62,6 +62,12 @@ namespace Hush
 
 		[[nodiscard]]
 		const std::vector<GeoSurface> &GetSurfaces() const
+		{
+			return this->m_surfaces;
+		}
+
+		[[nodiscard]]
+		std::vector<GeoSurface> &GetSurfaces()
 		{
 			return this->m_surfaces;
 		}

@@ -26,6 +26,14 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
+
+		/// @brief Utility struct to pass in virtual file paths and metadata, not relying on FileInfo itself
+		struct DroppableFile
+		{
+			std::string virtualPath;
+			const FileInfo* fileInfo;
+		};
+
 		void RefreshDirectory();
 
 		/// Marks the panel dirty (triggering a re-list) when the content directory's
@@ -45,7 +53,7 @@ namespace Hush
 		static bool IsImageExtension(EFileExtension ext);
 
 		[[nodiscard]]
-		bool CanBeDroppedToScene(const FileInfo &fileData) const;
+		bool CanBeDroppedToScene(const DroppableFile &fileData) const;
 
 		ResourceManager *m_resourceManager = nullptr;
 		VirtualFilesystem *m_filesystem = nullptr;
@@ -58,6 +66,7 @@ namespace Hush
 		std::vector<FileInfo> m_currentItems;
 		std::string m_currentWorkingDirectory = "res://";
 		ComponentRef m_editorInfoRef{};
+		DroppableFile m_currentDroppable; // This is needed to keep the string intact
 		bool m_dirty = true;
 
 		/// Last-seen modification time of the content directory, used to detect

@@ -15,6 +15,12 @@ namespace Hush::MathUtils
 		return t > max ? max : t;
 	}
 
+	inline int32_t Clamp(int32_t value, int32_t min, int32_t max)
+	{
+		const int32_t t = value < min ? min : value;
+		return t > max ? max : t;
+	}
+
 	inline int32_t CircleBack(int32_t value, int32_t min, int32_t maxInclusive)
 	{
 		if (value < min)

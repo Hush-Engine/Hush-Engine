@@ -1,4 +1,6 @@
 #include "UI.hpp"
+#include "Assertions.hpp"
+#include "BitwiseUtils.hpp"
 #include "CommandPanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
@@ -21,6 +23,32 @@
 Hush::UI::UI()
 {
 	s_instance = this;
+}
+
+void Hush::UI::LoadFonts()
+{
+	// IBM Plex Serif family. Regular is added first so it becomes ImGui's
+	// default UI font; the other variants live in the same atlas and can be
+	// pushed per-widget with ImGui::PushFont(UI::GetFont(...)).
+	constexpr float kUiFontSize = 18.0f;
+	ImGuiIO &io = ImGui::GetIO();
+
+	s_fonts[static_cast<size_t>(EFontVariant::Regular)] = io.Fonts->AddFontFromFileTTF(
+		HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Regular.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Light)] =
+		io.Fonts->AddFontFromFileTTF(HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Light.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Bold)] =
+		io.Fonts->AddFontFromFileTTF(HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Bold.ttf", kUiFontSize);
+	s_fonts[static_cast<size_t>(EFontVariant::Italic)] = io.Fonts->AddFontFromFileTTF(
+		HUSH_ENGINE_RES_DIR "/res/fonts/IBMPlexSerif/IBMPlexSerif-Italic.ttf", kUiFontSize);
+
+	HUSH_ASSERT(s_fonts[static_cast<size_t>(EFontVariant::Regular)] != nullptr,
+				"Failed to load the default UI font (IBM Plex Serif). Falling back to ImGui's embedded font.");
+}
+
+ImFont *Hush::UI::GetFont(const EFontVariant variant)
+{
+	return s_fonts[static_cast<size_t>(variant)];
 }
 
 void Hush::UI::Init(Scene *parentScene)
@@ -65,7 +93,7 @@ void Hush::UI::SetupImGuiStyle()
 	style.ChildRounding = 0.0f;
 	style.ChildBorderSize = 1.0f;
 	style.PopupRounding = 0.0f;
-	style.PopupBorderSize = 1.0f;
+	style.PopupBorderSize = 5.0f;
 	style.FramePadding = ImVec2(6.0f, 6.0f);
 	style.FrameRounding = 0.0f;
 	style.FrameBorderSize = 0.0f;
@@ -199,12 +227,20 @@ bool Hush::UI::Spinner(const char *label, float radius, int thickness, const uin
 	return true;
 }
 
-bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput)
+bool Hush::UI::InputTextWithHint(const char *label, const char *hint, char *buffer, size_t size, bool focusOnInput,
+								 bool *outReceivedInput)
 {
+	HUSH_ASSERT(outReceivedInput != nullptr,
+				"Input text with hint needs to capture whether or not the textfield received an input");
 	char outChar = 0;
 	if (focusOnInput && InputManager::FetchCharThisFrame(&outChar))
 	{
 		ImGui::SetKeyboardFocusHere();
+		*outReceivedInput = true;
+	}
+	if (ImGui::IsKeyPressed(ImGuiKey_Backspace, true))
+	{
+		*outReceivedInput = true;
 	}
 	return ImGui::InputTextWithHint(label, hint, buffer, size);
 }
@@ -221,7 +257,7 @@ bool Hush::UI::BeginCenterPopup(const char *label, bool transparent)
 	constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse;
 
 	const ImVec2 screenCenter = ImGui::GetMainViewport()->GetCenter();
-	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos(screenCenter, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::Begin(label, nullptr, windowFlags);
 
 	return true;
@@ -264,6 +300,107 @@ bool Hush::UI::CustomSelectable(const char *label, bool *isHovered, ImDrawList *
 	}
 
 	return *isHovered && (ImGui::IsMouseClicked(0) || ImGui::IsKeyPressed(ImGuiKey_Enter, false));
+}
+
+bool Hush::UI::Vec3Edit(const char *label, float v[3], float step, float stepFast, const char *format)
+{
+	bool changed = false;
+	ImGui::PushID(label);
+	ImGui::AlignTextToFramePadding();
+
+	const char *labelEnd = ImGui::FindRenderedTextEnd(label);
+	bool hasVisibleLabel = (label != labelEnd);
+
+	if (hasVisibleLabel)
+	{
+		ImGui::TextUnformatted(label, labelEnd);
+		ImGui::SameLine();
+	}
+	else
+	{
+		ImGui::SameLine(0.0f, 0.0f);
+	}
+
+	float avail = ImGui::GetContentRegionAvail().x;
+	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+
+	float buttonWidth = ImGui::GetFrameHeight();
+
+	float totalSpacing = spacing * 2.0f;
+	float totalButtons = buttonWidth * 3.0f;
+	float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 3.0f);
+
+	changed |= DrawVecComponent("x", &v[0], ImVec4(1.0f, 0.2f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+	changed |= DrawVecComponent("y", &v[1], ImVec4(0.2f, 1.0f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+	changed |= DrawVecComponent("z", &v[2], ImVec4(0.2f, 0.2f, 1.0f, 1.0f), step, format, fieldWidth, buttonWidth);
+
+	ImGui::PopID();
+	return changed;
+}
+
+bool Hush::UI::Vec4Edit(const char *label, float v[4], float step, float stepFast, const char *format)
+{
+	bool changed = false;
+
+	ImGui::PushID(label);
+	ImGui::AlignTextToFramePadding();
+
+	const char *labelEnd = ImGui::FindRenderedTextEnd(label);
+	bool hasVisibleLabel = (label != labelEnd);
+
+	if (hasVisibleLabel)
+	{
+		// Only render text if something exists before '##'
+		ImGui::TextUnformatted(label, labelEnd);
+		ImGui::SameLine();
+	}
+	else
+	{
+		ImGui::SameLine(0.0f, 0.0f);
+	}
+
+	float avail = ImGui::GetContentRegionAvail().x;
+	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+
+	float buttonWidth = ImGui::GetFrameHeight(); // square, like ImGui's own prefix buttons
+
+	float totalSpacing = spacing * 2.0f;
+	float totalButtons = buttonWidth * 4.0f;
+	float fieldWidth = ImMax(1.0f, (avail - totalSpacing - totalButtons) / 4.0f);
+
+	changed |= DrawVecComponent("x", &v[0], ImVec4(1.0f, 0.2f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+
+	changed |= DrawVecComponent("y", &v[1], ImVec4(0.2f, 1.0f, 0.2f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+
+	changed |= DrawVecComponent("z", &v[2], ImVec4(0.2f, 0.2f, 1.0f, 1.0f), step, format, fieldWidth, buttonWidth);
+	ImGui::SameLine(0.0f, spacing);
+
+	changed |= DrawVecComponent("w", &v[3], ImVec4(1.0f, 0.2f, 1.0f, 1.0f), step, format, fieldWidth, buttonWidth);
+
+	ImGui::PopID();
+	return changed;
+}
+
+bool Hush::UI::FlagsBegin(const char *label)
+{
+	const ImVec2 buttonSize(ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f,
+							ImGui::GetFrameHeight());
+
+	if (ImGui::Button(label, buttonSize))
+	{
+		ImGui::OpenPopup(label);
+	}
+
+	return ImGui::BeginPopup(label);
+}
+
+void Hush::UI::FlagsEnd()
+{
+	ImGui::EndPopup();
 }
 
 bool Hush::UI::BeginToolBar()
@@ -324,4 +461,32 @@ void Hush::UI::DrawPlayButton()
 	}
 	ImGui::End();
 }
+
+bool Hush::UI::DrawVecComponent(const char *id, float *value, const ImVec4 &color, float step, const char *format,
+								float fieldWidth, float buttonWidth)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Button, color);
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0, 0});
+
+	ImGui::BeginDisabled(true);
+	ImGui::Button(id, ImVec2(buttonWidth, 0.0f));
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+	ImGui::PopStyleColor(2);
+
+	ImGui::PushItemWidth(fieldWidth);
+	char hashed[4] = {0};
+	hashed[0] = '#';
+	hashed[1] = '#';
+	hashed[2] = id[0];
+
+	bool changed = ImGui::DragFloat(hashed, value, step, 0.0f, 0.0f, format);
+
+	ImGui::PopStyleVar();
+	ImGui::PopItemWidth();
+	return changed;
+}
+
 // NOLINTEND

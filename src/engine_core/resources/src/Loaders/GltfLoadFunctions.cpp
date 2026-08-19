@@ -32,6 +32,19 @@ fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromFile(co
 	return parser.loadGltfBinary(data, file.parent_path(), loadingOptions);
 }
 
+fastgltf::Expected<fastgltf::Asset> Hush::GltfLoadFunctions::GetAssetFromBinary(const std::span<const std::byte> &data)
+{
+	fastgltf::Expected<fastgltf::GltfDataBuffer> res =
+		fastgltf::GltfDataBuffer::FromBytes(data.data(), data.size_bytes());
+	if (!res)
+	{
+		return res.error();
+	}
+	fastgltf::Parser parser{};
+
+	return parser.loadGltfBinary(res.get(), {});
+}
+
 glm::mat4 Hush::GltfLoadFunctions::GetNodeTransform(const fastgltf::Node &node)
 {
 	const fastgltf::math::mat<float, 4, 4> *const matrix = std::get_if<fastgltf::math::fmat4x4>(&node.transform);
@@ -164,6 +177,29 @@ std::span<const std::byte> Hush::GltfLoadFunctions::ExtractImageBuffer(const fas
 	}
 
 	return {};
+}
+
+bool Hush::GltfLoadFunctions::GetImageBufferOffsetAndSize(const fastgltf::Image &image, const fastgltf::Asset &asset,
+														  uint64_t *outOffset, uint64_t *outSize)
+{
+	// Only a buffer-view source resides within the same glb file; external URIs and
+	// base64-embedded data have no file offset to reference.
+	const fastgltf::sources::BufferView *bufferViewSource = std::get_if<fastgltf::sources::BufferView>(&image.data);
+	if (bufferViewSource == nullptr)
+	{
+		return false;
+	}
+
+	const fastgltf::BufferView &bufferView = asset.bufferViews.at(bufferViewSource->bufferViewIndex);
+	if (outOffset != nullptr)
+	{
+		*outOffset = bufferView.byteOffset;
+	}
+	if (outSize != nullptr)
+	{
+		*outSize = bufferView.byteLength;
+	}
+	return true;
 }
 
 // std::shared_ptr<Hush::ImageTexture> Hush::GltfLoadFunctions::TextureFromImageDataSource(const fastgltf::Asset &asset,

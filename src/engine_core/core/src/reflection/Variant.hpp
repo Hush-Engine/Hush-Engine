@@ -110,23 +110,27 @@ namespace Hush::Reflection
 		explicit Variant(T &&value)
 			: m_typeId(GetTypeId<std::remove_cvref_t<T>>())
 		{
-			if constexpr (sizeof(std::remove_reference_t<T>) <= MAX_SMALL_SIZE)
+			// T can be deduced as a reference when the caller passes an lvalue (e.g. Variant(instance->field)),
+			// so always strip the reference before storing it. Allocating a reference (new T) is ill-formed.
+			using ValueType = std::remove_reference_t<T>;
+
+			if constexpr (sizeof(ValueType) <= MAX_SMALL_SIZE)
 			{
-				new (m_data) std::remove_reference_t<T>(std::forward<T>(value));
+				new (m_data) ValueType(std::forward<T>(value));
 				m_status = EVariantStatus::Small;
-				if constexpr (std::is_trivially_destructible_v<T>)
+				if constexpr (std::is_trivially_destructible_v<ValueType>)
 				{
 					m_dtor = nullptr;
 				}
 				else
 				{
-					m_dtor = [](void *ptr) { static_cast<T *>(ptr)->~T(); };
+					m_dtor = [](void *ptr) { static_cast<ValueType *>(ptr)->~ValueType(); };
 				}
 			}
 			else
 			{
-				m_ptr = new T(std::forward<T>(value));
-				m_dtor = [](void *ptr) { delete static_cast<T *>(ptr); };
+				m_ptr = new ValueType(std::forward<T>(value));
+				m_dtor = [](void *ptr) { delete static_cast<ValueType *>(ptr); };
 				m_status = EVariantStatus::Large;
 			}
 		}

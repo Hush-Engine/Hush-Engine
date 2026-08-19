@@ -1,10 +1,16 @@
 #pragma once
 
 #include "Transform.hpp"
+
+#if __has_include("WorldTransform.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "WorldTransform.hushgen.hpp"
+#endif
+
 namespace Hush
 {
-	struct [[hush::export]] WorldTransform : public Transform
+	struct [[hush::export, hush::reflect]] WorldTransform : public Transform
 	{
-		using Transform::Transform;
+		HUSH_GENERATED_BODY
+
 	};
 } // namespace Hush
