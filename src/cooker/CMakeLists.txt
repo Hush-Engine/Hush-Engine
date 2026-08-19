@@ -12,6 +12,7 @@ hush_add_library(
     SRCS src/AssetCooker.cpp
          src/Cookers/ImageCooker.cpp
          src/Cookers/ShaderCooker.cpp
+         src/Cookers/MeshCooker.cpp
          src/CookedDirectory.cpp
     PUBLIC_HEADER_DIRS src
 )
@@ -20,11 +21,13 @@ add_library(Hush::Cooker ALIAS HushCooker)
 target_sources(HushCooker PUBLIC
     $<TARGET_OBJECTS:HushAssets>
     $<TARGET_OBJECTS:HushRendering>
+    $<TARGET_OBJECTS:HushResources>
 )
 
 target_link_libraries(HushCooker PUBLIC
     Hush::Assets
     Hush::Rendering
+    Hush::Resources
     stb
     zstd::libzstd
 )
