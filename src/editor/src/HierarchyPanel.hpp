@@ -27,7 +27,8 @@ namespace Hush
 		Scene *m_activeScene;
 		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
 
-		// Small helper without recursion
+		// Small helper WITH recursion
+		// PERF: Remove recursion from this function
 		void GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name, InspectorPanel *inspector);
 	};
 } // namespace Hush

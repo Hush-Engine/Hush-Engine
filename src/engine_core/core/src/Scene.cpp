@@ -859,6 +859,12 @@ Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 	return ecs_lookup(world, tag.c_str());
 }
 
+
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const {
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	return ecs_lookup(world, tag.data());
+}
+
 const std::vector<Hush::Entity::EntityId> &Hush::Scene::GetAllRegisteredComponents() const
 {
 	return this->m_registeredComponents;

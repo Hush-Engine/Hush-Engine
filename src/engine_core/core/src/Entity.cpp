@@ -138,6 +138,9 @@ void Hush::Entity::SetParent(const Entity &parent)
 	// NYI: for testing purposes this isn't implemented
 	(void)parent;
 	LogError("Set Parent Not Yet Implemented");
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_remove_pair(world, this->GetId(), EcsTerms::CHILD_OF, EcsTerms::WILDCARD);
+	ecs_add_pair(world, this->GetId(), EcsTerms::CHILD_OF, parent.GetId());
 }
 
 void Hush::Entity::AddChild(const Entity &child)

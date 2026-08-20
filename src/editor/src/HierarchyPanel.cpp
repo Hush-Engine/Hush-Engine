@@ -4,6 +4,7 @@
 #include <functional>
 #include <imgui/imgui.h>
 #include <Assertions.hpp>
+#include <memory_resource>
 #include <optional>
 #include <string_view>
 #include "Components/LocalTransform.hpp"
@@ -11,6 +12,7 @@
 #include "Components/WorldTransform.hpp"
 #include "Entity.hpp"
 #include "InspectorPanel.hpp"
+#include "Logger.hpp"
 #include "UI.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
@@ -95,12 +97,43 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, co
 	{
 		flags |= ImGuiTreeNodeFlags_Leaf;
 	}
+	// std::pmr::memory_resource* allocator = this->m_activeScene->GetFrameScopeMemoryResource();
 
-	bool isNodeOpen = ImGui::TreeNodeEx(name.GetName().data(), flags);
+	// PERF: Temp strings
+	std::string_view key = entity.GetKey();
+	std::string display {name.GetName()};
+	if (!key.empty()) {
+		display.append(" (");
+		display.append(key);
+		display.append(")");
+	}
+	ImGui::BeginGroup();
+	bool isNodeOpen = ImGui::TreeNodeEx(display.c_str(), flags);
 	if (ImGui::IsItemClicked())
 	{
 		inspector->SetInspectTarget(entity.GetId());
 	}
+
+	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+		ImGui::Text("Move: %s", display.c_str());
+		Entity::EntityId entityToMoveId = entity.GetId();
+		ImGui::SetDragDropPayload("MOVED_ENTITY", &entityToMoveId, sizeof(Entity::EntityId), ImGuiCond_Always);
+
+		ImGui::EndDragDropSource();
+	}
+
+	if (ImGui::BeginDragDropTarget()) {
+		const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MOVED_ENTITY");
+		if (payload != nullptr) {
+			Entity::EntityId id = *(reinterpret_cast<Entity::EntityId*>(payload->Data));
+			Entity toMove = this->m_activeScene->EntityFromIdUnchecked(id);
+
+			toMove.SetParent(entity);
+
+		}
+		ImGui::EndDragDropTarget();
+	}
+
 	if (isNodeOpen)
 	{
 		entity.EachChild([this, inspector](Entity &currChild) {
@@ -114,4 +147,5 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, co
 		});
 		ImGui::TreePop();
 	}
+	ImGui::EndGroup();
 }

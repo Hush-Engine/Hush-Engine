@@ -218,6 +218,10 @@ namespace Hush
 		[[nodiscard]]
 		EntityId Lookup(NullTerminatedStringView tag) const;
 
+		// HACK: Marshallable version
+		[[hush::export]] [[nodiscard]]
+		EntityId Lookup(std::string_view tag) const;
+
 		[[nodiscard]]
 		const std::vector<Entity::EntityId> &GetAllRegisteredComponents() const;
 
