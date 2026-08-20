@@ -21,6 +21,7 @@
 #include "Scene.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 
 static constexpr uint64_t ROW_BYTE_ALIGNMENT = 256;
@@ -333,6 +334,65 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 
 			// Both buffers are fully staged — mark for component removal.
 			m_entitiesToMarkAsUploaded.push_back(entity.GetId());
+
+			// TODO: This code is somewhat temporal, since the textures should be made available by HushCooker on
+			// material instancing, we'll figure that out when we merge that feature Upload all material textures for
+			// this mesh (full mode, not streaming).
+			for (auto &[materialPtr, textureMap] : meshRef.GetMaterialTextureRefs())
+			{
+				for (auto &[binding, texRef] : textureMap)
+				{
+					if (!texRef->IsCpuImageValid())
+					{
+						continue;
+					}
+					if (texRef->GetGpuTexture() != nullptr)
+					{
+						continue;
+					}
+
+					Image *cpuImage = texRef->GetCpuImage();
+
+					auto gpuTexture = m_graphicsDevice->CreateTexture(Graphics::TextureDescriptor{
+						.width = cpuImage->GetWidth(),
+						.height = cpuImage->GetHeight(),
+						.depth = cpuImage->GetDepth(),
+						.mipLevels = 1,
+						.arrayLayers = 1,
+						.sampleCount = 1,
+						.format = cpuImage->GetFormat(),
+						.usage = Graphics::ETextureUsage::Sampled | Graphics::ETextureUsage::CopyDestination,
+						.debugName = "MeshMaterialTexture",
+					});
+
+					uint64_t cpuOffset = 0;
+					ETextureUploadNextStep step = UploadTexture({
+						.cpuImage = cpuImage,
+						.cpuOffsetRef = &cpuOffset,
+						.gpuTexture = gpuTexture.get(),
+						.isStreaming = false,
+					});
+
+					if (step == ETextureUploadNextStep::Finished)
+					{
+						Graphics::IGraphicsTexture *rawPtr = gpuTexture.get();
+						texRef->SetGpuTexture(std::move(gpuTexture));
+						const_cast<Graphics::Material3D *>(materialPtr)->SetTexture(binding, rawPtr);
+					}
+					else if (step == ETextureUploadNextStep::Stop)
+					{
+						shouldContinue = false;
+						break;
+					}
+					// Continue: staging was full, gpuTexture is dropped,
+					// texture stays without GPU resource — retry next frame.
+				}
+				if (!shouldContinue)
+				{
+					break;
+				}
+			}
+
 			++uploadCount;
 		}
 
@@ -341,6 +401,122 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 			break;
 		}
 	}
+}
+
+Hush::Renderer::ResourceUploadSystem::ETextureUploadNextStep Hush::Renderer::ResourceUploadSystem::UploadTexture(
+	const TextureUploadCommand &command)
+{
+	Image *cpuImage = command.cpuImage;
+
+	std::span<const std::byte> cpuImageData = cpuImage->GetTextureData();
+	const uint64_t totalSize = cpuImageData.size_bytes();
+	const uint64_t remaining = totalSize - *command.cpuOffsetRef;
+
+	const bool isStreaming = command.isStreaming;
+
+	uint64_t bytesToUpload = 0;
+
+	const uint32_t width = cpuImage->GetWidth();
+	const uint32_t height = cpuImage->GetHeight();
+
+	// Compute the tight (unpadded) and aligned row pitches.
+	// Graphics APIs (e.g. WebGPU) require bytesPerRow to be a
+	// multiple of ROW_BYTE_ALIGNMENT (256).
+	const uint64_t bytesPerRow =
+		static_cast<uint64_t>(width) * static_cast<uint64_t>(Graphics::GetBytesPerPixel(cpuImage->GetFormat()));
+	const uint64_t alignedBytesPerRow =
+		(bytesPerRow > 0) ? (bytesPerRow + ROW_BYTE_ALIGNMENT - 1) & ~(ROW_BYTE_ALIGNMENT - 1) : 0;
+
+	// Align the current staging write cursor so that the buffer
+	// offset for this texture satisfies the row-alignment constraint.
+	m_textureStaging.offset = (m_textureStaging.offset + ROW_BYTE_ALIGNMENT - 1) & ~(ROW_BYTE_ALIGNMENT - 1);
+	const uint64_t alignedStagingRemaining = m_textureStaging.Remaining();
+
+	if (alignedStagingRemaining == 0)
+	{
+		// Staging region exhausted after alignment — stop this frame.
+		return ETextureUploadNextStep::Stop;
+	}
+
+	// Number of source rows still to upload.
+	const uint32_t remainingRows = (bytesPerRow > 0) ? static_cast<uint32_t>(remaining / bytesPerRow) : height;
+
+	if (!isStreaming)
+	{
+		// Full mode: all remaining rows must fit at once (aligned).
+		const uint64_t alignedRequired = static_cast<uint64_t>(remainingRows) * alignedBytesPerRow;
+		if (alignedRequired > alignedStagingRemaining)
+		{
+			// Not enough staging room for a full upload — defer to
+			// next frame rather than partially uploading in Full mode.
+			return ETextureUploadNextStep::Continue;
+		}
+		bytesToUpload = remaining;
+	}
+	else
+	{
+		// Streaming mode: stage as many complete rows as we can.
+		// Enforce a minimum of one texture row to avoid tiny stalls.
+		if (alignedStagingRemaining < alignedBytesPerRow && bytesPerRow <= remaining)
+		{
+			// Not even a single aligned row fits — skip this entry this frame.
+			return ETextureUploadNextStep::Continue;
+		}
+
+		const uint32_t rowsThatFit = (alignedBytesPerRow > 0)
+										 ? static_cast<uint32_t>(alignedStagingRemaining / alignedBytesPerRow)
+										 : remainingRows;
+		const uint32_t rowsToStage = std::min(rowsThatFit, remainingRows);
+		bytesToUpload = static_cast<uint64_t>(rowsToStage) * bytesPerRow;
+	}
+
+	// Compute row counts for the copy region.
+	const uint32_t startRow = (bytesPerRow > 0) ? static_cast<uint32_t>(*command.cpuOffsetRef / bytesPerRow) : 0;
+	const uint32_t rowCount = (bytesPerRow > 0) ? static_cast<uint32_t>(bytesToUpload / bytesPerRow) : height;
+	const uint64_t alignedStagingSize = static_cast<uint64_t>(rowCount) * alignedBytesPerRow;
+
+	// Copy CPU data → texture staging region (CPU-only memcpy).
+	// Each row is written at an aligned stride so the GPU copy
+	// command sees correctly pitched data.
+	char *dst = static_cast<char *>(m_textureStaging.cpuPtr) + m_textureStaging.offset;
+	const char *src = reinterpret_cast<const char *>(cpuImageData.data()) + *command.cpuOffsetRef;
+
+	if (bytesPerRow == alignedBytesPerRow)
+	{
+		// Row pitch already satisfies alignment — single memcpy.
+		std::memcpy(dst, src, bytesToUpload);
+	}
+	else
+	{
+		// Copy each row individually, leaving alignment padding
+		// between rows in the staging buffer.
+		for (uint32_t row = 0; row < rowCount; ++row)
+		{
+			std::memcpy(dst + (row * alignedBytesPerRow), src + (row * bytesPerRow), bytesPerRow);
+		}
+	}
+
+	// The texture staging region starts at m_halfQuota within the
+	// overall staging buffer.
+	const uint64_t bufferOffset = m_halfQuota + m_textureStaging.offset;
+
+	// Record a pending copy (staging → GPU texture).
+	m_pendingTextureCopies.push_back(PendingTextureCopy{
+		.stagingOffset = bufferOffset,
+		.destination = command.gpuTexture,
+		.dstX = 0,
+		.dstY = startRow,
+		.dstZ = 0,
+		.width = width,
+		.height = rowCount,
+		.depth = 1,
+		.rowPitch = static_cast<uint32_t>(alignedBytesPerRow),
+	});
+
+	m_textureStaging.offset += alignedStagingSize;
+	*(command.cpuOffsetRef) += bytesToUpload;
+
+	return ETextureUploadNextStep::Finished;
 }
 
 void Hush::Renderer::ResourceUploadSystem::StageDirtyTextures()
@@ -356,7 +532,7 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyTextures()
 		for (uint32_t i = 0; i < it.Size(); ++i)
 		{
 			Hush::Entity entity = it.GetEntity(i);
-			auto &uploadState = uploadStateSpan[i];
+			GpuUploadComponent &uploadState = uploadStateSpan[i];
 			auto &textureComponent = textureComponentSpan[i];
 
 			// Skip non-dirty or data-less entries.
@@ -366,7 +542,7 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyTextures()
 				continue;
 			}
 
-			auto *cpuImage = textureComponent->GetCpuImage();
+			Image *cpuImage = textureComponent->GetCpuImage();
 
 			std::span<const std::byte> cpuImageData = cpuImage->GetTextureData();
 			const uint64_t totalSize = cpuImageData.size_bytes();
@@ -404,111 +580,22 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyTextures()
 			// with staging the upload.
 			//
 			// Determine how much we can stage this frame.
-			uint64_t bytesToUpload = 0;
 
-			const bool isStreaming = (uploadState.uploadMode == GpuUploadComponent::EUploadMode::Streaming);
+			ETextureUploadNextStep nextStep =
+				UploadTexture({.cpuImage = cpuImage,
+							   .cpuOffsetRef = &(uploadState.cpuOffset),
+							   .gpuTexture = textureComponent->GetGpuTexture(),
+							   .isStreaming = uploadState.uploadMode == GpuUploadComponent::EUploadMode::Streaming});
 
-			const auto width = cpuImage->GetWidth();
-			const auto height = cpuImage->GetHeight();
-
-			// Compute the tight (unpadded) and aligned row pitches.
-			// Graphics APIs (e.g. WebGPU) require bytesPerRow to be a
-			// multiple of ROW_BYTE_ALIGNMENT (256).
-			const uint64_t bytesPerRow =
-				static_cast<uint64_t>(width) * static_cast<uint64_t>(Graphics::GetBytesPerPixel(cpuImage->GetFormat()));
-			const uint64_t alignedBytesPerRow =
-				(bytesPerRow > 0) ? (bytesPerRow + ROW_BYTE_ALIGNMENT - 1) & ~(ROW_BYTE_ALIGNMENT - 1) : 0;
-
-			// Align the current staging write cursor so that the buffer
-			// offset for this texture satisfies the row-alignment constraint.
-			m_textureStaging.offset = (m_textureStaging.offset + ROW_BYTE_ALIGNMENT - 1) & ~(ROW_BYTE_ALIGNMENT - 1);
-			const uint64_t alignedStagingRemaining = m_textureStaging.Remaining();
-
-			if (alignedStagingRemaining == 0)
+			if (nextStep == ETextureUploadNextStep::Continue)
 			{
-				// Staging region exhausted after alignment — stop this frame.
+				continue;
+			}
+			if (nextStep == ETextureUploadNextStep::Stop)
+			{
 				shouldContinue = false;
 				break;
 			}
-
-			// Number of source rows still to upload.
-			const uint32_t remainingRows = (bytesPerRow > 0) ? static_cast<uint32_t>(remaining / bytesPerRow) : height;
-
-			if (!isStreaming)
-			{
-				// Full mode: all remaining rows must fit at once (aligned).
-				const uint64_t alignedRequired = static_cast<uint64_t>(remainingRows) * alignedBytesPerRow;
-				if (alignedRequired > alignedStagingRemaining)
-				{
-					// Not enough staging room for a full upload — defer to
-					// next frame rather than partially uploading in Full mode.
-					continue;
-				}
-				bytesToUpload = remaining;
-			}
-			else
-			{
-				// Streaming mode: stage as many complete rows as we can.
-				// Enforce a minimum of one texture row to avoid tiny stalls.
-				if (alignedStagingRemaining < alignedBytesPerRow && bytesPerRow <= remaining)
-				{
-					// Not even a single aligned row fits — skip this entry this frame.
-					continue;
-				}
-
-				const uint32_t rowsThatFit = (alignedBytesPerRow > 0)
-												 ? static_cast<uint32_t>(alignedStagingRemaining / alignedBytesPerRow)
-												 : remainingRows;
-				const uint32_t rowsToStage = std::min(rowsThatFit, remainingRows);
-				bytesToUpload = static_cast<uint64_t>(rowsToStage) * bytesPerRow;
-			}
-
-			// Compute row counts for the copy region.
-			const uint32_t startRow =
-				(bytesPerRow > 0) ? static_cast<uint32_t>(uploadState.cpuOffset / bytesPerRow) : 0;
-			const uint32_t rowCount = (bytesPerRow > 0) ? static_cast<uint32_t>(bytesToUpload / bytesPerRow) : height;
-			const uint64_t alignedStagingSize = static_cast<uint64_t>(rowCount) * alignedBytesPerRow;
-
-			// Copy CPU data → texture staging region (CPU-only memcpy).
-			// Each row is written at an aligned stride so the GPU copy
-			// command sees correctly pitched data.
-			char *dst = static_cast<char *>(m_textureStaging.cpuPtr) + m_textureStaging.offset;
-			const char *src = reinterpret_cast<const char *>(cpuImageData.data()) + uploadState.cpuOffset;
-
-			if (bytesPerRow == alignedBytesPerRow)
-			{
-				// Row pitch already satisfies alignment — single memcpy.
-				std::memcpy(dst, src, bytesToUpload);
-			}
-			else
-			{
-				// Copy each row individually, leaving alignment padding
-				// between rows in the staging buffer.
-				for (uint32_t row = 0; row < rowCount; ++row)
-				{
-					std::memcpy(dst + (row * alignedBytesPerRow), src + (row * bytesPerRow), bytesPerRow);
-				}
-			}
-
-			// The texture staging region starts at m_halfQuota within the
-			// overall staging buffer.
-			const uint64_t bufferOffset = m_halfQuota + m_textureStaging.offset;
-
-			// Record a pending copy (staging → GPU texture).
-			m_pendingTextureCopies.push_back(PendingTextureCopy{
-				.stagingOffset = bufferOffset,
-				.destination = textureComponent->GetGpuTexture(),
-				.dstX = 0,
-				.dstY = startRow,
-				.dstZ = 0,
-				.width = width,
-				.height = rowCount,
-				.depth = 1,
-				.rowPitch = static_cast<uint32_t>(alignedBytesPerRow),
-			});
-
-			m_textureStaging.offset += alignedStagingSize;
-			uploadState.cpuOffset += bytesToUpload;
 
 			// Check whether the upload is now complete.
 			if (uploadState.cpuOffset >= totalSize)

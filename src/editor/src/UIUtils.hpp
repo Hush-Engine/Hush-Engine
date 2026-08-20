@@ -16,7 +16,8 @@ namespace Hush
 		{
 			Info,
 			Warning,
-			Update
+			Update,
+			Error
 		};
 
 		static constexpr size_t NOTIFICATION_MAX_LENGTH = 64;

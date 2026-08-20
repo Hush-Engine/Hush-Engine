@@ -31,6 +31,11 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		virtual EBufferUsage GetUsage() const = 0;
 
+		[[nodiscard]]
+		virtual const BufferDescriptor &GetDescriptor() const = 0;
+
+		virtual void Destroy() = 0;
+
 		/// @brief Map buffer for CPU access (if supported)
 		///
 		/// @param device Non-owning pointer to the graphics device (may be needed for some APIs to perform the mapping)

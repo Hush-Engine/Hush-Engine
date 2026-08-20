@@ -40,29 +40,29 @@ Hush::SharedLibrary::~SharedLibrary()
 }
 
 Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
-	std::string_view libraryName) noexcept
+	NullTerminatedStringView libraryName) noexcept
 {
 #if HUSH_PLATFORM_WIN
-	auto *handle = LoadLibraryA(libraryName.data());
+	auto *handle = LoadLibraryA(libraryName.c_str());
 #else
-	auto *handle = dlopen(libraryName.data(), RTLD_LAZY);
+	auto *handle = dlopen(libraryName.c_str(), RTLD_LAZY);
 
 #endif
 
 	if (handle == nullptr)
 	{
-		LogFormat(ELogLevel::Debug, "Failed to open library: {}", libraryName);
+		LogFormat(ELogLevel::Debug, "Failed to open library: {}", std::string_view(libraryName));
 		return EError::NotFound;
 	}
 	return SharedLibrary(handle);
 }
 
-void *Hush::SharedLibrary::GetRawSymbol(std::string_view symbolName)
+void *Hush::SharedLibrary::GetRawSymbol(NullTerminatedStringView symbolName)
 {
 #if HUSH_PLATFORM_WIN
 	auto *winHandle = static_cast<HMODULE>(m_nativeHandle);
 
-	return reinterpret_cast<void *>(GetProcAddress(winHandle, symbolName.data()));
+	return reinterpret_cast<void *>(GetProcAddress(winHandle, symbolName.c_str()));
 #else
 	return nullptr;
 #endif

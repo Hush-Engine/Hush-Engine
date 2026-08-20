@@ -7,7 +7,8 @@
 #include "ImageTexture.hpp"
 #include <cstddef>
 #include "Assertions.hpp"
-#define STB_IMAGE_IMPLEMENTATION
+// NOTE: STB_IMAGE_IMPLEMENTATION lives in engine_core/src/stb_impl.cpp (single TU per
+// final link). Do not define it here; this file only consumes the STB API.
 #include <stb/stb_image.h>
 
 Hush::ImageTexture::ImageTexture(const std::filesystem::path &filePath)

@@ -48,7 +48,6 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 {
 	ZoneScoped;
 
-	HUSH_ASSERT(&GetScene() != nullptr, "RenderGraphSystem requires a valid Scene reference!");
 	m_renderDevice->BeginFrame();
 	m_frameActive = true;
 

@@ -111,6 +111,12 @@ namespace Hush
 			return *this;
 		}
 
+		inline QueryBuilder &WithOptional(const Entity &term)
+		{
+			impl::QueryBuilderImpl::WithOptional(this->m_opaqueDesc.data(), &this->m_termCount, term.GetId());
+			return *this;
+		}
+
 		Query<Components...> Build()
 		{
 			RawQuery initializedQuery = impl::QueryBuilderImpl::InitQuery(this->m_scene, this->m_opaqueDesc.data());

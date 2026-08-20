@@ -7,12 +7,14 @@
 #include "ShaderCompiler.hpp"
 #include "Logger.hpp"
 
+#include <magic_enum/magic_enum.hpp>
 #include <slang.h>
 #include <slang-com-ptr.h>
 
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 namespace Hush::Graphics
 {
@@ -128,6 +130,109 @@ namespace Hush::Graphics
 		}
 	}
 
+	inline EBindingDataTypeFlags BindingTypeFlagFromSlangScalar(slang::TypeReflection::ScalarType scalarType)
+	{
+		switch (scalarType)
+		{
+		case slang::TypeReflection::None:
+			return EBindingDataTypeFlags::Undefined;
+		case slang::TypeReflection::Int32:
+			return EBindingDataTypeFlags::Int32;
+		case slang::TypeReflection::UInt32:
+			return EBindingDataTypeFlags::UInt32;
+		case slang::TypeReflection::Int64:
+			return EBindingDataTypeFlags::Int64;
+		case slang::TypeReflection::UInt64:
+			return EBindingDataTypeFlags::UInt64;
+		case slang::TypeReflection::Float32:
+			return EBindingDataTypeFlags::Float32;
+		case slang::TypeReflection::Float64:
+			return EBindingDataTypeFlags::Float64;
+		default:
+			LogFormat(ELogLevel::Debug, "Scalar type on shader not implemented!");
+			return EBindingDataTypeFlags::Undefined;
+		}
+	}
+
+	static void FillWithPropertiesPerBindingStruct(slang::TypeLayoutReflection *elementTypeLayout,
+												   std::vector<ReflectedBinding> &outBindings,
+												   const ReflectedBinding &parentBinding)
+	{
+		if (elementTypeLayout == nullptr)
+		{
+			return;
+		}
+
+		auto fieldCount = static_cast<uint32_t>(elementTypeLayout->getFieldCount());
+		for (uint32_t f = 0; f < fieldCount; ++f)
+		{
+			slang::VariableLayoutReflection *fieldVar = elementTypeLayout->getFieldByIndex(f);
+			if (fieldVar == nullptr)
+			{
+				continue;
+			}
+
+			slang::TypeLayoutReflection *fieldType = fieldVar->getTypeLayout();
+			if (fieldType == nullptr)
+			{
+				continue;
+			}
+
+			ReflectedBinding fieldBinding{};
+			const char *fieldName = fieldVar->getName();
+			fieldBinding.name = (fieldName != nullptr) ? fieldName : "";
+			fieldBinding.set = parentBinding.set;
+			fieldBinding.binding = parentBinding.binding;
+			fieldBinding.type = EBindingType::UniformBuffer;
+			fieldBinding.stageFlags = parentBinding.stageFlags;
+			fieldBinding.bufferSize = fieldType->getSize();
+			fieldBinding.bufferOffset = fieldVar->getOffset();
+			fieldBinding.isMember = true;
+			// Determine its data type
+			using SlangReflectionKind_t = slang::TypeReflection::Kind;
+			using SlangScalarType_t = slang::TypeReflection::ScalarType;
+
+			SlangReflectionKind_t kind = fieldType->getKind();
+			EBindingDataTypeFlags flags = EBindingDataTypeFlags::Undefined;
+
+			switch (kind)
+			{
+			case SlangReflectionKind_t::Vector: {
+				// Could be a color or something, that is up to the user to decide
+				SlangScalarType_t scalarType = fieldType->getScalarType();
+				flags |= BindingTypeFlagFromSlangScalar(scalarType);
+				size_t vecDimensions = fieldType->getElementCount();
+
+				switch (vecDimensions)
+				{
+				case 2:
+					flags |= EBindingDataTypeFlags::Vec2;
+					break;
+				case 3:
+					flags |= EBindingDataTypeFlags::Vec3;
+					break;
+				case 4:
+					flags |= EBindingDataTypeFlags::Vec4;
+					break;
+				default:
+					break;
+				}
+				break;
+			}
+			case SlangReflectionKind_t::Scalar: {
+				SlangScalarType_t scalarType = fieldType->getScalarType();
+				flags |= BindingTypeFlagFromSlangScalar(scalarType);
+				break;
+			}
+			default:
+				LogFormat(ELogLevel::Debug, "Kind {} not yet implemented for reflection", magic_enum::enum_name(kind));
+				break;
+			}
+			fieldBinding.dataType = flags;
+			outBindings.push_back(fieldBinding);
+		}
+	}
+
 	static void ReflectParameterBinding(slang::VariableLayoutReflection *param,
 										const std::vector<CompiledShaderStage> &stages,
 										std::vector<ReflectedBinding> &outBindings)
@@ -192,13 +297,14 @@ namespace Hush::Graphics
 		}
 
 		// Refine binding type based on the Slang type kind
-		if (kind == slang::TypeReflection::Kind::ConstantBuffer || kind == slang::TypeReflection::Kind::ParameterBlock)
+		if (kind == slang::TypeReflection::Kind::ConstantBuffer)
 		{
 			binding.type = EBindingType::UniformBuffer;
-			auto *elementTypeLayout = typeLayout->getElementTypeLayout();
+			slang::TypeLayoutReflection *elementTypeLayout = typeLayout->getElementTypeLayout();
 			if (elementTypeLayout != nullptr)
 			{
 				binding.bufferSize = elementTypeLayout->getSize();
+				FillWithPropertiesPerBindingStruct(elementTypeLayout, outBindings, binding);
 			}
 		}
 		else if (kind == slang::TypeReflection::Kind::Resource)
@@ -399,7 +505,8 @@ namespace Hush::Graphics
 		return m_options.target;
 	}
 
-	ShaderCompilationResult ShaderCompiler::CompileFromSource(std::string_view source, std::string_view sourceName,
+	ShaderCompilationResult ShaderCompiler::CompileFromSource(NullTerminatedStringView source,
+															  NullTerminatedStringView sourceName,
 															  const std::vector<ShaderEntryPointRequest> &entryPoints)
 	{
 		if (!m_initialized)
@@ -410,17 +517,15 @@ namespace Hush::Graphics
 			return failResult;
 		}
 
-		std::string nameStr(sourceName);
-
 		// Check cache
-		std::string cacheKey = BuildCacheKey(nameStr.c_str(), entryPoints);
+		std::string cacheKey = BuildCacheKey(sourceName, entryPoints);
 		auto cacheIt = m_cache.find(cacheKey);
 		if (cacheIt != m_cache.end())
 		{
 			return cacheIt->second;
 		}
 
-		ShaderCompilationResult result = CompileInternal(nameStr.c_str(), source.data(), source.size(), entryPoints);
+		auto result = CompileInternal(sourceName, source, entryPoints);
 
 		// Cache the result
 		m_cache[cacheKey] = result;
@@ -493,8 +598,8 @@ namespace Hush::Graphics
 		}
 	}
 
-	ShaderCompilationResult ShaderCompiler::CompileInternal(const char *moduleNameOrPath, const char *source,
-															size_t sourceLength,
+	ShaderCompilationResult ShaderCompiler::CompileInternal(NullTerminatedStringView moduleNameOrPath,
+															NullTerminatedStringView source,
 															const std::vector<ShaderEntryPointRequest> &entryPoints)
 	{
 		ShaderCompilationResult result;
@@ -564,16 +669,16 @@ namespace Hush::Graphics
 		Slang::ComPtr<ISlangBlob> diagnosticsBlob;
 		slang::IModule *module = nullptr;
 
-		if (source != nullptr && sourceLength > 0)
+		if (!source.empty())
 		{
 			// Load from source string
-			module = session->loadModuleFromSourceString(moduleNameOrPath,
-														 moduleNameOrPath, // virtual path for diagnostics
-														 source, diagnosticsBlob.writeRef());
+			module = session->loadModuleFromSourceString(moduleNameOrPath.c_str(),
+														 moduleNameOrPath.c_str(), // virtual path for diagnostics
+														 source.c_str(), diagnosticsBlob.writeRef());
 		}
 		else
 		{
-			module = session->loadModule(moduleNameOrPath, diagnosticsBlob.writeRef());
+			module = session->loadModule(moduleNameOrPath.c_str(), diagnosticsBlob.writeRef());
 		}
 
 		AppendDiagnostics(diagnosticsBlob.get(), result.diagnostics);
@@ -583,7 +688,7 @@ namespace Hush::Graphics
 			if (result.diagnostics.empty())
 			{
 				result.diagnostics = "Failed to load Slang module: ";
-				result.diagnostics += moduleNameOrPath;
+				result.diagnostics += moduleNameOrPath.c_str();
 			}
 			return result;
 		}
@@ -741,11 +846,11 @@ namespace Hush::Graphics
 		ReflectVertexInputs(layout, outResult.vertexInputs);
 	}
 
-	std::string ShaderCompiler::BuildCacheKey(const char *moduleNameOrPath,
+	std::string ShaderCompiler::BuildCacheKey(NullTerminatedStringView moduleNameOrPath,
 											  const std::vector<ShaderEntryPointRequest> &entryPoints) const
 	{
 		std::string key;
-		key += moduleNameOrPath;
+		key += moduleNameOrPath.c_str();
 		key += "|target=";
 		key += std::to_string(static_cast<uint32_t>(m_options.target));
 		key += "|opt=";

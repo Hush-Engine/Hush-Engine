@@ -28,13 +28,13 @@ constexpr std::string_view CALL_SYSTEM_ON_POSTRENDER_FN_NAME = "CallSystemOnPost
 	} while (0)
 
 // NOLINTBEGIN
-void Hush::ScriptingHost::Initialize(std::string_view dllPath)
+void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath)
 {
 	// TODO: reconcile with virtual filesystem
-	void *libraryHandle = LibManager::LibraryOpen(dllPath.data());
+	void *libraryHandle = LibManager::LibraryOpen(dllPath.c_str());
 
 	// This could be user side??? eventually
-	HUSH_COND_FAIL_MSG(libraryHandle != nullptr, "Could not load dynamic library at {}", dllPath);
+	HUSH_COND_FAIL_MSG(libraryHandle != nullptr, "Could not load dynamic library at {}", std::string_view(dllPath));
 
 	BIND_DLL_SCRIPTING_FUNCTION(START_SCRIPTING_CONNECTION, this->m_startScriptingConnectionFn);
 	BIND_DLL_SCRIPTING_FUNCTION(DISPOSE_SCRIPTING_CONNECTION, this->m_disposeScriptingConnectionFn);

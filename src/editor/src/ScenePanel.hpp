@@ -8,15 +8,21 @@
 
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
+#include "imguizmo/ImGuizmo.h"
 #include <glm/glm.hpp>
 
 namespace Hush
 {
+	class EditorCamera;
+
 	class ScenePanel final : public IEditorPanel
 	{
 	public:
 		void Init(Scene *activeScene) noexcept override;
 		void OnRender(float deltaTime) noexcept override;
+
+		void SetGizmoTarget(Entity::EntityId entityId) noexcept;
+		void SetGizmoOperation(ImGuizmo::OPERATION op) noexcept;
 
 		/// @brief Set the native texture view handle to display the rendered scene.
 		/// For WebGPU this should be a WGPUTextureView cast to void*.
@@ -46,15 +52,20 @@ namespace Hush
 		}
 
 	private:
+		void RenderGizmo(const ImVec2 &imagePos, const ImVec2 &imageSize);
+
 		void *m_sceneTextureView = nullptr;
 		uint32_t m_textureWidth = 0;
 		uint32_t m_textureHeight = 0;
 
-		/// Set to true whenever m_panelSize changes.
 		bool m_resized = false;
-		// Entity that represents the scene panel in the ECS, it's used to communicate with other systems
 		Entity m_bridgeEntity;
 		ComponentRef m_panelSizeRef;
 		ComponentRef m_editorInfoRef;
+
+		Scene *m_activeScene = nullptr;
+		EditorCamera *m_editorCamera = nullptr;
+		ImGuizmo::OPERATION m_currentGizmoOp = ImGuizmo::OPERATION::TRANSLATE;
+		Entity::EntityId m_gizmoTargetId = Entity::INVALID_ENTITY_ID;
 	};
 } // namespace Hush

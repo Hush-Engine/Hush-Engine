@@ -19,6 +19,11 @@ Hush::RawQuery::RawQuery(Scene *scene, void *query)
 
 bool Hush::RawQuery::QueryIterator::Next()
 {
+	static_assert(sizeof(ecs_iter_t) <= ECS_ITER_SIZE,
+				  "ecs_iter_t no longer fits QueryIterator's internal buffer; bump ECS_ITER_SIZE.");
+	static_assert(alignof(ecs_iter_t) <= ECS_ITER_ALIGNMENT,
+				  "ecs_iter_t needs stronger alignment than ECS_ITER_ALIGNMENT; bump ECS_ITER_ALIGNMENT.");
+
 	if (m_hasBeenDestroyed)
 	{
 		return false;
@@ -101,7 +106,7 @@ Hush::RawQuery::QueryIterator::~QueryIterator()
 		return;
 	}
 
-	LogFormat(ELogLevel::Info, "Destroyed query iterator on: {}", (void *)this);
+	// LogFormat(ELogLevel::Info, "Destroyed query iterator on: {}", (void *)this);
 	auto *queryIter = reinterpret_cast<ecs_iter_t *>(m_iterData.data());
 
 	ecs_iter_fini(queryIter);
@@ -133,7 +138,7 @@ Hush::RawQuery::~RawQuery() noexcept
 		return;
 	}
 
-	LogFormat(ELogLevel::Info, "Called raw query destructor on inner query {}!", (void *)this);
+	// LogFormat(ELogLevel::Info, "Called raw query destructor on inner query {}!", (void *)this);
 	ecs_query_fini(query);
 }
 

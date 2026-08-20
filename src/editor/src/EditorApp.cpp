@@ -4,11 +4,20 @@
 
 #include "Assertions.hpp"
 #include "Components/GlobalKeys.hpp"
+#include "Components/LocalTransform.hpp"
+#include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
+#include "CookedFileSystem.hpp"
+#include "CookerService.hpp"
+#include "CookedDirectory.hpp"
+#include "Entity.hpp"
+#include "FileWatcher.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
+#include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
@@ -85,7 +94,32 @@ public:
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
-		vfs->MountFileSystem<Hush::CFileSystem>("res://", HUSH_DEFAULT_PROJECT_DIR);
+		// Cooked-first: serve cooked .hcooked/*.hasset outputs transparently, falling back
+		// to raw sources. See CookedFileSystem.
+		const std::filesystem::path cookedDirPath = std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR) / ".hcooked";
+		vfs->MountFileSystem<Hush::CookedFileSystem>("res://", std::string("res://"),
+													 std::string(HUSH_DEFAULT_PROJECT_DIR), cookedDirPath.string());
+
+		// Cooker service for import pipeline (EditorApp-owned; no longer an ECS component)
+		m_cookerService = std::make_unique<Hush::CookerService>();
+		m_cookerService->Init(vfs, std::filesystem::path(HUSH_DEFAULT_PROJECT_DIR),
+							  this->m_engine->GetFrameScopeMemoryResource());
+
+		// Wire OS file drop → cooker import.
+		m_engine->GetWindowRenderer()->SetDropCallback([this](const std::filesystem::path &path) {
+			if (m_cookerService)
+			{
+				m_cookerService->ImportFile(path);
+			}
+		});
+
+		// File watcher + lifecycle
+		std::filesystem::path projRoot(HUSH_DEFAULT_PROJECT_DIR);
+		m_fileWatcher = std::make_unique<Hush::FileWatcher>(projRoot);
+		// Let the import service suppress the watcher events its own writes cause.
+		m_cookerService->SetFileWatcher(m_fileWatcher.get());
+		m_cookedDirectory.Init(projRoot, vfs, m_engine->GetFrameScopeMemoryResource());
+		m_cookedDirectory.Reconcile();
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
@@ -105,6 +139,10 @@ public:
 		ImGuiIO &io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		// Load the custom UI fonts (IBM Plex Serif family) before the backends
+		// are initialized so the font atlas is baked into the first frame.
+		Hush::UI::LoadFonts();
 
 		// Platform backend (SDL3)
 		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
@@ -135,11 +173,26 @@ public:
 		};
 
 		this->m_scene->Init();
+		// Create a directional light
+		// Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
+		// dirLightEntity.AddComponent<Hush::WorldTransform>();
+		// dirLightEntity.AddComponent<Hush::LocalTransform>();
+		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
 	}
 
 	void Update(float delta) override
 	{
+		// Drain file system events → trigger recook
+		if (m_fileWatcher)
+		{
+			m_fileWatcher->DrainEvents([this](const Hush::FileWatchEvent &ev) {
+				m_cookedDirectory.HandleFileEvent(ev.path, ev.type == Hush::FileWatchEvent::Type::Added,
+												  ev.type == Hush::FileWatchEvent::Type::Removed,
+												  ev.type == Hush::FileWatchEvent::Type::Modified);
+			});
+		}
+
 		this->m_scene->Update(delta);
 	}
 
@@ -256,74 +309,7 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		// ── Pass 1: Scene render ────────────────────────────────────
-
-		struct ScenePassData
-		{
-			ResourceId renderTexture;
-		};
-
-		const auto &scenePassData = graph.AddPass<ScenePassData>(
-			EPassType::Graphics, "EditorScenePass",
-
-			// BUILD
-			[this](RenderGraph::BuildContext &ctx, ScenePassData &data) {
-				// Use the scene panel's content size so the render texture
-				// matches the panel 1:1.  Falls back to the window size on
-				// the very first frame (before the panel has reported).
-				const auto bufferSize = m_sceneBufferSize;
-
-				// Ensure we wait for any resource uploads (textures, buffers)
-				// that were queued before this frame.
-				ctx.Read(ctx.GetResourceIdByName(RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME));
-
-				data.renderTexture = ctx.Create<TextureResource>(
-					"EditorScenePass_RenderTexture", TextureDescriptor{
-														 .width = bufferSize.x,
-														 .height = bufferSize.y,
-														 .format = ETextureFormat::BGRA8_UNORM,
-														 .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
-													 });
-
-				// Never cull this pass — the editor always needs the scene
-				// texture even if nothing else reads it explicitly.
-				ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
-			},
-
-			// EXECUTE
-			[](ScenePassData &data, Hush::Graphics::ICommandList *cmdList,
-			   const Hush::RenderGraph::ResourceManager &resourceManager) {
-				static int32_t counter = 0;
-				counter++;
-				auto *cmd = dynamic_cast<Hush::Graphics::IGraphicsCommandList *>(cmdList);
-				if (cmd == nullptr)
-				{
-					Hush::LogFormat(Hush::ELogLevel::Error, "[EditorScenePass] Failed to get graphics command list.");
-					return;
-				}
-
-				RenderPassDescriptor renderPass{};
-				renderPass.debugLabel = "EditorScenePass";
-
-				RenderPassColorAttachment colorAttachment{};
-				colorAttachment.texture =
-					resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
-				colorAttachment.loadOp = ELoadOp::Clear;
-				colorAttachment.storeOp = EStoreOp::Store;
-				colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
-				renderPass.AddColorAttachment(colorAttachment);
-
-				cmd->BeginRenderPass(renderPass);
-				// TODO: actual scene rendering commands go here (deferred /
-				//       forward passes, mesh draws, etc.)
-				cmd->EndRenderPass();
-			});
-
-		// Save the scene texture resource ID so we can look it up later
-		// when forwarding the native view to the ScenePanel.
-		m_sceneTextureResourceId = scenePassData.renderTexture;
-
-		// ── Pass 2: ImGui render to backbuffer ──────────────────────
+		// ── ImGui render to backbuffer ──────────────────────────────
 
 		struct ImGuiPassData
 		{
@@ -335,10 +321,10 @@ private:
 			EPassType::Graphics, "EditorImGuiPass",
 
 			// BUILD
-			[&scenePassData, device, this](RenderGraph::BuildContext &ctx, ImGuiPassData &data) {
+			[device, this](RenderGraph::BuildContext &ctx, ImGuiPassData &data) {
 				// Read the scene texture — this creates a dependency so the
-				// ImGui pass is guaranteed to run after ScenePass.
-				data.sceneTexture = ctx.Read(scenePassData.renderTexture);
+				// ImGui pass is guaranteed to run after the scene pass.
+				data.sceneTexture = ctx.Read(ctx.GetResourceIdByName("EditorScenePass_RenderTexture"));
 
 				// Import the swapchain backbuffer as an external resource.
 				data.backbuffer = ctx.Import<ImportedTextureResource>("EditorBackbuffer",
@@ -453,7 +439,13 @@ private:
 
 		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("EditorScenePass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -471,7 +463,13 @@ private:
 
 		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
 
-		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(m_sceneTextureResourceId);
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("EditorScenePass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
 
 		if (texRes != nullptr && texRes->texture != nullptr)
 		{
@@ -515,6 +513,10 @@ private:
 	Hush::UI m_userInterface;
 	Hush::ResourceManager *m_resourceManager = nullptr;
 
+	std::unique_ptr<Hush::FileWatcher> m_fileWatcher;
+	Hush::CookedDirectory m_cookedDirectory;
+	std::unique_ptr<Hush::CookerService> m_cookerService;
+
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.
 	glm::u32vec2 m_sceneBufferSize{1, 1};
@@ -522,9 +524,6 @@ private:
 	/// Set to true when the scene panel resizes; consumed in OnPreRender
 	/// to invalidate the render graph before the next rebuild.
 	bool m_sceneBufferDirty = false;
-
-	/// Resource ID of the scene render texture (created in ScenePass).
-	Hush::RenderGraph::ResourceId m_sceneTextureResourceId{};
 
 	/// Resource ID of the imported swapchain backbuffer (updated each frame).
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{};

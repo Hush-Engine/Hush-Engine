@@ -232,6 +232,21 @@ namespace Hush::Renderer
 			}
 		};
 
+		enum class ETextureUploadNextStep
+		{
+			Finished = 0,
+			Continue,
+			Stop
+		};
+
+		struct TextureUploadCommand
+		{
+			Image *cpuImage;
+			uint64_t *cpuOffsetRef;
+			Graphics::IGraphicsTexture *gpuTexture;
+			bool isStreaming;
+		};
+
 		/// @brief Stage dirty mesh data into the mesh half of the staging
 		///        buffer and record PendingBufferCopy descriptors.
 		void StageDirtyMeshes();
@@ -239,6 +254,8 @@ namespace Hush::Renderer
 		/// @brief Stage dirty texture data into the texture half of the
 		///        staging buffer and record PendingTextureCopy descriptors.
 		void StageDirtyTextures();
+
+		ETextureUploadNextStep UploadTexture(const TextureUploadCommand &command);
 
 		// ------------------------------------------------------------------
 		// Render-graph integration

@@ -77,11 +77,16 @@ namespace Hush
 		/// As part of this member function, another Ref<> will be created, but it will store the
 		///
 		/// @param path The path to the texture file, relative to the virtual filesystem root.
+		/// @param unloadStrategy Whether to keep the CPU image resident after GPU upload.
+		/// @param maxSize If non-zero, the decoded RGBA8 image is box-downscaled so its longest
+		///        side is at most this many pixels (e.g. for thumbnails). Textures loaded with a
+		///        given maxSize are cached separately from the full-resolution load of the same path.
 		///
 		/// @return A reference to the loaded texture, or an error if the texture could not be loaded.
 		Result<Ref<TextureComponent>, EError> LoadTexture(std::string_view path,
 														  TextureComponent::ECpuUnloadStrategy unloadStrategy =
-															  TextureComponent::ECpuUnloadStrategy::UnloadAfterUpload);
+															  TextureComponent::ECpuUnloadStrategy::UnloadAfterUpload,
+														  uint32_t maxSize = 0);
 
 		/// @brief Loads a texture from the given raw data.
 		///
@@ -103,27 +108,55 @@ namespace Hush
 		Ref<Mesh> LoadMesh(const std::string_view &path);
 
 		template <class T, class... Args>
-		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
+		Ref<T> AllocateRefKnwonID(uint32_t id, Args &&...args)
 		{
-			uint64_t hash = Hashing::Fnv1a64(identifier);
-			const auto &iterator = this->m_loadedResources.find(hash);
+			const auto &iterator = this->m_loadedResources.find(id);
 			if (iterator != this->m_loadedResources.end())
 			{
 				HandleId handle = iterator->second;
 				auto *instance = reinterpret_cast<T *>(handle);
-				return {this, instance};
+				return {this, instance, id};
 			}
 			// NOLINTNEXTLINE
 			T *instance = new T(std::forward<Args>(args)...);
 			const auto handle = reinterpret_cast<HandleId>(instance);
-			this->m_loadedResources[hash] = handle;
-			return {this, instance};
+			this->m_loadedResources[id] = handle;
+			return {this, instance, id};
+		}
+
+		template <class T, class... Args>
+		Ref<T> AllocateRef(const std::string_view &identifier, Args &&...args)
+		{
+			uint32_t hash = Hashing::Fnv1a(identifier);
+			return AllocateRefKnwonID<T>(hash, std::forward<Args>(args)...);
+		}
+
+		template <class T>
+		[[nodiscard]]
+		Ref<T> GetRefOrNull(uint32_t identifier)
+		{
+			const auto &iterator = this->m_loadedResources.find(identifier);
+			if (iterator != this->m_loadedResources.end())
+			{
+				HandleId handle = iterator->second;
+				auto *instance = reinterpret_cast<T *>(handle);
+				return {this, instance, identifier};
+			}
+			return {this, nullptr};
+		}
+
+		template <class T>
+		[[nodiscard]]
+		Ref<T> GetRefOrNull(const std::string_view &identifier)
+		{
+			uint32_t hash = Hashing::Fnv1a(identifier);
+			return GetRefOrNull<T>(hash);
 		}
 
 	private:
 		std::unordered_map<HandleId, RefCounted> m_references;
 		std::vector<HandleId> m_deletionQueue;
-		std::unordered_map<uint64_t, HandleId> m_loadedResources;
+		std::unordered_map<uint32_t, HandleId> m_loadedResources;
 
 		VirtualFilesystem *m_filesystem = nullptr;
 	};

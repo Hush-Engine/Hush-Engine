@@ -8,6 +8,7 @@
 #include "Scene.hpp"
 #include "../components/EditorInfo.hpp"
 #include "Shared/EditorCamera.hpp"
+#include "definitions/KeyCode.hpp"
 #include <glm/ext/vector_float3.hpp>
 
 constexpr float CAM_PITCH_MIN = -89.5f * Hush::MathUtils::DEG_TO_RAD;
@@ -16,10 +17,6 @@ constexpr float CAM_PITCH_MAX = 89.5f * Hush::MathUtils::DEG_TO_RAD;
 void Hush::EditorCameraSystem::Init()
 {
 	// There should only ever be ONE EditorCamera component in the active scene
-	this->GetScene().CreateQuery<EditorCamera>().Each(
-		[this](Entity &entity, [[maybe_unused]]
-							   EditorCamera &camRef) { this->m_editorCameraEntity = std::move(entity); });
-
 	Entity editorCamEntity = this->GetScene().CreateEntityWithKey(EDITOR_CAMERA);
 	this->m_editorCameraRef = editorCamEntity.CreateComponentReference<EditorCamera>();
 
@@ -38,8 +35,9 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	// We need to retrieve the camera and editor info references every frame because the scene might have been reloaded,
 	// which destroys all existing entities and components.  This is a bit hacky but it avoids having to add a more
 	// complex event system just for this.
-	auto* editorCamera = m_editorCameraEntity.GetComponent<EditorCamera>();
-	auto* editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
+	auto *editorCamera = this->m_editorCameraRef.GetData<EditorCamera>();
+	HUSH_ASSERT(editorCamera != nullptr, "Editor camera component should never be null if the HushEditor is running!");
+	auto *editorInfo = this->m_editorInfoRef.GetData<EditorInfo>();
 	HUSH_ASSERT(editorInfo != nullptr, "Editor info component should never be null if the HushEditor is running!");
 
 	if (editorCamera == nullptr)
@@ -96,13 +94,16 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	{
 		cameraDir += up;
 	}
+	bool isRunning = InputManager::IsKeyDown(EKeyCode::LShift);
 	if (cameraDir != Vector3Math::ZERO)
 	{
 		// constexpr float maxSpeed = 5000.0F;
 		constexpr float maxSpeed = 20.0F;
+		constexpr float runModifier = 1.5F;
 		this->m_blendValue = MathUtils::Clamp(this->m_blendValue + delta, 0.0F, 1.0F);
 		float speed = maxSpeed * ApplyAccelerationCurve(this->m_blendValue);
-		positionRef += glm::normalize(cameraDir) * speed * delta;
+		float runAdditional = speed * (runModifier * static_cast<float>(isRunning));
+		positionRef += glm::normalize(cameraDir) * (speed + runAdditional) * delta;
 	}
 	else
 	{
@@ -111,7 +112,7 @@ void Hush::EditorCameraSystem::OnUpdate(float delta)
 	glm::vec2 mouseAcceleration = InputManager::GetMouseAcceleration();
 	if (mouseAcceleration != glm::vec2{0.0F})
 	{
-		constexpr float mouseLookSpeed = 3.0F;
+		constexpr float mouseLookSpeed = 1.0F;
 		float &yaw = editorCamera->GetYaw();
 		float &pitch = editorCamera->GetPitch();
 		yaw += mouseAcceleration.x * mouseLookSpeed * delta;

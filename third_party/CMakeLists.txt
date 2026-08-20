@@ -3,6 +3,11 @@ add_subdirectory(imgui)
 add_subdirectory(stb)
 add_subdirectory(zadeh)
 
+# bc7enc — BCn texture compression (vendored, public domain)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bc7enc/bc7enc.cpp")
+    add_subdirectory(bc7enc)
+endif()
+
 set(WGPU_VERSION "v27.0.4.0")
 set(WEBGPU_LINK_TYPE "STATIC")
 if (EMSCRIPTEN)

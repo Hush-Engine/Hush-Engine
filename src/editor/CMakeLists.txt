@@ -5,7 +5,10 @@ hush_add_executable(
         TARGET_NAME HushEditor
         SRCS src/ContentPanel.cpp
              src/SystemSelection.cpp
+             src/CookedFileSystem.cpp
+             src/CookerService.cpp
              src/EditorApp.cpp
+             src/FileWatcher.cpp
              src/HierarchyPanel.cpp
              src/NotificationPanel.cpp
              src/InspectorPanel.cpp
@@ -37,7 +40,7 @@ endif()
 
 string(REPLACE ")" "\\)" ESCAPED_PROJECT_ROOT "${HUSH_DEFAULT_PROJECT_ROOT}")
 
-# Add compile definition for the editor target
+# Add compile definition for the editor target. TODO: eventually, this should be picked up from the project settings file
 target_compile_definitions(HushEditor PRIVATE
     "HUSH_DEFAULT_PROJECT_DIR=R\"(${ESCAPED_PROJECT_ROOT})\""
 )
@@ -46,7 +49,17 @@ target_compile_definitions(HushEditor PRIVATE
     "HUSH_ENGINE_RES_DIR=R\"(${CMAKE_SOURCE_DIR})\""
 )
 
-target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo)
+target_link_libraries(HushEditor PRIVATE Hush::Engine imgui imguizmo imguifiledialog)
+# thomasmonkman-filewatch (header-only, no CMake config)
+find_path(FILEWATCH_INCLUDE_DIR "thomasmonkman-filewatch/FileWatch.hpp")
+if(NOT FILEWATCH_INCLUDE_DIR)
+    message(FATAL_ERROR "filewatch headers not found (thomasmonkman-filewatch/FileWatch.hpp). "
+                        "Install the thomasmonkman-filewatch package (e.g. via vcpkg) and re-run CMake.")
+endif()
+target_include_directories(HushEditor PRIVATE ${FILEWATCH_INCLUDE_DIR})
+message(STATUS "Found filewatch: ${FILEWATCH_INCLUDE_DIR}")
+
+target_link_libraries(HushEditor PRIVATE Hush::Engine Hush::Cooker imgui imguizmo)
 
 hush_deploy_runtime_dlls(HushEditor)
 

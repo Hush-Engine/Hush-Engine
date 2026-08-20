@@ -6,15 +6,16 @@
 */
 #pragma once
 
+#include "BitwiseUtils.hpp"
 #include "GraphicsTypes.hpp"
 #include "IBindGroup.hpp"
 #include "IShaderModule.hpp"
 #include "PipelineDescriptor.hpp"
 
+#include <NullTerminatedStringView.hpp>
 #include <algorithm>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -57,6 +58,31 @@ namespace Hush::Graphics
 		std::string entryPointName = "main";
 	};
 
+	/// @brief Data type of the reflected binding, useful for inspector serialization
+	/// @details These flags can be encoded in a way that tells you what the composed type is scalar + (vector / array
+	/// dimensions). i.e:
+	///    - (Float32 | Vec4 | AsColor) == RGBA8 color binding
+	//     - (Float64 | Vec3) == Raw vec3 double precision vector, maybe for positions
+	enum class EBindingDataTypeFlags : uint32_t
+	{
+		Undefined = 0,
+		Int32 = 1,
+		UInt32 = 2,
+		Int64 = 4,
+		UInt64 = 8,
+		Float32 = 16,
+		Float64 = 32,
+		Vec2 = 64,
+		Vec3 = 128,
+		Vec4 = 256,
+		Mat3 = 512,
+		AsColor = 1024,
+		// Should not be exposed in any user-facing API by default
+		IsPrivate = 2048
+	};
+
+	HUSH_GENERATE_FLAGS(EBindingDataTypeFlags, uint32_t);
+
 	/// @brief A single reflected resource binding extracted from compiled shaders.
 	///
 	/// The compiler fills these from Slang's reflection API so that callers can
@@ -81,6 +107,15 @@ namespace Hush::Graphics
 
 		/// @brief For buffer bindings: minimum required size (0 = unknown)
 		uint64_t bufferSize = 0;
+		/// @brief The offset of the initial buffer pointer (mostly to handle struct fields of one giant buffer)
+		uint64_t bufferOffset = 0;
+
+		/// @brief True if this is a per-member sub-entry of a ConstantBuffer struct.
+		/// When true, this entry represents a single field within a constant buffer
+		/// and should be used for property mapping (not for layout building).
+		bool isMember = false;
+
+		EBindingDataTypeFlags dataType;
 	};
 
 	/// @brief Reflected vertex input attribute extracted from the vertex shader.
@@ -162,6 +197,12 @@ namespace Hush::Graphics
 
 			for (const auto &b : bindings)
 			{
+				// Per-member sub-entries do not represent distinct layout bindings.
+				if (b.isMember)
+				{
+					continue;
+				}
+
 				BindGroupLayoutEntry entry{};
 				entry.binding = b.binding;
 				entry.type = b.type;
@@ -243,7 +284,7 @@ namespace Hush::Graphics
 		/// @param entryPoints List of entry points to compile.
 		/// @return Compilation result.
 		[[nodiscard]]
-		ShaderCompilationResult CompileFromSource(std::string_view source, std::string_view sourceName,
+		ShaderCompilationResult CompileFromSource(NullTerminatedStringView source, NullTerminatedStringView sourceName,
 												  const std::vector<ShaderEntryPointRequest> &entryPoints);
 
 		/// @brief Clear all cached compilation results.
@@ -270,9 +311,8 @@ namespace Hush::Graphics
 	private:
 		/// @brief Shared compilation logic used by both CompileFromFile and
 		///        CompileFromSource.
-		ShaderCompilationResult CompileInternal(const char *moduleNameOrPath,
-												const char *source, // nullptr when compiling from file
-												size_t sourceLength,
+		ShaderCompilationResult CompileInternal(NullTerminatedStringView moduleNameOrPath,
+												NullTerminatedStringView source, // empty when compiling from file
 												const std::vector<ShaderEntryPointRequest> &entryPoints);
 
 		/// @brief Extract reflection data from a linked Slang program.
@@ -286,7 +326,7 @@ namespace Hush::Graphics
 
 		/// @brief Build a cache key from the compilation inputs.
 		[[nodiscard]]
-		std::string BuildCacheKey(const char *moduleNameOrPath,
+		std::string BuildCacheKey(NullTerminatedStringView moduleNameOrPath,
 								  const std::vector<ShaderEntryPointRequest> &entryPoints) const;
 
 		/// @brief Map an EShaderStage to the Slang SlangStage enum value.

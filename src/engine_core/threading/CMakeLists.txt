@@ -12,7 +12,7 @@ hush_add_library(
 )
 add_library(Hush::Threading ALIAS HushThreading)
 
-target_link_libraries(HushThreading PUBLIC Hush::Log Hush::Utils)
+target_link_libraries(HushThreading PUBLIC Hush::Log Hush::Utils Hush::Memory)
 
 if (linux)
     target_link_libraries(HushThreading PUBLIC pthread)
@@ -28,3 +28,7 @@ add_test_target(
         SRCS tests/ThreadPool.test.cpp
         HEADER_DIRS tests
 )
+
+# CoroutineFrameResource() (referenced by the coroutine promise operator new/delete) now lives
+# in the memory module's .cpp, so the test executable must link it.
+target_link_libraries(HushThreadingTest PRIVATE Hush::Memory)

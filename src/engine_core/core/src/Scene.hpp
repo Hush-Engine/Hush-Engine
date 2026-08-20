@@ -7,19 +7,23 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "Components/Serializable.hpp"
 #include "Entity.hpp"
 #include "ISystem.hpp"
 #include "Logger.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "Query.hpp"
 #include "HushBindings.hpp"
 #include "QueryBuilder.hpp"
+#include "SceneAsset.hpp"
 #include "executors/ThreadPool.hpp"
-
+#include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include <array>
 #include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <memory_resource>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -35,6 +39,7 @@
 
 namespace Hush
 {
+	class SceneAsset;
 	enum class [[hush::export]] EComponentObserverType
 	{
 		Add,
@@ -60,6 +65,12 @@ namespace Hush
 		using EntityId = Entity::EntityId;
 
 	public:
+		enum class EError
+		{
+			None = 0,
+			BadSceneFormat
+		};
+
 		/// Constructor.
 		/// @param engine Game engine
 		Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool);
@@ -95,6 +106,12 @@ namespace Hush
 		{
 			m_userSystems.push_back(std::make_unique<S>());
 		}
+
+		/// @brief Parses a scene asset and instantiates all entities and systems in it to this scene
+		EError FromSceneAsset(const std::string &asset); // TODO: This should be a Ref<SceneAsset>, but the resources
+														 // module is one layer above us
+
+		EError ToSceneAsset(std::string &asset);
 
 		/// Remove a system from the scene by name.
 		/// @param name Name of the system to remove.
@@ -176,13 +193,14 @@ namespace Hush
 		/// Get the component registered id by name
 		/// @param name Component name
 		/// @return The component id if it exists, std::nullopt otherwise
-		std::optional<std::uint64_t> GetRegisteredComponentId(std::string_view name);
+		std::optional<std::uint64_t> GetRegisteredComponentId(NullTerminatedStringView name);
 
 		/// Register a component id
 		/// @param name Name of the component
 		/// @param id Id of the component
-		[[hush::export]]
-		void RegisterComponentId(std::string_view name, Entity::EntityId id);
+		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
+		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
+		void RegisterComponentId(NullTerminatedStringView name, Entity::EntityId id);
 
 		std::optional<Entity> EntityFromId(EntityId id);
 
@@ -192,8 +210,16 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		EntityId RegisterComponentRaw(const ComponentTraits::ComponentInfo &desc) const;
 
-		[[nodiscard]] [[hush::export]]
-		EntityId Lookup(std::string_view key) const;
+		[[hush::export]]
+		void MarkComponentToggleableRaw(EntityId id);
+
+		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
+		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
+		[[nodiscard]]
+		EntityId Lookup(NullTerminatedStringView tag) const;
+
+		[[nodiscard]]
+		const std::vector<Entity::EntityId> &GetAllRegisteredComponents() const;
 
 		template <typename... Components>
 		Query<Components...> CreateQuery(RawQuery::ECacheMode cacheMode = RawQuery::ECacheMode::Default)
@@ -242,6 +268,25 @@ namespace Hush
 			return this->m_engine;
 		}
 
+		/// Sets the engine-owned frame and scene-scoped memory resources into this scene.
+		/// Both may be null, in which case the scene falls back to owning heap allocations.
+		void SetMemoryResources(std::pmr::memory_resource *frameMemory,
+								Hush::Memory::ThreadLocalMemoryResourcePool *sceneMemory) noexcept
+		{
+			this->m_frameMemory = frameMemory;
+			this->m_sceneMemory = sceneMemory;
+		}
+
+		/// The engine-owned frame-scoped memory resource wired into this scene, or null if not
+		/// wired. Handy for callers that only hold a `Scene*` and need to materialize a
+		/// `NullTerminatedStringView` from a bare view before calling `Lookup` and friends, e.g.
+		/// `scene->Lookup(MakeNullTerminated(tag, scene->GetFrameScopeMemoryResource()))`.
+		[[nodiscard]]
+		std::pmr::memory_resource *GetFrameScopeMemoryResource() const noexcept
+		{
+			return this->m_frameMemory;
+		}
+
 		[[nodiscard]]
 		const void *GetWorld() const
 		{
@@ -268,6 +313,23 @@ namespace Hush
 			this->m_scriptingInterface = scriptingInterface;
 		}
 
+		// Public interface for registering with templates, we might do more than registerIfNeededSlow later
+		template <class T>
+		[[nodiscard]]
+		EntityId RegisterComponent()
+		{
+			return this->RegisterIfNeededSlow<T>();
+		}
+
+		template <class T>
+		void RegisterDefaultSerializer()
+		{
+			Entity comp = this->EntityFromIdUnchecked(this->RegisterComponent<T>());
+			Serializable &ser = comp.AddComponent<Serializable>();
+			ser.serialize = &Serializable::DefaultSerialize<T>;
+			ser.deserialize = &Serializable::DefaultDeserialize<T>;
+		}
+
 	private:
 		friend class Entity;
 		friend class RawQuery;
@@ -275,7 +337,7 @@ namespace Hush
 
 		template <typename T>
 		[[nodiscard]]
-		EntityId RegisterIfNeededSlow()
+		inline EntityId RegisterIfNeededSlow()
 		{
 			// First, get the entity id, and check if the component is registered.
 			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
@@ -327,7 +389,20 @@ namespace Hush
 		/// User systems handled by the scripting host
 		std::vector<uintptr_t> m_scriptingSystems;
 
+		// Small ref array of all registered components, used for editor and scripting
+		// Components will not be unloaded by the scene until it ends, so this works fine as a real-time cache
+		// If this changes, we need to use a flecs query to fetch all entities with the EcsComponent tag
+		mutable std::vector<Entity::EntityId> m_registeredComponents;
+
 		HushEngine *m_engine;
+
+		/// Frame-scoped memory resource (owned by the engine): transient allocations such as
+		/// null-terminated string copies at C-API boundaries. Null until wired by the engine.
+		std::pmr::memory_resource *m_frameMemory = nullptr;
+
+		/// Scene-scoped bump allocator (owned by the engine). Allocations live until the scene
+		/// is torn down, at which point ~Scene rewinds it. Null until wired by the engine.
+		Hush::Memory::ThreadLocalMemoryResourcePool *m_sceneMemory = nullptr;
 
 		/// Thread pool used by the scene for parallel operations
 		Threading::Executors::ThreadPool *m_threadPool;

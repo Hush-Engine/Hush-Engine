@@ -73,6 +73,10 @@ namespace Hush
 		// Public facing API, will call ResolveFileSystem
 		Result<std::string_view, EError> ResolveVirtualPath(const std::string_view &path);
 
+		/// Resolves a virtual path to its backing host (OS) path, when the owning mount is
+		/// backed by the real filesystem. Returns OperationNotSupported for virtual backends.
+		Result<std::filesystem::path, EError> ResolveHostPath(std::string_view path);
+
 	private:
 		void MountFileSystemInternal(std::string_view path, std::unique_ptr<IFileSystem> resourceLoader);
 

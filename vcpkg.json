@@ -7,9 +7,11 @@
     "flecs",
     "fmt",
     "glm",
+    "zstd",
     "magic-enum",
     "outcome",
     "rapidjson",
+    "thomasmonkman-filewatch",
     {
       "name": "sdl3",
       "platform": "emscripten"
