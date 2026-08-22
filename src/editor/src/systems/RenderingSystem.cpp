@@ -347,6 +347,7 @@ void Hush::RenderingSystem::Init()
 	{
 		Serializable &ser = camRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<Camera>;
+		ser.deserialize = &Serializable::DefaultDeserialize<Camera>;
 	}
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
