@@ -479,6 +479,7 @@ void Hush::RenderingSystem::OnPreRender()
 	// The view matrix is the inverse of the entity's world transform (the camera looks down its forward axis).
 	this->m_hasValidGameCamera = false;
 	this->m_gameCameraQuery.Each([this](Entity::EntityId, Camera &cam, WorldTransform &xform) {
+	    cam.SetViewportSize((float)(this->m_cachedGameViewportSize.x), (float)(this->m_cachedGameViewportSize.y));
 		glm::mat4 view = glm::inverse(xform.GetTransformationMatrix());
 		glm::mat4 proj = cam.GetProjectionMatrix();
 
