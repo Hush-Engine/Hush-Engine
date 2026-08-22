@@ -2,6 +2,7 @@
 #include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
 #include "CommandPanel.hpp"
+#include "GamePanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
@@ -57,6 +58,7 @@ void Hush::UI::Init(Scene *parentScene)
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, NotificationPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
+	ADD_PANEL(parentScene, this->m_activePanels, GamePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);

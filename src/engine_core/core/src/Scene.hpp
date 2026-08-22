@@ -47,7 +47,11 @@ namespace Hush
 		Set
 	};
 
+	class Scene;
+
 	using ObserverCallback_t = void (*)(Entity::EntityId, void *);
+	// Same as the one above, but you get a reference to this scene instead of a component... Mostly here for type safety
+	using EntityEventCallback_t = void (*)(Entity::EntityId, Scene *);
 
 	class HushEngine;
 
@@ -139,6 +143,8 @@ namespace Hush
 		[[hush::export]]
 		void AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
 									 EComponentObserverType observerType, ObserverCallback_t callback);
+
+		Entity::EntityId AddEventObserverRaw(Entity::EntityId event, EntityEventCallback_t callback);
 
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type

@@ -59,26 +59,30 @@ Hush::Scene::~Scene()
 void Hush::Scene::Init()
 {
 	ZoneScoped;
-	// Register an observer for our inspectable components
-	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
-													 [this](Entity::EntityId compId, InspectableComponent *) {
-														 // HACK: Add the serializable component to it
-														 this->m_registeredComponents.emplace_back(compId);
-													 });
+	if (!this->m_isInitialized) {
+		// Register an observer for our inspectable components
+		this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
+														 [this](Entity::EntityId compId, InspectableComponent *) {
+															 // HACK: Add the serializable component to it
+															 this->m_registeredComponents.emplace_back(compId);
+														 });
+		// Skip built-in systems on re-call
 
-	for (const std::vector<ISystem *> &systemBucket : m_systems)
-	{
-
-#if HUSH_PLATFORM_EMSCRIPTEN
-		for (ISystem *system : systemBucket)
+		for (const std::vector<ISystem *> &systemBucket : m_systems)
 		{
-			system->Init();
+
+	#if HUSH_PLATFORM_EMSCRIPTEN
+			for (ISystem *system : systemBucket)
+			{
+				system->Init();
+			}
+	#else
+			Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+												   [](ISystem *system) { system->Init(); }));
+	#endif
 		}
-#else
-		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
-											   [](ISystem *system) { system->Init(); }));
-#endif
 	}
+
 
 	// TODO: Group user systems into buckets
 	if (this->m_scriptingInterface != nullptr)
@@ -565,12 +569,46 @@ void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t c
 				void *componentInstance = ecs_field_w_size(it, callbackCtx->componentByteSize, 0);
 
 				callbackCtx->function(eventEntity, componentInstance);
+				// BUG: Memory leak, the outer function must return the observer's Id and that indicates ownershipp
 			},
 		.callback_ctx = context,
 		.callback_ctx_free = [](void *ctx) { delete static_cast<CallbackContext *>(ctx); }};
 
 	[[maybe_unused]]
 	Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
+}
+
+Hush::Entity::EntityId Hush::Scene::AddEventObserverRaw(Entity::EntityId event, EntityEventCallback_t callback)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+
+	ecs_term_t queryTerm = {.id = EcsAny};
+	ecs_query_desc_t query = {.terms = {queryTerm}};
+
+
+	// TODO: Replace heap for arena allocator
+	ecs_observer_desc_t observerDesc = {
+		.query = query,
+		.events = {event},
+		.callback =
+			[](ecs_iter_t *it) {
+				if (it->count <= 0)
+				{
+					return;
+				}
+				Entity::EntityId eventEntity = it->entities[0];
+
+				auto callback = reinterpret_cast<EntityEventCallback_t>(it->callback_ctx);
+				auto *scene = reinterpret_cast<Scene*>(it->run_ctx);
+				callback(eventEntity, scene);
+
+			},
+		.callback_ctx = reinterpret_cast<void *>(callback),
+		.run_ctx = reinterpret_cast<void*>(this)
+	};
+
+	// So the observer can be removed
+	return ecs_observer_init(world, &observerDesc);
 }
 
 void Hush::Scene::DestroyEntity(Entity &&entity)
@@ -859,8 +897,8 @@ Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
 	return ecs_lookup(world, tag.c_str());
 }
 
-
-Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const {
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+{
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	return ecs_lookup(world, tag.data());
 }

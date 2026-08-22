@@ -286,6 +286,8 @@ namespace Hush
 		/// pointer and you have an observer that's listening for changes
 		void NotifyComponentModifiedRaw(Entity::EntityId componentId);
 
+		void EmitEvent(Entity::EntityId event);
+
 		ComponentRef CreateComponentReferenceRaw(EntityId componentId);
 
 		/// Add a component to the entity.

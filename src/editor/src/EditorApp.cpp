@@ -21,6 +21,7 @@
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
+#include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "backends/imgui_impl_sdl3.h"
@@ -41,12 +42,14 @@
 #include "RenderGraph/RenderGraph.hpp"
 #include "Logger.hpp"
 
+#include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_wgpu.h>
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 #include "Profiling.hpp"
 
 // This is temporary lol
@@ -57,6 +60,11 @@
 
 class EditorApp final : public Hush::IApplication
 {
+	// UX: Create a better message
+	static constexpr std::string_view SCENE_PATH_NOT_SET_ON_PLAY_ERR =
+		"Your scene must be saved to a file before playing!";
+	static constexpr std::string_view SCENE_SAVED_ERR = "Failed to save scene!";
+
 public:
 	explicit EditorApp(Hush::HushEngine *engine)
 		: m_engine(engine),
@@ -76,6 +84,45 @@ public:
 		ImGui::DestroyContext();
 	}
 
+	void HookEvents()
+	{
+		Hush::Entity event = this->m_scene->CreateEntityWithKey(Hush::PLAY_TIME_EVENT_KEY);
+		this->m_scene->AddEventObserverRaw(event.GetId(), [](Hush::Entity::EntityId entity, Hush::Scene *scene) {
+			// Save our scene state
+			std::string sceneJson;
+			Hush::Entity editorEnt = scene->EntityFromIdUnchecked(entity);
+			auto *editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+
+			if (editorInfo->lastUsedScenePath.empty())
+			{
+				// Send an error
+				Hush::Entity errEnt = scene->CreateEntity();
+				errEnt.EmplaceComponent<Hush::ToastNotification>(SCENE_PATH_NOT_SET_ON_PLAY_ERR, 4.0f,
+																 Hush::ToastNotification::EToastType::Error);
+				return;
+			}
+
+			Hush::Scene::EError err = scene->ToSceneAsset(sceneJson);
+			{
+				std::ofstream output;
+				output.open(editorInfo->lastUsedScenePath);
+				output << sceneJson;
+				output.close();
+			}
+			if (err != Hush::Scene::EError::None)
+			{
+				Hush::Entity errEnt = scene->CreateEntity();
+				errEnt.EmplaceComponent<Hush::ToastNotification>(SCENE_SAVED_ERR, 4.0f,
+																 Hush::ToastNotification::EToastType::Error);
+
+			}
+			editorInfo->isPlaying = true;
+			// TODO: Destroy all User systems and recreate them
+			// Call onto the scene's init func again
+			scene->Init();
+		});
+	}
+
 	void Init() override
 	{
 		// Make the giant System pool
@@ -91,6 +138,7 @@ public:
 		Hush::Entity entt = this->m_scene->CreateEntityWithKey(ENGINE_MANAGER);
 
 		entt.AddComponent<Hush::EditorInfo>();
+		this->m_editorInfoRef = entt.CreateComponentReference<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
@@ -179,6 +227,7 @@ public:
 		// dirLightEntity.AddComponent<Hush::LocalTransform>();
 		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
+		this->HookEvents();
 	}
 
 	void Update(float delta) override
@@ -516,6 +565,7 @@ private:
 	std::unique_ptr<Hush::FileWatcher> m_fileWatcher;
 	Hush::CookedDirectory m_cookedDirectory;
 	std::unique_ptr<Hush::CookerService> m_cookerService;
+	Hush::ComponentRef m_editorInfoRef;
 
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.

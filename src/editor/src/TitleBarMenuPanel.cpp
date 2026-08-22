@@ -1,5 +1,6 @@
 #include "TitleBarMenuPanel.hpp"
 #include "Assertions.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "HushEngine.hpp"
 #include "Logger.hpp"
 #include "Ref.hpp"
@@ -7,6 +8,7 @@
 #include "SceneAsset.hpp"
 #include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
+#include "components/EditorInfo.hpp"
 #include "imguifiledialog/ImGuiFileDialog.h"
 #include "networking/NetworkUtils.hpp"
 #include <cstdio>
@@ -38,6 +40,16 @@ void Hush::TitleBarMenuPanel::OnRender([[maybe_unused]] float deltaTime) noexcep
 			}
 			ImGui::EndMenu();
 		}
+		// Put this way back in the center
+		if (ImGui::Button("Play")) {
+			// Emit events
+			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+			Entity::EntityId playId = this->m_activeScene->Lookup(PLAY_TIME_EVENT_KEY);
+			editorEnt.EmitEvent(playId);
+		}
+		ImGui::Button("Simulate Physics");
+		ImGui::Button("Pause");
+		ImGui::Button("End");
 		ImGui::EndMainMenuBar();
 	}
 	// TODO: Also render the play options here
@@ -66,6 +78,11 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 		{
 			notificationEnt.EmplaceComponent<ToastNotification>("Scene saved succesfully!", 2.f,
 																ToastNotification::EToastType::Info);
+
+			// Get the editor entity and save the last path
+			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+			auto* editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+			editorInfo->lastUsedScenePath = path;
 		}
 		else
 		{
@@ -101,6 +118,11 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 		{
 			notificationEnt.EmplaceComponent<ToastNotification>("Scene loaded succesfully!", 2.f,
 																ToastNotification::EToastType::Info);
+
+			// Get the editor entity and save the last path
+			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+			auto* editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+			editorInfo->lastUsedScenePath = path;
 		}
 		else
 		{

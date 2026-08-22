@@ -46,6 +46,15 @@ void Hush::Entity::NotifyComponentModifiedRaw(Entity::EntityId componentId)
 	ecs_modified_id(world, this->m_entityId, componentId);
 }
 
+void Hush::Entity::EmitEvent(Entity::EntityId event) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_event_desc_t desc {
+		.event = event,
+		.entity = this->GetId(),
+	};
+	ecs_emit(world, &desc);
+}
+
 Hush::ComponentRef Hush::Entity::CreateComponentReferenceRaw(EntityId componentId)
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
