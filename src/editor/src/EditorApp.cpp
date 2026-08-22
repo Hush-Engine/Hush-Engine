@@ -114,7 +114,6 @@ public:
 				Hush::Entity errEnt = scene->CreateEntity();
 				errEnt.EmplaceComponent<Hush::ToastNotification>(SCENE_SAVED_ERR, 4.0f,
 																 Hush::ToastNotification::EToastType::Error);
-
 			}
 			editorInfo->isPlaying = true;
 			// TODO: Destroy all User systems and recreate them
@@ -257,6 +256,7 @@ public:
 		// The texture was realized during the previous frame's OnPreRender
 		// (graph compile + resource realization).
 		UpdateScenePanelTexture();
+		UpdateGamePanelTexture();
 
 		// Start a new ImGui frame (platform + renderer backends + core)
 		ImGui_ImplWGPU_NewFrame();
@@ -283,6 +283,17 @@ public:
 			{
 				m_sceneBufferSize = scenePanel.GetPanelSize();
 				m_sceneBufferDirty = true;
+			}
+		}
+
+		auto &gamePanel = m_userInterface.GetPanel<Hush::GamePanel>();
+		if (gamePanel.ConsumeResized())
+		{
+			const auto newSize = gamePanel.GetPanelSize();
+			if (newSize.x > 0 && newSize.y > 0)
+			{
+				m_gameBufferSize = gamePanel.GetPanelSize();
+				m_gameBufferDirty = true;
 			}
 		}
 
@@ -317,6 +328,22 @@ public:
 			m_engine->GetWindowRenderer()->GetRenderDevice().Invalidate();
 		}
 
+		// Same as above, but for the game cameras (entities with a Camera
+		// component).  The WorldTransform term excludes the editor camera,
+		// which never has one.
+		if (m_gameBufferDirty)
+		{
+			m_gameBufferDirty = false;
+
+			glm::u32vec2 newSize = m_gameBufferSize;
+			this->m_scene->CreateQuery<Hush::Camera, Hush::WorldTransform>().Each(
+				[&newSize](Hush::Entity &, Hush::Camera &cam, Hush::WorldTransform &) {
+					cam.SetViewportSize(static_cast<float>(newSize.x), static_cast<float>(newSize.y));
+				});
+
+			m_engine->GetWindowRenderer()->GetRenderDevice().Invalidate();
+		}
+
 		// If the render graph is about to be rebuilt (Invalidated by us
 		// above, or externally by a window resize), steal the current
 		// scene texture out of the graph BEFORE Reset() destroys it.
@@ -326,6 +353,7 @@ public:
 		if (renderDevice.IsDirty())
 		{
 			CacheCurrentSceneTexture();
+			CacheCurrentGameTexture();
 		}
 
 		this->m_scene->PreRender();
@@ -547,6 +575,78 @@ private:
 		m_userInterface.SetSceneTextureView(nullptr, 0, 0);
 	}
 
+	/// @brief Steal ownership of the current game view texture from the render
+	///        graph so it survives a graph Reset().
+	void CacheCurrentGameTexture()
+	{
+		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
+		if (windowRenderer == nullptr)
+		{
+			return;
+		}
+
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
+
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("GameViewPass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
+
+		if (texRes != nullptr && texRes->texture != nullptr)
+		{
+			m_cachedGameTexture = std::move(texRes->texture);
+		}
+	}
+
+	void UpdateGamePanelTexture()
+	{
+		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
+		if (windowRenderer == nullptr)
+		{
+			return;
+		}
+
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
+
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("GameViewPass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			m_userInterface.SetGameTextureView(nullptr, 0, 0);
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
+
+		if (texRes != nullptr && texRes->texture != nullptr)
+		{
+			// New texture is realized — swap to it and release the old cache.
+			m_cachedGameTexture.reset();
+
+			Hush::Graphics::IGraphicsTexture *tex = texRes->texture.get();
+			void *nativeView = tex->GetNativeView();
+
+			m_userInterface.SetGameTextureView(nativeView, tex->GetWidth(), tex->GetHeight());
+			return;
+		}
+
+		// New texture is not realized yet (graph was just rebuilt).
+		// If we have a cached copy of the previous texture, keep
+		// displaying it — no flicker, no stale pointer.
+		if (m_cachedGameTexture != nullptr)
+		{
+			void *nativeView = m_cachedGameTexture->GetNativeView();
+			m_userInterface.SetGameTextureView(nativeView, m_cachedGameTexture->GetWidth(),
+											   m_cachedGameTexture->GetHeight());
+			return;
+		}
+
+		// No texture available at all (first frame).
+		m_userInterface.SetGameTextureView(nullptr, 0, 0);
+	}
+
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
 	Hush::ScriptingHost *m_scriptingHost = nullptr;
@@ -556,6 +656,9 @@ private:
 	/// so the ScenePanel's raw WGPUTextureView pointer doesn't dangle.
 	/// Released once the new texture is realized.
 	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedSceneTexture;
+
+	/// Same as above, but for the GamePanel's game view texture.
+	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedGameTexture;
 
 	Hush::HushEngine *m_engine = nullptr;
 
@@ -574,6 +677,14 @@ private:
 	/// Set to true when the scene panel resizes; consumed in OnPreRender
 	/// to invalidate the render graph before the next rebuild.
 	bool m_sceneBufferDirty = false;
+
+	/// Current desired size for the game view render texture (matches the
+	/// Game panel's content region).  Updated each frame after DrawPanels.
+	glm::u32vec2 m_gameBufferSize{1, 1};
+
+	/// Set to true when the game panel resizes; consumed in OnPreRender
+	/// to invalidate the render graph before the next rebuild.
+	bool m_gameBufferDirty = false;
 
 	/// Resource ID of the imported swapchain backbuffer (updated each frame).
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{};

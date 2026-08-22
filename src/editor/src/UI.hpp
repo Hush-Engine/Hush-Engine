@@ -7,6 +7,7 @@
 #pragma once
 
 #include "IEditorPanel.hpp"
+#include "GamePanel.hpp"
 #include "ScenePanel.hpp"
 #include "Scene.hpp"
 #include "RHI/ShaderCompiler.hpp"
@@ -60,6 +61,15 @@ namespace Hush
 		void SetSceneTextureView(void *nativeTextureView, uint32_t width, uint32_t height) const noexcept
 		{
 			GetPanel<ScenePanel>().SetSceneTextureView(nativeTextureView, width, height);
+		}
+
+		/// @brief Forward the native game view texture to the GamePanel for display.
+		/// @param nativeTextureView Native texture view handle (e.g. WGPUTextureView cast to void*).
+		/// @param width Texture width in pixels.
+		/// @param height Texture height in pixels.
+		void SetGameTextureView(void *nativeTextureView, uint32_t width, uint32_t height) const noexcept
+		{
+			GetPanel<GamePanel>().SetGameTextureView(nativeTextureView, width, height);
 		}
 
 		template <class T>

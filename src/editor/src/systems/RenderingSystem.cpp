@@ -150,6 +150,99 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 		});
 }
 
+void Hush::RenderingSystem::BuildGameViewPassFunction(Hush::RenderGraph::RenderGraph &graph,
+													  Hush::RenderingSystem *self)
+{
+	using namespace Hush::Graphics;
+	using namespace Hush::RenderGraph;
+
+	using RenderGraphBuildContext_t = Hush::RenderGraph::RenderGraph::BuildContext;
+
+	struct GameViewPassData
+	{
+		ResourceId renderTexture;
+		ResourceId depthTexture;
+	};
+
+	graph.AddPass<GameViewPassData>(
+		EPassType::Graphics, "GameViewPass",
+		[self](RenderGraphBuildContext_t &ctx, GameViewPassData &data) {
+			const glm::u32vec2 bufferSize = self->m_cachedGameViewportSize;
+
+			data.renderTexture = ctx.Create<TextureResource>(
+				"GameViewPass_RenderTexture", TextureDescriptor{
+												  .width = bufferSize.x,
+												  .height = bufferSize.y,
+												  .format = ETextureFormat::BGRA8_UNORM,
+												  .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
+											  });
+
+			data.depthTexture = ctx.Create<TextureResource>("GameViewPass_DepthTexture",
+															TextureDescriptor{.width = bufferSize.x,
+																			  .height = bufferSize.y,
+																			  .format = ETextureFormat::D32_FLOAT,
+																			  .usage = ETextureUsage::DepthStencil});
+
+			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+		},
+		[self](GameViewPassData &data, ICommandList *cmdList,
+			   const Hush::RenderGraph::ResourceManager &resourceManager) {
+			auto *cmd = dynamic_cast<IGraphicsCommandList *>(cmdList);
+			if (cmd == nullptr)
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[GameViewPass] Failed to get graphics command list.");
+				return;
+			}
+
+			RenderPassDescriptor renderPass{};
+			renderPass.debugLabel = "GameViewPass";
+
+			RenderPassColorAttachment colorAttachment{};
+			colorAttachment.texture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+			colorAttachment.loadOp = ELoadOp::Clear;
+			colorAttachment.storeOp = EStoreOp::Store;
+			colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f};
+			renderPass.AddColorAttachment(colorAttachment);
+
+			RenderPassDepthStencilAttachment depthAttachment{};
+			depthAttachment.texture = resourceManager.GetResource<TextureResource>(data.depthTexture)->texture.get();
+			depthAttachment.depthLoadOp = ELoadOp::Clear;
+			depthAttachment.depthStoreOp = EStoreOp::Store;
+			depthAttachment.depthClearValue = 1.0f;
+			renderPass.SetDepthStencilAttachment(depthAttachment);
+
+			cmd->BeginRenderPass(renderPass);
+
+			if (self->m_hasValidGameCamera)
+			{
+				cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedGameViewportSize.x),
+								 static_cast<float>(self->m_cachedGameViewportSize.y), 0, 1);
+
+				auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
+				graphicsDevice->WriteBuffer(self->m_gameSceneDataBuffer.get(), 0, &self->m_cachedGameSceneData,
+											sizeof(SceneData));
+
+				// The editor grid is an editing aid, the game view only renders scene meshes
+				cmd->BindPipeline(self->m_meshPipeline.get());
+
+				for (const auto &draw : self->m_meshDrawList)
+				{
+					cmd->SetVertexBuffer(0, draw.vertexBuffer);
+					cmd->SetIndexBuffer(draw.indexBuffer);
+					cmd->SetBindGroup(0, self->m_gameMeshSceneBindGroup.get(),
+									  std::span<const uint32_t>{&draw.dynamicOffset, 1});
+					if (draw.materialBindGroup != nullptr)
+					{
+						cmd->SetBindGroup(1, draw.materialBindGroup);
+					}
+					cmd->DrawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
+				}
+			}
+
+			cmd->EndRenderPass();
+		});
+}
+
 Hush::Serializable::EError MeshReferenceDeserialize(uint8_t *self, Hush::Serialization::JsonDeserializer &serializer,
 													void *ctx)
 {
@@ -272,11 +365,22 @@ void Hush::RenderingSystem::Init()
 
 	this->m_editorCameraQuery = this->GetScene().CreateQuery<EditorCamera>();
 
+	this->m_gameCameraQuery = this->GetScene().CreateQuery<Camera, WorldTransform>();
+
 	this->m_directionalLightsQuery = this->GetScene().CreateQuery<DirectionalLight, WorldTransform>();
 
 	// Make sure we have the data so that initialization order does not matter
 	auto scenePanelQuery = this->GetScene().CreateQuery<const ScenePanelSizeComp>(RawQuery::ECacheMode::None);
 	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
+
+	auto gamePanelQuery = this->GetScene().CreateQuery<const GamePanelSizeComp>(RawQuery::ECacheMode::None);
+	gamePanelQuery.Each([this](const GamePanelSizeComp &sizeComp) { this->m_cachedGameViewportSize = sizeComp.size; });
+
+	this->GetScene().AddComponentObserver<GamePanelSizeComp>(
+		EComponentObserverType::Set, [this](Entity::EntityId entity, GamePanelSizeComp *panelSize) {
+			(void)entity;
+			this->m_cachedGameViewportSize = panelSize->size;
+		});
 
 	// We need to load the shaders here
 	// Access the filesystem
@@ -298,7 +402,10 @@ void Hush::RenderingSystem::Init()
 
 	Entity sceneBuilderEnt = this->GetScene().CreateEntityWithKey("SceneRenderGraph");
 	auto &scenePassBuilder = sceneBuilderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
-	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildScenePassFunction(graph, this); };
+	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) {
+		BuildScenePassFunction(graph, this);
+		BuildGameViewPassFunction(graph, this);
+	};
 	scenePassBuilder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
 
 	this->m_pbrMaterialDescriptor = {
@@ -366,6 +473,22 @@ void Hush::RenderingSystem::OnPreRender()
 		this->m_cachedSceneData.proj = proj;
 		this->m_cachedSceneData.viewproj = viewProj;
 		this->m_cachedSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
+	});
+
+	// Game view data comes from entities with a Camera component, NOT from the editor camera.
+	// The view matrix is the inverse of the entity's world transform (the camera looks down its forward axis).
+	this->m_hasValidGameCamera = false;
+	this->m_gameCameraQuery.Each([this](Entity::EntityId, Camera &cam, WorldTransform &xform) {
+		glm::mat4 view = glm::inverse(xform.GetTransformationMatrix());
+		glm::mat4 proj = cam.GetProjectionMatrix();
+
+		this->m_cachedGameSceneData.view = view;
+		this->m_cachedGameSceneData.proj = proj;
+		this->m_cachedGameSceneData.viewproj = proj * view;
+		this->m_cachedGameSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
+		this->m_cachedGameSceneData.sunlightDirection = this->m_cachedSceneData.sunlightDirection;
+		this->m_cachedGameSceneData.sunlightColor = this->m_cachedSceneData.sunlightColor;
+		this->m_hasValidGameCamera = true;
 	});
 
 	m_meshDrawList.clear();
@@ -734,6 +857,12 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 													.memoryAccess = EMemoryAccess::CPUNone,
 													.debugName = "SceneDataBuffer"});
 
+	// The game view has its own scene data buffer so both cameras can be uploaded on the same frame
+	this->m_gameSceneDataBuffer = device->CreateBuffer({.size = sizeof(SceneData),
+														.usage = EBufferUsage::Uniform,
+														.memoryAccess = EMemoryAccess::CPUNone,
+														.debugName = "GameSceneDataBuffer"});
+
 	// This assumes the material will always be the default PBR, which is fine for a general buffer, but, we will need
 	// per material buffers
 	this->m_meshMaterialBuffer = device->CreateBuffer({.size = sizeof(PBRMaterialData),
@@ -778,4 +907,12 @@ void Hush::RenderingSystem::CreateMeshSceneBindGroup(Graphics::IGraphicsDevice *
 		{.binding = 0, .buffer = this->m_sceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
 		{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = this->m_meshModelSlotSize}};
 	this->m_meshSceneBindGroup = device->CreateBindGroup(sceneBgDesc);
+
+	// Same model buffer as the editor scene pass, only the camera data differs
+	BindGroupDescriptor gameSceneBgDesc{};
+	gameSceneBgDesc.layout = this->m_meshSceneBindGroupLayout.get();
+	gameSceneBgDesc.entries = {
+		{.binding = 0, .buffer = this->m_gameSceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
+		{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = this->m_meshModelSlotSize}};
+	this->m_gameMeshSceneBindGroup = device->CreateBindGroup(gameSceneBgDesc);
 }

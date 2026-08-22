@@ -10,6 +10,7 @@
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "Shared/Camera.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
 #include "VirtualFilesystem.hpp"
@@ -91,6 +92,8 @@ namespace Hush
 	private:
 		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 
+		static void BuildGameViewPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
+
 		void SetupGridPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
 							   Graphics::ShaderCompiler *shaderCompiler);
 
@@ -101,10 +104,16 @@ namespace Hush
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
+		Query<Camera, WorldTransform> m_gameCameraQuery;
 
 		GridViewUniforms m_cachedViewUniforms{};
 		SceneData m_cachedSceneData{};
 		glm::u32vec2 m_cachedViewportSize{1, 1};
+
+		// Game view (rendered from an entity's Camera component)
+		SceneData m_cachedGameSceneData{};
+		glm::u32vec2 m_cachedGameViewportSize{1, 1};
+		bool m_hasValidGameCamera = false;
 
 		// Lighting
 		Query<DirectionalLight, WorldTransform> m_directionalLightsQuery;
@@ -130,9 +139,11 @@ namespace Hush
 		std::unique_ptr<Graphics::IBindGroupLayout> m_meshSceneBindGroupLayout;
 		std::unique_ptr<Graphics::IBindGroupLayout> m_meshMaterialBindGroupLayout;
 		std::unique_ptr<Graphics::IBindGroup> m_meshSceneBindGroup;
+		std::unique_ptr<Graphics::IBindGroup> m_gameMeshSceneBindGroup;
 		std::unique_ptr<Graphics::IBindGroup> m_meshMaterialBindGroup;
 
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_sceneDataBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gameSceneDataBuffer;
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshModelBuffer;
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshMaterialBuffer;
 		uint32_t m_meshModelSlotSize = 0;

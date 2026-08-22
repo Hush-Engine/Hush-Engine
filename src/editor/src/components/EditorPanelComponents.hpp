@@ -13,4 +13,9 @@ namespace Hush
 	{
 		glm::u32vec2 size{};
 	};
+
+	struct GamePanelSizeComp
+	{
+		glm::u32vec2 size{};
+	};
 } // namespace Hush
