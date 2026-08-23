@@ -183,7 +183,7 @@ public:
 #endif
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 
-		this->m_scriptingHost->Initialize(scriptingProjDllPath, this->m_engine->GetVirtualFilesystem());
+		this->m_scriptingHost->Initialize(scriptingProjDllPath, this->m_engine->GetVirtualFilesystem(), this->GetScene());
 		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
 		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 

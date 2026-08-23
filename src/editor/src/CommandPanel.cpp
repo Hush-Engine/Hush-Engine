@@ -366,12 +366,8 @@ void Hush::CommandPanel::AddComponentPopup()
 			Entity::EntityId compId = this->m_activeScene->Lookup(nameView);
 			if (compId == Entity::INVALID_ENTITY_ID)
 			{
-				// Register the component
-				compId = this->m_activeScene->RegisterComponentRaw({
-					.size = typeInfo.byteSize,
-					.alignment = typeInfo.align,
-					.name = nameView.data(),
-				});
+				// Warn
+				continue;
 			}
 			allComponentIds.emplace_back(compId);
 			popupState.options.emplace_back(typeInfo.name);

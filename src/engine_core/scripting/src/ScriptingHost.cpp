@@ -2,6 +2,7 @@
 #include "Assertions.hpp"
 #include "LibManager.hpp"
 #include "Logger.hpp"
+#include "Scene.hpp"
 #include "VirtualFilesystem.hpp"
 #include <cstdint>
 
@@ -32,7 +33,7 @@ constexpr std::string_view CALL_SYSTEM_ON_POSTRENDER_FN_NAME = "CallSystemOnPost
 	} while (0)
 
 // NOLINTBEGIN
-void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs)
+void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs, Scene* scene)
 {
 	// TODO: reconcile with virtual filesystem
 	auto res = vfs->ResolveHostPath(dllPath);
@@ -59,6 +60,23 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_RENDER_FN_NAME, this->m_scriptingInterface.renderFunction);
 	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_PRERENDER_FN_NAME, this->m_scriptingInterface.preRenderFunction);
 	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_ON_POSTRENDER_FN_NAME, this->m_scriptingInterface.postRenderFunction);
+
+	// HACK: This should probably live somewhere else
+	// Update the cache
+	std::vector<Hush::ScriptingRegisteredTypeInfo>& comps = this->GetAvailableComponents();
+
+	for (const ScriptingRegisteredTypeInfo& typeInfo : comps) {
+		auto nameView = std::string_view(static_cast<const char *>(typeInfo.name));
+
+		// Register the component
+		(void)scene->RegisterComponentRaw({
+			.size = typeInfo.byteSize,
+			.alignment = typeInfo.align,
+			.name = nameView.data(),
+		});
+		
+	}
+	
 }
 // NOLINTEND
 

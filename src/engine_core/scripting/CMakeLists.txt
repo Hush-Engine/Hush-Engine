@@ -9,4 +9,4 @@ hush_add_library(
 
 add_library(Hush::Scripting ALIAS HushScripting)
 
-target_link_libraries(HushScripting PUBLIC HushUtils HushLog HushCore)
+target_link_libraries(HushScripting PUBLIC HushUtils HushLog HushCore HushFilesystem)

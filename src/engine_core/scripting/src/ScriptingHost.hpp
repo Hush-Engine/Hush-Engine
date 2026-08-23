@@ -50,7 +50,7 @@ namespace Hush
 			"Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
 
 		// We need to load an arbitrary DLL and communicate with it through C calls
-		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs);
+		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs, Scene* scene);
 
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableSystems();
 
