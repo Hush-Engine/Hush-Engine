@@ -345,11 +345,37 @@ void Hush::CommandPanel::AddComponentPopup()
 
 	// Find all components
 	const std::vector<Entity::EntityId> &registeredComps = this->m_activeScene->GetAllRegisteredComponents();
-	popupState.options.reserve(registeredComps.size());
-	for (Entity::EntityId id : registeredComps)
+	std::vector<Entity::EntityId> allComponentIds{registeredComps.begin(), registeredComps.end()};
+	popupState.options.reserve(allComponentIds.size());
+	for (Entity::EntityId id : allComponentIds)
 	{
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(id);
 		popupState.options.emplace_back(ent.GetKey());
+	}
+
+	// BACKLOG: We look scripting components up by name here, but we should probably look them up by id or add
+	// the Inspectable component to them on registration instead. Component memory lives in the flecs storage,
+	// not the scripting's heap or stack.
+	if (this->m_scriptingHost != nullptr)
+	{
+		std::vector<ScriptingRegisteredTypeInfo> &scriptedComponents = this->m_scriptingHost->GetAvailableComponents();
+		allComponentIds.reserve(allComponentIds.size() + scriptedComponents.size());
+		for (const ScriptingRegisteredTypeInfo &typeInfo : scriptedComponents)
+		{
+			auto nameView = std::string_view(static_cast<const char *>(typeInfo.name));
+			Entity::EntityId compId = this->m_activeScene->Lookup(nameView);
+			if (compId == Entity::INVALID_ENTITY_ID)
+			{
+				// Register the component
+				compId = this->m_activeScene->RegisterComponentRaw({
+					.size = typeInfo.byteSize,
+					.alignment = typeInfo.align,
+					.name = nameView.data(),
+				});
+			}
+			allComponentIds.emplace_back(compId);
+			popupState.options.emplace_back(typeInfo.name);
+		}
 	}
 
 	Entity &inspectedEntity = inspectTarget.value();
@@ -359,7 +385,7 @@ void Hush::CommandPanel::AddComponentPopup()
 		Entity *entityRef;
 		const std::vector<Entity::EntityId> *compsArr;
 	};
-	PopupCtx popupCtx{.entityRef = &inspectedEntity, .compsArr = &registeredComps};
+	PopupCtx popupCtx{.entityRef = &inspectedEntity, .compsArr = &allComponentIds};
 
 	popupState.ctx = &popupCtx;
 

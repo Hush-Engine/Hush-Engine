@@ -67,8 +67,19 @@ std::vector<Hush::ScriptingRegisteredTypeInfo> &Hush::ScriptingHost::GetAvailabl
 	if (m_libIsDirty)
 	{
 		this->FetchSystemsIntoCache();
+		this->FetchComponentsIntoCache();
 	}
 	return this->m_availableSystems;
+}
+
+std::vector<Hush::ScriptingRegisteredTypeInfo> &Hush::ScriptingHost::GetAvailableComponents()
+{
+	if (m_libIsDirty)
+	{
+		this->FetchComponentsIntoCache();
+		this->FetchSystemsIntoCache();
+	}
+	return this->m_availableComponents;
 }
 
 void Hush::ScriptingHost::FetchSystemsIntoCache()

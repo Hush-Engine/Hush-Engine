@@ -4,6 +4,7 @@
 #include "NullTerminatedStringView.hpp"
 #include "Result.hpp"
 #include "VirtualFilesystem.hpp"
+#include <cstdint>
 #include <string_view>
 #include <vector>
 #include <ISystem.hpp>
@@ -24,6 +25,8 @@ namespace Hush
 		// This is up to the reflection system of the scripting language, essentially, where in the array they are
 		// supposed to go, which order it was added to the registry
 		int32_t registryIndex;
+		uint64_t byteSize;
+		uint64_t align;
 	};
 
 	class ScriptingHost
@@ -50,6 +53,8 @@ namespace Hush
 		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs);
 
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableSystems();
+
+		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableComponents();
 
 		Result<uintptr_t, EError> CreateSystem(const ScriptingRegisteredTypeInfo &systemInfo);
 
