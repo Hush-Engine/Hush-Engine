@@ -144,7 +144,7 @@ public:
 	void Update(float delta) override
 	{
 		m_elapsedTime += delta;
-		GetScene()->Update(delta);
+		GetScene()->Update(delta, false);
 	}
 
 	void FixedUpdate(float delta) override

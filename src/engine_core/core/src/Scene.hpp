@@ -85,7 +85,7 @@ namespace Hush
 		void Init();
 
 		/// Update is called every frame.
-		void Update(float delta);
+		void Update(float delta, bool isEditor);
 
 		/// FixedUpdate is called every fixed frame.
 		void FixedUpdate(float delta);

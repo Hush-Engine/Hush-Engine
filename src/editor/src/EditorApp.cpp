@@ -15,6 +15,7 @@
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
 #include "Shared/DirectionalLight.hpp"
@@ -170,13 +171,21 @@ public:
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
-		// Scripting
-		// constexpr std::string_view scriptingProjDllPath =
-		// "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
+// HACK: Scripting (Hardcoded for the game jam for now)
+#if HUSH_PLATFORM_WIN
+		constexpr Hush::NullTerminatedStringView scriptingProjDllPath =
+			"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
+#elif HUSH_PLATFORM_OSX
+		constexpr Hush::NulNullTerminatedStringView scriptingProjDllPath =
+			"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
+#else
+#error "Platform not supported for the game jam!"
+#endif
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
-		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		// this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
+
+		this->m_scriptingHost->Initialize(scriptingProjDllPath, this->m_engine->GetVirtualFilesystem());
+		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
+		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
 		this->m_resourceManager = m_engine->GetResourceManager();
 
@@ -241,7 +250,8 @@ public:
 			});
 		}
 
-		this->m_scene->Update(delta);
+		bool isEditor = !(this->m_editorInfoRef.GetData<Hush::EditorInfo>()->isPlaying);
+		this->m_scene->Update(delta, isEditor);
 	}
 
 	void FixedUpdate(float delta) override

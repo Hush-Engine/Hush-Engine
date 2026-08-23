@@ -2,6 +2,7 @@
 #include "Assertions.hpp"
 #include "LibManager.hpp"
 #include "Logger.hpp"
+#include "VirtualFilesystem.hpp"
 #include <cstdint>
 
 constexpr std::string_view START_SCRIPTING_CONNECTION = "StartScriptingConnection";
@@ -9,6 +10,9 @@ constexpr std::string_view DISPOSE_SCRIPTING_CONNECTION = "DisposeScriptingConne
 
 constexpr std::string_view GET_AVAILABLE_SYSTEMS_FN_NAME = "GetAvailableSystems";
 constexpr std::string_view GET_SYSTEM_COUNT_FN_NAME = "GetSystemCount";
+
+constexpr std::string_view GET_AVAILABLE_COMPONENTS_FN_NAME = "GetAvailableComponents";
+constexpr std::string_view GET_COMPONENT_COUNT_FN_NAME = "GetComponentCount";
 
 constexpr std::string_view INSTANTIATE_SYSTEM_FN_NAME = "InstantiateSystem";
 constexpr std::string_view CALL_SYSTEM_INIT_FN_NAME = "CallSystemInit";
@@ -28,10 +32,12 @@ constexpr std::string_view CALL_SYSTEM_ON_POSTRENDER_FN_NAME = "CallSystemOnPost
 	} while (0)
 
 // NOLINTBEGIN
-void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath)
+void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs)
 {
 	// TODO: reconcile with virtual filesystem
-	void *libraryHandle = LibManager::LibraryOpen(dllPath.c_str());
+	auto res = vfs->ResolveHostPath(dllPath);
+	HUSH_RESULT_ASSERT(res, "Could not resolve virtual path for scripting at: {}", dllPath);
+	void *libraryHandle = LibManager::LibraryOpen(res.value().string().c_str());
 
 	// This could be user side??? eventually
 	HUSH_COND_FAIL_MSG(libraryHandle != nullptr, "Could not load dynamic library at {}", std::string_view(dllPath));
@@ -41,6 +47,9 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath)
 
 	BIND_DLL_SCRIPTING_FUNCTION(GET_AVAILABLE_SYSTEMS_FN_NAME, this->m_getAvailableSystemsFn);
 	BIND_DLL_SCRIPTING_FUNCTION(GET_SYSTEM_COUNT_FN_NAME, this->m_getSystemCountFn);
+
+	BIND_DLL_SCRIPTING_FUNCTION(GET_AVAILABLE_COMPONENTS_FN_NAME, this->m_getAvailableComponentsFn);
+	BIND_DLL_SCRIPTING_FUNCTION(GET_COMPONENT_COUNT_FN_NAME, this->m_getComponentCountFn);
 
 	BIND_DLL_SCRIPTING_FUNCTION(INSTANTIATE_SYSTEM_FN_NAME, this->m_instantiateSystemFn);
 	BIND_DLL_SCRIPTING_FUNCTION(CALL_SYSTEM_INIT_FN_NAME, this->m_scriptingInterface.initFunction);
@@ -53,7 +62,7 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath)
 }
 // NOLINTEND
 
-std::vector<Hush::ScriptingSystemInfo> &Hush::ScriptingHost::GetAvailableSystems()
+std::vector<Hush::ScriptingRegisteredTypeInfo> &Hush::ScriptingHost::GetAvailableSystems()
 {
 	if (m_libIsDirty)
 	{
@@ -73,14 +82,31 @@ void Hush::ScriptingHost::FetchSystemsIntoCache()
 	HUSH_ASSERT(
 		this->m_getAvailableSystemsFn != nullptr,
 		"Function pointer to get available systems is not initialized, forgot to call ScriptingHost::Initialize?");
-	ScriptingSystemInfo *systemsArr = this->m_availableSystems.data();
+	ScriptingRegisteredTypeInfo *systemsArr = this->m_availableSystems.data();
 
 	this->m_getAvailableSystemsFn(&systemsArr, this->m_availableSystems.size());
 	this->m_libIsDirty = false;
 }
 
+void Hush::ScriptingHost::FetchComponentsIntoCache()
+{
+	HUSH_ASSERT(this->m_getComponentCountFn != nullptr,
+				"Function pointer to get component count is not initialized, forgot to call ScriptingHost::Initialize?");
+	uint64_t compCount = this->m_getComponentCountFn();
+	Hush::LogFormat(ELogLevel::Info, "Got {} components from the scripting system!", compCount);
+	this->m_availableComponents.resize(compCount);
+
+	HUSH_ASSERT(
+		this->m_getAvailableComponentsFn != nullptr,
+		"Function pointer to get available components is not initialized, forgot to call ScriptingHost::Initialize?");
+	ScriptingRegisteredTypeInfo *componentsArr = this->m_availableComponents.data();
+
+	this->m_getAvailableComponentsFn(&componentsArr, this->m_availableComponents.size());
+	this->m_libIsDirty = false;
+}
+
 Hush::Result<uintptr_t, Hush::ScriptingHost::EError> Hush::ScriptingHost::CreateSystem(
-	const ScriptingSystemInfo &systemInfo)
+	const ScriptingRegisteredTypeInfo &systemInfo)
 {
 	HUSH_ASSERT(this->m_instantiateSystemFn != nullptr,
 				"Function pointer to create systems is not initialized, forgot to call ScriptingHost::Initialize?");

@@ -4,9 +4,11 @@
 #include "Scene.hpp"
 #include "ScriptingHost.hpp"
 #include "UI.hpp"
+#include "UIUtils.hpp"
 
 #include <imgui/imgui.h>
 #include <magic_enum/magic_enum.hpp>
+#include <string>
 
 constexpr int32_t MAX_COLUMNS = 4;		// hard cap (change to 5 if preferred)
 constexpr float MIN_COL_WIDTH = 120.0f; // below this, don't add another column
@@ -19,7 +21,7 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 												   int32_t *selectedSystemIndex)
 {
 	HUSH_ASSERT(selectedSystemIndex != nullptr, "A pointer to the selected / desired system is needed");
-	const std::vector<ScriptingSystemInfo> &items = scriptingHost->GetAvailableSystems();
+	const std::vector<ScriptingRegisteredTypeInfo> &items = scriptingHost->GetAvailableSystems();
 	ImGui::SetNextWindowSize(ImVec2(520, 480), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSizeConstraints(ImVec2(300, 200), ImVec2(FLT_MAX, FLT_MAX));
 
@@ -138,7 +140,7 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 	if (ImGui::Button("Add System", ImVec2(btnW, 0)))
 	{
 		// TODO: add
-		const ScriptingSystemInfo &systemInfo = items[*selectedSystemIndex];
+		const ScriptingRegisteredTypeInfo &systemInfo = items[*selectedSystemIndex];
 		auto createResult = scriptingHost->CreateSystem(systemInfo);
 		if (createResult.has_error())
 		{
@@ -148,7 +150,8 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 		else
 		{
 			scene->AddScriptingSystem(createResult.value());
-			// Maybe make a toast notification(?
+			Entity toast = scene->CreateEntity();
+			toast.EmplaceComponent<ToastNotification>(std::string("Created system: ") + &(systemInfo.name[0]), 2.f, ToastNotification::EToastType::Info);
 		}
 		shouldKeepOpen = false;
 	}

@@ -109,7 +109,7 @@ void Hush::Scene::Init()
 	this->m_isInitialized = true;
 }
 
-void Hush::Scene::Update(float delta)
+void Hush::Scene::Update(float delta, bool isEditor)
 {
 	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -128,10 +128,9 @@ void Hush::Scene::Update(float delta)
 #endif
 	}
 
-	if (this->m_scriptingInterface == nullptr)
+	// BACKLOG: Make user systems be able to run at editor time
+	if (this->m_scriptingInterface == nullptr || isEditor)
 	{
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
-		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
