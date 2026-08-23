@@ -61,6 +61,10 @@ message(STATUS "Found filewatch: ${FILEWATCH_INCLUDE_DIR}")
 
 target_link_libraries(HushEditor PRIVATE Hush::Engine Hush::Cooker imgui imguizmo)
 
+# EditorApp.cpp includes the generated HushBindings.cpp directly, so the
+# bindings must be generated before the editor compiles.
+add_dependencies(HushEditor GenerateHushBindings)
+
 hush_deploy_runtime_dlls(HushEditor)
 
 if (HUSH_ENABLE_MIMALLOC)

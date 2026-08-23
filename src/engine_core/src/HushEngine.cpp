@@ -10,6 +10,8 @@
 #include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
 #include <SDL3/SDL_keyboard.h>
+#include "ModuleRegistry.hpp"
+#include "reflection/Type.hpp"
 #include <WindowManager.hpp>
 #include <algorithm>
 #include <cstdint>
@@ -38,6 +40,13 @@ struct Hush::HushEngine::HushEngineInternal
 	Hush::VirtualFilesystem vfs;
 	Hush::ResourceManager resourceManager;
 
+	/// Reflection database of the engine. Every module registers its types
+	/// here. It must be declared before the module registry.
+	Hush::Reflection::ReflectionDB reflectionDB;
+
+	/// Registry of the loaded gameplay modules.
+	Hush::Modules::ModuleRegistry moduleRegistry{reflectionDB};
+
 	std::unique_ptr<Graphics::RenderGraphSystem> renderGraphSystem;
 	std::unique_ptr<Hush::Renderer::ResourceUploadSystem> resourceUploadSystem;
 	std::unique_ptr<WindowRenderer> windowRenderer = nullptr;
@@ -64,6 +73,15 @@ Hush::HushEngine::HushEngine()
 Hush::HushEngine::~HushEngine()
 {
 	this->Quit();
+	// Systems can own Flecs queries and module callbacks. Tear them down while
+	// the scene world and loaded module libraries are both still alive.
+	if (m_app != nullptr)
+	{
+		m_app->GetScene()->Shutdown();
+	}
+	m_internal->resourceUploadSystem.reset();
+	m_internal->renderGraphSystem.reset();
+	m_app.reset();
 }
 
 void Hush::HushEngine::Init(int argc, char **argv)
@@ -80,12 +98,28 @@ void Hush::HushEngine::Init(int argc, char **argv)
 	// Load the VFS with the default data directory
 	this->m_internal->vfs.MountFileSystem<Hush::CFileSystem>("engine_res://", engineResDir);
 
+	// Register the built-in types before the application loads its modules.
+	RegisterBuiltInTypes();
+
 	this->m_app = LoadApplication(this);
+	Scene *scene = this->m_app->GetScene();
+	Modules::ModuleRegistry *moduleRegistry = &this->m_internal->moduleRegistry;
+	scene->SetSystemFactory([moduleRegistry](Scene &targetScene, std::string_view module,
+											 std::string_view type) -> std::unique_ptr<ISystem> {
+		Result<std::unique_ptr<ISystem>, Modules::ModuleRegistry::EError> system =
+			moduleRegistry->CreateSystem(module, type, targetScene);
+		if (system.has_error())
+		{
+			LogFormat(ELogLevel::Error, "Could not resolve scene system {} from module {}", type, module);
+			return nullptr;
+		}
+		return std::move(system.value());
+	});
 
 	// Wire the engine-owned frame/scene memory resources into the scene, so it can cheaply
 	// materialize null-terminated strings for Flecs and allocate scene-lifetime data from the
 	// scene arena.
-	this->m_app->GetScene()->SetMemoryResources(&this->m_internal->frameMemoryPool, &this->m_internal->sceneMemoryPool);
+	scene->SetMemoryResources(&this->m_internal->frameMemoryPool, &this->m_internal->sceneMemoryPool);
 
 	// Check for --wait-profiler flag
 	std::span<char *> args(argv, static_cast<size_t>(argc));
@@ -206,6 +240,16 @@ Hush::WindowRenderer *Hush::HushEngine::GetWindowRenderer() noexcept
 Hush::VirtualFilesystem *Hush::HushEngine::GetVirtualFilesystem() noexcept
 {
 	return &this->m_internal->vfs;
+}
+
+Hush::Reflection::ReflectionDB *Hush::HushEngine::GetReflectionDB() noexcept
+{
+	return &this->m_internal->reflectionDB;
+}
+
+Hush::Modules::ModuleRegistry *Hush::HushEngine::GetModuleRegistry() noexcept
+{
+	return &this->m_internal->moduleRegistry;
 }
 
 void Hush::HushEngine::AddDefaultSystems()

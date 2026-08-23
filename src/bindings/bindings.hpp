@@ -15,6 +15,7 @@
 
 #include "HushEngine.hpp"
 #include "Scene.hpp"
+#include "ModuleBindingApi.hpp"
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"
 

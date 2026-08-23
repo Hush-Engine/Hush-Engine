@@ -20,10 +20,12 @@
 #include "Hush/Memory/ThreadLocalMemoryResourcePool.hpp"
 #include <array>
 #include <atomic>
+#include <concepts>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <memory_resource>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -65,10 +67,14 @@ namespace Hush
 		using EntityId = Entity::EntityId;
 
 	public:
+		using SystemFactory =
+			std::function<std::unique_ptr<ISystem>(Scene &, std::string_view module, std::string_view type)>;
+
 		enum class EError
 		{
 			None = 0,
-			BadSceneFormat
+			BadSceneFormat,
+			SystemResolutionFailed
 		};
 
 		/// Constructor.
@@ -101,11 +107,22 @@ namespace Hush
 		///
 		/// @tparam S Add a system to the scene
 		template <typename S>
-			requires std::derived_from<S, ISystem>
+			requires std::derived_from<S, ISystem> && std::constructible_from<S, Scene &>
 		void AddSystem()
 		{
-			m_userSystems.push_back(std::make_unique<S>());
+			AddSystem(std::make_unique<S>(*this));
 		}
+
+		/// Adds an already created system to the scene. The scene takes
+		/// ownership of the system.
+		/// @param system System to add.
+		void AddSystem(std::unique_ptr<ISystem> system);
+
+		/// Adds a module-owned system and records the stable identity written to scene assets.
+		void AddSystem(std::unique_ptr<ISystem> system, SerializedSystem serializedSystem);
+
+		/// Sets the factory used to resolve systems found in scene assets.
+		void SetSystemFactory(SystemFactory factory);
 
 		/// @brief Parses a scene asset and instantiates all entities and systems in it to this scene
 		EError FromSceneAsset(const std::string &asset); // TODO: This should be a Ref<SceneAsset>, but the resources
@@ -370,6 +387,12 @@ namespace Hush
 		/// Sort the systems based on their order and store them in the buckets
 		void SortSystems();
 
+		struct OwnedSystem
+		{
+			std::unique_ptr<ISystem> instance;
+			std::optional<SerializedSystem> serialized;
+		};
+
 		/// Ordered array of systems
 		/// This is not the most efficient way to store the systems btw.
 		std::array<std::vector<ISystem *>, ORDER_BUCKET_SIZE> m_systems;
@@ -384,7 +407,9 @@ namespace Hush
 		std::vector<ISystem *> m_engineSystems;
 
 		/// User systems (mostly to use with C++-side gameplay code)
-		std::vector<std::unique_ptr<ISystem>> m_userSystems;
+		std::vector<OwnedSystem> m_userSystems;
+
+		SystemFactory m_systemFactory;
 
 		/// User systems handled by the scripting host
 		std::vector<uintptr_t> m_scriptingSystems;

@@ -6,8 +6,10 @@
 // NOLINTBEGIN
 #include "bindings.hpp"
 
-#if __has_include("./HushBindings.cpp")
+#if !defined(HUSH_HEADER_PARSING) && __has_include("./HushBindings.cpp")
+#define HUSH_STATIC_BINDING
 #include "./HushBindings.cpp"
+#undef HUSH_STATIC_BINDING
 #endif
 
 // NOLINTEND

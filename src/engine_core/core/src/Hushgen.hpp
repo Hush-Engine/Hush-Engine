@@ -1,4 +1,6 @@
 
+#include <reflection/ModuleHandle.hpp>
+
 #ifdef HUSH_GENERATED_BODY
 #undef HUSH_GENERATED_BODY
 #endif
@@ -18,9 +20,12 @@ public:                                                                         
 	{                                                                                                                  \
 		return "";                                                                                                     \
 	}                                                                                                                  \
-	static void RegisterReflection(Hush::Reflection::ReflectionDB &db)                                                 \
+	static bool RegisterReflection(Hush::Reflection::ReflectionDB &db,                                                  \
+									   Hush::ModuleHandle module = Hush::ENGINE_MODULE_HANDLE)                                        \
 	{                                                                                                                  \
 		(void)db;                                                                                                      \
+		(void)module;                                                                                                  \
+		return true;                                                                                                   \
 	}                                                                                                                  \
                                                                                                                        \
 	template <typename T>                                                                                              \
