@@ -28,8 +28,7 @@ namespace Hush::Reflection
 		};
 		using CallFunc = Result<Variant, EFunctionInfoError> (*)(std::span<const VariantView>);
 
-		FunctionInfo(CallFunc callFunc, std::string name, std::span<const TypeId> argsType,
-					 MetadataMap metadata = {})
+		FunctionInfo(CallFunc callFunc, std::string name, std::span<const TypeId> argsType, MetadataMap metadata = {})
 			: m_name(std::move(name)),
 			  m_callFunc(callFunc),
 			  m_argsCount(static_cast<uint8_t>(argsType.size()))

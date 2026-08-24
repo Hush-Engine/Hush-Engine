@@ -16,7 +16,7 @@ namespace Hush
 {
 	class HushEngine;
 	class Scene;
-}
+} // namespace Hush
 
 namespace Hush::Modules
 {
@@ -51,22 +51,20 @@ namespace Hush::Modules
 	/// least GetReflectedTypeNameLength for the same type.
 	[[hush::export]]
 	bool CopyReflectedTypeName(HushEngine *engine, std::uint64_t typeId, char *destination,
-							std::uint32_t destinationSize);
+							   std::uint32_t destinationSize);
 
 	/// Queries whether a reflected type has metadata with key.
 	[[hush::export]]
-	bool HasReflectedTypeMetadata(HushEngine *engine, std::uint64_t typeId, const char *keyData,
-								  std::size_t keySize);
+	bool HasReflectedTypeMetadata(HushEngine *engine, std::uint64_t typeId, const char *keyData, std::size_t keySize);
 
 	/// Gets the byte length of a type metadata value, or zero when it is absent.
 	[[hush::export]]
-	std::uint32_t GetReflectedTypeMetadataValueLength(HushEngine *engine, std::uint64_t typeId,
-												  const char *keyData, std::size_t keySize);
+	std::uint32_t GetReflectedTypeMetadataValueLength(HushEngine *engine, std::uint64_t typeId, const char *keyData,
+													  std::size_t keySize);
 
 	/// Copies a type metadata value into destination. destinationSize must be at
 	/// least GetReflectedTypeMetadataValueLength for the same key.
 	[[hush::export]]
-	bool CopyReflectedTypeMetadataValue(HushEngine *engine, std::uint64_t typeId,
-								   const char *keyData, std::size_t keySize, char *destination,
-								   std::uint32_t destinationSize);
+	bool CopyReflectedTypeMetadataValue(HushEngine *engine, std::uint64_t typeId, const char *keyData,
+										std::size_t keySize, char *destination, std::uint32_t destinationSize);
 } // namespace Hush::Modules

@@ -20,8 +20,8 @@ public:                                                                         
 	{                                                                                                                  \
 		return "";                                                                                                     \
 	}                                                                                                                  \
-	static bool RegisterReflection(Hush::Reflection::ReflectionDB &db,                                                  \
-									   Hush::ModuleHandle module = Hush::ENGINE_MODULE_HANDLE)                                        \
+	static bool RegisterReflection(Hush::Reflection::ReflectionDB &db,                                                 \
+								   Hush::ModuleHandle module = Hush::ENGINE_MODULE_HANDLE)                             \
 	{                                                                                                                  \
 		(void)db;                                                                                                      \
 		(void)module;                                                                                                  \

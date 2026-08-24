@@ -33,9 +33,7 @@ namespace
 
 	std::uint32_t GetStringLength(std::string_view value)
 	{
-		return value.size() > std::numeric_limits<std::uint32_t>::max()
-				? 0
-				: static_cast<std::uint32_t>(value.size());
+		return value.size() > std::numeric_limits<std::uint32_t>::max() ? 0 : static_cast<std::uint32_t>(value.size());
 	}
 
 	Hush::Reflection::ReflectionDB *GetReflectionDB(Hush::HushEngine *engine)
@@ -87,8 +85,7 @@ bool Hush::Modules::RegisterForeignSystem(HushEngine *engine, ModuleHandle modul
 		   ModuleRegistry::EError::None;
 }
 
-bool Hush::Modules::AddSystemToScene(HushEngine *engine, Scene *scene, ModuleHandle module,
-										 std::uint64_t typeId)
+bool Hush::Modules::AddSystemToScene(HushEngine *engine, Scene *scene, ModuleHandle module, std::uint64_t typeId)
 {
 	if (engine == nullptr || scene == nullptr)
 	{
@@ -134,7 +131,7 @@ std::uint32_t Hush::Modules::GetReflectedTypeNameLength(HushEngine *engine, std:
 }
 
 bool Hush::Modules::CopyReflectedTypeName(HushEngine *engine, std::uint64_t typeId, char *destination,
-									  std::uint32_t destinationSize)
+										  std::uint32_t destinationSize)
 {
 	Reflection::ReflectionDB *db = GetReflectionDB(engine);
 	if (db == nullptr)
@@ -145,8 +142,8 @@ bool Hush::Modules::CopyReflectedTypeName(HushEngine *engine, std::uint64_t type
 	return name.has_value() && CopyString(*name, destination, destinationSize);
 }
 
-bool Hush::Modules::HasReflectedTypeMetadata(HushEngine *engine, std::uint64_t typeId,
-											 const char *keyData, std::size_t keySize)
+bool Hush::Modules::HasReflectedTypeMetadata(HushEngine *engine, std::uint64_t typeId, const char *keyData,
+											 std::size_t keySize)
 {
 	Reflection::ReflectionDB *db = GetReflectionDB(engine);
 	return db != nullptr && keyData != nullptr &&
@@ -154,7 +151,7 @@ bool Hush::Modules::HasReflectedTypeMetadata(HushEngine *engine, std::uint64_t t
 }
 
 std::uint32_t Hush::Modules::GetReflectedTypeMetadataValueLength(HushEngine *engine, std::uint64_t typeId,
-														 const char *keyData, std::size_t keySize)
+																 const char *keyData, std::size_t keySize)
 {
 	Reflection::ReflectionDB *db = GetReflectionDB(engine);
 	if (db == nullptr || keyData == nullptr)
@@ -167,9 +164,9 @@ std::uint32_t Hush::Modules::GetReflectedTypeMetadataValueLength(HushEngine *eng
 	return value.has_value() ? GetStringLength(*value) : 0;
 }
 
-bool Hush::Modules::CopyReflectedTypeMetadataValue(HushEngine *engine, std::uint64_t typeId,
-														 const char *keyData, std::size_t keySize, char *destination,
-														 std::uint32_t destinationSize)
+bool Hush::Modules::CopyReflectedTypeMetadataValue(HushEngine *engine, std::uint64_t typeId, const char *keyData,
+												   std::size_t keySize, char *destination,
+												   std::uint32_t destinationSize)
 {
 	Reflection::ReflectionDB *db = GetReflectionDB(engine);
 	if (db == nullptr || keyData == nullptr)

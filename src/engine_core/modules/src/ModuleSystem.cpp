@@ -7,8 +7,8 @@
 #include "ModuleSystem.hpp"
 
 Hush::Modules::ModuleSystem::ModuleSystem(Scene &scene, ModuleHandle module, HushObjectHandle object,
-										  HushSystemRuntimeOps runtimeOps, std::string_view name,
-										  std::uint16_t order, std::uint32_t lifecycleMask)
+										  HushSystemRuntimeOps runtimeOps, std::string_view name, std::uint16_t order,
+										  std::uint32_t lifecycleMask)
 	: ISystem(scene),
 	  m_module(module),
 	  m_object(object),

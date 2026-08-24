@@ -79,7 +79,8 @@ std::filesystem::path LibManager::GetCurrentExecutablePath()
 		}
 		if (static_cast<std::size_t>(length) < buffer.size())
 		{
-			return std::filesystem::path(std::string_view(buffer.data(), static_cast<std::size_t>(length))).parent_path();
+			return std::filesystem::path(std::string_view(buffer.data(), static_cast<std::size_t>(length)))
+				.parent_path();
 		}
 		buffer.resize(buffer.size() * 2);
 	}
