@@ -7,6 +7,7 @@
 #pragma once
 #include <NullTerminatedStringView.hpp>
 #include <Result.hpp>
+#include <filesystem>
 
 namespace Hush
 {
@@ -69,6 +70,9 @@ namespace Hush
 		/// @param libraryName Shared Library name.
 		/// @return A handle to the shared library
 		static Result<SharedLibrary, EError> OpenSharedLibrary(NullTerminatedStringView libraryName) noexcept;
+
+		/// Opens a shared library from a native filesystem path.
+		static Result<SharedLibrary, EError> OpenSharedLibrary(const std::filesystem::path &libraryPath) noexcept;
 
 	private:
 		void *GetRawSymbol(NullTerminatedStringView symbolName);

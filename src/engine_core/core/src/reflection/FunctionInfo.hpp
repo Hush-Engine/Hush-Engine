@@ -7,12 +7,13 @@
 #pragma once
 #include "Variant.hpp"
 #include "Result.hpp"
+#include "Metadata.hpp"
 
 #include <array>
 
 namespace Hush::Reflection
 {
-	class FunctionInfo
+	class FunctionInfo : public MetadataHolder
 	{
 	public:
 		static constexpr std::uint8_t MAX_ARGS = 16;
@@ -27,11 +28,12 @@ namespace Hush::Reflection
 		};
 		using CallFunc = Result<Variant, EFunctionInfoError> (*)(std::span<const VariantView>);
 
-		FunctionInfo(CallFunc callFunc, std::string name, std::span<const TypeId> argsType)
+		FunctionInfo(CallFunc callFunc, std::string name, std::span<const TypeId> argsType, MetadataMap metadata = {})
 			: m_name(std::move(name)),
 			  m_callFunc(callFunc),
 			  m_argsCount(static_cast<uint8_t>(argsType.size()))
 		{
+			SetMetadata(std::move(metadata));
 			if (m_argsCount > MAX_ARGS)
 			{
 				// TODO: Handle error, maybe a log message?
@@ -41,10 +43,11 @@ namespace Hush::Reflection
 
 		template <typename... Args>
 			requires(sizeof...(Args) <= MAX_ARGS)
-		static FunctionInfo Create(CallFunc callFunc, std::string name)
+		static FunctionInfo Create(CallFunc callFunc, std::string name, MetadataMap metadata = {})
 		{
 			FunctionInfo funcInfo(callFunc, std::move(name),
-								  std::span<const TypeId>({GetTypeId<std::remove_reference_t<Args>>()...}));
+								  std::span<const TypeId>({GetTypeId<std::remove_reference_t<Args>>()...}),
+								  std::move(metadata));
 
 			return funcInfo;
 		}

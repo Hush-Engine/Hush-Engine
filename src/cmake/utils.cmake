@@ -102,30 +102,45 @@ function(hush_minject_target tgt)
 endfunction()
 
 
+# Paths to locally built hush tools. When set, the downloads are skipped.
+# This is useful when working on the hush-llvm repository.
+set(HUSH_REFLECTION_TOOL_PATH "" CACHE PATH "Path to a local hush-reflection binary")
+set(HUSH_EXPORT_TOOL_PATH "" CACHE PATH "Path to a local hush-export binary")
+
 if (CMAKE_HOST_WIN32)
-    set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-reflection.exe")
-    set (HUSH_REFLECTION_HASH "98b9f1352d8f9c1032f66b277c48c0f42a5d6ca9faf3a1dea3b901ac33bf4480")
+    if (HUSH_REFLECTION_TOOL_PATH)
+        set(HUSH_REFLECTION_BIN "${HUSH_REFLECTION_TOOL_PATH}")
+    else ()
+        set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.4/hush-reflection.exe")
+        set (HUSH_REFLECTION_HASH "8d7a87fa267b1c17a5f22334c3e9ea4da627f32889b6150715d35bf24bac1821")
 
-    download_hush_file(
-            URL ${HUSH_REFLECTION_URL}
-            FILENAME "hush-reflection.exe"
-            EXPECTED_HASH ${HUSH_REFLECTION_HASH}
-    )
+        download_hush_file(
+                URL ${HUSH_REFLECTION_URL}
+                FILENAME "hush-reflection.exe"
+                EXPECTED_HASH ${HUSH_REFLECTION_HASH}
+        )
 
-    set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.2/hush-export.exe")
-    set (HUSH_EXPORT_HASH "435bd8cdf7cb104cfd61bea167633ab7ccfe67a8f2bd7fe7c8e8370d019acc34")
+        set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+    endif ()
 
-    download_hush_file(
-            URL ${HUSH_EXPORT_URL}
-            FILENAME "hush-export.exe"
-            EXPECTED_HASH ${HUSH_EXPORT_HASH}
-    )
+    if (HUSH_EXPORT_TOOL_PATH)
+        set(HUSH_EXPORT_BIN "${HUSH_EXPORT_TOOL_PATH}")
+    else ()
+        set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.4/hush-export.exe")
+        set (HUSH_EXPORT_HASH "4e85b43500fdd68c827bda8a739d511b95465de6b74f5d07ab068a84834c2a75")
 
-    set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
-    set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
+        download_hush_file(
+                URL ${HUSH_EXPORT_URL}
+                FILENAME "hush-export.exe"
+                EXPECTED_HASH ${HUSH_EXPORT_HASH}
+        )
+
+        set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
+    endif ()
 endif ()
 
-set(HUSH_REFLECTION_BIN "${CMAKE_BINARY_DIR}/hush-reflection.exe")
+set(HUSH_REFLECTION_BIN "${HUSH_REFLECTION_BIN}" CACHE INTERNAL "Path to the hush-reflection binary")
+set(HUSH_EXPORT_BIN "${HUSH_EXPORT_BIN}" CACHE INTERNAL "Path to the hush-export binary")
 
 
 # Set all warnings for the target
@@ -141,8 +156,9 @@ endmacro()
 # PUBLIC_HEADER_DIRS: Public header directories for the target
 # PRIVATE_HEADER_DIRS: Private header directories for the target
 # REFLECTION_SUBDIR: Subdirectory to append to the current working directory.
+# MODULE_ENTRY: Whether to emit the extern "C" HushRegisterModule entry point
 macro(enable_reflection)
-    cmake_parse_arguments(REFLECT "" "TARGET_NAME" "PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;REFLECTION_SUBDIR" ${ARGN})
+    cmake_parse_arguments(REFLECT "MODULE_ENTRY" "TARGET_NAME" "PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;REFLECTION_SUBDIR" ${ARGN})
 
     # Glob all header files in the public and private directories
     if (REFLECT_PUBLIC_HEADER_DIRS)
@@ -179,17 +195,34 @@ macro(enable_reflection)
         set(WORKING_DIR ${WORKING_DIR}/${REFLECT_REFLECTION_SUBDIR})
     endif ()
 
+    # The module header is generated into a target named folder so consumers
+    # include it as <TargetName/RegisterModule.hpp>.
+    set(HUSHGEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/hushgen/${REFLECT_TARGET_NAME})
+    file(MAKE_DIRECTORY ${HUSHGEN_DIR})
+
+    set(REFLECT_EXTRA_ARGS "")
+    if (REFLECT_MODULE_ENTRY)
+        set(REFLECT_EXTRA_ARGS --emit-module-entry)
+    endif ()
+
     add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp ${HUSHGEN_DIR}/RegisterModule.hpp
             COMMAND ${HUSH_REFLECTION_BIN}
             COMMAND_EXPAND_LISTS
-            ARGS --output-stamp=${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp ${LIB_SRCS_ABSOLUTE} -- -std=c++20 "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${REFLECT_TARGET_NAME},INCLUDE_DIRECTORIES>,PREPEND,-I>" "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${REFLECT_TARGET_NAME},COMPILE_DEFINITIONS>,PREPEND,-D>"
+            ARGS --output-stamp=${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp
+                 --module-name=${REFLECT_TARGET_NAME}
+                 --module-header=${HUSHGEN_DIR}/RegisterModule.hpp
+                 ${REFLECT_EXTRA_ARGS}
+                 ${LIB_SRCS_ABSOLUTE} -- -std=c++20 "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${REFLECT_TARGET_NAME},INCLUDE_DIRECTORIES>,PREPEND,-I>" "$<LIST:TRANSFORM,$<TARGET_PROPERTY:${REFLECT_TARGET_NAME},COMPILE_DEFINITIONS>,PREPEND,-D>"
             DEPENDS ${PUBLIC_HEADERS_FILES} ${PRIVATE_HEADERS_FILES} ${LIB_SRCS_ABSOLUTE} ${HUSH_REFLECTION_BIN}
             WORKING_DIRECTORY ${WORKING_DIR}
             VERBATIM
     )
 
     target_sources(${REFLECT_TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/${REFLECT_TARGET_NAME}.hushgen.cpp)
+
+    # Expose the folder with the generated RegisterModule.hpp headers.
+    target_include_directories(${REFLECT_TARGET_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/hushgen)
 
 endmacro()
 
@@ -201,7 +234,7 @@ endmacro()
 # PRIVATE_HEADER_DIRS: Private header directories for the library
 # ENABLE_REFLECTION: Whether to enable reflection for the library
 macro(hush_add_library)
-    cmake_parse_arguments(LIB "" "TARGET_NAME;LIB_TYPE" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
+    cmake_parse_arguments(LIB "MODULE_ENTRY" "TARGET_NAME;LIB_TYPE" "SRCS;PUBLIC_HEADER_DIRS;PRIVATE_HEADER_DIRS;ENABLE_REFLECTION" ${ARGN})
     add_library(${LIB_TARGET_NAME} ${LIB_LIB_TYPE} ${LIB_SRCS})
     target_include_directories(${LIB_TARGET_NAME} PUBLIC ${LIB_PUBLIC_HEADER_DIRS})
     target_include_directories(${LIB_TARGET_NAME} PRIVATE ${LIB_PRIVATE_HEADER_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
@@ -218,10 +251,16 @@ macro(hush_add_library)
     # endif ()
 
     if (${LIB_ENABLE_REFLECTION})
+        # Only forward the module entry option when it is set.
+        set(LIB_REFLECT_MODULE_ENTRY "")
+        if (${LIB_MODULE_ENTRY})
+            set(LIB_REFLECT_MODULE_ENTRY MODULE_ENTRY)
+        endif ()
         enable_reflection(
                 TARGET_NAME ${LIB_TARGET_NAME}
                 PUBLIC_HEADER_DIRS ${LIB_PUBLIC_HEADER_DIRS}
                 PRIVATE_HEADER_DIRS ${LIB_PRIVATE_HEADER_DIRS}
+                ${LIB_REFLECT_MODULE_ENTRY}
         )
     endif ()
 

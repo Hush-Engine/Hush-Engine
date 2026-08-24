@@ -46,6 +46,15 @@ Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *t
 
 Hush::Scene::~Scene()
 {
+	if (m_isInitialized)
+	{
+		Shutdown();
+	}
+	// Systems may own Flecs queries. Destroy them while the world is still
+	// alive, before ecs_fini invalidates those query objects.
+	m_systems = {};
+	m_userSystems.clear();
+
 	// ecs_fini runs component binding_ctx_free hooks, which destroy any objects allocated from
 	// the scene arena. Rewind the arena only afterwards, once nothing references it.
 	ecs_fini(static_cast<ecs_world_t *>(m_world));
@@ -270,8 +279,12 @@ void Hush::Scene::PostRender()
 
 void Hush::Scene::Shutdown()
 {
-
 	ZoneScoped;
+	if (!m_isInitialized)
+	{
+		return;
+	}
+	m_isInitialized = false;
 
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
 	{
@@ -300,123 +313,392 @@ void Hush::Scene::Shutdown()
 	}
 }
 
-// Free helper functions
-inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk)
+namespace
 {
-	using JsonEToken_t = Hush::Serialization::JsonDeserializer::EToken;
-	return tk != JsonEToken_t::ArrayEnd && tk != JsonEToken_t::Error && tk != JsonEToken_t::EndOfInput;
-}
+	using JsonDeserializer = Hush::Serialization::JsonDeserializer;
+	using JsonToken = JsonDeserializer::EToken;
 
-// Local macro helper
-#define BREAK_LOOP_IF_NEEDED                                                                                           \
-	currToken = deserializer.GetToken();                                                                               \
-	if (!ShouldContinueReadingCompsArray(currToken))                                                                   \
-	{                                                                                                                  \
-		break;                                                                                                         \
+	struct ParsedComponent
+	{
+		std::string key;
+		std::string json;
+	};
+
+	struct ParsedEntity
+	{
+		std::string key;
+		std::vector<ParsedComponent> components;
+	};
+
+	struct ParsedScene
+	{
+		std::string entities;
+		std::optional<std::string> systems;
+	};
+
+	bool SkipMemberValue(JsonDeserializer &deserializer)
+	{
+		return deserializer.Next() && deserializer.SkipValue();
 	}
 
-inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
-												 Hush::Serialization::JsonDeserializer &deserializer,
-												 Hush::Entity &entity)
-{
-	using namespace Hush;
-	deserializer.Next(); // Skip the start of the array
-	std::string_view currKey;
-	int64_t compId{};
-	std::string_view compKey{};
-	Serialization::JsonDeserializer::EToken currToken{};
-	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken);
-		 currToken = deserializer.GetToken())
+	bool FinishDocument(JsonDeserializer &deserializer, JsonToken closingToken)
 	{
-		std::string_view objectJson;
-		deserializer.PeekObject(objectJson);
-
-		Serialization::JsonDeserializer localDeser{objectJson};
-
-		deserializer.Next();
-		BREAK_LOOP_IF_NEEDED;
-
-		deserializer.ReadKey(currKey);
-		BREAK_LOOP_IF_NEEDED;
-		deserializer.ReadInt(compId);
-		BREAK_LOOP_IF_NEEDED;
-
-		deserializer.ReadKey(currKey);
-		BREAK_LOOP_IF_NEEDED;
-		deserializer.ReadString(compKey);
-		BREAK_LOOP_IF_NEEDED;
-
-		// Get the component with that key
-		Entity comp = scene->CreateEntityWithKey(compKey);
-		void *instance = entity.AddComponentRaw(comp.GetId());
-
-		// Deserialize it
-		Serializable *serComp = comp.GetComponent<Serializable>();
-		if (serComp != nullptr && serComp->deserialize != nullptr)
+		if (!deserializer.Next() || deserializer.GetToken() != closingToken)
 		{
-			auto *rawInstance = reinterpret_cast<uint8_t *>(instance);
-			serComp->deserialize(rawInstance, localDeser, serComp->ctx);
-			if (serComp->postDeserialize != nullptr)
+			return false;
+		}
+		return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
+	}
+
+	bool ParseSceneRoot(std::string_view asset, ParsedScene &scene)
+	{
+		JsonDeserializer deserializer(asset);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ObjectStart)
+		{
+			return false;
+		}
+
+		bool hasEntities = false;
+		while (deserializer.PeekKey().has_value())
+		{
+			std::string_view key;
+			if (!deserializer.ReadKey(key))
 			{
-				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
+				return false;
+			}
+
+			if (key == "versionMajor")
+			{
+				if (!deserializer.Next() || deserializer.GetToken() != JsonToken::Uint || deserializer.GetUint() != 0)
+				{
+					return false;
+				}
+			}
+			else if (key == "entities")
+			{
+				std::string_view entities;
+				if (!deserializer.ReadArray(entities))
+				{
+					return false;
+				}
+				scene.entities = entities;
+				hasEntities = true;
+			}
+			else if (key == "systems")
+			{
+				std::string_view systems;
+				if (!deserializer.ReadArray(systems))
+				{
+					return false;
+				}
+				scene.systems = std::string(systems);
+			}
+			else if (!SkipMemberValue(deserializer))
+			{
+				return false;
 			}
 		}
 
-		deserializer.SkipObject();
-		BREAK_LOOP_IF_NEEDED;
+		return hasEntities && FinishDocument(deserializer, JsonToken::ObjectEnd);
 	}
-	return Scene::EError::None;
-}
+
+	bool ParseComponent(std::string_view json, ParsedComponent &component)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ObjectStart)
+		{
+			return false;
+		}
+
+		bool hasKey = false;
+		while (deserializer.PeekKey().has_value())
+		{
+			std::string_view key;
+			if (!deserializer.ReadKey(key))
+			{
+				return false;
+			}
+			if (key == "key")
+			{
+				std::string_view value;
+				if (!deserializer.ReadString(value))
+				{
+					return false;
+				}
+				component.key = value;
+				hasKey = true;
+			}
+			else if (!SkipMemberValue(deserializer))
+			{
+				return false;
+			}
+		}
+
+		return hasKey && FinishDocument(deserializer, JsonToken::ObjectEnd);
+	}
+
+	bool ParseComponents(std::string_view json, std::vector<ParsedComponent> &components)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayStart)
+		{
+			return false;
+		}
+
+		while (true)
+		{
+			std::string_view componentJson;
+			if (deserializer.ReadObject(componentJson))
+			{
+				ParsedComponent component;
+				component.json = componentJson;
+				if (!ParseComponent(component.json, component))
+				{
+					return false;
+				}
+				components.push_back(std::move(component));
+				continue;
+			}
+
+			if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayEnd)
+			{
+				return false;
+			}
+			return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
+		}
+	}
+
+	bool ParseEntity(std::string_view json, ParsedEntity &entity)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ObjectStart)
+		{
+			return false;
+		}
+
+		bool hasKey = false;
+		std::optional<std::string> components;
+		while (deserializer.PeekKey().has_value())
+		{
+			std::string_view key;
+			if (!deserializer.ReadKey(key))
+			{
+				return false;
+			}
+			if (key == "key")
+			{
+				std::string_view value;
+				if (!deserializer.ReadString(value))
+				{
+					return false;
+				}
+				entity.key = value;
+				hasKey = true;
+			}
+			else if (key == "components")
+			{
+				std::string_view value;
+				if (!deserializer.ReadArray(value))
+				{
+					return false;
+				}
+				components = std::string(value);
+			}
+			else if (!SkipMemberValue(deserializer))
+			{
+				return false;
+			}
+		}
+
+		return hasKey && components.has_value() && FinishDocument(deserializer, JsonToken::ObjectEnd) &&
+			   ParseComponents(*components, entity.components);
+	}
+
+	bool ParseEntities(std::string_view json, std::vector<ParsedEntity> &entities)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayStart)
+		{
+			return false;
+		}
+
+		while (true)
+		{
+			std::string_view entityJson;
+			if (deserializer.ReadObject(entityJson))
+			{
+				ParsedEntity entity;
+				const std::string ownedJson(entityJson);
+				if (!ParseEntity(ownedJson, entity))
+				{
+					return false;
+				}
+				entities.push_back(std::move(entity));
+				continue;
+			}
+
+			if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayEnd)
+			{
+				return false;
+			}
+			return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
+		}
+	}
+
+	bool ParseSystem(std::string_view json, Hush::SerializedSystem &system)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ObjectStart)
+		{
+			return false;
+		}
+
+		bool hasModule = false;
+		bool hasType = false;
+		while (deserializer.PeekKey().has_value())
+		{
+			std::string_view key;
+			if (!deserializer.ReadKey(key))
+			{
+				return false;
+			}
+			if (key == "module" || key == "type")
+			{
+				const bool isModule = key == "module";
+				std::string_view value;
+				if (!deserializer.ReadString(value))
+				{
+					return false;
+				}
+				if (isModule)
+				{
+					system.module = value;
+					hasModule = true;
+				}
+				else
+				{
+					system.type = value;
+					hasType = true;
+				}
+			}
+			else if (!SkipMemberValue(deserializer))
+			{
+				return false;
+			}
+		}
+
+		return hasModule && hasType && !system.type.empty() && FinishDocument(deserializer, JsonToken::ObjectEnd);
+	}
+
+	bool ParseSystems(std::string_view json, std::vector<Hush::SerializedSystem> &systems)
+	{
+		JsonDeserializer deserializer(json);
+		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayStart)
+		{
+			return false;
+		}
+
+		while (true)
+		{
+			std::string_view systemJson;
+			if (deserializer.ReadObject(systemJson))
+			{
+				Hush::SerializedSystem system;
+				const std::string ownedJson(systemJson);
+				if (!ParseSystem(ownedJson, system))
+				{
+					return false;
+				}
+				systems.push_back(std::move(system));
+				continue;
+			}
+
+			if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayEnd)
+			{
+				return false;
+			}
+			return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
+		}
+	}
+
+	Hush::Scene::EError DeserializeComponents(Hush::Scene *scene, const std::vector<ParsedComponent> &components,
+											  Hush::Entity &entity)
+	{
+		using namespace Hush;
+		for (const ParsedComponent &component : components)
+		{
+			Entity componentEntity = scene->CreateEntityWithKey(component.key);
+			void *instance = entity.AddComponentRaw(componentEntity.GetId());
+			Serializable *serializer = componentEntity.GetComponent<Serializable>();
+			if (serializer == nullptr || serializer->deserialize == nullptr)
+			{
+				continue;
+			}
+
+			Serialization::JsonDeserializer deserializer(component.json);
+			auto *rawInstance = static_cast<std::uint8_t *>(instance);
+			if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
+			{
+				return Scene::EError::BadSceneFormat;
+			}
+			if (serializer->postDeserialize != nullptr)
+			{
+				serializer->postDeserialize(rawInstance, entity.GetId(), serializer->type, serializer->ctx);
+			}
+		}
+		return Scene::EError::None;
+	}
+} // namespace
 
 Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 {
-	Serialization::JsonDeserializer deserializer{asset};
-	// Enter the object
-	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
-	std::string_view currKey{};
-	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
-	// This should be the entities array now
-	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
-	// We are now on our object
-	while (deserializer.Next())
+	ParsedScene parsedScene;
+	std::vector<ParsedEntity> entities;
+	if (!ParseSceneRoot(asset, parsedScene) || !ParseEntities(parsedScene.entities, entities))
 	{
-		// Entity structure
-		// {"id": ##, "key": "...", "components": [...]}
-		int64_t id{}; // The ID is not entirely irrelevant, but for now it kinda is
-		deserializer.ReadKey(currKey);
-		deserializer.ReadInt(id);
-		std::string_view entKey;
-		deserializer.ReadKey(currKey);
-		deserializer.ReadString(entKey);
-
-		Entity ent;
-		if (entKey.empty())
-		{
-			ent = this->CreateEntity();
-		}
-		else
-		{
-			ent = this->CreateEntityWithKey(entKey);
-		}
-		(void)ent;
-
-		// We don't care abt this one
-		deserializer.ReadKey(currKey);
-		// Then we can go for comps related to that entity
-		std::string_view compsArray;
-		if (!deserializer.ReadArray(compsArray))
-		{
-			continue;
-		}
-		Serialization::JsonDeserializer arrayDeser{compsArray};
-		DeserializeComponents(this, arrayDeser, ent);
-		deserializer.Next();
+		return EError::BadSceneFormat;
 	}
-	(void)asset;
+
+	std::vector<SerializedSystem> systemReferences;
+	if (parsedScene.systems.has_value() && !ParseSystems(*parsedScene.systems, systemReferences))
+	{
+		return EError::BadSceneFormat;
+	}
+
+	std::vector<OwnedSystem> resolvedSystems;
+	resolvedSystems.reserve(systemReferences.size());
+	for (SerializedSystem &reference : systemReferences)
+	{
+		if (!m_systemFactory)
+		{
+			return EError::SystemResolutionFailed;
+		}
+
+		std::unique_ptr<ISystem> instance = m_systemFactory(*this, reference.module, reference.type);
+		if (instance == nullptr)
+		{
+			return EError::SystemResolutionFailed;
+		}
+		resolvedSystems.push_back({.instance = std::move(instance), .serialized = std::move(reference)});
+	}
+
+	for (const ParsedEntity &entityValue : entities)
+	{
+		Entity entity = entityValue.key.empty() ? CreateEntity() : CreateEntityWithKey(entityValue.key);
+		const EError error = DeserializeComponents(this, entityValue.components, entity);
+		if (error != EError::None)
+		{
+			return error;
+		}
+	}
+
+	for (OwnedSystem &system : resolvedSystems)
+	{
+		AddSystem(std::move(system.instance), std::move(*system.serialized));
+	}
+
 	return EError::None;
 }
-
-#undef BREAK_LOOP_IF_NEEDED
 
 Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 {
@@ -431,6 +713,22 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 	Serialization::JsonSerializer jsonSerializer{};
 	Serialization::ESerializationError serialErr{};
 	serialErr = jsonSerializer.BeginObject();
+	serialErr = jsonSerializer.Serialize("versionMajor", std::uint32_t{0});
+	serialErr = jsonSerializer.Serialize("versionMinor", std::uint32_t{2});
+	serialErr = jsonSerializer.SetKey("systems");
+	serialErr = jsonSerializer.BeginArray();
+	for (const OwnedSystem &system : m_userSystems)
+	{
+		if (!system.serialized.has_value())
+		{
+			continue;
+		}
+		serialErr = jsonSerializer.BeginObject();
+		serialErr = jsonSerializer.Serialize("module", std::string_view(system.serialized->module));
+		serialErr = jsonSerializer.Serialize("type", std::string_view(system.serialized->type));
+		serialErr = jsonSerializer.EndObject();
+	}
+	serialErr = jsonSerializer.EndArray();
 	serialErr = jsonSerializer.SetKey("entities");
 	serialErr = jsonSerializer.BeginArray();
 	q.Each([world, serializableId, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
@@ -488,12 +786,16 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 void Hush::Scene::RemoveSystem(std::string_view name)
 {
 	// Find the system
-	auto it = std::ranges::find_if(
-		m_userSystems, [name](const std::unique_ptr<ISystem> &system) { return system->GetName() == name; });
+	auto it = std::ranges::find_if(m_userSystems,
+								   [name](const OwnedSystem &system) { return system.instance->GetName() == name; });
 
 	// If the system was found, remove it
 	if (it != m_userSystems.end())
 	{
+		if (m_isInitialized)
+		{
+			it->instance->OnShutdown();
+		}
 		m_userSystems.erase(it);
 	}
 
@@ -917,6 +1219,32 @@ void Hush::Scene::AddEngineSystem(ISystem *system)
 	SortSystems();
 }
 
+void Hush::Scene::AddSystem(std::unique_ptr<ISystem> system)
+{
+	// If the system is added after the scene was initialized, init it right away.
+	if (this->m_isInitialized)
+	{
+		system->Init();
+	}
+	this->m_userSystems.push_back({.instance = std::move(system), .serialized = std::nullopt});
+	SortSystems();
+}
+
+void Hush::Scene::AddSystem(std::unique_ptr<ISystem> system, SerializedSystem serializedSystem)
+{
+	if (this->m_isInitialized)
+	{
+		system->Init();
+	}
+	this->m_userSystems.push_back({.instance = std::move(system), .serialized = std::move(serializedSystem)});
+	SortSystems();
+}
+
+void Hush::Scene::SetSystemFactory(SystemFactory factory)
+{
+	m_systemFactory = std::move(factory);
+}
+
 void Hush::Scene::AddScriptingSystem(uintptr_t system)
 {
 	this->m_scriptingSystems.push_back(system);
@@ -942,8 +1270,8 @@ void Hush::Scene::SortSystems()
 	}
 
 	// Finally, add the user systems
-	for (std::unique_ptr<ISystem> &system : m_userSystems)
+	for (OwnedSystem &system : m_userSystems)
 	{
-		m_systems[system->Order()].push_back(system.get());
+		m_systems[system.instance->Order()].push_back(system.instance.get());
 	}
 }
