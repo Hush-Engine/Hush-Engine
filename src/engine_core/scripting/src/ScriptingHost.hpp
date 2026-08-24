@@ -29,6 +29,48 @@ namespace Hush
 		uint64_t align;
 	};
 
+	/// @brief Mirrors ECompPropertyType from the scripting library's compile-time serialization registry
+	enum class EComponentPropertyType : int32_t
+	{
+		Unknown = 0,
+		I8,
+		U8,
+		I16,
+		U16,
+		I32,
+		U32,
+		I64,
+		U64,
+		F32,
+		F64,
+		Bool,
+		String,
+		Array,
+	};
+
+	/// @brief Mirrors CompPropertyInfo, describes a single serializable field of a scripted component
+	struct ScriptingComponentPropertyInfo
+	{
+		static constexpr int32_t MAX_PROP_NAME = 64;
+		char name[MAX_PROP_NAME];
+		EComponentPropertyType type;
+		uint32_t elementCount;
+		uint32_t elementSize;
+		uint32_t offset;
+	};
+
+	/// @brief Mirrors CompSerializationInfo, compile-time reflection data for serializing scripted components
+	struct ScriptingComponentSerializationInfo
+	{
+		static constexpr int32_t MAX_COMP_NAME = 64;
+		char name[MAX_COMP_NAME];
+		int32_t registryIndex;
+		uint64_t byteSize;
+		uint64_t align;
+		ScriptingComponentPropertyInfo *properties;
+		uint32_t propertyCount;
+	};
+
 	class ScriptingHost
 	{
 	public:
@@ -42,19 +84,27 @@ namespace Hush
 		using DisposeScriptingConnection_t = void (*)();
 
 		// System data
-		using GetAvailableRegisterTypesFnPtr_t = void (*)(ScriptingRegisteredTypeInfo **outRegisterTypeInfoArr, uint64_t systemsCount);
+		using GetAvailableRegisterTypesFnPtr_t = void (*)(ScriptingRegisteredTypeInfo **outRegisterTypeInfoArr,
+														  uint64_t systemsCount);
 		using GetRegisterTypeCountFnPtr_t = uint64_t (*)();
 		using InstantiateSystemFnPtr_t = uint8_t *(*)(const ScriptingRegisteredTypeInfo *systeminfo);
+
+		// Component serialization data
+		using GetAvailableComponentSerializationDataFnPtr_t = void (*)(ScriptingComponentSerializationInfo **outInfoArr,
+																	   uint64_t capacity);
+		using GetComponentSerializationCountFnPtr_t = uint64_t (*)();
 
 		static constexpr std::string_view FN_PTR_NOT_INITIALIZED_ERR =
 			"Function pointer is not initialized! Forgot to call ScriptingHost::Initialize?";
 
 		// We need to load an arbitrary DLL and communicate with it through C calls
-		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem* vfs, Scene* scene);
+		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem *vfs, Scene *scene);
 
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableSystems();
 
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableComponents();
+
+		std::vector<ScriptingComponentSerializationInfo> &GetAvailableComponentSerializationData();
 
 		Result<uintptr_t, EError> CreateSystem(const ScriptingRegisteredTypeInfo &systemInfo);
 
@@ -87,6 +137,20 @@ namespace Hush
 		}
 
 		[[nodiscard]]
+		GetComponentSerializationCountFnPtr_t GetComponentSerializationCountFn() const noexcept
+		{
+			HUSH_ASSERT(m_getComponentSerializationCountFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
+			return m_getComponentSerializationCountFn;
+		}
+
+		[[nodiscard]]
+		GetAvailableComponentSerializationDataFnPtr_t GetAvailableComponentSerializationDataFn() const noexcept
+		{
+			HUSH_ASSERT(m_getAvailableComponentSerializationDataFn != nullptr, "{}", FN_PTR_NOT_INITIALIZED_ERR);
+			return m_getAvailableComponentSerializationDataFn;
+		}
+
+		[[nodiscard]]
 		ScriptingSystemInterface *GetScriptingSystemInterface() noexcept
 		{
 			return &this->m_scriptingInterface;
@@ -97,9 +161,12 @@ namespace Hush
 
 		void FetchComponentsIntoCache();
 
+		void FetchComponentSerializationIntoCache();
+
 		bool m_libIsDirty = true;
 		std::vector<ScriptingRegisteredTypeInfo> m_availableSystems;
 		std::vector<ScriptingRegisteredTypeInfo> m_availableComponents;
+		std::vector<ScriptingComponentSerializationInfo> m_componentSerializationInfos;
 
 		StartScriptingConnection_t m_startScriptingConnectionFn = nullptr;
 		DisposeScriptingConnection_t m_disposeScriptingConnectionFn = nullptr;
@@ -110,6 +177,9 @@ namespace Hush
 
 		GetAvailableRegisterTypesFnPtr_t m_getAvailableComponentsFn = nullptr;
 		GetRegisterTypeCountFnPtr_t m_getComponentCountFn = nullptr;
+
+		GetComponentSerializationCountFnPtr_t m_getComponentSerializationCountFn = nullptr;
+		GetAvailableComponentSerializationDataFnPtr_t m_getAvailableComponentSerializationDataFn = nullptr;
 
 		ScriptingSystemInterface m_scriptingInterface;
 	};

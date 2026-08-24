@@ -31,6 +31,10 @@ glm::vec3 *Hush::Transform::GetPosition() noexcept
 	return reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
+glm::vec3 Hush::Transform::GetPositionValue() const noexcept {
+	return *reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
+}
+
 void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
 {
 	this->m_scale = scale;

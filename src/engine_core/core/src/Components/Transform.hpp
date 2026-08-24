@@ -35,6 +35,9 @@ namespace Hush
 
 		glm::vec3 *GetPosition() noexcept;
 
+		[[hush::export]]
+		glm::vec3 GetPositionValue() const noexcept;
+
 		void SetScale(const glm::vec3 &scale) noexcept;
 
 		[[nodiscard]]
