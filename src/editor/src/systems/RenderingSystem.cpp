@@ -542,6 +542,32 @@ void Hush::RenderingSystem::OnPreRender()
 				if (mat != nullptr)
 				{
 					mat->FlushProperties(device);
+
+					// Map known PBR bindings to their fallback defaults. Used both
+					// when building a bind group (null slot -> default) and when
+					// validating the cache, so the cached snapshot and the current
+					// material state compare consistently. Comparing the raw slot
+					// pointer (nullptr for unbound slots) against the cached resolved
+					// default would spuriously invalidate the entry on EVERY surface,
+					// freeing a bind group that an already-built draw still
+					// references (a deterministic dangling-pointer crash once a mesh
+					// has more than one surface).
+					auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
+						switch (binding)
+						{
+						case 1:
+							return m_defaultColorTex.get();
+						case 2:
+							return m_defaultMetalRoughTex.get();
+						case 3:
+							return m_defaultNormalTex.get();
+						case 4:
+							return m_defaultEmissiveTex.get();
+						default:
+							return m_defaultColorTex.get();
+						}
+					};
+
 					auto it = m_materialBindGroupCache.find(mat);
 					if (it != m_materialBindGroupCache.end())
 					{
@@ -550,8 +576,9 @@ void Hush::RenderingSystem::OnPreRender()
 						const auto &slots = mat->GetTextureSlots();
 						for (const auto &slot : slots)
 						{
+							IGraphicsTexture *currentTex =
+								slot.texture != nullptr ? slot.texture : defaultTextureForBinding(slot.binding);
 							auto cachedTex = it->second.textures.find(slot.binding);
-							IGraphicsTexture *currentTex = slot.texture;
 							if (cachedTex == it->second.textures.end())
 							{
 								if (currentTex != nullptr)
@@ -583,23 +610,6 @@ void Hush::RenderingSystem::OnPreRender()
 							{.binding = 0, .buffer = mat->GetUniformBuffer(), .offset = 0, .size = bufSize});
 
 						CachedMaterialBindGroup cachedEntry;
-
-						// Map known PBR bindings to their fallback defaults.
-						auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
-							switch (binding)
-							{
-							case 1:
-								return m_defaultColorTex.get();
-							case 2:
-								return m_defaultMetalRoughTex.get();
-							case 3:
-								return m_defaultNormalTex.get();
-							case 4:
-								return m_defaultEmissiveTex.get();
-							default:
-								return m_defaultColorTex.get();
-							}
-						};
 
 						const auto &slots = mat->GetTextureSlots();
 						for (const auto &slot : slots)

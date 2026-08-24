@@ -67,7 +67,16 @@ namespace Hush
 	class RenderingSystem final : public ISystem
 	{
 	public:
-		using ISystem::ISystem;
+		explicit RenderingSystem(Scene &scene)
+			: ISystem(scene)
+		{
+			// Run AFTER ResourceUploadSystem (order 0). Its OnPreRender maps the
+			// staging buffer and issues a blocking device-wide poll(); running
+			// concurrently with this system's queue.writeBuffer calls (both were
+			// in the default order-0 parallel bucket) corrupts wgpu's internal
+			// heap. Separation keeps every system's wgpu access single-threaded.
+			SetOrder(1);
+		}
 
 		void Init() override;
 

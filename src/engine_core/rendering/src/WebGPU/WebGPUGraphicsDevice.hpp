@@ -175,8 +175,10 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		static ETextureFormat ConvertToEngineTextureFormat(wgpu::TextureFormat format);
 
-		static void OnDeviceError(WGPUErrorType type, char const *message, void *userdata);
-		static void OnDeviceLost(WGPUDeviceLostReason reason, char const *message, void *userdata);
+		static void OnDeviceError(WGPUDevice const *device, WGPUErrorType type, WGPUStringView message, void *userdata,
+								  void *userdata2);
+		static void OnDeviceLost(WGPUDevice const *device, WGPUDeviceLostReason reason, WGPUStringView message,
+								 void *userdata, void *userdata2);
 
 	private:
 		wgpu::Buffer CreateBufferInternal(const BufferDescriptor &descriptor);

@@ -106,6 +106,17 @@ namespace Hush::Graphics
 	{
 		wgpu::DeviceDescriptor deviceDesc{};
 		deviceDesc.label = wgpu::StringView("Hush Graphics Device");
+
+		// Wire up the uncaptured-error and device-lost callbacks so wgpu
+		// validation/device errors surface in the engine log instead of being
+		// silently dropped (the old default wgpu handler only writes to stderr).
+		deviceDesc.uncapturedErrorCallbackInfo.callback = &WebGPUGraphicsDevice::OnDeviceError;
+		deviceDesc.uncapturedErrorCallbackInfo.userdata1 = this;
+
+		deviceDesc.deviceLostCallbackInfo.callback = &WebGPUGraphicsDevice::OnDeviceLost;
+		deviceDesc.deviceLostCallbackInfo.userdata1 = this;
+		deviceDesc.deviceLostCallbackInfo.mode = wgpu::CallbackMode::AllowSpontaneous;
+
 		m_device = m_adapter.requestDevice(deviceDesc);
 		HUSH_ASSERT(m_device, "Failed to request WebGPU device");
 
@@ -766,22 +777,32 @@ namespace Hush::Graphics
 		}
 	}
 
-	void WebGPUGraphicsDevice::OnDeviceError(WGPUErrorType type, char const *message, void * /*userdata*/)
+	void WebGPUGraphicsDevice::OnDeviceError(WGPUDevice const *device, WGPUErrorType type, WGPUStringView message,
+											 void *userdata, void * /*userdata2*/)
 	{
-		LogFormat(ELogLevel::Error, "WebGPU Error ({}): {}", magic_enum::enum_name(type),
-				  message != nullptr ? message : "Unknown error");
+		(void)device;
+		auto *self = static_cast<WebGPUGraphicsDevice *>(userdata);
+		(void)self;
+		std::string_view msg = (message.data != nullptr && message.length != WGPU_STRLEN)
+								   ? std::string_view(message.data, message.length)
+								   : std::string_view(message.data);
+		LogFormat(ELogLevel::Error, "WebGPU Error ({}): {}", magic_enum::enum_name(type), msg);
 	}
 
-	void WebGPUGraphicsDevice::OnDeviceLost(WGPUDeviceLostReason reason, char const *message, void *userdata)
+	void WebGPUGraphicsDevice::OnDeviceLost(WGPUDevice const *device, WGPUDeviceLostReason reason,
+											WGPUStringView message, void *userdata, void * /*userdata2*/)
 	{
-		auto *device = static_cast<WebGPUGraphicsDevice *>(userdata);
+		(void)device;
+		auto *self = static_cast<WebGPUGraphicsDevice *>(userdata);
 
-		LogFormat(ELogLevel::Error, "WebGPU Device Lost ({}): {}", magic_enum::enum_name(reason),
-				  message != nullptr ? message : "Unknown reason");
+		std::string_view msg = (message.data != nullptr && message.length != WGPU_STRLEN)
+								   ? std::string_view(message.data, message.length)
+								   : std::string_view(message.data);
+		LogFormat(ELogLevel::Error, "WebGPU Device Lost ({}): {}", magic_enum::enum_name(reason), msg);
 
-		if (device != nullptr)
+		if (self != nullptr)
 		{
-			device->m_initialized = false;
+			self->m_initialized = false;
 		}
 	}
 

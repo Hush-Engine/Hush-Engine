@@ -13,6 +13,8 @@
 #include <webgpu.h>
 #endif
 #include <webgpu/webgpu.hpp>
+#include <functional>
+#include <thread>
 
 namespace Hush::Graphics
 {
@@ -47,6 +49,7 @@ namespace Hush::Graphics
 #ifndef HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
 #endif
+		(void)device;
 		if (m_mappedData != nullptr)
 		{
 			return m_mappedData;
@@ -108,6 +111,8 @@ namespace Hush::Graphics
 #elif defined(WEBGPU_BACKEND_WGPU)
 		m_buffer.mapAsync(mapMode, 0, m_descriptor.size, callbackInfo);
 		// On WGPU-native, we need to poll events to ensure the mapAsync callback is processed.
+		// Note: wgpuInstanceWaitAny is unimplemented in this prebuilt wgpu-native build (panics
+		// with "not implemented" at src\unimplemented.rs), so a future-based wait is not usable.
 		[[maybe_unused]]
 		auto *webGpuGraphicsDevice = dynamic_cast<WebGPUGraphicsDevice *>(device);
 		webGpuGraphicsDevice->PollEvents();
@@ -138,6 +143,9 @@ namespace Hush::Graphics
 
 		m_mappedData = m_buffer.getMappedRange(0, m_descriptor.size);
 
+		LogFormat(ELogLevel::Trace, "WebGPU buffer mapped size={} ptr={} on thread {}", m_descriptor.size,
+				  static_cast<void *>(m_mappedData), std::hash<std::thread::id>{}(std::this_thread::get_id()));
+
 		return m_mappedData;
 	}
 
@@ -147,6 +155,9 @@ namespace Hush::Graphics
 		{
 			return;
 		}
+
+		LogFormat(ELogLevel::Trace, "WebGPU buffer unmapping size={} ptr={} on thread {}", m_descriptor.size,
+				  static_cast<void *>(m_mappedData), std::hash<std::thread::id>{}(std::this_thread::get_id()));
 
 		m_buffer.unmap();
 		m_mappedData = nullptr;

@@ -223,6 +223,14 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 	indexRef.clear();
 	vertexRef.clear();
 
+	// The mesh is shared (ref-counted) across every MeshReference that points
+	// at it, so re-importing the same glTF appends a duplicate surface on each
+	// drop unless we clear the list first. Without this, the second drop of the
+	// same model doubles the surfaces and the draw list, which (combined with a
+	// cache that used to rebuild per-surface) leaked a freed bind-group pointer
+	// into the first draw.
+	innerMeshRef->GetSurfaces().clear();
+
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
 		size_t initialVertex = vertexRef.size();
