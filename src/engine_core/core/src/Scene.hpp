@@ -81,6 +81,9 @@ namespace Hush
 
 		~Scene();
 
+		/// Must be called before Init
+		void HookEvents();
+
 		/// Init is called when the scene is initialized.
 		void Init();
 

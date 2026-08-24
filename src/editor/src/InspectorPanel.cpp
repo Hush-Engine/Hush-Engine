@@ -218,7 +218,8 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 {
 	using namespace Hush;
 	// Iterate over the properties of the type
-	ImGui::Text("%s (%llu)", &(compSerialInfo.name[0]), id);
+	std::string title = std::format("{}#{}", &(compSerialInfo.name[0]), id);
+	ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 
 	for (uint32_t i = 0; i < compSerialInfo.propertyCount; i++)
 	{

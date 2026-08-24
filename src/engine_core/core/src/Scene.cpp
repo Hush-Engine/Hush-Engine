@@ -56,33 +56,37 @@ Hush::Scene::~Scene()
 	}
 }
 
+void Hush::Scene::HookEvents()
+{
+	// Register an observer for our inspectable components
+	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
+													 [this](Entity::EntityId compId, InspectableComponent *) {
+														 // HACK: Add the serializable component to it
+														 this->m_registeredComponents.emplace_back(compId);
+													 });
+}
+
 void Hush::Scene::Init()
 {
 	ZoneScoped;
-	if (!this->m_isInitialized) {
-		// Register an observer for our inspectable components
-		this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
-														 [this](Entity::EntityId compId, InspectableComponent *) {
-															 // HACK: Add the serializable component to it
-															 this->m_registeredComponents.emplace_back(compId);
-														 });
+	if (!this->m_isInitialized)
+	{
 		// Skip built-in systems on re-call
 
 		for (const std::vector<ISystem *> &systemBucket : m_systems)
 		{
 
-	#if HUSH_PLATFORM_EMSCRIPTEN
+#if HUSH_PLATFORM_EMSCRIPTEN
 			for (ISystem *system : systemBucket)
 			{
 				system->Init();
 			}
-	#else
+#else
 			Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
 												   [](ISystem *system) { system->Init(); }));
-	#endif
+#endif
 		}
 	}
-
 
 	// TODO: Group user systems into buckets
 	if (this->m_scriptingInterface != nullptr)
@@ -584,27 +588,24 @@ Hush::Entity::EntityId Hush::Scene::AddEventObserverRaw(Entity::EntityId event, 
 	ecs_term_t queryTerm = {.id = EcsAny};
 	ecs_query_desc_t query = {.terms = {queryTerm}};
 
-
 	// TODO: Replace heap for arena allocator
-	ecs_observer_desc_t observerDesc = {
-		.query = query,
-		.events = {event},
-		.callback =
-			[](ecs_iter_t *it) {
-				if (it->count <= 0)
-				{
-					return;
-				}
-				Entity::EntityId eventEntity = it->entities[0];
+	ecs_observer_desc_t observerDesc = {.query = query,
+										.events = {event},
+										.callback =
+											[](ecs_iter_t *it) {
+												if (it->count <= 0)
+												{
+													return;
+												}
+												Entity::EntityId eventEntity = it->entities[0];
 
-				auto callback = reinterpret_cast<EntityEventCallback_t>(it->callback_ctx);
-				auto *scene = reinterpret_cast<Scene*>(it->run_ctx);
-				callback(eventEntity, scene);
-
-			},
-		.callback_ctx = reinterpret_cast<void *>(callback),
-		.run_ctx = reinterpret_cast<void*>(this)
-	};
+												auto callback =
+													reinterpret_cast<EntityEventCallback_t>(it->callback_ctx);
+												auto *scene = reinterpret_cast<Scene *>(it->run_ctx);
+												callback(eventEntity, scene);
+											},
+										.callback_ctx = reinterpret_cast<void *>(callback),
+										.run_ctx = reinterpret_cast<void *>(this)};
 
 	// So the observer can be removed
 	return ecs_observer_init(world, &observerDesc);

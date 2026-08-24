@@ -129,6 +129,9 @@ public:
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		auto windowSize = m_engine->GetWindowRenderer()->GetWindowSize();
 
+		// Must be the first thing to get called
+		this->m_scene->HookEvents();
+
 		this->m_scene->CreateEntityWithKey(EDITOR_CAMERA)
 			.EmplaceComponent<Hush::EditorCamera>(45.0f, static_cast<float>(windowSize.x),
 												  static_cast<float>(windowSize.y), 0.1f, 1000.0f);
