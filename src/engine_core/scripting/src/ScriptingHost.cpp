@@ -1,5 +1,6 @@
 #include "ScriptingHost.hpp"
 #include "Assertions.hpp"
+#include "Components/ComponentMetadata.hpp"
 #include "Components/Serializable.hpp"
 #include "LibManager.hpp"
 #include "Logger.hpp"
@@ -193,6 +194,8 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 
 		Entity comp = scene->EntityFromIdUnchecked(compId);
 
+		// Add the inspectable tag
+		comp.AddComponent<InspectableComponent>();
 		// Add serialization info from the comptime serialization
 		Serializable& ser = comp.AddComponent<Serializable>();
 		// The current model stores this info on static memory on the scripting side, so this pointer should be valid throughout the lifetime of the host

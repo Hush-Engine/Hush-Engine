@@ -10,11 +10,13 @@
 #include "Logger.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Ref.hpp"
+#include "ScriptingHost.hpp"
 #include "Shared/Camera.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
@@ -186,9 +188,13 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
 
-	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
-													   Entity &entity,
-													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each([this]([[maybe_unused]]
+																	  Entity &entity,
+																	  EditorInfo &infoRef,
+																	  ScriptingHost &scriptingHostRef) {
+		this->m_editorInfo = &infoRef;
+		this->m_scriptingHost = &scriptingHostRef;
+	});
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -205,6 +211,61 @@ const std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget() cons
 std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 {
 	return this->m_inspectTarget;
+}
+
+void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
+							  const Hush::ScriptingComponentSerializationInfo &compSerialInfo)
+{
+	using namespace Hush;
+	// Iterate over the properties of the type
+	ImGui::Text("%s (%llu)", &(compSerialInfo.name[0]), id);
+
+	for (uint32_t i = 0; i < compSerialInfo.propertyCount; i++)
+	{
+		const ScriptingComponentPropertyInfo* prop = &(compSerialInfo.properties[i]);
+		// Now we render depending on the type
+		uint8_t* ptrToSerialize = instance + prop->offset;
+		std::string_view propertyName = &(prop->name[0]);
+
+		switch (prop->type) {
+		case Hush::EComponentPropertyType::I8:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S8, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::U8:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U8, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::I16:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S16, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::U16:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U16, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::I32:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S32, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::U32:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U32, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::I64:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S64, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::U64:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U64, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::F32:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Float, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::F64:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
+			break;
+		case Hush::EComponentPropertyType::Bool:
+			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Bool, ptrToSerialize);
+			break;
+		default:
+			LogError("Type of property is not implemented for inspector serialization");
+			break;
+		}
+	}
 }
 
 // TODO: This probably should be a query on components that hold a function pointer on how to get serialized
@@ -235,5 +296,25 @@ void Hush::InspectorPanel::RenderProperties()
 	if (camComponent != nullptr)
 	{
 		Serialize(camComponent);
+	}
+
+	// Now, for any user defined components, we use the functions inside of their archetype
+	// HACK: Super bad awful approach
+	const std::vector<ScriptingComponentSerializationInfo> &serializableComps =
+		this->m_scriptingHost->GetAvailableComponentSerializationData();
+
+	for (const auto &compSerialInfo : serializableComps)
+	{
+		std::string_view compName = &(compSerialInfo.name[0]);
+
+		// PERF: THIS IS VERY BAD, WE ONLY DID THIS FOR THE JAM, BUT IT'S SUPER BAD
+		Entity::EntityId comp = this->m_activeScene->Lookup(compName);
+		if (!this->m_inspectTarget.value().HasComponentRaw(comp))
+		{
+			continue;
+		}
+
+		void *compMem = this->m_inspectTarget.value().GetComponentRaw(comp);
+		UserComponentRenderProps(comp, reinterpret_cast<uint8_t *>(compMem), compSerialInfo);
 	}
 }

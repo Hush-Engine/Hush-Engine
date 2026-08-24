@@ -353,27 +353,6 @@ void Hush::CommandPanel::AddComponentPopup()
 		popupState.options.emplace_back(ent.GetKey());
 	}
 
-	// BACKLOG: We look scripting components up by name here, but we should probably look them up by id or add
-	// the Inspectable component to them on registration instead. Component memory lives in the flecs storage,
-	// not the scripting's heap or stack.
-	if (this->m_scriptingHost != nullptr)
-	{
-		std::vector<ScriptingRegisteredTypeInfo> &scriptedComponents = this->m_scriptingHost->GetAvailableComponents();
-		allComponentIds.reserve(allComponentIds.size() + scriptedComponents.size());
-		for (const ScriptingRegisteredTypeInfo &typeInfo : scriptedComponents)
-		{
-			auto nameView = std::string_view(static_cast<const char *>(typeInfo.name));
-			Entity::EntityId compId = this->m_activeScene->Lookup(nameView);
-			if (compId == Entity::INVALID_ENTITY_ID)
-			{
-				// Warn
-				continue;
-			}
-			allComponentIds.emplace_back(compId);
-			popupState.options.emplace_back(typeInfo.name);
-		}
-	}
-
 	Entity &inspectedEntity = inspectTarget.value();
 
 	struct PopupCtx

@@ -31,7 +31,8 @@ glm::vec3 *Hush::Transform::GetPosition() noexcept
 	return reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
-glm::vec3 Hush::Transform::GetPositionValue() const noexcept {
+glm::vec3 Hush::Transform::GetPositionValue() const noexcept
+{
 	return *reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
