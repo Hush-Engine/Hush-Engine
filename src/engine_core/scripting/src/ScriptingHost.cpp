@@ -9,6 +9,8 @@
 #include "serialization/Formats/JsonSerializer.hpp"
 #include <cstdint>
 #include <cstring>
+#include <optional>
+#include <string_view>
 
 constexpr std::string_view START_SCRIPTING_CONNECTION = "StartScriptingConnection";
 constexpr std::string_view DISPOSE_SCRIPTING_CONNECTION = "DisposeScriptingConnection";
@@ -41,10 +43,12 @@ constexpr std::string_view CALL_SYSTEM_ON_POSTRENDER_FN_NAME = "CallSystemOnPost
 	} while (0)
 
 // NOLINTBEGIN
-inline size_t ScriptPropertyTypeGetSize(Hush::EComponentPropertyType type) {
+inline size_t ScriptPropertyTypeGetSize(Hush::EComponentPropertyType type)
+{
 	using namespace Hush;
 
-	switch (type) {
+	switch (type)
+	{
 	case Hush::EComponentPropertyType::Unknown:
 		LogError("Unsupported type from the compile time scripting side reflection!");
 		return size_t(-1);
@@ -78,20 +82,24 @@ inline size_t ScriptPropertyTypeGetSize(Hush::EComponentPropertyType type) {
 }
 
 // HACK: This macro ignores the error of the serializer
-#define WRITE_PROP_OF_TYPE(ptr, name, type, serializer) {\
-	type value {};\
-	value = *(reinterpret_cast<const type *>(ptr));\
-	(void)serializer.Serialize(name, value);\
-}
+#define WRITE_PROP_OF_TYPE(ptr, name, type, serializer)                                                                \
+	{                                                                                                                  \
+		type value{};                                                                                                  \
+		value = *(reinterpret_cast<const type *>(ptr));                                                                \
+		(void)serializer.Serialize(name, value);                                                                       \
+	}
 
-inline void ScriptSidePropertySerialize(const uint8_t* instance, const Hush::ScriptingComponentPropertyInfo* propInfo, Hush::Serialization::JsonSerializer& serializer) {
+inline void ScriptSidePropertySerialize(const uint8_t *instance, const Hush::ScriptingComponentPropertyInfo *propInfo,
+										Hush::Serialization::JsonSerializer &serializer)
+{
 	using namespace Hush;
 
 	uint32_t offset = propInfo->offset;
 
-	const uint8_t* ptrToRead = instance + offset;
+	const uint8_t *ptrToRead = instance + offset;
 
-	switch (propInfo->type) {
+	switch (propInfo->type)
+	{
 	case Hush::EComponentPropertyType::Unknown:
 		LogError("Unsupported type from the compile time scripting side reflection!");
 		break;
@@ -137,6 +145,123 @@ inline void ScriptSidePropertySerialize(const uint8_t* instance, const Hush::Scr
 
 #undef WRITE_PROP_OF_TYPE
 
+
+void ScriptSidePropertyDeserialize(uint8_t *instance,
+                                   const Hush::ScriptingComponentSerializationInfo *compSerialInfo,
+                                   Hush::Serialization::JsonDeserializer &deserializer)
+{
+    using namespace Hush;
+
+    // Consume the key (the current token must be EToken::Key)
+    std::string_view key = deserializer.GetKey();
+    if (key.empty())
+    {
+        // Error: unexpected token
+        return;
+    }
+
+    // Search for a matching property
+    for (uint32_t i = 0; i < compSerialInfo->propertyCount; i++)
+    {
+        const ScriptingComponentPropertyInfo *prop = &compSerialInfo->properties[i];
+        std::string_view propName(prop->name); // assuming prop->name is a null‑terminated char array
+
+        if (propName == key)
+        {
+            // Found – write the value
+            uint8_t *ptrToWrite = instance + prop->offset;
+
+            // The current token after ReadKey() is the value.
+            // Use the appropriate Read... method based on prop->type.
+            switch (prop->type)
+            {
+            case Hush::EComponentPropertyType::I8:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<int8_t*>(ptrToWrite) = static_cast<int8_t>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::U8:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<uint8_t*>(ptrToWrite) = static_cast<uint8_t>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::I16:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<int16_t*>(ptrToWrite) = static_cast<int16_t>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::U16:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<uint16_t*>(ptrToWrite) = static_cast<uint16_t>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::I32:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<int32_t*>(ptrToWrite) = static_cast<int32_t>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::U32:
+            {
+                *reinterpret_cast<uint32_t*>(ptrToWrite) = static_cast<uint32_t>(deserializer.GetUint());
+                break;
+            }
+            case Hush::EComponentPropertyType::I64:
+            {
+                int64_t temp;
+                deserializer.ReadInt(temp);
+                *reinterpret_cast<int64_t*>(ptrToWrite) = temp;
+                break;
+            }
+            case Hush::EComponentPropertyType::U64:
+                // NYI
+                break;
+            case Hush::EComponentPropertyType::F32:
+            {
+                double temp;
+                deserializer.ReadDouble(temp);
+                *reinterpret_cast<float*>(ptrToWrite) = static_cast<float>(temp);
+                break;
+            }
+            case Hush::EComponentPropertyType::F64:
+            {
+                double temp;
+                deserializer.ReadDouble(temp);
+                *reinterpret_cast<double*>(ptrToWrite) = temp;
+                break;
+            }
+            case Hush::EComponentPropertyType::Bool:
+            {
+                bool temp;
+                deserializer.ReadBool(temp);
+                *reinterpret_cast<bool*>(ptrToWrite) = temp;
+                break;
+            }
+            case Hush::EComponentPropertyType::String:
+            case Hush::EComponentPropertyType::Array:
+                // NYI
+                break;
+            default:
+                LogError("Unsupported type from compile‑time reflection!");
+                break;
+            }
+            return; // property handled
+        }
+    }
+
+    // Property not found – skip the entire value (scalar, object, or array)
+    deserializer.SkipValue();
+}
+
 void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFilesystem *vfs, Scene *scene)
 {
 	// TODO: reconcile with virtual filesystem
@@ -175,13 +300,14 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 	// This can be discarded
 	std::vector<Hush::ScriptingRegisteredTypeInfo> &comps = this->GetAvailableComponents();
 	// This one should stay
-	std::vector<ScriptingComponentSerializationInfo>& compSerialInfo = this->GetAvailableComponentSerializationData();
+	std::vector<ScriptingComponentSerializationInfo> &compSerialInfo = this->GetAvailableComponentSerializationData();
 
-	HUSH_ASSERT(comps.size() == compSerialInfo.size(), "Component registration info and serialization info should be parallel arrays (same size)");
+	HUSH_ASSERT(comps.size() == compSerialInfo.size(),
+				"Component registration info and serialization info should be parallel arrays (same size)");
 
 	for (size_t i = 0; i < compSerialInfo.size(); i++)
 	{
-		ScriptingComponentSerializationInfo& serializationInfo = compSerialInfo[i];
+		ScriptingComponentSerializationInfo &serializationInfo = compSerialInfo[i];
 
 		auto nameView = std::string_view(static_cast<const char *>(serializationInfo.name));
 
@@ -197,23 +323,52 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 		// Add the inspectable tag
 		comp.AddComponent<InspectableComponent>();
 		// Add serialization info from the comptime serialization
-		Serializable& ser = comp.AddComponent<Serializable>();
-		// The current model stores this info on static memory on the scripting side, so this pointer should be valid throughout the lifetime of the host
+		Serializable &ser = comp.AddComponent<Serializable>();
+		// The current model stores this info on static memory on the scripting side, so this pointer should be valid
+		// throughout the lifetime of the host
 		ser.ctx = &serializationInfo;
-		ser.serialize = [](const uint8_t* self, Serialization::JsonSerializer& serializer, void* ctx) {
-			auto* serializationInfo = reinterpret_cast<ScriptingComponentSerializationInfo*>(ctx);
+		ser.serialize = [](const uint8_t *self, Serialization::JsonSerializer &serializer, void *ctx) {
+			auto *serializationInfo = reinterpret_cast<ScriptingComponentSerializationInfo *>(ctx);
 
 			uint32_t propCount = serializationInfo->propertyCount;
 
-			for (uint32_t i = 0; i < propCount; i++) {
-				ScriptingComponentPropertyInfo* propInfo = &(serializationInfo->properties[i]);
+			for (uint32_t i = 0; i < propCount; i++)
+			{
+				ScriptingComponentPropertyInfo *propInfo = &(serializationInfo->properties[i]);
 				ScriptSidePropertySerialize(self, propInfo, serializer);
 			}
 
 			return Serializable::EError::None;
 		};
+
 		// TODO: Deserialize
-	
+		ser.deserialize = [](uint8_t *self, Serialization::JsonDeserializer &deserializer, void *ctx) {
+		    auto *serializationInfo = reinterpret_cast<ScriptingComponentSerializationInfo *>(ctx);
+		    deserializer.Next();
+
+		    while (deserializer.Next())
+		    {
+		        auto token = deserializer.GetToken();
+
+		        if (token == Serialization::JsonDeserializer::EToken::ObjectEnd)
+		        {
+		            break; // done with this object
+		        }
+
+		        if (token == Serialization::JsonDeserializer::EToken::Key)
+		        {
+		            // The function will read the key and then the value (or skip it)
+		            ScriptSidePropertyDeserialize(self, serializationInfo, deserializer);
+		        }
+		        else
+		        {
+		            // Unexpected token (shouldn't happen in valid JSON) – skip it
+		            deserializer.SkipValue();
+		        }
+		    }
+
+		    return Serializable::EError::None;
+		};		
 	}
 }
 // NOLINTEND
