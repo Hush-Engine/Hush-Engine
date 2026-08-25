@@ -33,6 +33,7 @@ namespace Hush
 		[[nodiscard]]
 		const glm::vec3 *GetPosition() const noexcept;
 
+		[[hush::export]]
 		glm::vec3 *GetPosition() noexcept;
 
 		[[hush::export]]

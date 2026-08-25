@@ -5,6 +5,7 @@
 #include "Components/WorldTransform.hpp"
 #include "CookerService.hpp"
 #include "Entity.hpp"
+#include "HushBindings.hpp"
 #include "ISystem.hpp"
 #include "Loaders/CrossLoaderDefinitions.hpp"
 #include "Query.hpp"
@@ -13,6 +14,7 @@
 #include "Shared/Camera.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
 #include "VirtualFilesystem.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
@@ -97,6 +99,10 @@ namespace Hush
 
 		/// @brief Default PBR material descriptor for instancing any other material
 		Graphics::Material3DDescriptor &GetPBRDescriptor();
+
+		const RenderingContext* GetRenderingContext() {
+			return &this->m_renderingContext;
+		}
 
 	private:
 		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);

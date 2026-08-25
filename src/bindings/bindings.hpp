@@ -17,5 +17,6 @@
 #include "Scene.hpp"
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
 
 // NOLINTEND

@@ -302,6 +302,9 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		void *GetComponentRaw(EntityId componentId);
 
+		[[nodiscard]] [[hush::export]]
+		const void *GetComponentConstRaw(EntityId componentId) const;
+
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.

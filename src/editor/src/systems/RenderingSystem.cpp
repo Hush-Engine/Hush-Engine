@@ -3,6 +3,7 @@
 #include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
@@ -34,9 +35,11 @@
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
 #include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
+#include "crypto/Hashing.hpp"
 #include <cstdint>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
@@ -53,6 +56,9 @@
 #include "serialization/Serialization.hpp"
 
 using namespace Hush::Graphics;
+
+// HACK: hacky function, see its implementation for details
+Hush::Entity::EntityId InstantiateMeshEntities(const char* virtualPath, void* instance);
 
 void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
 {
@@ -353,6 +359,12 @@ void Hush::RenderingSystem::Init()
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
 	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();
 	renderingSystemRef = this;
+	auto &renderingSystemAPIRef = selfEntity.AddComponent<RenderingSystemAPI>();
+	renderingSystemAPIRef.instantiateMeshEntities = &::InstantiateMeshEntities;
+	renderingSystemAPIRef.instance = this;
+
+	// Expose the scripting-facing API through the interface component so scripts
+	// can query the RenderingSystemAPI component and call into the system.
 
 	// TODO: Check why we can't do Cache::All
 	this->m_renderableTargetsQuery =
@@ -650,6 +662,64 @@ void Hush::RenderingSystem::OnPreRender()
 
 void Hush::RenderingSystem::OnPostRender()
 {
+}
+
+// HACK: Utility for the user side API, this is, in fact, quite bad but it's because this
+// class should NOT belong to the editor at all
+Hush::Entity::EntityId InstantiateMeshEntities(const char* virtualPath, void* instance)
+{
+	using namespace Hush;
+	auto* self = reinterpret_cast<RenderingSystem*>(instance);
+	Scene &scene = self->GetScene();
+	ResourceManager *resourceManager = scene.GetEngine()->GetResourceManager();
+	VirtualFilesystem *vfs = scene.GetEngine()->GetVirtualFilesystem();
+
+	Entity entity = scene.CreateEntityWithName("RuntimeMesh");
+	entity.AddComponent<WorldTransform>();
+	entity.AddComponent<LocalTransform>();
+
+	// The mesh is keyed by the asset path so every instance of the same asset
+	// shares one Mesh (and later one set of GPU buffers).
+	const uint32_t resourceId = Hashing::Fnv1a(virtualPath);
+	Ref<Mesh> mesh = resourceManager->AllocateRefKnwonID<Mesh>(resourceId);
+	auto &meshRefComp = entity.EmplaceComponent<MeshReference>(mesh);
+	meshRefComp.SetResourcePath(virtualPath, "RuntimeMesh");
+
+	// Parse the cooked HAsset only once; later instances reuse the shared Mesh.
+	if (mesh->GetVertexBuffer().empty())
+	{
+		auto openRes = vfs->OpenFile(virtualPath);
+		HUSH_ASSERT(!openRes.has_error(), "InstantiateMeshEntities: cannot open '{}' (is the asset cooked?)",
+					virtualPath);
+		if (openRes.has_error())
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+
+		const size_t fileSize = openRes.value()->GetFileInfo().size;
+		std::vector<std::byte> buffer(fileSize);
+		auto readRes = openRes.value()->Read(buffer);
+		HUSH_ASSERT(!readRes.has_error(), "InstantiateMeshEntities: failed to read '{}'", virtualPath);
+		if (readRes.has_error())
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+
+		const bool loaded = HMeshLoader::LoadMeshFromBinary(buffer, &meshRefComp, self->GetRenderingContext());
+		HUSH_ASSERT(loaded, "InstantiateMeshEntities: '{}' is not a valid cooked mesh asset", virtualPath);
+		if (!loaded)
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+	}
+
+	// Let ResourceUploadSystem create + upload the GPU vertex/index buffers.
+	entity.AddComponent<Renderer::GpuUploadComponent>();
+
+	return entity.GetId();
 }
 
 std::string_view Hush::RenderingSystem::GetName() const

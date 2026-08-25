@@ -88,6 +88,12 @@ void *Hush::Entity::GetComponentRaw(EntityId componentId)
 	return ecs_get_mut_id(world, m_entityId, componentId);
 }
 
+const void *Hush::Entity::GetComponentConstRaw(EntityId componentId) const {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+
+	return ecs_get_id(world, m_entityId, componentId);
+}
+
 void *Hush::Entity::GetComponentRaw(EntityId componentId) const
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());

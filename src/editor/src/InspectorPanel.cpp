@@ -260,7 +260,7 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
 			break;
 		case Hush::EComponentPropertyType::Bool:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Bool, ptrToSerialize);
+			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool*>(ptrToSerialize));
 			break;
 		default:
 			LogError("Type of property is not implemented for inspector serialization");

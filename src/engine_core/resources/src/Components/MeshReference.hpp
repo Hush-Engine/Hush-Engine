@@ -28,7 +28,7 @@ namespace Hush
 	/// @brief Small wrapper around the `Mesh` data structure, internally, this is useful for caching using our
 	/// reference counting system
 	// This structure is intended as a bridge between cached resource data and the rendering pipeline
-	class [[hush::reflect]] MeshReference
+	class [[hush::reflect]] [[hush::export]] MeshReference
 	{
 		HUSH_GENERATED_BODY
 	public:
