@@ -15,8 +15,10 @@ Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, co
 void Hush::Transform::SetPosition(glm::vec3 position) noexcept
 {
 	this->m_transform[Mat4Math::TRANSLATION_COLUMN] = glm::vec4(position, 1.0F);
+	this->m_dirty = true;
 }
 
+// TODO: Remove these two functions, access should not skip the dirty flag
 const glm::vec3 *Hush::Transform::GetPosition() const noexcept
 {
 	// WARN: This is potentially undefined behaviour, but, should work for all compilers
@@ -36,7 +38,7 @@ glm::vec3 Hush::Transform::GetPositionValue() const noexcept
 	return *reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
-void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
+void Hush::Transform::SetScale(glm::vec3 scale) noexcept
 {
 	this->m_scale = scale;
 	this->m_dirty = true;

@@ -39,7 +39,8 @@ namespace Hush
 		[[hush::export]]
 		glm::vec3 GetPositionValue() const noexcept;
 
-		void SetScale(const glm::vec3 &scale) noexcept;
+		[[hush::export]]
+		void SetScale(glm::vec3 scale) noexcept;
 
 		[[nodiscard]]
 		const glm::vec3 &GetScale() const noexcept;

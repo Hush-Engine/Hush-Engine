@@ -47,6 +47,7 @@ namespace Hush
 		static bool FetchCharThisFrame(char *outChar);
 
 		/// @brief Gets the vector of the mouse's position in pixels
+		[[hush::export]]
 		static glm::vec2 GetMousePosition();
 
 		/// @brief Gets the vector of the mouse's acceleration in pixels/s^2
