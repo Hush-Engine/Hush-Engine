@@ -52,21 +52,22 @@ namespace Hush
 		[[nodiscard]]
 		glm::quat GetRotationQuat() const noexcept;
 
+		[[hush::export]]
 		void SetEulerAngles(const glm::vec3 &euler) noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 GetEulerAngles() const noexcept;
 
 		[[nodiscard]]
 		glm::mat3 GetRotationMatrix() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Forward() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Up() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Right() const noexcept;
 
 		void SetTransformationMatrix(const glm::mat4 &xform);

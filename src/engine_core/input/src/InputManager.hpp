@@ -51,6 +51,7 @@ namespace Hush
 		static glm::vec2 GetMousePosition();
 
 		/// @brief Gets the vector of the mouse's acceleration in pixels/s^2
+		[[hush::export]]
 		static glm::vec2 GetMouseAcceleration();
 
 		static const glm::vec2 &GetMouseScrollAcceleration();

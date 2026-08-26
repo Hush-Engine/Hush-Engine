@@ -22,7 +22,7 @@
 
 namespace Hush
 {
-	class [[hush::export, hush::reflect]] Camera
+	class [[hush::export]] [[hush::reflect]] Camera
 	{
 		HUSH_GENERATED_BODY
 	public:
