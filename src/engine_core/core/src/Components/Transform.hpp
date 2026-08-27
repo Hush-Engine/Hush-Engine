@@ -72,13 +72,17 @@ namespace Hush
 
 		void SetTransformationMatrix(const glm::mat4 &xform);
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 GetTransformationMatrix() const;
 
-		[[nodiscard]]
+		// HACK: Temporary method for the jam because the generated Matrix4 has only 4 floats
+		[[hush::export]]
+		void GetTransformationMatrixUnsafe(float* outMatrix, size_t count) const;
+
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 XForm(const Transform &other) const;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 InvXForm(const Transform &other) const;
 
 		glm::mat4 operator*(const Transform &other) const;

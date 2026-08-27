@@ -387,12 +387,16 @@ void Hush::RenderingSystem::Init()
 	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
 
 	auto gamePanelQuery = this->GetScene().CreateQuery<const GamePanelSizeComp>(RawQuery::ECacheMode::None);
-	gamePanelQuery.Each([this](const GamePanelSizeComp &sizeComp) { this->m_cachedGameViewportSize = sizeComp.size; });
+	gamePanelQuery.Each([this](const GamePanelSizeComp &sizeComp) {
+		this->m_cachedGameViewportSize = sizeComp.size;
+		this->m_cachedGameViewportPosition = sizeComp.position;
+	});
 
 	this->GetScene().AddComponentObserver<GamePanelSizeComp>(
 		EComponentObserverType::Set, [this](Entity::EntityId entity, GamePanelSizeComp *panelSize) {
 			(void)entity;
 			this->m_cachedGameViewportSize = panelSize->size;
+			this->m_cachedGameViewportPosition = panelSize->position;
 		});
 
 	// We need to load the shaders here
@@ -493,6 +497,7 @@ void Hush::RenderingSystem::OnPreRender()
 	this->m_hasValidGameCamera = false;
 	this->m_gameCameraQuery.Each([this](Entity::EntityId, Camera &cam, WorldTransform &xform) {
 		cam.SetViewportSize((float)(this->m_cachedGameViewportSize.x), (float)(this->m_cachedGameViewportSize.y));
+		cam.SetViewportOffset(this->m_cachedGameViewportPosition);
 		glm::mat4 view = glm::inverse(xform.GetTransformationMatrix());
 		glm::mat4 proj = cam.GetProjectionMatrix();
 

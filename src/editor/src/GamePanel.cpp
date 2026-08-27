@@ -32,6 +32,16 @@ void Hush::GamePanel::OnRender(float deltaTime) noexcept
 
 	ImGui::Begin("Game", nullptr, GAME_PANEL_FLAGS);
 
+	// Capture the content-area origin in window space before any content is drawn.
+	// This is the offset needed to convert window-space mouse coords to viewport-relative NDC.
+	ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
+	glm::vec2 newPos = {cursorScreenPos.x, cursorScreenPos.y};
+	if (newPos != panelSize->position)
+	{
+		panelSize->position = newPos;
+		this->m_bridgeEntity.NotifyComponentModifiedRaw(this->m_panelSizeRef.GetComponentId());
+	}
+
 	// ── Track the panel's content region size every frame ────────────
 	ImVec2 availSize = ImGui::GetContentRegionAvail();
 

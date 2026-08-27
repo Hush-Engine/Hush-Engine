@@ -17,5 +17,6 @@ namespace Hush
 	struct GamePanelSizeComp
 	{
 		glm::u32vec2 size{};
+		glm::vec2 position{};  // top-left of content area in window space (for mouse NDC correction)
 	};
 } // namespace Hush

@@ -18,5 +18,6 @@
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"
 #include "Systems/RenderingSystemAPI.hpp"
+#include "Shared/Camera.hpp"
 
 // NOLINTEND

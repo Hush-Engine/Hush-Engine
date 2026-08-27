@@ -128,6 +128,7 @@ namespace Hush
 		// Game view (rendered from an entity's Camera component)
 		SceneData m_cachedGameSceneData{};
 		glm::u32vec2 m_cachedGameViewportSize{1, 1};
+		glm::vec2 m_cachedGameViewportPosition{};
 		bool m_hasValidGameCamera = false;
 
 		// Lighting
