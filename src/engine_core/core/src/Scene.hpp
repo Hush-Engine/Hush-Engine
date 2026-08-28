@@ -355,6 +355,8 @@ namespace Hush
 			// First, get the entity id, and check if the component is registered.
 			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
+			
+			LogFormat(ELogLevel::Info, "Registered comp {} with size {}", info.name, info.size);
 
 			return InternalRegisterCppComponent(status, componentId, info);
 		}

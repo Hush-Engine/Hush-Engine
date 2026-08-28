@@ -383,6 +383,31 @@ namespace Hush
 		[[nodiscard]] [[hush::export]]
 		bool IsAlive() const;
 
+		/// @brief Returns true if the given entity ID encodes a flecs relationship pair.
+		/// Flecs sets bit 63 (ECS_PAIR = 1ULL << 63) on all pair IDs. Pair components have
+		/// size zero and cannot be serialized like normal components.
+		[[nodiscard]]
+		static constexpr bool IsPairId(EntityId id) noexcept
+		{
+			return (id & (EntityId(1) << 63)) != 0;
+		}
+
+		/// Extracts the relation (first) 32-bit entity index from a pair ID.
+		/// Flecs encodes pairs as ECS_PAIR | (relation << 32) | target.
+		[[nodiscard]]
+		static constexpr EntityId GetPairFirst(EntityId id) noexcept
+		{
+			constexpr EntityId ID_FLAGS_MASK = EntityId(0xFF) << 56;
+			return (id & ~ID_FLAGS_MASK) >> 32;
+		}
+
+		/// Extracts the target (second) 32-bit entity index from a pair ID (lower 32 bits).
+		[[nodiscard]]
+		static constexpr EntityId GetPairSecond(EntityId id) noexcept
+		{
+			return id & EntityId(0xFFFFFFFF);
+		}
+
 	private:
 		friend class Scene;
 		friend class Query<>;

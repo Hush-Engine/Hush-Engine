@@ -46,7 +46,7 @@ void Hush::Transform::SetScale(glm::vec3 scale) noexcept
 	this->m_dirty = true;
 }
 
-const glm::vec3 &Hush::Transform::GetScale() const noexcept
+glm::vec3 Hush::Transform::GetScale() const noexcept
 {
 	return this->m_scale;
 }

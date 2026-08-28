@@ -139,15 +139,6 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 		Serialize(const_cast<Graphics::Material3D *>(currMat.Get()), i);
 	}
 
-	// for (size_t i = 0; i < surfaces.size(); i++)
-	// {
-	// 	const GeoSurface &surface = surfaces[i];
-	// 	if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
-	// 								ImGuiTreeNodeFlags_DefaultOpen))
-	// 	{
-	// 		Serialize(surface.material.get(), std::to_string(i).c_str());
-	// 	}
-	// }
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
@@ -263,7 +254,7 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool*>(ptrToSerialize));
 			break;
 		default:
-			LogError("Type of property is not implemented for inspector serialization");
+			// LogError("Type of property is not implemented for inspector serialization");
 			break;
 		}
 	}

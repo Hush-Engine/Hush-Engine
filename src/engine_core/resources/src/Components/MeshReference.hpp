@@ -1,13 +1,17 @@
 #pragma once
 
+#include "Assertions.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/TextureComponent.hpp"
 #include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
+#include "Vector3Math.hpp"
 #include "crypto/Hashing.hpp"
 
 #include <cstdint>
+#include <glm/ext/vector_float3.hpp>
+#include <limits>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
@@ -111,6 +115,10 @@ namespace Hush
 		{
 			return m_materialTextureRefs;
 		}
+
+		// BACKLOG: Make this return an AABB instead
+		[[hush::export]]
+		void CalculateBounds(glm::vec3 *outCenter, glm::vec3 *outSize);
 
 		// HACK: Temporary method, will allow us to load data from deserialization
 		void SetResourcePath(std::string_view path, std::string_view name)

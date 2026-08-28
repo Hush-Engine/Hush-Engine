@@ -42,8 +42,8 @@ namespace Hush
 		[[hush::export]]
 		void SetScale(glm::vec3 scale) noexcept;
 
-		[[nodiscard]]
-		const glm::vec3 &GetScale() const noexcept;
+		[[hush::export]] [[nodiscard]]
+		glm::vec3 GetScale() const noexcept;
 
 		glm::vec3 &GetScale() noexcept;
 

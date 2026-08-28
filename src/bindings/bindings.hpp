@@ -19,5 +19,6 @@
 #include "InputManager.hpp"
 #include "Systems/RenderingSystemAPI.hpp"
 #include "Shared/Camera.hpp"
+#include "Components/MeshReference.hpp"
 
 // NOLINTEND

@@ -28,6 +28,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
@@ -322,9 +323,11 @@ inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserialize
 		break;                                                                                                         \
 	}
 
-inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
-												 Hush::Serialization::JsonDeserializer &deserializer,
-												 Hush::Entity &entity)
+inline Hush::Scene::EError DeserializeComponents(
+	Hush::Scene *scene,
+	Hush::Serialization::JsonDeserializer &deserializer,
+	Hush::Entity &entity,
+	std::vector<std::pair<Hush::Entity::EntityId, Hush::Entity::EntityId>> *pendingPairs)
 {
 	using namespace Hush;
 	deserializer.Next(); // Skip the start of the array
@@ -352,6 +355,17 @@ inline Hush::Scene::EError DeserializeComponents(Hush::Scene *scene,
 		BREAK_LOOP_IF_NEEDED;
 		deserializer.ReadString(compKey);
 		BREAK_LOOP_IF_NEEDED;
+
+		// Pair IDs have bit 63 set and have zero size — they cannot be added as normal
+		// components. Defer them to the post-loop remapping pass.
+		auto savedCompId = static_cast<Entity::EntityId>(compId);
+		if (pendingPairs != nullptr && Entity::IsPairId(savedCompId))
+		{
+			pendingPairs->emplace_back(entity.GetId(), savedCompId);
+			deserializer.SkipObject();
+			BREAK_LOOP_IF_NEEDED;
+			continue;
+		}
 
 		// Get the component with that key
 		Entity comp = scene->CreateEntityWithKey(compKey);
@@ -384,12 +398,17 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
 	// This should be the entities array now
 	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	// Maps old session entity index (lower 32 bits of serialized ID) → new runtime entity ID.
+	std::unordered_map<Entity::EntityId, Entity::EntityId> idRemap;
+	// Relationship pairs deferred until all entities are created.
+	std::vector<std::pair<Entity::EntityId, Entity::EntityId>> pendingPairs;
+
 	// We are now on our object
 	while (deserializer.Next())
 	{
 		// Entity structure
 		// {"id": ##, "key": "...", "components": [...]}
-		int64_t id{}; // The ID is not entirely irrelevant, but for now it kinda is
+		int64_t id{};
 		deserializer.ReadKey(currKey);
 		deserializer.ReadInt(id);
 		std::string_view entKey;
@@ -405,7 +424,8 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 		{
 			ent = this->CreateEntityWithKey(entKey);
 		}
-		(void)ent;
+		// Record old entity index → new entity ID for relationship remapping.
+		idRemap[static_cast<Entity::EntityId>(id) & 0xFFFFFFFFULL] = ent.GetId();
 
 		// We don't care abt this one
 		deserializer.ReadKey(currKey);
@@ -416,9 +436,22 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 			continue;
 		}
 		Serialization::JsonDeserializer arrayDeser{compsArray};
-		DeserializeComponents(this, arrayDeser, ent);
+		DeserializeComponents(this, arrayDeser, ent, &pendingPairs);
 		deserializer.Next();
 	}
+
+	// Second pass: reconstruct relationship pairs with remapped entity IDs.
+	// Built-in flecs entities (e.g. EcsChildOf) are not in idRemap; fall back to their original ID.
+	auto *flecsWorld = static_cast<ecs_world_t *>(m_world);
+	for (const auto &[entityId, savedPairId] : pendingPairs)
+	{
+		Entity::EntityId oldFirst  = Entity::GetPairFirst(savedPairId);
+		Entity::EntityId oldSecond = Entity::GetPairSecond(savedPairId);
+		Entity::EntityId newFirst  = idRemap.count(oldFirst)  ? idRemap.at(oldFirst)  : oldFirst;
+		Entity::EntityId newSecond = idRemap.count(oldSecond) ? idRemap.at(oldSecond) : oldSecond;
+		ecs_add_id(flecsWorld, entityId, ecs_pair(newFirst, newSecond));
+	}
+
 	(void)asset;
 	return EError::None;
 }
@@ -440,7 +473,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 	serialErr = jsonSerializer.BeginObject();
 	serialErr = jsonSerializer.SetKey("entities");
 	serialErr = jsonSerializer.BeginArray();
-	q.Each([world, serializableId, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
+	q.Each([world, serializableId, scene = this, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
 		(void)xform;
 		serialErr = jsonSerializer.BeginObject();
 		serialErr = jsonSerializer.Serialize("id", ent.GetId());
@@ -450,7 +483,20 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 
 		serialErr = jsonSerializer.SetKey("components");
 		serialErr = jsonSerializer.BeginArray();
-		ent.EachId([world, serializableId, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+		ent.EachId([world, serializableId, scene, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+			// Pairs have size 0; ecs_get_id would assert. Serialize just the id so
+			// deserialization can detect them via IsPairId and remap old→new entity indices.
+			// Cast to int64_t so rapidjson writes a signed int that ReadInt can parse back
+			// (the pair ID has bit 63 set and would exceed INT64_MAX as unsigned).
+			if (Entity::IsPairId(comp))
+			{
+				constexpr std::string_view emptyString;
+				serialErr = jsonSerializer.BeginObject();
+				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
+				serialErr = jsonSerializer.Serialize("key", emptyString);
+				serialErr = jsonSerializer.EndObject();
+				return;
+			}
 			serialErr = jsonSerializer.BeginObject();
 			const auto *rawComp = reinterpret_cast<const uint8_t *>(ecs_get_id(world, ent.GetId(), comp));
 			// Serialize comp to JSON
