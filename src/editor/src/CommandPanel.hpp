@@ -3,6 +3,7 @@
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
 #include "ScriptingHost.hpp"
+#include "SystemSelection.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
 #include <cstdint>
@@ -93,6 +94,8 @@ namespace Hush
 		int32_t m_selectedItem = -1;
 
 		bool m_keyboardFocusSet = false;
+
+		SystemSelection::State m_systemSelectionState;
 
 		std::vector<std::string_view> m_currentlyAvailableCommands;
 

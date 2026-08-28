@@ -82,7 +82,7 @@ void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
 		break;
 	case EState::AddSystemMode: {
 		bool popupOpen =
-			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedItem);
+			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_systemSelectionState);
 		if (!popupOpen)
 		{
 			this->CloseCommandMode();
@@ -156,6 +156,7 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_selectedCommandIdx = -1;
 	this->m_selectedItem = -1;
 	this->m_keyboardFocusSet = false;
+	this->m_systemSelectionState.Clear();
 	if (this->m_editorInfo->currentState == EEditorState::CommandMode)
 	{
 		this->m_editorInfo->currentState = EEditorState::None;

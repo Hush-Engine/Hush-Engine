@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <vector>
 
 namespace Hush
 {
@@ -11,7 +11,13 @@ namespace Hush
 
 namespace Hush::SystemSelection
 {
+	struct State
+	{
+		std::vector<bool> checked;
 
-	bool RenderSystemListWindow(Scene *scene, ScriptingHost *scriptingHost, int32_t *selectedSystemIndex);
+		void Clear() { std::fill(checked.begin(), checked.end(), false); }
+	};
+
+	bool RenderSystemListWindow(Scene *scene, ScriptingHost *scriptingHost, State *state);
 
 }

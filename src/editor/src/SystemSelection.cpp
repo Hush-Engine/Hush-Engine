@@ -18,10 +18,15 @@ constexpr float MAX_ROW_HEIGHT = 28.0f;
 constexpr int32_t IDEAL_ROWS = 6; // target rows before spilling to a new column
 
 bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::ScriptingHost *scriptingHost,
-												   int32_t *selectedSystemIndex)
+												   State *state)
 {
-	HUSH_ASSERT(selectedSystemIndex != nullptr, "A pointer to the selected / desired system is needed");
+	HUSH_ASSERT(state != nullptr, "A valid SystemSelection::State is needed");
 	const std::vector<ScriptingRegisteredTypeInfo> &items = scriptingHost->GetAvailableSystems();
+
+	if (state->checked.size() != items.size())
+	{
+		state->checked.assign(items.size(), false);
+	}
 	ImGui::SetNextWindowSize(ImVec2(520, 480), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSizeConstraints(ImVec2(300, 200), ImVec2(FLT_MAX, FLT_MAX));
 
@@ -107,12 +112,10 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 			}
 
 			ImGui::PushID(items[idx].registryIndex);
-			bool selected = *selectedSystemIndex >= 0 && idx == static_cast<size_t>(*selectedSystemIndex);
-			ImGui::Selectable(items[idx].name, &selected, 0, ImVec2(colW, rowH));
-			if (selected)
-			{
-				*selectedSystemIndex = static_cast<int32_t>(idx);
-			}
+			ImGui::SetNextItemWidth(colW);
+			bool check = state->checked[idx];
+			ImGui::Checkbox(items[idx].name, &check);
+			state->checked[idx] = check;
 			ImGui::PopID();
 		}
 	}
@@ -137,23 +140,47 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.57f, 1.00f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.40f, 0.80f, 1.0f));
 
+	bool anyChecked = false;
+	for (bool c : state->checked)
+	{
+		anyChecked = anyChecked || c;
+	}
+
+	if (!anyChecked)
+	{
+		ImGui::BeginDisabled();
+	}
+
 	if (ImGui::Button("Add System", ImVec2(btnW, 0)))
 	{
-		// TODO: add
-		const ScriptingRegisteredTypeInfo &systemInfo = items[*selectedSystemIndex];
-		auto createResult = scriptingHost->CreateSystem(systemInfo);
-		if (createResult.has_error())
+		for (size_t i = 0; i < items.size(); ++i)
 		{
-			LogFormat(ELogLevel::Error, "Could not create system {}. Error: {}", systemInfo.name,
-					  magic_enum::enum_name(createResult.error()));
-		}
-		else
-		{
-			scene->AddScriptingSystem(createResult.value());
-			Entity toast = scene->CreateEntity();
-			toast.EmplaceComponent<ToastNotification>(std::string("Created system: ") + &(systemInfo.name[0]), 2.f, ToastNotification::EToastType::Info);
+			if (!state->checked[i])
+			{
+				continue;
+			}
+			const ScriptingRegisteredTypeInfo &systemInfo = items[i];
+			auto createResult = scriptingHost->CreateSystem(systemInfo);
+			if (createResult.has_error())
+			{
+				LogFormat(ELogLevel::Error, "Could not create system {}. Error: {}", systemInfo.name,
+						  magic_enum::enum_name(createResult.error()));
+			}
+			else
+			{
+				scene->AddScriptingSystem(createResult.value());
+				Entity toast = scene->CreateEntity();
+				toast.EmplaceComponent<ToastNotification>(
+					std::string("Created system: ") + &(systemInfo.name[0]), 2.f,
+					ToastNotification::EToastType::Info);
+			}
 		}
 		shouldKeepOpen = false;
+	}
+
+	if (!anyChecked)
+	{
+		ImGui::EndDisabled();
 	}
 
 	ImGui::PopStyleColor(3);
