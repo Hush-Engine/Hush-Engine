@@ -20,6 +20,7 @@ hush_add_library(
              src/Systems/RenderingSystemAPI.hpp
 
              src/Shared/Camera.cpp
+             src/Shared/Camera.hpp
              # src/Shared/ImageTexture.cpp
              src/Shared/EditorCamera.cpp
              src/Shared/DirectionalLight.hpp
