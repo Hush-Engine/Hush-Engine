@@ -10,6 +10,7 @@
 #include "Scene.hpp"
 
 #include <cstdint>
+#include <cstring>
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include <flecs/private/api_types.h>
@@ -46,9 +47,10 @@ void Hush::Entity::NotifyComponentModifiedRaw(Entity::EntityId componentId)
 	ecs_modified_id(world, this->m_entityId, componentId);
 }
 
-void Hush::Entity::EmitEvent(Entity::EntityId event) {
+void Hush::Entity::EmitEvent(Entity::EntityId event)
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
-	ecs_event_desc_t desc {
+	ecs_event_desc_t desc{
 		.event = event,
 		.entity = this->GetId(),
 	};
@@ -88,7 +90,8 @@ void *Hush::Entity::GetComponentRaw(EntityId componentId)
 	return ecs_get_mut_id(world, m_entityId, componentId);
 }
 
-const void *Hush::Entity::GetComponentConstRaw(EntityId componentId) const {
+const void *Hush::Entity::GetComponentConstRaw(EntityId componentId) const
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 
 	return ecs_get_id(world, m_entityId, componentId);
@@ -241,6 +244,30 @@ std::string_view Hush::Entity::GetKey() const
 		return {EMPTY_STR};
 	}
 	return std::string_view{rawName};
+}
+
+std::string_view Hush::Entity::QueryName() const
+{
+	const Entity::Name *name = this->GetComponent<Entity::Name>();
+	if (name == nullptr)
+	{
+		return {EMPTY_STR};
+	}
+	return name->GetName();
+}
+
+void Hush::Entity::GetKey(std::span<char> buffer) const
+{
+	std::string_view key = this->GetKey();
+	HUSH_COND_FAIL_MSG(buffer.size() >= key.size(), "Buffer to copy Key does not have the capacity for: {}", key);
+	std::memcpy(buffer.data(), key.data(), buffer.size());
+}
+
+void Hush::Entity::QueryName(std::span<char> buffer) const
+{
+	std::string_view name = this->QueryName();
+	HUSH_COND_FAIL_MSG(buffer.size() >= name.size(), "Buffer to copy name does not have the capacity for: {}", name);
+	std::memcpy(buffer.data(), name.data(), buffer.size());
 }
 
 bool Hush::Entity::IsAlive() const

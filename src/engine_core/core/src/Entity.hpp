@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <Hushgen.hpp>
 
@@ -373,6 +374,16 @@ namespace Hush
 
 		[[nodiscard]]
 		std::string_view GetKey() const;
+
+		[[nodiscard]]
+		std::string_view QueryName() const;
+
+		// HACK: To avoid exporting a string view
+		[[hush::export]]
+		void GetKey(std::span<char> buffer) const;
+
+		[[hush::export]]
+		void QueryName(std::span<char> buffer) const;
 
 		[[nodiscard]]
 		inline bool IsValid() const

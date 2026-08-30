@@ -490,10 +490,10 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 			// (the pair ID has bit 63 set and would exceed INT64_MAX as unsigned).
 			if (Entity::IsPairId(comp))
 			{
-				constexpr std::string_view emptyString;
+				constexpr const char* emptyStr = "";
 				serialErr = jsonSerializer.BeginObject();
 				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
-				serialErr = jsonSerializer.Serialize("key", emptyString);
+				serialErr = jsonSerializer.Serialize("key", std::string_view{emptyStr});
 				serialErr = jsonSerializer.EndObject();
 				return;
 			}
