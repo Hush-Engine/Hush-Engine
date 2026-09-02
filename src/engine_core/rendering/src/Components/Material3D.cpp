@@ -502,19 +502,21 @@ namespace Hush::Graphics
 	}
 
 	void Material3D::OnEachPropertyMut(
-		std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>)> callback)
+		std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>, int32_t propertyCount)> callback)
 	{
+		int32_t count = 0;
 		for (auto &entry : this->m_propertyMap)
 		{
 			// Get this uniform range
 			auto *start = reinterpret_cast<std::byte *>(this->m_uniformStagingBuffer.data() + entry.second.offset);
-			bool mutated = callback(entry.first, &entry.second, {start, entry.second.size});
+			bool mutated = callback(entry.first, &entry.second, {start, entry.second.size}, count);
 			// Only on true
 			if (mutated)
 			{
 				this->m_propertiesDirty = true;
 			}
-		}
+			count++;
+ 		}
 	}
 
 	uint64_t Material3D::GetUniformBufferSize() const noexcept

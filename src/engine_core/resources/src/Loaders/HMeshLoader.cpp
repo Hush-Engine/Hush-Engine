@@ -106,7 +106,6 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		// Otherwise, create it
 		auto matName = std::string_view(&(materialInfo[i].name[0]));
 		existingMat = resourceManager->AllocateRefKnwonID<Graphics::Material3D>(materialInfo[i].resource);
-		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		existingMat->SetMaterialPass(materialInfo[i].pass);
 		existingMat->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
 		// TODO: Make these reflect the .hshader metadata
@@ -114,6 +113,7 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		// existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
 		existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
 		existingMat->SetName(matName);
+		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		outRef->PushMaterial(existingMat);
 	}
 	const size_t matDataSize = sizeof(HMeshMaterialInfo) * header->materialCount;

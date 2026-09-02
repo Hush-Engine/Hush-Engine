@@ -252,7 +252,7 @@ struct FragmentOutput
 FragmentOutput fragMain(VertexOutput input)
 {
     float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
-    float alpha = texColor.w;
+    float alpha = texColor.w * materialData.colorFactors.a;
     if (alpha < materialData.alphaCutoff)
     {
         discard;
@@ -299,6 +299,10 @@ FragmentOutput fragMain(VertexOutput input)
     float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
 
     FragmentOutput o;
-    o.color = float4(ambient + directLight + emission, texColor.a);
+    vec3 finalColor = vec3(ambient + directLight + emission);
+    finalColor = finalColor / (finalColor + vec3(1.0f));
+    const float gamma = 1.0f;
+    finalColor = pow(finalColor, vec3(1.0f / gamma, 1.0f / gamma, 1.0f / gamma));
+    o.color = vec4(finalColor, alpha);
     return o;
 }

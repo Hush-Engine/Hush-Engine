@@ -74,15 +74,15 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 		ImGui::PopID();
 	};
 
-	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName,
-													  Graphics::MaterialPropertyInfo *infoRef,
-													  std::span<std::byte> uniformRange) {
+	component->OnEachPropertyMut([&drawPropertyFlags, idx](std::string_view propName,
+														   Graphics::MaterialPropertyInfo *infoRef,
+														   std::span<std::byte> uniformRange, int32_t propertyIndex) {
 		// NYI: We should still show something about this property, but have it collapsed and grayed out or something
 		if (Bitwise::HasCompositeFlag(infoRef->typeFlags, Graphics::EBindingDataTypeFlags::IsPrivate))
 		{
 			return false;
 		}
-		ImGui::PushID(propName.data());
+		ImGui::PushID(static_cast<int32_t>(idx));
 		Graphics::EBindingDataTypeFlags flags = infoRef->typeFlags;
 
 		// This indicates whether the material's CPU-side buffer was modified, NOT the property's flags or any other
@@ -100,7 +100,9 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			}
 			else
 			{
+				ImGui::PushID(propertyIndex);
 				wasModified = UI::Vec3Edit("##vec3", reinterpret_cast<float *>(uniformRange.data()));
+				ImGui::PopID();
 			}
 		}
 		else if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec4))
@@ -113,7 +115,9 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			}
 			else
 			{
+				ImGui::PushID(propertyIndex);
 				wasModified = UI::Vec4Edit("##vec4", reinterpret_cast<float *>(uniformRange.data()));
+				ImGui::PopID();
 			}
 		}
 
@@ -216,12 +220,13 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 
 	for (uint32_t i = 0; i < compSerialInfo.propertyCount; i++)
 	{
-		const ScriptingComponentPropertyInfo* prop = &(compSerialInfo.properties[i]);
+		const ScriptingComponentPropertyInfo *prop = &(compSerialInfo.properties[i]);
 		// Now we render depending on the type
-		uint8_t* ptrToSerialize = instance + prop->offset;
+		uint8_t *ptrToSerialize = instance + prop->offset;
 		std::string_view propertyName = &(prop->name[0]);
 
-		switch (prop->type) {
+		switch (prop->type)
+		{
 		case Hush::EComponentPropertyType::I8:
 			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S8, ptrToSerialize);
 			break;
@@ -253,7 +258,7 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
 			break;
 		case Hush::EComponentPropertyType::Bool:
-			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool*>(ptrToSerialize));
+			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
 			break;
 		default:
 			// LogError("Type of property is not implemented for inspector serialization");
