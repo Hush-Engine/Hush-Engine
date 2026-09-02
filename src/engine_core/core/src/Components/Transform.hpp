@@ -47,9 +47,10 @@ namespace Hush
 
 		glm::vec3 &GetScale() noexcept;
 
+		[[hush::export]]
 		void SetRotationQuat(const glm::quat &rotationQuat) noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::quat GetRotationQuat() const noexcept;
 
 		[[hush::export]]

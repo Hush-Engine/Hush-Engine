@@ -432,6 +432,7 @@ void Hush::RenderingSystem::Init()
 		.fragmentEntry = "fragMain",
 		.compilationResult = &this->m_pbrCompilationData,
 		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
+		.blendEnabled = true,
 	};
 
 	HushEngine *engine = this->GetScene().GetEngine();
@@ -904,7 +905,7 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 		meshDesc.primitive.cullMode = ECullModeFlags::Back;
 		meshDesc.primitive.frontFace = EFrontFace::CounterClockwise;
 
-		meshDesc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
+		meshDesc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM, .blendEnabled = true, .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}, .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 
 		meshDesc.depthStencil = {.enabled = true,
 								 .format = ETextureFormat::D32_FLOAT,

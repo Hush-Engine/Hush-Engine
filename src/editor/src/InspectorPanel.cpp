@@ -63,6 +63,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 	ImGui::Text("%s#%zu", name.data(), idx);
 
 	auto drawPropertyFlags = [](const char *label, Graphics::EBindingDataTypeFlags *typeFlags) {
+		ImGui::PushID(label);
 		if (UI::FlagsBegin(label))
 		{
 			UI::FlagItem("As Color", Graphics::EBindingDataTypeFlags::AsColor, typeFlags);
@@ -70,6 +71,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			UI::FlagsEnd();
 		}
 		ImGui::SameLine();
+		ImGui::PopID();
 	};
 
 	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName,

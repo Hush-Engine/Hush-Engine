@@ -45,7 +45,7 @@ namespace Hush::GLTFLoader
 	// only works if we assume the mesh is running the default PBR shader
 
 	/// @brief Describes all relevant information about the default PBR GLTF material, this is NOT meant for
-	/// rendering
+	/// rendering, this should be mirrored by HMeshLoader.cpp
 	struct MaterialInfo
 	{
 		// 63 + null
@@ -54,6 +54,7 @@ namespace Hush::GLTFLoader
 		uint32_t resource;
 		float alphaCutoff;
 		glm::vec4 albedo;
+		// glm::vec4 emission;
 		char name[MAX_MAT_NAME];
 	};
 

@@ -6,6 +6,7 @@
 #include "HAsset.hpp"
 #include "Logger.hpp"
 #include "ResourceManager.hpp"
+#include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
 #include "Shared/Mesh.hpp"
 #include "VirtualFilesystem.hpp"
@@ -42,6 +43,7 @@ struct HMeshMaterialInfo
 	uint32_t resource;
 	float alphaCutoff;
 	glm::vec4 albedo;
+	// glm::vec4 emission; // w for intensity
 	char name[MAX_MAT_NAME];
 };
 
@@ -106,8 +108,10 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		existingMat = resourceManager->AllocateRefKnwonID<Graphics::Material3D>(materialInfo[i].resource);
 		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		existingMat->SetMaterialPass(materialInfo[i].pass);
+		existingMat->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
 		// TODO: Make these reflect the .hshader metadata
 		existingMat->SetProperty("colorFactors", materialInfo[i].albedo);
+		// existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
 		existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
 		existingMat->SetName(matName);
 		outRef->PushMaterial(existingMat);

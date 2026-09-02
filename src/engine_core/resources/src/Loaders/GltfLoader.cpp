@@ -5,6 +5,7 @@
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "Shared/MaterialOptions.hpp"
 #include "crypto/Hashing.hpp"
 #include <algorithm>
 #include <cstring>
@@ -109,11 +110,16 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 
 			const fastgltf::Material &rawMaterial = gltfAsset->materials[meshMatIdx];
 			auto albedo = rawMaterial.pbrData.baseColorFactor;
+			const fastgltf::math::nvec3 &emission = rawMaterial.emissiveFactor;
+			(void)emission;
 			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
-			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
-								.resource = materialResourceId,
-								.alphaCutoff = rawMaterial.alphaCutoff,
-								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
+			MaterialInfo mat = {
+				.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
+				.resource = materialResourceId,
+				.alphaCutoff = rawMaterial.alphaCutoff,
+				.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()},
+				// .emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}
+			};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);
 
@@ -489,7 +495,6 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 
 	auto materialInstance = resourceManager->AllocateRef<Graphics::Material3D>(material.name);
 	materialInstance->SetMaterialPass(passType);
-
 	if (!materialInstance->IsInitialized())
 	{
 		Graphics::Material3D::EError err = materialInstance->Init(graphicsDevice, *defaultMaterialDesc);
@@ -501,11 +506,13 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	materialInstance->SetProperty("colorFactors",
 								  *reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
-															   material.emissiveFactor.z(), 1.0f));
+															   material.emissiveFactor.z(), material.emissiveStrength));
 	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
 	constexpr uint32_t useNormalsFlag = 1;
 	materialInstance->SetProperty("optionFlags", useNormalsFlag);
 	materialInstance->SetName(material.name);
+	materialInstance->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
+
 
 	// glTF PBR bindings: 1 = baseColor, 2 = metallicRoughness,
 	//                     3 = normal, 4 = emissive
