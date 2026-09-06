@@ -8,9 +8,11 @@
 #include "definitions/KeyData.hpp"
 #include "definitions/MouseButton.hpp"
 #include "definitions/MouseData.hpp"
+#include <array>
 #include <glm/vec2.hpp>
 #include <unordered_map>
 #include <HushBindings.hpp>
+#include <vector>
 namespace Hush
 {
 
@@ -58,7 +60,7 @@ namespace Hush
 
 		/* Methods to send events from SDL */
 
-		static void SendKeyEvent(KeyCode key, EKeyState state);
+		static void SendKeyEvent(KeyCode key, EKeyState state, uint64_t frame);
 
 		static void SendMouseButtonEvent(MouseButton mouseButton, EKeyState state);
 
@@ -78,7 +80,7 @@ namespace Hush
 	private:
 		// TODO: Reserve memory for this map???
 		// NOLINTNEXTLINE
-		static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
+		static std::vector<KeyData> S_KEY_DATA_BY_CODE;
 
 		// NOLINTNEXTLINE
 		static MouseData S_MOUSE_DATA;

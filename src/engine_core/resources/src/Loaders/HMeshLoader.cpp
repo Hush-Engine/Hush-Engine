@@ -43,7 +43,7 @@ struct HMeshMaterialInfo
 	uint32_t resource;
 	float alphaCutoff;
 	glm::vec4 albedo;
-	// glm::vec4 emission; // w for intensity
+	glm::vec4 emission; // w for intensity
 	char name[MAX_MAT_NAME];
 };
 
@@ -109,11 +109,11 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		existingMat->SetMaterialPass(materialInfo[i].pass);
 		existingMat->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
 		// TODO: Make these reflect the .hshader metadata
+		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		existingMat->SetProperty("colorFactors", materialInfo[i].albedo);
-		// existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
+		existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
 		existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
 		existingMat->SetName(matName);
-		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		outRef->PushMaterial(existingMat);
 	}
 	const size_t matDataSize = sizeof(HMeshMaterialInfo) * header->materialCount;
@@ -130,7 +130,7 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 	const auto *textureInfo = reinterpret_cast<const HMeshTextureInfo *>(rawData);
 	if (header->textureCount > 0)
 	{
-		const size_t consumed = static_cast<size_t>(rawData - modelData.data());
+		const auto consumed = static_cast<size_t>(rawData - modelData.data());
 		if (consumed > modelData.size())
 		{
 			return false;

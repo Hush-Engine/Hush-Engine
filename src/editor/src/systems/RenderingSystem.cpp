@@ -487,6 +487,7 @@ void Hush::RenderingSystem::OnPreRender()
 		this->m_cachedViewUniforms.pos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
 
 		// Scene data for mesh rendering
+		this->m_cachedSceneData.cameraPos = pos;
 		this->m_cachedSceneData.view = view;
 		this->m_cachedSceneData.proj = proj;
 		this->m_cachedSceneData.viewproj = viewProj;

@@ -118,7 +118,7 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 				.resource = materialResourceId,
 				.alphaCutoff = rawMaterial.alphaCutoff,
 				.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()},
-				// .emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}
+				.emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}
 			};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);

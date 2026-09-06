@@ -21,6 +21,7 @@ bool Hush::InputManager::IsKeyDown(EKeyCode key)
 
 bool Hush::InputManager::IsKeyDownThisFrame(EKeyCode key)
 {
+	LogFormat(ELogLevel::Info, "Key: {}, Key state: {}", magic_enum::enum_name(key), magic_enum::enum_name(S_KEY_DATA_BY_CODE[key].currentState));
 	return KeyMapContains(key) && S_KEY_DATA_BY_CODE[key].currentState == EKeyState::Pressed;
 }
 
@@ -71,10 +72,10 @@ const glm::vec2 &Hush::InputManager::GetMouseScrollAcceleration()
 	return S_MOUSE_DATA.wheelAcceleration;
 }
 
-void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state)
+void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state, uint64_t frame)
 {
 	auto mappedKeyCode = static_cast<EKeyCode>(key);
-	KeyData data{mappedKeyCode, state};
+	KeyData data{frame, mappedKeyCode, state};
 	// If the key is already inserted and the state is not none
 	if (KeyMapContains(mappedKeyCode))
 	{

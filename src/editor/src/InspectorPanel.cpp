@@ -90,6 +90,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 		bool wasModified = false;
 		bool asColor = Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::AsColor);
 
+		ImGui::PushID(propertyIndex);
 		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3))
 		{
 			drawPropertyFlags(propName.data(), &infoRef->typeFlags);
@@ -100,9 +101,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			}
 			else
 			{
-				ImGui::PushID(propertyIndex);
 				wasModified = UI::Vec3Edit("##vec3", reinterpret_cast<float *>(uniformRange.data()));
-				ImGui::PopID();
 			}
 		}
 		else if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec4))
@@ -115,12 +114,11 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			}
 			else
 			{
-				ImGui::PushID(propertyIndex);
 				wasModified = UI::Vec4Edit("##vec4", reinterpret_cast<float *>(uniformRange.data()));
-				ImGui::PopID();
 			}
 		}
 
+		ImGui::PopID();
 		ImGui::PopID();
 		return wasModified;
 	});
@@ -271,6 +269,10 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 // Also, every entity in the editor should probably have a list of how they ordered their components ???
 void Hush::InspectorPanel::RenderProperties()
 {
+	if (!this->m_inspectTarget->IsAlive()) {
+		this->m_inspectTarget.reset();
+		return;
+	}
 	Entity::Name *entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
 	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
 	ImGui::SeparatorText(entityName->GetName().data());

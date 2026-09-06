@@ -121,6 +121,8 @@ namespace Hush
 		/// scene that owns those allocations is gone, so no live object still references them.
 		void ResetSceneScopeMemory() noexcept;
 
+		uint64_t GetFrameNumber() const noexcept;
+
 	private:
 		void AddDefaultSystems();
 
@@ -131,6 +133,7 @@ namespace Hush
 		std::chrono::steady_clock::duration m_elapsed;
 
 		bool m_isApplicationRunning = false;
+		uint64_t m_frameNumber = 0;
 		static constexpr std::string_view ENGINE_WINDOW_NAME = "Hush Engine";
 	};
 } // namespace Hush

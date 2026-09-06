@@ -54,7 +54,7 @@ namespace Hush::GLTFLoader
 		uint32_t resource;
 		float alphaCutoff;
 		glm::vec4 albedo;
-		// glm::vec4 emission;
+		glm::vec4 emission;
 		char name[MAX_MAT_NAME];
 	};
 
