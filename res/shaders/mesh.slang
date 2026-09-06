@@ -20,6 +20,8 @@ struct SceneData
     float4 ambientColor;
     float4 sunlightDirection; // .w = sun power
     float4 sunlightColor;
+    vec3 cameraPos;
+    float _pad;
 };
 
 struct ModelData
@@ -120,11 +122,6 @@ float3 calculateTangentGramSchmidt(float3 normal, float3 tangent)
 float3 viewMatExtractFwd(float4x4 viewMatrix)
 {
     return float3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-}
-
-float3 viewMatExtractPos(float4x4 viewMatrix)
-{
-    return -float3(viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]);
 }
 
 float3 scalarPow(float3 v, float n)
@@ -287,7 +284,7 @@ FragmentOutput fragMain(VertexOutput input)
         return o;
     }
 
-    float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
+    float3 fragToCamDir = normalize(u_sceneData.cameraPos - input.outWorldPos);
     params.View = fragToCamDir;
     params.NdotV = max(dot(params.Normal, params.View), 0.0);
 
