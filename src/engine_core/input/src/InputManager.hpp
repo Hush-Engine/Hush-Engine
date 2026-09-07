@@ -22,9 +22,12 @@ namespace Hush
 		Locked = 1
 	};
 
+	// TODO: This will not be static anymore
 	class InputManager
 	{
 	public:
+		static void Init();
+
 		/// @brief Evaluates to true whilst the key is pressed down
 		[[hush::export]]
 		static bool IsKeyDown(EKeyCode key);
@@ -60,7 +63,7 @@ namespace Hush
 
 		/* Methods to send events from SDL */
 
-		static void SendKeyEvent(KeyCode key, EKeyState state, uint64_t frame);
+		static void SendKeyEvent(KeyCode key, EKeyState state);
 
 		static void SendMouseButtonEvent(MouseButton mouseButton, EKeyState state);
 
@@ -73,6 +76,8 @@ namespace Hush
 		static void ResetCharData();
 
 		static void SendCharEvent(char pressedChar);
+
+		static void MarkPressedKeysForNextFrame();
 
 		[[hush::export]]
 		static void SetCursorLock(ECursorLockMode lockMode);

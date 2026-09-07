@@ -1,8 +1,8 @@
 #include "InputManager.hpp"
-#include "Logger.hpp"
 #include "Platform.hpp"
 #include "definitions/KeyCode.hpp"
 #include "definitions/KeyStates.hpp"
+#include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include <SDL3/SDL_mouse.h>
 
@@ -10,29 +10,33 @@
 
 // TODO: Populate the map in the stack with all enums
 // NOLINTNEXTLINE
-std::unordered_map<Hush::EKeyCode, Hush::KeyData> Hush::InputManager::S_KEY_DATA_BY_CODE = {};
+std::vector<Hush::KeyData> Hush::InputManager::S_KEY_DATA_BY_CODE = {};
 // NOLINTNEXTLINE
 Hush::MouseData Hush::InputManager::S_MOUSE_DATA = {};
 
+void Hush::InputManager::Init()
+{
+	S_KEY_DATA_BY_CODE.resize((uint32_t)EKeyCode::SdlNumScancodes);
+}
+
 bool Hush::InputManager::IsKeyDown(EKeyCode key)
 {
-	return KeyMapContains(key) && IS_CURRENTLY_PRESSED(S_KEY_DATA_BY_CODE[key].currentState);
+	return IS_CURRENTLY_PRESSED(S_KEY_DATA_BY_CODE[(uint32_t)key].currentState);
 }
 
 bool Hush::InputManager::IsKeyDownThisFrame(EKeyCode key)
 {
-	LogFormat(ELogLevel::Info, "Key: {}, Key state: {}", magic_enum::enum_name(key), magic_enum::enum_name(S_KEY_DATA_BY_CODE[key].currentState));
-	return KeyMapContains(key) && S_KEY_DATA_BY_CODE[key].currentState == EKeyState::Pressed;
+	return S_KEY_DATA_BY_CODE[(uint32_t)key].currentState == EKeyState::Pressed;
 }
 
 bool Hush::InputManager::IsKeyUp(EKeyCode key)
 {
-	return KeyMapContains(key) && S_KEY_DATA_BY_CODE[key].currentState == EKeyState::Released;
+	return S_KEY_DATA_BY_CODE[(uint32_t)key].currentState == EKeyState::Released;
 }
 
 bool Hush::InputManager::IsKeyHeld(EKeyCode key)
 {
-	return KeyMapContains(key) && S_KEY_DATA_BY_CODE[key].currentState == EKeyState::Held;
+	return S_KEY_DATA_BY_CODE[(uint32_t)key].currentState == EKeyState::Held;
 }
 
 bool Hush::InputManager::GetMouseButtonPressed(EMouseButton button)
@@ -57,6 +61,19 @@ void Hush::InputManager::SendCharEvent(char pressedChar)
 	s_lastChar = pressedChar;
 }
 
+void Hush::InputManager::MarkPressedKeysForNextFrame()
+{
+	for (auto &ref : S_KEY_DATA_BY_CODE)
+	{
+		if (ref.currentState == EKeyState::Pressed)
+		{
+			// Will be marked as held, and it's SDL's job to mark it as released
+			ref.currentState = EKeyState::Held;
+			ref.previousState = EKeyState::Pressed;
+		}
+	}
+}
+
 glm::vec2 Hush::InputManager::GetMousePosition()
 {
 	return glm::vec2{S_MOUSE_DATA.positionX, S_MOUSE_DATA.positionY};
@@ -72,16 +89,13 @@ const glm::vec2 &Hush::InputManager::GetMouseScrollAcceleration()
 	return S_MOUSE_DATA.wheelAcceleration;
 }
 
-void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state, uint64_t frame)
+void Hush::InputManager::SendKeyEvent(KeyCode key, EKeyState state)
 {
 	auto mappedKeyCode = static_cast<EKeyCode>(key);
-	KeyData data{frame, mappedKeyCode, state};
+	KeyData data{mappedKeyCode, state};
 	// If the key is already inserted and the state is not none
-	if (KeyMapContains(mappedKeyCode))
-	{
-		UpdateKeyStateFromData(data, state);
-	}
-	S_KEY_DATA_BY_CODE.insert_or_assign(mappedKeyCode, data);
+	UpdateKeyStateFromData(data, state);
+	S_KEY_DATA_BY_CODE[(uint32_t)mappedKeyCode] = data;
 }
 
 void Hush::InputManager::SendMouseButtonEvent(MouseButton mouseButton, EKeyState state)
@@ -122,7 +136,7 @@ void Hush::InputManager::SetCursorLock(ECursorLockMode lockMode)
 void Hush::InputManager::UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState)
 {
 	// Check if we already had a current state in our entry, and if so, move that to the previous state
-	KeyData existingData = S_KEY_DATA_BY_CODE[keyData.code];
+	KeyData existingData = S_KEY_DATA_BY_CODE[(uint32_t)keyData.code];
 	if (existingData.currentState != EKeyState::None)
 	{
 		keyData.previousState = existingData.currentState;
@@ -133,11 +147,6 @@ void Hush::InputManager::UpdateKeyStateFromData(KeyData &keyData, EKeyState inco
 	{
 		keyData.currentState = EKeyState::Held;
 	}
-}
-
-bool Hush::InputManager::KeyMapContains(EKeyCode key)
-{
-	return S_KEY_DATA_BY_CODE.find(key) != S_KEY_DATA_BY_CODE.end();
 }
 
 bool Hush::InputManager::MouseMapContains(EMouseButton button)

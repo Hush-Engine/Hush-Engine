@@ -106,7 +106,7 @@ glm::u32vec2 Hush::WindowRenderer::GetWindowSize() noexcept
 	return {width, height};
 }
 
-void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Event &event, uint64_t frame)
+void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Event &event)
 {
 	// SDL_Event event;
 	KeyCode code = 0;
