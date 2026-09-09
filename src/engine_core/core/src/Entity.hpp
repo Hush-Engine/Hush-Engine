@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
@@ -107,8 +108,9 @@ namespace Hush
 
 			void SetName(std::string_view name)
 			{
-				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH,
-								   "Maximum character length for entity name was exceeded");
+				if (name.size() >= MAX_ENTITY_NAME_LENGTH) {
+					LogFormat(ELogLevel::Warn, "Maximum character length for entity name was exceeded");
+				}
 				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
 				std::copy_n(name.data(), copyLength, this->m_name.data());
 				// NOLINTNEXTLINE

@@ -34,13 +34,14 @@ namespace Hush
 	public:
 #pragma warning(push)
 #pragma warning(disable : 4324)
+		// NOTE (Nef): I removed alignas properties because it caused a mismatch with Slang's layout (we were expecting 64 bytes of stride and we ended up with 80)
 		struct Vertex
 		{
-			alignas(16) glm::vec3 position{};
-			alignas(16) glm::vec3 normal = Vector3Math::RIGHT;
-			alignas(16) glm::vec4 color = glm::vec4{1.f};
-			alignas(16) glm::vec4 tangent;
-			alignas(8) glm::vec2 uv{};
+			glm::vec3 position{};
+			glm::vec3 normal = Vector3Math::RIGHT;
+			glm::vec4 color = glm::vec4{1.f};
+			glm::vec4 tangent;
+			glm::vec2 uv{};
 		};
 
 #pragma warning(pop)

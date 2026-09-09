@@ -80,7 +80,8 @@ namespace Hush::GLTFLoader
 
 	GltfLoadFunctions::EError LoadAssetFromBinary(std::span<const std::byte> data, AssetHandle *outAsset);
 
-	void ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
+	// Returns true if TANGENT attributes were loaded from the glTF (so callers can skip CalculateTangentBasis).
+	bool ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
 						   const fastgltf::Mesh &mesh, const std::filesystem::path &basePath, Ref<Mesh> &innerMeshRef,
 						   MeshReference *meshRef = nullptr); // A MeshRefcomponent may or may not be present, for
 															  // either the entity or raw upload paths

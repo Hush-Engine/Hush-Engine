@@ -21,6 +21,7 @@
 #include <zstd.h>
 
 #include <stb/stb_image.h>
+#include <string>
 
 namespace
 {
@@ -347,7 +348,7 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 }
 
 Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> Hush::ResourceManager::
-	LoadTextureFromData(std::string_view name, std::span<const std::byte> data)
+	LoadTextureFromData(std::string_view name, std::span<const std::byte> data, Graphics::ETextureFormat format)
 {
 	const uint32_t nameHash = Hashing::Fnv1a(name);
 	const auto &iterator = this->m_loadedResources.find(nameHash);
@@ -372,7 +373,6 @@ Hush::Result<Hush::Ref<Hush::TextureComponent>, Hush::ResourceManager::EError> H
 		return EError::LoadFailed;
 	}
 
-	const Graphics::ETextureFormat format = Graphics::ETextureFormat::RGBA8_UNORM;
 	constexpr int depth = 1;
 
 	const size_t pixelDataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * kDesiredChannels;

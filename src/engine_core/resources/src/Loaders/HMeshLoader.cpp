@@ -8,6 +8,7 @@
 #include "ResourceManager.hpp"
 #include "Shared/MaterialOptions.hpp"
 #include "Shared/MaterialPass.hpp"
+#include "RHI/GraphicsTypes.hpp"
 #include "Shared/Mesh.hpp"
 #include "VirtualFilesystem.hpp"
 #include <cstddef>
@@ -108,11 +109,20 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		existingMat = resourceManager->AllocateRefKnwonID<Graphics::Material3D>(materialInfo[i].resource);
 		existingMat->SetMaterialPass(materialInfo[i].pass);
 		existingMat->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
+
+		// TODO: Encode cull mode
+		// existingMat->SetCullMode(material.doubleSided ? ECullMode::None : ECullMode::Front);
+		existingMat->SetCullMode(ECullMode::None);
 		// TODO: Make these reflect the .hshader metadata
 		existingMat->Init(renderingCtx->device, *renderingCtx->materialDescriptor);
 		existingMat->SetProperty("colorFactors", materialInfo[i].albedo);
 		existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
-		existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
+		// Cooked format doesn't store these — use passthrough defaults so texture values are used as-is
+		existingMat->SetProperty("metal_rough_factors", glm::vec4(1.0f, 1.0f, 0.0f, 0.0f));
+		existingMat->SetProperty("optionFlags", 1u); // USE_NORMALS_FLAG
+		if (materialInfo[i].pass == EMaterialPass::Mask) {
+			existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
+		}
 		existingMat->SetName(matName);
 		outRef->PushMaterial(existingMat);
 	}
@@ -194,7 +204,11 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 			// Dedup key must match the GLTF direct path (material name + "_" + binding name) so a
 			// re-cooked mesh shares the same TextureComponent as the original load.
 			std::string texUniqueName = std::string(mat->GetName()) + std::string("_") + std::string(&(tex.name[0]));
-			auto loadRes = resourceManager->LoadTextureFromData(texUniqueName, {texData.data(), tex.size});
+			// Binding 1 = albedo (sRGB-encoded); all others are linear data.
+			const Graphics::ETextureFormat texFormat = (tex.binding == 1)
+				? Graphics::ETextureFormat::RGBA8_SRGB
+				: Graphics::ETextureFormat::RGBA8_UNORM;
+			auto loadRes = resourceManager->LoadTextureFromData(texUniqueName, {texData.data(), tex.size}, texFormat);
 			if (loadRes.has_error())
 			{
 				continue;

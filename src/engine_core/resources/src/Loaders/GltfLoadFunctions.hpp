@@ -1,6 +1,8 @@
 #pragma once
 #include <fastgltf/core.hpp>
+#include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
+#include <fastgltf/glm_element_traits.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <glm/mat4x4.hpp>
@@ -57,6 +59,7 @@ namespace Hush::GltfLoadFunctions
 
 	Hush::Result<const std::byte *, EError> GetDataFromBufferSource(const fastgltf::Buffer &buffer);
 
+	// TODO: Make this an EachAttributeByName
 	template <class BufferType>
 	inline std::vector<BufferType> FindAttributeByName(const fastgltf::Primitive &primitive,
 													   const fastgltf::Asset &asset,
@@ -69,26 +72,10 @@ namespace Hush::GltfLoadFunctions
 			return result;
 		}
 		const fastgltf::Accessor &foundAccessor = asset.accessors[attribute->accessorIndex];
-		const fastgltf::BufferView &accessorBufferView = asset.bufferViews[foundAccessor.bufferViewIndex.value()];
-		const fastgltf::Buffer &buffer = asset.buffers[accessorBufferView.bufferIndex];
 		result.reserve(foundAccessor.count);
-		// Calculate the pointer to the start of the position data by using buffer, buffer view, and accessor offsets.
-		Result<const std::byte *, EError> bufferData = GetDataFromBufferSource(buffer);
-
-		if (bufferData.has_error())
-		{
-			LogFormat(ELogLevel::Warn, "{} Error! Could not read the data variant for the buffer, variant index: {}",
-					  magic_enum::enum_name(bufferData.error()), buffer.data.index());
-			return std::vector<BufferType>();
-		}
-
-		const auto *posData = reinterpret_cast<const BufferType *>(bufferData.value() + accessorBufferView.byteOffset +
-																   foundAccessor.byteOffset);
-
-		for (size_t i = 0; i < foundAccessor.count; ++i)
-		{
-			result.push_back(posData[i]);
-		}
+		fastgltf::iterateAccessor<BufferType>(asset, foundAccessor, [&result](BufferType val) {
+		    result.push_back(val);
+		});
 		return result;
 	}
 

@@ -882,6 +882,9 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 	{
 		SamplerDescriptor samplerDesc{};
 		samplerDesc.debugName = "DefaultMeshSampler";
+		samplerDesc.addressModeU = EAddressMode::Repeat;
+		samplerDesc.addressModeV = EAddressMode::Repeat;
+		samplerDesc.addressModeW = EAddressMode::Repeat;
 		m_defaultSampler = device->CreateSampler(samplerDesc);
 	}
 
