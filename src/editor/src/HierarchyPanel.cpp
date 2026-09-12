@@ -69,6 +69,33 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	this->HandleInput();
+	if (this->m_deletePopupOpen) {
+		// Add to the deletion queue
+		ImVec2 windowSize = ImGui::GetWindowViewport()->Size;
+		windowSize.x *= 0.5f;
+		windowSize.y *= 0.5f;
+		ImGui::SetNextWindowPos(windowSize);
+
+		ImGui::OpenPopup("Delete Entity");
+		ImGui::BeginPopup("Delete Entity", ImGuiWindowFlags_NoResize);
+
+		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		SelectedItemInfo& selection = editorInfo->currentSelection;
+		Entity ent = this->m_activeScene->EntityFromIdUnchecked(selection.value);
+		ImGui::Text("Are you sure you want to delete '%s' and all components associated with it?", ent.QueryName().data());
+		bool didSubmit = InputManager::IsKeyDownThisFrame(EKeyCode::KpEnter) || InputManager::IsKeyDownThisFrame(EKeyCode::RETURN);
+		if (ImGui::Button("Yes") || didSubmit) {
+			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
+			this->m_deletePopupOpen = false;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("No")) {
+			this->m_deletePopupOpen = false;
+		}
+		// Should we set the editorInfo comp to a selection of none??
+		ImGui::EndPopup();
+	}
+
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
@@ -102,9 +129,7 @@ void Hush::HierarchyPanel::HandleInput() {
 		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
 		SelectedItemInfo& selection = editorInfo->currentSelection;
 		if (selection.type == ESelectedItemType::Entity && selection.value != Entity::INVALID_ENTITY_ID) {
-			// Add to the deletion queue
-			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
-			// Should we set the editorInfo comp to a selection of none??
+			this->m_deletePopupOpen = true;
 		}
 	}
 }

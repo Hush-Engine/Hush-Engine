@@ -134,6 +134,34 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 	fileDialog->Close();
 }
 
+void Hush::TitleBarMenuPanel::TriggerLoadScene() {
+	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
+
+	// BACKLOG: Use our own file dialog instead of ImGui's
+	IGFD::FileDialogConfig config;
+
+	VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
+	auto pathResolveRes = vfs->ResolveHostPath("res://");
+	HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
+
+	config.path = pathResolveRes.value().string();
+	fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
+}
+
+void Hush::TitleBarMenuPanel::TriggerSaveScene() {
+	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
+
+	// BACKLOG: Use our own file dialog instead of ImGui's
+	IGFD::FileDialogConfig config;
+
+	VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
+	auto pathResolveRes = vfs->ResolveHostPath("res://");
+	HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
+
+	config.path = pathResolveRes.value().string();
+	fileDialog->OpenDialog("SceneSave", "Save Scene As...", ".hscene", config);
+}
+
 void Hush::TitleBarMenuPanel::FileMenuOptions()
 {
 	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
@@ -147,6 +175,13 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 		this->LoadSceneDialog(fileDialog);
 	}
 
+	if (ImGui::IsKeyChordPressed(ImGuiKey_O | ImGuiMod_Ctrl)) {
+		this->TriggerLoadScene();
+	}
+	if (ImGui::IsKeyChordPressed(ImGuiKey_S | ImGuiMod_Shift | ImGuiMod_Ctrl)) {
+		this->TriggerSaveScene();
+	}
+
 	if (!ImGui::BeginMenu("File"))
 	{
 		return;
@@ -157,15 +192,7 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 	}
 	if (ImGui::MenuItem("Open Scene", "Ctrl+O"))
 	{
-		// BACKLOG: Use our own file dialog instead of ImGui's
-		IGFD::FileDialogConfig config;
-
-		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
-		auto pathResolveRes = vfs->ResolveHostPath("res://");
-		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
-
-		config.path = pathResolveRes.value().string();
-		fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
+		TriggerLoadScene();
 	}
 	if (ImGui::MenuItem("Save", "Ctrl+S"))
 	{
@@ -173,15 +200,7 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 	}
 	if (ImGui::MenuItem("Save Scene As...", "Ctrl+Shift+S"))
 	{
-		// BACKLOG: Use our own file dialog instead of ImGui's
-		IGFD::FileDialogConfig config;
-
-		VirtualFilesystem *vfs = this->m_activeScene->GetEngine()->GetVirtualFilesystem();
-		auto pathResolveRes = vfs->ResolveHostPath("res://");
-		HUSH_RESULT_ASSERT(pathResolveRes, "Could not resolve virtual filesystem! This should never happen");
-
-		config.path = pathResolveRes.value().string();
-		fileDialog->OpenDialog("SceneSave", "Save Scene As...", ".hscene", config);
+		TriggerSaveScene();
 	}
 
 	if (ImGui::BeginMenu("Settings"))

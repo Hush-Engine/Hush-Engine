@@ -30,6 +30,7 @@ namespace Hush
 		Scene *m_activeScene;
 		ComponentRef m_editorInfo;
 		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
+		bool m_deletePopupOpen = false;
 
 		// Small helper WITH recursion
 		// PERF: Remove recursion from this function
