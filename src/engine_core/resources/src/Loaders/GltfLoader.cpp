@@ -103,6 +103,13 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			outVertexBuffer->at(i + initialVertex).color = colors.at(i);
 		}
 
+		std::vector<glm::vec4> tangentBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec4>(primitive, *gltfAsset, "TANGENT");
+		for (uint32_t i = 0; i < tangentBuffer.size(); i++)
+		{
+			outVertexBuffer->at(i + initialVertex).tangent = tangentBuffer.at(i);
+		}
+
 		if (primitive.materialIndex.has_value())
 		{
 			size_t meshMatIdx = primitive.materialIndex.value();

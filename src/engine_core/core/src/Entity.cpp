@@ -6,6 +6,7 @@
 #include "Entity.hpp"
 #include "Assertions.hpp"
 #include "EcsTerms.hpp"
+#include "EntityManagerSystem.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
 
@@ -149,6 +150,14 @@ void Hush::Entity::Destroy(Entity &&entity)
 	Scene *scene = entity.m_ownerScene;
 
 	scene->DestroyEntity(std::move(entity));
+}
+
+void Hush::Entity::QueueDestroy(Entity &&entity) {
+	if (!entity.IsAlive()) {
+		// Something beat us to the deletion
+		return;
+	}
+	entity.AddComponent<EntityMarkedForDeletion>();
 }
 
 void Hush::Entity::SetParent(const Entity &parent)

@@ -1,11 +1,13 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/Transform.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
 #include "Logger.hpp"
 #include "RHI/ShaderCompiler.hpp"
@@ -182,18 +184,21 @@ void Hush::InspectorPanel::OnRender([[maybe_unused]] float deltaTime)
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
-
-	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each([this]([[maybe_unused]]
+	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
+	// BUG: This may produce a dangling ptr if the storage moves, use a compref instead
+	activeScene->CreateQuery<ScriptingHost>().Each([this]([[maybe_unused]]
 																	  Entity &entity,
-																	  EditorInfo &infoRef,
 																	  ScriptingHost &scriptingHostRef) {
-		this->m_editorInfo = &infoRef;
 		this->m_scriptingHost = &scriptingHostRef;
 	});
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
 {
+	auto *info = this->m_editorInfo.GetData<EditorInfo>();
+	info->currentSelection.type = ESelectedItemType::Entity;
+	info->currentSelection.value = entity;
 	this->m_inspectTarget = this->m_activeScene->EntityFromId(entity);
 	UI::Get().GetPanel<ScenePanel>().SetGizmoTarget(entity);
 }
@@ -218,6 +223,7 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 
 	for (uint32_t i = 0; i < compSerialInfo.propertyCount; i++)
 	{
+		ImGui::PushID((int32_t)i);
 		const ScriptingComponentPropertyInfo *prop = &(compSerialInfo.properties[i]);
 		// Now we render depending on the type
 		uint8_t *ptrToSerialize = instance + prop->offset;
@@ -258,10 +264,14 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 		case Hush::EComponentPropertyType::Bool:
 			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
 			break;
+		case Hush::EComponentPropertyType::Vector3:
+			UI::Vec3Edit(propertyName.data(), reinterpret_cast<float*>(ptrToSerialize));
+			break;
 		default:
 			// LogError("Type of property is not implemented for inspector serialization");
 			break;
 		}
+		ImGui::PopID();
 	}
 }
 

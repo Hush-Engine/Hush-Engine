@@ -46,6 +46,8 @@ namespace Hush
 		Bool,
 		String,
 		Array,
+		Vector3,
+		Vector2
 	};
 
 	/// @brief Mirrors CompPropertyInfo, describes a single serializable field of a scripted component

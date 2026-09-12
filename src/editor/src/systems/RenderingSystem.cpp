@@ -35,6 +35,7 @@
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Shared/Types/Color.hpp"
 #include "Systems/RenderingSystemAPI.hpp"
 #include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
@@ -465,12 +466,19 @@ void Hush::RenderingSystem::OnPreRender()
 	ZoneScoped;
 
 	// This is a query because we'll want to support multiple dir lights later
-	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
+	int32_t dirLightsCount = 0;
+	this->m_directionalLightsQuery.Each([this, &dirLightsCount](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
 		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
 		this->m_cachedSceneData.sunlightColor.w = light.intensity;
 		glm::vec3 dir = xform.Forward();
 		this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
+		dirLightsCount++;
 	});
+
+	if (dirLightsCount <= 0) {
+		this->m_cachedGameSceneData.sunlightColor = Color::Black().GetRGBA32F();
+		this->m_cachedSceneData.sunlightColor = Color::Black().GetRGBA32F();
+	}
 
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
 		(void)ent;
@@ -557,8 +565,9 @@ void Hush::RenderingSystem::OnPreRender()
 			{
 				Graphics::IBindGroup *matBindGroup = nullptr;
 
-				auto *mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource).Get();
-				if (mat != nullptr)
+
+				Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
+				if (!mat.IsNull())
 				{
 					mat->FlushProperties(device);
 
@@ -587,7 +596,7 @@ void Hush::RenderingSystem::OnPreRender()
 						}
 					};
 
-					auto it = m_materialBindGroupCache.find(mat);
+					auto it = m_materialBindGroupCache.find(mat.Get());
 					if (it != m_materialBindGroupCache.end())
 					{
 						// Validate cache: check if any texture pointer changed (async upload completion).
@@ -642,7 +651,7 @@ void Hush::RenderingSystem::OnPreRender()
 						bgDesc.entries.push_back({.binding = 5, .sampler = m_defaultSampler.get()});
 
 						cachedEntry.bindGroup = device->CreateBindGroup(bgDesc);
-						auto [newIt, _] = m_materialBindGroupCache.emplace(mat, std::move(cachedEntry));
+						auto [newIt, _] = m_materialBindGroupCache.emplace(mat.Get(), std::move(cachedEntry));
 						it = newIt;
 					}
 					matBindGroup = it->second.bindGroup.get();

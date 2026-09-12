@@ -657,6 +657,7 @@ Hush::Entity::EntityId Hush::Scene::AddEventObserverRaw(Entity::EntityId event, 
 	return ecs_observer_init(world, &observerDesc);
 }
 
+// BACKLOG: Rename this to DestroyEntityImmediate
 void Hush::Scene::DestroyEntity(Entity &&entity)
 {
 	auto entityToDestroy = std::move(entity);

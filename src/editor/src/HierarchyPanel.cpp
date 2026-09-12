@@ -7,13 +7,17 @@
 #include <memory_resource>
 #include <optional>
 #include <string_view>
+#include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Entity.hpp"
+#include "InputManager.hpp"
 #include "InspectorPanel.hpp"
 #include "Logger.hpp"
 #include "UI.hpp"
+#include "components/EditorInfo.hpp"
+#include "definitions/KeyCode.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
 
@@ -56,12 +60,15 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 		};
 	}
 
+	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
 	this->m_activeScene = activeScene;
 	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
 }
 
 void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
+	this->HandleInput();
 	ImGuiViewport *mainViewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowViewport(mainViewport->ID);
 	ImGui::Begin("Hierarchy");
@@ -87,6 +94,19 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 	});
 
 	ImGui::End();
+}
+
+void Hush::HierarchyPanel::HandleInput() {
+	if (InputManager::IsKeyDownThisFrame(EKeyCode::DEL)){
+		// Nesting bc I don't want to fetch this comp every frame
+		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		SelectedItemInfo& selection = editorInfo->currentSelection;
+		if (selection.type == ESelectedItemType::Entity && selection.value != Entity::INVALID_ENTITY_ID) {
+			// Add to the deletion queue
+			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
+			// Should we set the editorInfo comp to a selection of none??
+		}
+	}
 }
 
 void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name,

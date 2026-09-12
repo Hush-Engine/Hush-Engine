@@ -9,6 +9,7 @@ hush_add_library(
         src/Query.cpp
         src/QueryBuilder.cpp
         src/TransformationSystem.cpp
+        src/EntityManagerSystem.cpp
         src/EcsTerms.cpp
         src/serialization/Serialization.cpp
         src/serialization/Deserialization.cpp

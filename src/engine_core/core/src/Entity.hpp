@@ -346,6 +346,13 @@ namespace Hush
 		/// @param entity Entity to destroy.
 		static void Destroy(Entity &&entity);
 
+		
+		/// @brief Destroys an entity on the next available tick of the EntityManager System
+		/// @details This function is useful to destroy any entities that might be in use by other
+		/// systems at the time of its intended destruction; instead of immediately removing the entity
+		/// from the world, it waits until the @ref EntityManagerSystem ticks again to remove it
+		static void QueueDestroy(Entity &&entity);
+
 		void SetParent(const Entity &parent);
 
 		[[hush::export]]

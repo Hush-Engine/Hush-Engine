@@ -119,7 +119,7 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		existingMat->SetProperty("emissionFactors", materialInfo[i].emission);
 		// Cooked format doesn't store these — use passthrough defaults so texture values are used as-is
 		existingMat->SetProperty("metal_rough_factors", glm::vec4(1.0f, 1.0f, 0.0f, 0.0f));
-		existingMat->SetProperty("optionFlags", 1u); // USE_NORMALS_FLAG
+		// existingMat->SetProperty("optionFlags", 1u); // USE_NORMALS_FLAG
 		if (materialInfo[i].pass == EMaterialPass::Mask) {
 			existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
 		}

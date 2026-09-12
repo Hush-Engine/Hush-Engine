@@ -11,6 +11,7 @@
 #include "CookerService.hpp"
 #include "CookedDirectory.hpp"
 #include "Entity.hpp"
+#include "EntityManagerSystem.hpp"
 #include "FileWatcher.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
@@ -137,6 +138,7 @@ public:
 												  static_cast<float>(windowSize.y), 0.1f, 1000.0f);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
+		this->m_scene->AddEngineSystem(new Hush::EntityManagerSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithKey(ENGINE_MANAGER);
 

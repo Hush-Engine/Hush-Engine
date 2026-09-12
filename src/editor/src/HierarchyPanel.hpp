@@ -24,7 +24,11 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
+		// NOTE: Maybe centralize this into an EditorInput file or something
+		void HandleInput();
+
 		Scene *m_activeScene;
+		ComponentRef m_editorInfo;
 		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
 
 		// Small helper WITH recursion
