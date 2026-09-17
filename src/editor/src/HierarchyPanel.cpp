@@ -18,6 +18,7 @@
 #include "UI.hpp"
 #include "components/EditorInfo.hpp"
 #include "definitions/KeyCode.hpp"
+#include "imgui_internal.h"
 #include "serialization/Formats/JsonSerializer.hpp"
 #include "serialization/Serialization.hpp"
 
@@ -69,7 +70,7 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	this->HandleInput();
-	if (this->m_deletePopupOpen) {
+	if (this->m_state == EState::DeletePopupOpen) {
 		// Add to the deletion queue
 		ImVec2 windowSize = ImGui::GetWindowViewport()->Size;
 		windowSize.x *= 0.5f;
@@ -86,11 +87,12 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 		bool didSubmit = InputManager::IsKeyDownThisFrame(EKeyCode::KpEnter) || InputManager::IsKeyDownThisFrame(EKeyCode::RETURN);
 		if (ImGui::Button("Yes") || didSubmit) {
 			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
-			this->m_deletePopupOpen = false;
+			selection.value = 0;
+			this->m_state = EState::None;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("No")) {
-			this->m_deletePopupOpen = false;
+		if (ImGui::Button("No") || InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE)) {
+			this->m_state = EState::None;
 		}
 		// Should we set the editorInfo comp to a selection of none??
 		ImGui::EndPopup();
@@ -124,20 +126,23 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 }
 
 void Hush::HierarchyPanel::HandleInput() {
+	if (this->m_state == EState::Renaming && InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE)) {
+		this->m_state = EState::None;
+	}
 	if (InputManager::IsKeyDownThisFrame(EKeyCode::DEL)){
 		// Nesting bc I don't want to fetch this comp every frame
 		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
 		SelectedItemInfo& selection = editorInfo->currentSelection;
 		if (selection.type == ESelectedItemType::Entity && selection.value != Entity::INVALID_ENTITY_ID) {
-			this->m_deletePopupOpen = true;
+			this->m_state = EState::DeletePopupOpen;
 		}
 	}
 }
 
-void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name,
+void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const Entity::Name &name,
 														InspectorPanel *inspector)
 {
-	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesToNodes;
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesToNodes | ImGuiTreeNodeFlags_AllowOverlap;
 	if (entity.GetChildCount() < 1)
 	{
 		flags |= ImGuiTreeNodeFlags_Leaf;
@@ -152,11 +157,47 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(const Entity &entity, co
 		display.append(key);
 		display.append(")");
 	}
+	if (this->m_state == EState::Renaming && this->m_editorInfo.GetData<EditorInfo>()->currentSelection.value == entity.GetId()) {
+		display.clear();
+	}
 	ImGui::BeginGroup();
 	bool isNodeOpen = ImGui::TreeNodeEx(display.c_str(), flags);
 	if (ImGui::IsItemClicked())
 	{
 		inspector->SetInspectTarget(entity.GetId());
+	}
+
+	if (UI::IsItemDoubleClicked() || InputManager::IsKeyDownThisFrame(EKeyCode::F2)) {
+		this->m_state = EState::Renaming;
+		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		editorInfo->currentSelection.type = ESelectedItemType::Entity;
+		editorInfo->currentSelection.value = entity.GetId();
+	}
+
+	if (this->m_state == EState::Renaming) {
+
+		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		// Stop renaming, we clicked something else
+		if (editorInfo->currentSelection.type != ESelectedItemType::Entity) {
+			this->m_state = EState::None;
+		}
+		else if (editorInfo->currentSelection.type == ESelectedItemType::Entity && editorInfo->currentSelection.value == entity.GetId()) {
+			// Draw our rename
+			ImGui::SameLine();
+	        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x); 
+
+	        ImGui::SetKeyboardFocusHere();
+	        bool renamed = ImGui::InputText("##Rename", this->m_entityRenameBuffer.data(), this->m_entityRenameBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue);
+
+			if (renamed) {
+				Entity::Name* nameComp = entity.GetComponent<Entity::Name>();
+				nameComp->SetName({this->m_entityRenameBuffer.data()});
+				this->m_entityRenameBuffer.fill(0);
+				this->m_state = EState::None;
+			}
+
+	        ImGui::PopItemWidth();
+		}
 	}
 
 	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
