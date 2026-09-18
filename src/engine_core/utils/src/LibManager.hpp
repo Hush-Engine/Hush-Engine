@@ -30,6 +30,8 @@ public:
 	/// @return A handle of the desired library or null
 	static void *LibraryOpen(const char *libraryPath);
 
+	static void LibraryClose(void* handle);
+
 	/// @brief Loads the desired symbol using a library handle (analogous to dlsym)
 	/// @param handle Library handle where the symbol is located
 	/// @param symbol Name of the symbol to be loaded

@@ -11,6 +11,15 @@ void *LibManager::LibraryOpen(const char *libraryPath)
 #endif
 }
 
+
+void LibManager::LibraryClose(void* handle) {
+#if _WIN32
+	FreeLibrary(reinterpret_cast<HMODULE>(handle));
+#else
+	dlclose(handle);
+#endif
+}
+
 void *LibManager::DynamicLoadSymbol(void *handle, const char *symbol)
 {
 #if _WIN32
