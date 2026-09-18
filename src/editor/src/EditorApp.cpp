@@ -67,6 +67,17 @@ class EditorApp final : public Hush::IApplication
 		"Your scene must be saved to a file before playing!";
 	static constexpr std::string_view SCENE_SAVED_ERR = "Failed to save scene!";
 
+	// HACK: Scripting (Hardcoded for the game jam for now)
+	#if HUSH_PLATFORM_WIN
+	static constexpr Hush::NullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
+				"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
+	#elif HUSH_PLATFORM_OSX
+	static constexpr Hush::NulNullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
+				"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
+	#else
+	#error "Platform not supported for the game jam!"
+	#endif
+
 public:
 	explicit EditorApp(Hush::HushEngine *engine)
 		: m_engine(engine),
@@ -176,25 +187,18 @@ public:
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
-// HACK: Scripting (Hardcoded for the game jam for now)
-#if HUSH_PLATFORM_WIN
-		constexpr Hush::NullTerminatedStringView scriptingProjDllPath =
-			"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
-#elif HUSH_PLATFORM_OSX
-		constexpr Hush::NulNullTerminatedStringView scriptingProjDllPath =
-			"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
-#else
-#error "Platform not supported for the game jam!"
-#endif
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 
-		this->m_scriptingHost->Initialize(scriptingProjDllPath, this->m_engine->GetVirtualFilesystem(), this->GetScene());
+		this->m_scriptingHost->Initialize(SCRIPTING_PROJ_DLL_PATH, this->m_engine->GetVirtualFilesystem(), this->GetScene());
 		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
 		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
 		this->m_resourceManager = m_engine->GetResourceManager();
 
 		// ── ImGui initialization ────────────────────────────────────
+		ImGui::SetAllocatorFunctions(
+			[](std::size_t size, void *) noexcept -> void * { return ::operator new(size, std::nothrow); },
+			[](void *p, void *) noexcept { ::operator delete(p); });
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO &io = ImGui::GetIO();
@@ -252,6 +256,15 @@ public:
 				m_cookedDirectory.HandleFileEvent(ev.path, ev.type == Hush::FileWatchEvent::Type::Added,
 												  ev.type == Hush::FileWatchEvent::Type::Removed,
 												  ev.type == Hush::FileWatchEvent::Type::Modified);
+				if (ev.type == Hush::FileWatchEvent::Type::Modified) {
+					Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
+					auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
+					if (res.has_error() || ev.path != res.value()) {
+						return;
+					}
+					// Modified the scripting, we need to reload the host
+					this->m_scriptingHost->Reload(SCRIPTING_PROJ_DLL_PATH, vfs, this->GetScene());
+				}
 			});
 		}
 

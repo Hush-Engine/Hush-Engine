@@ -256,6 +256,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
 	{
 		wgpu::Buffer buffer = this->CreateBufferInternal(descriptor);
+
 		if (buffer == nullptr)
 		{
 			// Error is logged on the internal function
@@ -279,7 +280,7 @@ namespace Hush::Graphics
 			return;
 		}
 
-		wgpu::Queue queue = m_device.getQueue();
+		wgpu::Queue queue = this->m_graphicsQueue->GetQueue();
 		queue.writeBuffer(webgpuBuffer->GetBuffer(), offset, data, static_cast<size_t>(size));
 	}
 

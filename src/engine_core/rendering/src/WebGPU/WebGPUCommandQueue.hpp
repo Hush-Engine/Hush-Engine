@@ -41,6 +41,7 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
 
+		/// @brief Returns the handle to the queue that's referenced in this wrapper (the wrapper is owning)
 		[[nodiscard]]
 		wgpu::Queue GetQueue() const
 		{

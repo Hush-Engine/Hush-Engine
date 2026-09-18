@@ -291,6 +291,19 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 			const uint64_t indexBytes = indices.size() * sizeof(indices[0]);
 			const uint64_t totalBytes = vertexBytes + indexBytes;
 
+			// Fast path: another entity sharing the same Mesh already uploaded the
+			// GPU buffers this frame (or a prior frame). Just mark this entity as done
+			// without touching the staging buffer.
+			if (meshRef.GetGpuVertexBuffer() != nullptr &&
+				meshRef.GetGpuVertexBuffer()->GetSize() >= vertexBytes &&
+				meshRef.GetGpuIndexBuffer() != nullptr &&
+				meshRef.GetGpuIndexBuffer()->GetSize() >= indexBytes)
+			{
+				m_entitiesToMarkAsUploaded.push_back(entity.GetId());
+				++uploadCount;
+				continue;
+			}
+
 			// If the staging region is completely exhausted, stop processing
 			// further entries this frame.
 			if (m_meshStaging.Remaining() == 0)

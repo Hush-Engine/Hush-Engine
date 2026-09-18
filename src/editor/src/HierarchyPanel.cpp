@@ -222,14 +222,17 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 
 	if (isNodeOpen)
 	{
-		entity.EachChild([this, inspector](Entity &currChild) {
+		int32_t childIdx = 0;
+		entity.EachChild([this, inspector, &childIdx](Entity &currChild) {
 			Entity::Name *childName = currChild.GetComponent<Entity::Name>();
 			if (childName == nullptr)
 			{
 				// Skip bc it's not renderable
 				return;
 			}
+			ImGui::PushID(childIdx);
 			GenerateEntitySelectableTree(currChild, *childName, inspector);
+			childIdx++;
 		});
 		ImGui::TreePop();
 	}

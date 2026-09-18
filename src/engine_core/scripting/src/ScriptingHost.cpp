@@ -9,6 +9,7 @@
 #include "serialization/Formats/JsonSerializer.hpp"
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <optional>
 #include <string_view>
 
@@ -267,7 +268,12 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 	// TODO: reconcile with virtual filesystem
 	auto res = vfs->ResolveHostPath(dllPath);
 	HUSH_RESULT_ASSERT(res, "Could not resolve virtual path for scripting at: {}", dllPath);
-	void *libraryHandle = LibManager::LibraryOpen(res.value().string().c_str());
+	// Copy the dll into a temp file
+	std::filesystem::path tempPath = res.value();
+	tempPath.replace_filename("~hush_script.hdlib");
+	std::filesystem::copy_file(res.value(), tempPath, std::filesystem::copy_options::overwrite_existing);
+	void *libraryHandle = LibManager::LibraryOpen(tempPath.string().c_str());
+	this->m_openHandle = libraryHandle;
 
 	// This could be user side??? eventually
 	HUSH_COND_FAIL_MSG(libraryHandle != nullptr, "Could not load dynamic library at {}", std::string_view(dllPath));
@@ -371,6 +377,16 @@ void Hush::ScriptingHost::Initialize(NullTerminatedStringView dllPath, VirtualFi
 		};		
 	}
 }
+
+void Hush::ScriptingHost::Reload(NullTerminatedStringView dllPath, VirtualFilesystem *vfs, Scene *scene) {
+	// NYI: Stop all the systems
+	(void)dllPath;
+	(void)vfs;
+	(void)scene;
+	// LibManager::LibraryClose(this->m_openHandle);
+	// this->Initialize(dllPath, vfs, scene);
+}
+
 // NOLINTEND
 
 std::vector<Hush::ScriptingRegisteredTypeInfo> &Hush::ScriptingHost::GetAvailableSystems()

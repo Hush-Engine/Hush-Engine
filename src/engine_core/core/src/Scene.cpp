@@ -22,12 +22,15 @@
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include "Profiling.hpp"
+#include <flecs/os_api.h>
 #include <flecs/private/api_defines.h>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <mimalloc.h>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tracy/Tracy.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -35,15 +38,68 @@ constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
 std::atomic<std::uint64_t> Hush::Scene::s_nextSceneId{1};
 
+#if defined (HUSH_USE_MIMALLOC)
+
+void* HushFlecsMalloc(int32_t bytes) {
+	// Raw malloc with no checks
+	void* res = mi_malloc(bytes);
+	TracyAlloc(res, bytes);
+	return res;
+}
+
+void* HushFlecsRealloc(void* ptr, int size) {
+	TracyFree(ptr);
+	void* res = mi_realloc(ptr, size);
+	TracyAlloc(ptr, size);
+	return res;
+}
+
+void HushFlecsFree(void* ptr) {
+	mi_free(ptr);
+	TracyFree(ptr);
+}
+
+#else
+// We still need the override of malloc
+void* HushFlecsMalloc(int32_t bytes) {
+	// Raw malloc with no checks
+	void* res = malloc(bytes);
+	TracyAlloc(res, bytes);
+	return res;
+}
+
+void HushFlecsFree(void* ptr) {
+	free(ptr);
+	TracyFree(ptr);
+}
+
+void* HushFlecsRealloc(void* ptr, int size) {
+	TracyFree(ptr);
+	void* res = realloc(ptr, size);
+	TracyAlloc(ptr, size);
+	return res;
+}
+
+#endif
+
+
+// NOLINTBEGIN
 Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
 	: m_engine(engine),
 	  m_threadPool(threadPool),
-	  m_world(ecs_init()),
 	  m_sceneId(s_nextSceneId.fetch_add(1, std::memory_order_relaxed))
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
+	
+	ecs_os_set_api_defaults();
+	ecs_os_api_t osApi = ecs_os_get_api();
+	osApi.malloc_ = HushFlecsMalloc;
+	osApi.realloc_ = HushFlecsRealloc;
+	osApi.free_ = HushFlecsFree;
+	this->m_world = reinterpret_cast<void*>(ecs_init());
 }
+// NOLINTEND
 
 Hush::Scene::~Scene()
 {

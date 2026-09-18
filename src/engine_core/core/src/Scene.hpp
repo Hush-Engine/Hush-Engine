@@ -422,7 +422,7 @@ namespace Hush
 		/// Thread pool used by the scene for parallel operations
 		Threading::Executors::ThreadPool *m_threadPool;
 
-		void *m_world;
+		void *m_world = nullptr;
 
 		ScriptingSystemInterface *m_scriptingInterface = nullptr;
 

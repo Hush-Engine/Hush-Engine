@@ -2,6 +2,7 @@
 
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"
+#include "RHI/IGraphicsBuffer.hpp"
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -108,11 +109,42 @@ namespace Hush
 
 		void CalculateNormals();
 
+		/// @brief Get the shared GPU vertex buffer (nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuVertexBuffer() const
+		{
+			return m_gpuVertexBuffer.get();
+		}
+
+		/// @brief Get the shared GPU index buffer (nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuIndexBuffer() const
+		{
+			return m_gpuIndexBuffer.get();
+		}
+
+		/// @brief Set the shared GPU vertex buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuVertexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuVertexBuffer = std::move(buffer);
+		}
+
+		/// @brief Set the shared GPU index buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuIndexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuIndexBuffer = std::move(buffer);
+		}
+
 	private:
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 		std::string m_name;
 		std::vector<GeoSurface> m_surfaces;
 		GPUMeshBuffers m_meshBuffers;
+
+		/// @brief Shared GPU vertex buffer,owned here so all MeshReference instances
+		/// pointing to this Mesh reuse the same buffer instead of duplicating it.
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuIndexBuffer;
 	};
 } // namespace Hush

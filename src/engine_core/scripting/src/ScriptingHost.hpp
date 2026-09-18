@@ -102,6 +102,8 @@ namespace Hush
 		// We need to load an arbitrary DLL and communicate with it through C calls
 		void Initialize(NullTerminatedStringView dllPath, VirtualFilesystem *vfs, Scene *scene);
 
+		void Reload(NullTerminatedStringView dllPath, VirtualFilesystem *vfs, Scene *scene);
+
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableSystems();
 
 		std::vector<ScriptingRegisteredTypeInfo> &GetAvailableComponents();
@@ -182,6 +184,8 @@ namespace Hush
 
 		GetComponentSerializationCountFnPtr_t m_getComponentSerializationCountFn = nullptr;
 		GetAvailableComponentSerializationDataFnPtr_t m_getAvailableComponentSerializationDataFn = nullptr;
+
+		void* m_openHandle;
 
 		ScriptingSystemInterface m_scriptingInterface;
 	};

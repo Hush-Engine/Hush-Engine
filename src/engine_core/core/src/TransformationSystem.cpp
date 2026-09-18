@@ -67,7 +67,9 @@ void Hush::TransformationSystem::OnUpdate(float delta)
 		if (parent.IsValid())
 		{
 			WorldTransform *parentWorldXform = parent.GetComponent<WorldTransform>();
-			worldMatrix = parentWorldXform->GetTransformationMatrix();
+			if (parentWorldXform != nullptr) {
+				worldMatrix = parentWorldXform->GetTransformationMatrix();
+			}
 		}
 		worldXform.SetTransformationMatrix(worldMatrix * localXform.GetTransformationMatrix());
 	});

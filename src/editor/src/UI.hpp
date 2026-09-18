@@ -97,6 +97,8 @@ namespace Hush
 
 		static bool BeginToolBar();
 
+		static bool IsItemDoubleClicked();
+
 		/// @brief Begin a popup attached to a button showing @p label. Call @ref FlagItem inside.
 		/// @return true if the popup is open and FlagItems should be rendered.
 		static bool FlagsBegin(const char *label);

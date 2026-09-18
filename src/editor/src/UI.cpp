@@ -411,6 +411,10 @@ bool Hush::UI::BeginToolBar()
 	return ImGui::Begin("##toolbar", nullptr, toolbarFlags);
 }
 
+bool Hush::UI::IsItemDoubleClicked() {
+	return ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
+}
+
 ImGuiID Hush::UI::DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags)
 {
 	ImGuiDockNodeFlags dockspaceFlags =
