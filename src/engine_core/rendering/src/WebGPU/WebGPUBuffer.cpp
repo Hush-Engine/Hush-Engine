@@ -32,7 +32,11 @@ namespace Hush::Graphics
 		{
 			Unmap();
 		}
-		m_buffer.destroy();
+		if (m_buffer != nullptr)
+		{
+			m_buffer.destroy();
+			m_buffer.release();
+		}
 	}
 
 	void WebGPUBuffer::Destroy()
@@ -41,7 +45,12 @@ namespace Hush::Graphics
 		{
 			Unmap();
 		}
-		m_buffer.destroy();
+		if (m_buffer != nullptr)
+		{
+			m_buffer.destroy();
+			m_buffer.release();
+			m_buffer = nullptr;
+		}
 	}
 
 	void *WebGPUBuffer::Map(Graphics::IGraphicsDevice *device)

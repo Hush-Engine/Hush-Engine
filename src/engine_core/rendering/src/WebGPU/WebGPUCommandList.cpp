@@ -98,6 +98,10 @@ namespace Hush::Graphics
 		{
 			m_encoder.release();
 		}
+		if (m_commandBuffer != nullptr)
+		{
+			m_commandBuffer.release();
+		}
 	}
 
 	void WebGPUCopyCommandList::Reset()
@@ -127,6 +131,7 @@ namespace Hush::Graphics
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Copy Command Buffer");
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
+		m_encoder.release();
 		m_isRecording = false;
 	}
 
@@ -265,10 +270,15 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 		}
 		if (m_isRecording && m_encoder != nullptr)
 		{
 			m_encoder.release();
+		}
+		if (m_commandBuffer != nullptr)
+		{
+			m_commandBuffer.release();
 		}
 	}
 
@@ -278,6 +288,7 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 
@@ -305,12 +316,14 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Compute Command Buffer");
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
+		m_encoder.release();
 		m_isRecording = false;
 	}
 
@@ -518,14 +531,20 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
+			m_renderPass.release();
 		}
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 		}
 		if (m_isRecording && m_encoder != nullptr)
 		{
 			m_encoder.release();
+		}
+		if (m_commandBuffer != nullptr)
+		{
+			m_commandBuffer.release();
 		}
 	}
 
@@ -535,12 +554,14 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
+			m_renderPass.release();
 			m_inRenderPass = false;
 		}
 
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 
@@ -568,18 +589,21 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
+			m_renderPass.release();
 			m_inRenderPass = false;
 		}
 
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Graphics Command Buffer", WGPU_STRLEN);
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
+		m_encoder.release();
 		m_isRecording = false;
 	}
 
@@ -973,6 +997,7 @@ namespace Hush::Graphics
 		HUSH_ASSERT(m_inRenderPass, "Not in a render pass");
 
 		m_renderPass.end();
+		m_renderPass.release();
 		m_inRenderPass = false;
 	}
 
@@ -1021,7 +1046,7 @@ namespace Hush::Graphics
 		if (m_inRenderPass)
 		{
 			m_renderPass.end();
-			m_renderPass = nullptr;
+			m_renderPass.release();
 			m_inRenderPass = false;
 		}
 
