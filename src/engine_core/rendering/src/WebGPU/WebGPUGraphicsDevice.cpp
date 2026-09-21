@@ -448,7 +448,7 @@ namespace Hush::Graphics
 	void WebGPUGraphicsDevice::BeginFrame()
 	{
 		m_instance.processEvents();
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
 #endif
 		if (m_needsResize)
@@ -506,7 +506,7 @@ namespace Hush::Graphics
 
 	void WebGPUGraphicsDevice::EndFrame()
 	{
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
 #endif
 #if HUSH_PLATFORM_EMSCRIPTEN

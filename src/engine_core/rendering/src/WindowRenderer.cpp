@@ -168,7 +168,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 Hush::WindowRenderer::~WindowRenderer()
 {
 	SDL_DestroyWindow(this->m_windowPtr);
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	SDL_Quit();
 #endif
 }
@@ -190,7 +190,7 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 	{
 		return true;
 	}
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	return rc;
 #else

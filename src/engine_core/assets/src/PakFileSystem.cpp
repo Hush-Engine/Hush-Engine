@@ -2,11 +2,12 @@
 #include "Result.hpp"
 #include "crypto/Hashing.hpp"
 #include "Logger.hpp"
+#include "Platform.hpp"
 #include <algorithm>
 #include <cstring>
 #include <fstream>
 
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 // Emscripten: full-read fallback (no mmap)
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -63,7 +64,7 @@ namespace Hush
 
 	bool MappedFile::Open(const std::filesystem::path &path)
 	{
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 		// Emscripten: full-read into memory
 		std::ifstream file(path, std::ios::binary | std::ios::ate);
 		if (!file)
@@ -144,7 +145,7 @@ namespace Hush
 
 	void MappedFile::Close()
 	{
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 		m_fallback.clear();
 #elif defined(_WIN32)
 		if (m_data)

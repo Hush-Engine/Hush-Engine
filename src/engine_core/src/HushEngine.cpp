@@ -54,10 +54,10 @@ struct Hush::HushEngine::HushEngineInternal
 	Hush::Memory::ThreadLocalMemoryResourcePool sceneMemoryPool{HUSH_SCENE_ARENA_SIZE_KB * 1024};
 };
 
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 static constexpr uint32_t NUM_THREADS = 4;
 #else
-static constexpr uint32_t NUM_THREADS = std::thread::hardware_concurrency();
+static const uint32_t NUM_THREADS = std::max(1u, std::thread::hardware_concurrency());
 #endif
 
 Hush::HushEngine::HushEngine()
@@ -126,7 +126,7 @@ void Hush::HushEngine::Init(int argc, char **argv)
 	if (std::ranges::find_if(args, [](const char *arg) { return std::string_view(arg) == "--wait-profiler"; }) !=
 		args.end())
 	{
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		LogInfo("Waiting for Tracy profiler to connect...");
 		while (!TracyIsConnected)
 		{
@@ -163,7 +163,7 @@ void Hush::HushEngine::Run()
 		return;
 	}
 
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
 #endif
 
@@ -193,7 +193,7 @@ void Hush::HushEngine::Run()
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	m_elapsed = end - start;
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	FrameMark;
 #endif
 }

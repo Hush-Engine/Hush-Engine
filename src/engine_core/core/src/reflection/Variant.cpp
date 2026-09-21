@@ -5,6 +5,7 @@
 */
 
 #include "Variant.hpp"
+#include <cstring>
 
 Hush::Reflection::VariantView::VariantView(const Variant &variant)
 	: m_typeId(variant.m_typeId)

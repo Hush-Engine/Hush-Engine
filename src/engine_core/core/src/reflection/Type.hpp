@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 #include <shared_mutex>
+#include <mutex>
 #include <utility>
 #include <span>
 #include <vector>
@@ -20,7 +21,7 @@
 
 #include <crypto/Hashing.hpp>
 
-#ifdef HUSH_COMPILER_MSVC
+#if HUSH_COMPILER_MSVC
 #pragma warning(push)
 #pragma warning(disable : 5030) // Attribute not recognized
 #endif

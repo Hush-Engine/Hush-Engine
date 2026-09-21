@@ -34,7 +34,11 @@
     {
       "name": "mimalloc",
       "features": ["override"],
-      "platform": "!emscripten"
+      "platform": "windows & !emscripten"
+    },
+    {
+      "name": "mimalloc",
+      "platform": "!windows & !emscripten"
     }
   ]
 }

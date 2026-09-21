@@ -104,8 +104,8 @@ endfunction()
 
 # Paths to locally built hush tools. When set, the downloads are skipped.
 # This is useful when working on the hush-llvm repository.
-set(HUSH_REFLECTION_TOOL_PATH "" CACHE PATH "Path to a local hush-reflection binary")
-set(HUSH_EXPORT_TOOL_PATH "" CACHE PATH "Path to a local hush-export binary")
+set(HUSH_REFLECTION_TOOL_PATH "$ENV{HUSH_REFLECTION_TOOL_PATH}" CACHE FILEPATH "Path to a local hush-reflection binary")
+set(HUSH_EXPORT_TOOL_PATH "$ENV{HUSH_EXPORT_TOOL_PATH}" CACHE FILEPATH "Path to a local hush-export binary")
 
 if (CMAKE_HOST_WIN32)
     if (HUSH_REFLECTION_TOOL_PATH)
@@ -136,6 +136,18 @@ if (CMAKE_HOST_WIN32)
         )
 
         set(HUSH_EXPORT_BIN "${CMAKE_BINARY_DIR}/hush-export.exe")
+    endif ()
+else ()
+    # Keep the full tool bundle intact: builtin headers live next to bin/.
+    if (HUSH_REFLECTION_TOOL_PATH)
+        set(HUSH_REFLECTION_BIN "${HUSH_REFLECTION_TOOL_PATH}")
+    else ()
+        find_program(HUSH_REFLECTION_BIN NAMES hush-reflection REQUIRED)
+    endif ()
+    if (HUSH_EXPORT_TOOL_PATH)
+        set(HUSH_EXPORT_BIN "${HUSH_EXPORT_TOOL_PATH}")
+    else ()
+        find_program(HUSH_EXPORT_BIN NAMES hush-export REQUIRED)
     endif ()
 endif ()
 

@@ -81,7 +81,7 @@ jobs:
        needs.detect-changes.outputs.wasm == 'true')
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -206,6 +206,66 @@ jobs:
         run: ./hush-devtool.exe build --preset windows-x64-${{ matrix.build-type }} -v
       - name: Test hush
         run: ./hush-devtool.exe test --preset windows-x64-${{ matrix.build-type }} -v
+
+  build-hush-linux:
+    name: Build hush engine (Linux)
+    needs: [detect-changes, format-hush, build-devtool]
+    if: >-
+      always() && !failure() && !cancelled() &&
+      fromJSON(needs.detect-changes.outputs.engine)
+    strategy:
+      matrix:
+        build-type: [debug, release]
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config autoconf automake libtool \
+            libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev \
+            libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev \
+            libudev-dev
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2.0.9
+        with:
+          version: "19"
+      - name: Get devtool
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+        uses: actions/download-artifact@v8
+        with:
+          name: hush-devtool-ubuntu-latest-${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+      - name: Get devtool
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main'
+        uses: actions/download-artifact@v8
+        with:
+          name: hush-devtool-ubuntu-latest-${{ github.sha }}
+      - name: Prepare devtool
+        run: |
+          mv hush hush-devtool
+          chmod +x hush-devtool
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v5
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-${{ runner.os }}-clang19-${{ matrix.build-type }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**', 'cmake/**', '.gitmodules', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-clang19-${{ matrix.build-type }}-
+      - name: Bootstrap VCPKG
+        run: |
+          mkdir -p .vcpkg-cache
+          ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Configure hush
+        run: ./hush-devtool configure --preset linux-x64-${{ matrix.build-type }} -v
+      - name: Build hush
+        run: ./hush-devtool build --preset linux-x64-${{ matrix.build-type }} -v
+      - name: Test hush
+        run: ./hush-devtool test --preset linux-x64-${{ matrix.build-type }} -v
 
   build-hush-wasm:
     name: Build hush engine (Wasm)
