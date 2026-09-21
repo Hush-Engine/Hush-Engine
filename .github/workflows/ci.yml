@@ -148,8 +148,14 @@ jobs:
       - name: Rename devtool
         run: mv hush.exe hush-devtool.exe
         shell: bash
+      - name: Install clang-format
+        uses: KyleMayes/install-llvm-action@v2.0.9
+        with:
+          version: "22.1.8"
       - name: Format hush
-        run: ./hush-devtool.exe format --check -v --print-files --all-files
+        run: |
+          clang-format --version
+          ./hush-devtool.exe format --check -v --print-files --all-files
 
   build-hush-windows:
     name: Build hush engine
