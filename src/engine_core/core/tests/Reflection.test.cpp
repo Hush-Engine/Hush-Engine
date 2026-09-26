@@ -294,4 +294,66 @@ TEST_CASE("Reflection", "[reflection]")
 		AutogenTest *instance = reinterpret_cast<AutogenTest *>(buffer);
 		REQUIRE(instance->myCustomField == value);
 	}
+
+	SECTION("Types registered without a module belong to the engine")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		AutogenTest::RegisterReflection(reflectionDB);
+
+		const Hush::Reflection::TypeInfo *typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+		REQUIRE(typeInfo != nullptr);
+		REQUIRE(typeInfo->GetOwner() == Hush::ENGINE_MODULE_HANDLE);
+		REQUIRE(typeInfo->IsBuiltin());
+	}
+
+	SECTION("Duplicate registration returns an error and keeps the first type")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		AutogenTest::RegisterReflection(reflectionDB);
+
+		Hush::Reflection::TypeInfo duplicate(Hush::Reflection::GetTypeId<AutogenTest>());
+		duplicate.SetName("AutogenTest");
+		duplicate.SetSize(1);
+		REQUIRE(reflectionDB.RegisterClass(std::move(duplicate)) ==
+				Hush::Reflection::ERegisterClassError::DuplicateType);
+
+		const Hush::Reflection::TypeInfo *typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+		REQUIRE(typeInfo != nullptr);
+		REQUIRE(typeInfo->GetSize() == sizeof(AutogenTest));
+	}
+
+	SECTION("Module types can be unregistered")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+		constexpr Hush::ModuleHandle module = 42;
+
+		AutogenTest::RegisterReflection(reflectionDB, module);
+		REQUIRE(reflectionDB.GetTypeInfo("AutogenTest") != nullptr);
+		REQUIRE(reflectionDB.GetTypeInfo("AutogenTest")->GetOwner() == module);
+
+		REQUIRE(reflectionDB.UnregisterModule(module) == 1);
+		REQUIRE(reflectionDB.GetTypeInfo("AutogenTest") == nullptr);
+
+		// The engine module cannot be unregistered.
+		AutogenTest::RegisterReflection(reflectionDB);
+		REQUIRE(reflectionDB.UnregisterModule(Hush::ENGINE_MODULE_HANDLE) == 0);
+		REQUIRE(reflectionDB.GetTypeInfo("AutogenTest") != nullptr);
+	}
+
+	SECTION("Metadata is stored in the type info")
+	{
+		Hush::Reflection::ReflectionDB reflectionDB;
+
+		reflectionDB.RegisterClass<AutogenTest>()
+			.AddMetadata(Hush::Reflection::METADATA_KEY_BUILTIN.data(), "true")
+			.AddMetadata("category", "test")
+			.Register();
+
+		const Hush::Reflection::TypeInfo *typeInfo = reflectionDB.GetTypeInfo("AutogenTest");
+		REQUIRE(typeInfo != nullptr);
+		REQUIRE(typeInfo->HasMetadata("category"));
+		REQUIRE(typeInfo->GetMetadata("category").value() == "test");
+		REQUIRE(typeInfo->HasMetadata(Hush::Reflection::METADATA_KEY_BUILTIN));
+		REQUIRE(!typeInfo->HasMetadata("missing"));
+	}
 }

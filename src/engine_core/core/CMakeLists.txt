@@ -22,12 +22,12 @@ hush_add_library(
 )
 add_library(Hush::Core ALIAS HushCore)
 
-target_link_libraries(HushCore PUBLIC $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static> Hush::Threading Hush::Utils Hush::Log Hush::Memory zadeh rapidjson Boost::unordered glm::glm)
+target_link_libraries(HushCore PUBLIC $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static> Hush::Threading Hush::Utils Hush::Log Hush::Memory zadeh RapidJSON Boost::unordered glm::glm)
 
 add_test_target(
         TARGET_NAME HushCoreTest
         ENGINE_TARGET HushCore
-        SRCS tests/Entity.test.cpp tests/Query.test.cpp tests/Reflection.test.cpp tests/Serialization.test.cpp
+        SRCS tests/Entity.test.cpp tests/Query.test.cpp tests/Reflection.test.cpp tests/SceneSerialization.test.cpp tests/Serialization.test.cpp
         HEADER_DIRS tests
         ENABLE_REFLECTION ON
 )

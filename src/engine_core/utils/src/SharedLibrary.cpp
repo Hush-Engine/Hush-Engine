@@ -5,9 +5,10 @@
 */
 
 #include "SharedLibrary.hpp"
+#include "Logger.hpp"
 #include "Platform.hpp"
 
-#include <LibManager.hpp>
+#include <utility>
 
 #if HUSH_PLATFORM_WIN
 #define WIN32_LEAN_AND_MEAN
@@ -27,6 +28,15 @@ Hush::SharedLibrary::SharedLibrary(SharedLibrary &&rhs) noexcept
 {
 }
 
+Hush::SharedLibrary &Hush::SharedLibrary::operator=(SharedLibrary &&rhs) noexcept
+{
+	if (this != &rhs)
+	{
+		std::swap(m_nativeHandle, rhs.m_nativeHandle);
+	}
+	return *this;
+}
+
 Hush::SharedLibrary::~SharedLibrary()
 {
 	if (m_nativeHandle != nullptr)
@@ -42,16 +52,26 @@ Hush::SharedLibrary::~SharedLibrary()
 Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
 	NullTerminatedStringView libraryName) noexcept
 {
-#if HUSH_PLATFORM_WIN
-	auto *handle = LoadLibraryA(libraryName.c_str());
-#else
-	auto *handle = dlopen(libraryName.c_str(), RTLD_LAZY);
+	return OpenSharedLibrary(std::filesystem::path(std::string(std::string_view(libraryName))));
+}
 
+Hush::Result<Hush::SharedLibrary, Hush::SharedLibrary::EError> Hush::SharedLibrary::OpenSharedLibrary(
+	const std::filesystem::path &libraryPath) noexcept
+{
+	if (libraryPath.empty())
+	{
+		return EError::EmptyName;
+	}
+#if HUSH_PLATFORM_WIN
+	auto *handle = LoadLibraryW(libraryPath.c_str());
+#else
+	const std::string nativePath = libraryPath.string();
+	auto *handle = dlopen(nativePath.c_str(), RTLD_LAZY);
 #endif
 
 	if (handle == nullptr)
 	{
-		LogFormat(ELogLevel::Debug, "Failed to open library: {}", std::string_view(libraryName));
+		LogFormat(ELogLevel::Debug, "Failed to open library: {}", libraryPath.generic_string());
 		return EError::NotFound;
 	}
 	return SharedLibrary(handle);
@@ -64,6 +84,6 @@ void *Hush::SharedLibrary::GetRawSymbol(NullTerminatedStringView symbolName)
 
 	return reinterpret_cast<void *>(GetProcAddress(winHandle, symbolName.c_str()));
 #else
-	return nullptr;
+	return dlsym(m_nativeHandle, symbolName.c_str());
 #endif
 }

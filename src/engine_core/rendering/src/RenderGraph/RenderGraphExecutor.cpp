@@ -1,80 +1,476 @@
 /*! \file RenderGraphExecutor.cpp
 	\author Alan Ramirez Herrera
 	\date 2026-02-18
-	\brief RenderGraph executor implementation — all GPU execution infrastructure.
-
-	This file implements the runtime execution of a compiled RenderGraph:
-	  - Resource realization (creating GPU resources from deferred handles)
-	  - Resource state tracking and barrier computation
-	  - Transition rerouting to the "most competent queue"
-	  - Command list batching with fence waits/signals
-	  - Per-pass command list recording and batched submission
+	\brief Explicit resource-access and completion-point planning.
 */
-
 #include "RenderGraphExecutor.hpp"
-#include <Assertions.hpp>
-#include <Profiling.hpp>
 #include <algorithm>
+#include <bit>
 
 using namespace Hush::RenderGraph;
+using namespace Hush::Graphics;
 
-RenderGraphExecutor::RenderGraphExecutor(Hush::Graphics::IGraphicsDevice *device)
+namespace
+{
+	bool ValidAccessState(EResourceState state, bool write)
+	{
+		const auto bits = static_cast<uint32_t>(state);
+		if (write)
+		{
+			return IsWriteState(state) && std::has_single_bit(bits);
+		}
+		constexpr auto readMask = static_cast<uint32_t>(EResourceState::GenericRead) |
+								  static_cast<uint32_t>(EResourceState::DepthStencilRead) |
+								  static_cast<uint32_t>(EResourceState::Present);
+		return state == EResourceState::UnorderedAccess || (bits != 0 && (bits & ~readMask) == 0);
+	}
+} // namespace
+
+RenderGraphExecutor::RenderGraphExecutor(IGraphicsDevice *device)
 	: m_device(device)
 {
-	HUSH_ASSERT(m_device != nullptr, "RenderGraphExecutor requires a valid graphics device!");
+}
+
+RenderGraphExecutor::~RenderGraphExecutor()
+{
+	if (!m_inFlight.empty())
+	{
+		WaitIdle();
+	}
+}
+
+void RenderGraphExecutor::RetireCompleted()
+{
+	if (m_device != nullptr)
+	{
+		m_device->PollCompletions();
+	}
+	std::erase_if(m_inFlight, [&](const InFlight &work) {
+		for (uint32_t q = 0; q < m_queueCount; ++q)
+		{
+			if (work.completion[q] != 0 && m_fences[q]->GetCompletedValue() < work.completion[q])
+			{
+				return false;
+			}
+		}
+		return true;
+	});
+	for (auto it = m_persistentStates.begin(); it != m_persistentStates.end();)
+	{
+		if (it->second.lifetime.expired())
+		{
+			m_persistentStates.erase(it++);
+		}
+		else
+		{
+			++it;
+		}
+	}
+}
+
+void RenderGraphExecutor::WaitIdle()
+{
+	auto queues = m_queues;
+	// External uploads may precede the first graph execution.
+	if (m_queueCount == 0 && m_device != nullptr)
+	{
+		for (uint32_t q = 0; q < queues.size(); ++q)
+		{
+			queues[q] = m_device->GetQueueForType(static_cast<EQueueType>(q));
+		}
+	}
+	for (size_t q = 0; q < queues.size(); ++q)
+	{
+		if (queues[q] != nullptr && std::find(queues.begin(), queues.begin() + q, queues[q]) == queues.begin() + q)
+		{
+			queues[q]->WaitIdle();
+		}
+	}
+	m_inFlight.clear();
+}
+
+Hush::Result<RenderGraphExecutor::ResourceCompletion, EGraphError> RenderGraphExecutor::GetResourceCompletion(
+	const ResourceHandle &resource) const
+{
+	const auto it = m_persistentStates.find(resource.GetInstanceId());
+	if (it == m_persistentStates.end() || m_submissionFailed)
+	{
+		return EGraphError::InvalidResource;
+	}
+	const auto &state = it->second.scheduled;
+	ResourceCompletion result{.state = state.state, .points = {}};
+	for (uint32_t q = 0; q < m_queueCount; ++q)
+	{
+		const auto value = std::max(state.ready[q], state.accesses[q]);
+		if (value != 0)
+		{
+			result.points[q] = {.fence = m_fences[q].get(), .value = value};
+		}
+	}
+	return result;
 }
 
 void RenderGraphExecutor::ResetFrameState()
 {
-	m_stateTracker.Clear();
-
-	// Reset fence value counters but keep the fence objects alive for reuse
-	std::fill(m_queueFenceValues.begin(), m_queueFenceValues.end(), 0);
+	RetireCompleted();
+	if (m_states.size() <= 1)
+	{
+		m_schedule.clear(); // No resource accesses: there are no inner allocations to preserve.
+	}
+	else
+	{
+		for (auto &pass : m_schedule)
+		{
+			pass.node = nullptr;
+			pass.accesses.clear(); // Retain capacity, never references into a previous graph.
+		}
+	}
+	m_states.clear();
+	m_plan.clear();
+	// Signal values belong to the fence lifetime, not to a CPU frame.
 }
 
-void RenderGraphExecutor::RealizeResources(RenderGraph &graph)
+void RenderGraphExecutor::Join(Points &destination, const Points &source)
 {
-	ZoneScoped;
-	graph.GetResourceManager().ForEachResource([&](ResourceId /*id*/, ResourceHandle &handle) {
-		if (!handle.IsRealized())
+	for (size_t q = 0; q < destination.size(); ++q)
+	{
+		destination[q] = std::max(destination[q], source[q]);
+	}
+}
+
+Hush::Result<void, EGraphError> RenderGraphExecutor::InitializeQueues()
+{
+	if (m_device == nullptr)
+	{
+		return EGraphError::DeviceFailure;
+	}
+	uint32_t queueCount = 0;
+	std::array<Hush::Graphics::ICommandQueue *, RenderGraph::PASS_TYPE_COUNT> queues{};
+	for (uint32_t type = 0; type < RenderGraph::PASS_TYPE_COUNT; ++type)
+	{
+		const auto logical = static_cast<EQueueType>(type);
+		const auto physical = m_device->MapPassTypeToQueueIndex(logical);
+		if (physical >= RenderGraph::PASS_TYPE_COUNT)
 		{
-			handle.CreateResource(m_device);
+			return EGraphError::InvalidQueue;
 		}
+		auto *queue = m_device->GetQueueForType(logical);
+		if (queue == nullptr || queue != m_device->GetQueueForType(static_cast<EQueueType>(physical)))
+		{
+			return EGraphError::InvalidQueue;
+		}
+		queues[physical] = queue;
+		queueCount = std::max(queueCount, physical + 1);
+	}
+	// A live timeline and its retirement records belong to one physical queue.
+	if (m_queueCount != 0 && queues != m_queues)
+	{
+		return EGraphError::InvalidQueue;
+	}
+	for (uint32_t q = 0; q < queueCount; ++q)
+	{
+		if (queues[q] == nullptr)
+		{
+			continue;
+		}
+		for (uint32_t prior = 0; prior < q; ++prior)
+		{
+			if (queues[prior] == queues[q])
+			{
+				return EGraphError::InvalidQueue;
+			}
+		}
+		if (!m_fences[q])
+		{
+			m_fences[q] = m_device->CreateFence(0);
+		}
+		if (!m_fences[q])
+		{
+			return EGraphError::DeviceFailure;
+		}
+	}
+
+	m_queues = queues;
+	m_queueCount = queueCount;
+	return Hush::Success();
+}
+
+Hush::Result<void, EGraphError> RenderGraphExecutor::Initialize(RenderGraph &graph, std::pmr::memory_resource &scratch)
+{
+	if (graph.m_executionContext && graph.m_executionContext != m_executionContext)
+	{
+		return EGraphError::InvalidState;
+	}
+	const auto queues = InitializeQueues();
+	if (!queues.has_value())
+	{
+		return queues.error();
+	}
+	graph.m_executionContext = m_executionContext;
+	m_states.assign(graph.m_nextResourceId, State{});
+	boost::unordered_flat_set<void *, boost::hash<void *>, std::equal_to<>, std::pmr::polymorphic_allocator<void *>>
+		identities{std::pmr::polymorphic_allocator<void *>{&scratch}};
+	EGraphError error = EGraphError::None;
+	graph.GetResourceManager().ForEachResource([&](ResourceId id, ResourceHandle &handle) {
+		handle.CreateResource(m_device);
+		if (handle.SupportsBarriers())
+		{
+			auto *resource = handle.GetBarrierResource();
+			if (resource == nullptr)
+			{
+				error = EGraphError::InvalidResource;
+			}
+			else if (!identities.insert(resource).second)
+			{
+				error = EGraphError::DuplicateResource;
+			}
+		}
+		State initialState;
+		const auto &initial = graph.GetImportedResourceInitialStates();
+		if (auto it = initial.find(id); it != initial.end())
+		{
+			initialState.state = it->second;
+		}
+		// Allocate entries before submission. Planning uses a scratch copy and
+		// cannot corrupt the last successfully scheduled state on failure.
+		auto [entry, inserted] = m_persistentStates.try_emplace(
+			handle.GetInstanceId(), PersistentState{.scheduled = initialState, .lifetime = handle.GetLifetimeToken()});
+		m_states[id.id] = entry->second.scheduled;
+	});
+	if (error != EGraphError::None)
+	{
+		return error;
+	}
+	return Hush::Success();
+}
+
+bool RenderGraphExecutor::GatherPassAccesses(PassAccesses &pass, const ResourceManager &resources) const
+{
+	const auto *node = pass.node;
+	auto addAccess = [&](ResourceId id, EResourceState state, bool write) {
+		const auto *handle = resources.GetResourceHandle(id);
+		if (handle == nullptr)
+		{
+			return false;
+		}
+		const bool physical = handle->SupportsBarriers();
+		if (physical && !ValidAccessState(state, write))
+		{
+			return false;
+		}
+		if (physical && write && node->GetReadResources().contains(id) && node->GetReadState(id) != state)
+		{
+			return false; // Internal state changes need explicit callback barriers or separate passes.
+		}
+		pass.accesses.push_back(
+			{.id = id, .state = physical ? state : EResourceState::Undefined, .write = write, .physical = physical});
+		return true;
+	};
+	for (auto id : node->GetWrittenResources())
+	{
+		if (!addAccess(id, node->GetWriteState(id), true))
+		{
+			return false;
+		}
+	}
+	return std::ranges::all_of(node->GetReadResources(), [&](ResourceId id) {
+		return node->GetWrittenResources().contains(id) || addAccess(id, node->GetReadState(id), false);
 	});
 }
 
-void RenderGraphExecutor::EnsureFencesCreated(uint32_t queueCount)
+Hush::Result<void, EGraphError> RenderGraphExecutor::GatherAccesses(RenderGraph &graph,
+																	std::pmr::memory_resource &scratch)
 {
-	if (m_queueFences.size() >= queueCount)
+	const bool reuseAccesses = graph.GetResourceManager().GetResourceCount() != 0;
+	if (reuseAccesses)
 	{
-		return;
+		m_schedule.resize(graph.GetPasses().size());
 	}
-
-	const size_t oldSize = m_queueFences.size();
-	m_queueFences.resize(queueCount);
-	m_queueFenceValues.resize(queueCount, 0);
-
-	for (size_t q = oldSize; q < queueCount; ++q)
+	else
 	{
-		m_queueFences[q] = m_device->CreateFence(0);
-		HUSH_ASSERT(m_queueFences[q] != nullptr, "Failed to create timeline fence for queue");
+		m_schedule.clear();
+		m_schedule.reserve(graph.GetPasses().size());
+	}
+	size_t index = 0;
+	for (const auto &level : graph.GetDependencyLevels())
+	{
+		for (auto *node : level.GetPassNodes())
+		{
+			if (node->GetQueueIndex() != m_device->MapPassTypeToQueueIndex(PassTypeToQueueType(node->GetPassType())))
+			{
+				return EGraphError::InvalidQueue;
+			}
+			auto &pass = reuseAccesses ? m_schedule[index++] : m_schedule.emplace_back();
+			pass.node = node;
+			pass.accesses.clear();
+			if (!GatherPassAccesses(pass, graph.GetResourceManager()))
+			{
+				return EGraphError::InvalidState;
+			}
+		}
+	}
+	CombineReadEpochs(graph.m_nextResourceId, scratch);
+	return Hush::Success();
+}
+
+void RenderGraphExecutor::CombineReadEpochs(uint32_t resourceCount, std::pmr::memory_resource &scratch)
+{
+	// All vectors have their final size before taking access pointers. Readers
+	// may span dependency levels: a CPU level boundary is not synchronization.
+	std::pmr::vector<std::pmr::vector<Access *>> histories(resourceCount, &scratch);
+	for (auto &pass : m_schedule)
+	{
+		for (auto &access : pass.accesses)
+		{
+			histories[access.id.id].push_back(&access);
+		}
+	}
+	for (const auto &history : histories)
+	{
+		for (size_t first = 0; first < history.size();)
+		{
+			if (history[first]->write)
+			{
+				++first;
+				continue;
+			}
+			auto combined = history[first]->state;
+			size_t end = first + 1;
+			while (end < history.size() && !history[end]->write &&
+				   m_device->CanCombineReadStates(combined, history[end]->state))
+			{
+				combined |= history[end++]->state;
+			}
+			for (; first < end; ++first)
+			{
+				history[first]->state = combined;
+			}
+		}
 	}
 }
 
-uint64_t RenderGraphExecutor::AllocateFenceValue(uint32_t queueIndex)
+uint32_t RenderGraphExecutor::TransitionQueue(uint32_t preferred, EResourceState before, EResourceState after) const
 {
-	HUSH_ASSERT(queueIndex < m_queueFenceValues.size(), "Queue index out of range");
-	return ++m_queueFenceValues[queueIndex];
+	const auto required = static_cast<uint32_t>(before | after);
+	auto supports = [&](uint32_t q) {
+		return m_queues[q] != nullptr &&
+			   (required & ~m_device->GetQueueSupportedStates(static_cast<EQueueType>(q))) == 0;
+	};
+	if (supports(preferred))
+	{
+		return preferred;
+	}
+	for (uint32_t q = 0; q < m_queueCount; ++q)
+	{
+		if (supports(q))
+		{
+			return q;
+		}
+	}
+	return NO_QUEUE;
 }
 
-Hush::Graphics::ICommandQueue *RenderGraphExecutor::GetQueueByIndex(uint32_t queueIndex) const
+Hush::Result<void, EGraphError> RenderGraphExecutor::PlanPass(PassAccesses &pass, const ResourceManager &resources)
 {
-	return m_device->GetQueueForType(QueueIndexToType(queueIndex));
+	Operation work;
+	work.queue = pass.node->GetQueueIndex();
+	work.pass = pass.node;
+	for (const auto *dependency : pass.node->GetNodesToSync())
+	{
+		auto &wait = work.waits[dependency->GetQueueIndex()];
+		wait = std::max(wait, dependency->m_fenceSignalValue);
+	}
+	std::array<Operation, RenderGraph::PASS_TYPE_COUNT> barriers;
+	for (auto &access : pass.accesses)
+	{
+		auto &history = m_states[access.id.id];
+		if (!access.write && m_device->CanCombineReadStates(history.state, access.state) &&
+			(history.state & access.state) == access.state)
+		{
+			access.state = history.state; // Keep a valid read superset; do not narrow it.
+		}
+		const bool transition = access.physical && history.state != access.state;
+		const bool used =
+			std::any_of(history.accesses.begin(), history.accesses.end(), [](auto value) { return value != 0; });
+		const bool uav = access.physical && !transition && access.state == EResourceState::UnorderedAccess && used &&
+						 (access.write || history.lastWrite);
+		if (!transition && !uav)
+		{
+			Join(work.waits, history.ready);
+			if (access.write)
+			{
+				Join(work.waits, history.accesses);
+			}
+			continue;
+		}
+		const auto queue = TransitionQueue(work.queue, history.state, access.state);
+		if (queue == NO_QUEUE)
+		{
+			return EGraphError::UnsupportedTransition;
+		}
+		access.barrierQueue = queue;
+		auto &operation = barriers[queue];
+		operation.queue = queue;
+		Join(operation.waits, history.ready);
+		Join(operation.waits, history.accesses);
+		auto *resource = resources.GetResourceHandle(access.id)->GetBarrierResource();
+		if (transition)
+		{
+			operation.barriers.transitions.push_back(
+				{.resource = resource, .stateBefore = history.state, .stateAfter = access.state});
+		}
+		else
+		{
+			operation.barriers.uavBarriers.push_back({resource});
+		}
+	}
+	// Capture every prerequisite before allocating any transition signal. Each
+	// consumer uses this operation's exact signal, never a mutable latest value.
+	Points transitionSignals{};
+	for (auto &operation : barriers)
+	{
+		if (operation.barriers.transitions.empty() && operation.barriers.uavBarriers.empty())
+		{
+			continue;
+		}
+		operation.signal = ++m_fenceValues[operation.queue];
+		transitionSignals[operation.queue] = operation.signal;
+		work.waits[operation.queue] = std::max(work.waits[operation.queue], operation.signal);
+		m_plan.push_back(std::move(operation));
+	}
+	work.signal = ++m_fenceValues[work.queue];
+	pass.node->m_fenceSignalValue = work.signal;
+	ApplyPassState(pass, work, transitionSignals);
+	m_plan.push_back(std::move(work));
+	return Hush::Success();
 }
 
-std::unique_ptr<Hush::Graphics::ICommandList> RenderGraphExecutor::CreateCommandListForQueue(uint32_t queueIndex) const
+void RenderGraphExecutor::ApplyPassState(const PassAccesses &pass, const Operation &work, const Points &transitions)
 {
-	switch (queueIndex)
+	for (const auto &access : pass.accesses)
+	{
+		auto &history = m_states[access.id.id];
+		if (access.barrierQueue != NO_QUEUE)
+		{
+			history.state = access.state;
+			history.ready = {};
+			history.accesses = {};
+			history.ready[access.barrierQueue] = transitions[access.barrierQueue];
+		}
+		if (access.write)
+		{
+			history.ready = {};
+			history.accesses = {};
+			history.ready[work.queue] = work.signal;
+		}
+		history.accesses[work.queue] = work.signal;
+		history.lastWrite = access.write;
+	}
+}
+
+std::unique_ptr<ICommandList> RenderGraphExecutor::CreateCommandList(uint32_t queue) const
+{
+	switch (queue)
 	{
 	case 1:
 		return m_device->CreateComputeCommandList();
@@ -85,519 +481,113 @@ std::unique_ptr<Hush::Graphics::ICommandList> RenderGraphExecutor::CreateCommand
 	}
 }
 
-bool RenderGraphExecutor::QueueSupportsTransition(uint32_t queueIndex, Hush::Graphics::EResourceState stateBefore,
-												  Hush::Graphics::EResourceState stateAfter) const
+Hush::Result<void, EGraphError> RenderGraphExecutor::SubmitPlan(RenderGraph &graph, std::pmr::memory_resource &scratch)
 {
-	const uint32_t supportedStates = m_device->GetQueueSupportedStates(QueueIndexToType(queueIndex));
-	const auto beforeBits = static_cast<uint32_t>(stateBefore);
-	const auto afterBits = static_cast<uint32_t>(stateAfter);
-
-	// Queue must support both the before and after states to perform the transition
-	return (beforeBits & ~supportedStates) == 0 && (afterBits & ~supportedStates) == 0;
+	if (m_plan.empty())
+	{
+		return Hush::Success();
+	}
+	InFlight work;
+	work.lifetimes.reserve(graph.GetResourceManager().GetResourceCount() + graph.GetPasses().size());
+	graph.GetResourceManager().ForEachResource(
+		[&](ResourceId, const ResourceHandle &handle) { work.lifetimes.push_back(handle.GetLifetimeToken()); });
+	for (const auto &pass : graph.GetPasses())
+	{
+		work.lifetimes.push_back(pass.GetLifetimeToken());
+	}
+	auto &commands = work.commands;
+	commands.reserve(m_plan.size());
+	// Only the outer staging array is scratch. SubmitInfo's RHI-owned vector
+	// members and in-flight command/resource ownership keep their normal allocators.
+	std::pmr::vector<SubmitInfo> submissions(m_plan.size(), &scratch);
+	for (auto &operation : m_plan)
+	{
+		auto cmd = CreateCommandList(operation.queue);
+		if (!cmd)
+		{
+			return EGraphError::DeviceFailure;
+		}
+		cmd->Reset();
+		if (!operation.barriers.transitions.empty())
+		{
+			cmd->ResourceBarrier(operation.barriers.transitions);
+		}
+		if (!operation.barriers.uavBarriers.empty())
+		{
+			cmd->UAVBarrier(operation.barriers.uavBarriers);
+		}
+		if (operation.pass != nullptr)
+		{
+			operation.pass->Execute(cmd.get(), graph.GetResourceManager());
+		}
+		cmd->Close();
+		commands.push_back(std::move(cmd));
+	}
+	for (size_t i = 0; i < m_plan.size(); ++i)
+	{
+		const auto &operation = m_plan[i];
+		auto &submit = submissions[i];
+		for (uint32_t q = 0; q < m_queueCount; ++q)
+		{
+			if (q != operation.queue && operation.waits[q] != 0)
+			{
+				submit.waitFences.push_back({.fence = m_fences[q].get(), .value = operation.waits[q]});
+			}
+		}
+		submit.commandLists.push_back(commands[i].get());
+		submit.signalFences.push_back({.fence = m_fences[operation.queue].get(), .value = operation.signal});
+		work.completion[operation.queue] = operation.signal;
+	}
+	// All allocation/recording completes before the first submit. Even a
+	// partially failed submission retains every object until an explicit drain.
+	m_inFlight.push_back(std::move(work));
+	try
+	{
+		for (size_t i = 0; i < m_plan.size(); ++i)
+		{
+			m_queues[m_plan[i].queue]->SubmitBatched(submissions[i]);
+		}
+	}
+	catch (...)
+	{
+		m_submissionFailed = true;
+		return EGraphError::DeviceFailure;
+	}
+	graph.GetResourceManager().ForEachResource([&](ResourceId id, const ResourceHandle &handle) {
+		m_persistentStates.at(handle.GetInstanceId()).scheduled = m_states[id.id];
+	});
+	return Hush::Success();
 }
 
-uint32_t RenderGraphExecutor::FindMostCompetentQueue(Hush::Graphics::EResourceState stateBefore,
-													 Hush::Graphics::EResourceState stateAfter,
-													 const boost::unordered_flat_set<uint32_t> &involvedQueues) const
+Hush::Result<void, EGraphError> RenderGraphExecutor::Execute(RenderGraph &graph, std::pmr::memory_resource &scratch)
 {
-	// Prefer involved queues first, then fall back to graphics (queue 0) which supports all states
-	for (uint32_t q : involvedQueues)
+	if (m_submissionFailed)
 	{
-		if (QueueSupportsTransition(q, stateBefore, stateAfter))
+		return EGraphError::DeviceFailure;
+	}
+	RetireCompleted();
+	if (!graph.IsCompiled())
+	{
+		return EGraphError::NotCompiled;
+	}
+	m_plan.clear();
+	auto initialized = Initialize(graph, scratch);
+	if (!initialized.has_value())
+	{
+		return initialized.error();
+	}
+	auto gathered = GatherAccesses(graph, scratch);
+	if (!gathered.has_value())
+	{
+		return gathered.error();
+	}
+	for (auto &pass : m_schedule)
+	{
+		auto result = PlanPass(pass, graph.GetResourceManager());
+		if (!result.has_value())
 		{
-			return q;
+			return result.error();
 		}
 	}
-
-	// Graphics queue is always the most competent fallback
-	return 0;
-}
-
-void RenderGraphExecutor::ComputeBarriersForPass(RenderPassNode &passNode, const ResourceManager &resourceManager,
-												 std::vector<Hush::Graphics::ResourceBarrierDescriptor> &barriers)
-{
-	// Compute barriers for read resources
-	for (const ResourceId &rid : passNode.GetReadResources())
-	{
-		ResourceStateEntry *stateEntry = m_stateTracker.GetState(rid);
-		if (stateEntry == nullptr)
-		{
-			continue;
-		}
-
-		Hush::Graphics::EResourceState desiredState = passNode.GetReadState(rid);
-		if (desiredState == Hush::Graphics::EResourceState::Undefined)
-		{
-			continue; // No explicit state requested
-		}
-
-		if (stateEntry->currentState != desiredState)
-		{
-			Hush::RenderGraph::ResourceHandle *handle = resourceManager.GetResourceHandle(rid);
-			void *resource = (handle != nullptr) ? handle->GetNativePtr() : nullptr;
-
-			barriers.push_back(Hush::Graphics::ResourceBarrierDescriptor{.resource = resource,
-																		 .stateBefore = stateEntry->currentState,
-																		 .stateAfter = desiredState,
-																		 .subresource = UINT32_MAX});
-
-			// Update tracked state
-			m_stateTracker.SetState(rid, desiredState, passNode.GetQueueIndex());
-		}
-	}
-
-	// Compute barriers for written resources
-	for (const ResourceId &rid : passNode.GetWrittenResources())
-	{
-		ResourceStateEntry *stateEntry = m_stateTracker.GetState(rid);
-		if (stateEntry == nullptr)
-		{
-			continue;
-		}
-
-		Hush::Graphics::EResourceState desiredState = passNode.GetWriteState(rid);
-		if (desiredState == Hush::Graphics::EResourceState::Undefined)
-		{
-			continue;
-		}
-
-		if (stateEntry->currentState != desiredState)
-		{
-			Hush::RenderGraph::ResourceHandle *handle = resourceManager.GetResourceHandle(rid);
-			void *resource = (handle != nullptr) ? handle->GetNativePtr() : nullptr;
-
-			barriers.push_back(Hush::Graphics::ResourceBarrierDescriptor{.resource = resource,
-																		 .stateBefore = stateEntry->currentState,
-																		 .stateAfter = desiredState,
-																		 .subresource = UINT32_MAX});
-
-			m_stateTracker.SetState(rid, desiredState, passNode.GetQueueIndex());
-		}
-	}
-}
-
-DependencyLevelExecutionContext RenderGraphExecutor::BuildExecutionContext(RenderGraph::DependencyLevel &level,
-																		   const ResourceManager &resourceManager,
-																		   uint32_t queueCount)
-{
-	ZoneScoped;
-	DependencyLevelExecutionContext execCtx;
-	execCtx.queuePlans.resize(queueCount);
-
-	for (uint32_t q = 0; q < queueCount; ++q)
-	{
-		execCtx.queuePlans[q].queueIndex = q;
-	}
-
-	// --- Step 1: Read cross-queue dependency info (already populated during compilation) ---
-	const auto &crossDepQueues = level.GetQueuesInvolvedInCrossDependencies();
-	const auto &multiQueueResources = level.GetResourcesReadByMultipleQueues();
-
-	const bool hasCrossQueueDeps = !crossDepQueues.empty();
-
-	// --- Step 2: Determine most competent queue for transition rerouting ---
-	if (hasCrossQueueDeps)
-	{
-		// Collect all cross-queue transitions to find the combined before/after states
-		Hush::Graphics::EResourceState combinedBefore = Hush::Graphics::EResourceState::Undefined;
-		Hush::Graphics::EResourceState combinedAfter = Hush::Graphics::EResourceState::Undefined;
-
-		for (const ResourceId &rid : multiQueueResources)
-		{
-			const ResourceStateEntry *stateEntry = m_stateTracker.GetState(rid);
-			if (stateEntry != nullptr)
-			{
-				combinedBefore = combinedBefore | stateEntry->currentState;
-			}
-
-			// Collect the combined desired read state from all passes reading this resource
-			for (RenderPassNode *node : level.GetPassNodes())
-			{
-				Hush::Graphics::EResourceState readState = node->GetReadState(rid);
-				if (readState != Hush::Graphics::EResourceState::Undefined)
-				{
-					combinedAfter = combinedAfter | readState;
-				}
-			}
-		}
-
-		execCtx.mostCompetentQueueIndex = FindMostCompetentQueue(combinedBefore, combinedAfter, crossDepQueues);
-
-		// Mark queues involved in cross-dependencies as requiring transition rerouting
-		for (uint32_t q : crossDepQueues)
-		{
-			execCtx.queuePlans[q].requiresTransitionRerouting = true;
-		}
-		execCtx.queuePlans[execCtx.mostCompetentQueueIndex].isMostCompetentQueue = true;
-
-		// --- Step 3: Build rerouted barriers for multi-queue reads ---
-		for (const ResourceId &rid : multiQueueResources)
-		{
-			ResourceStateEntry *stateEntry = m_stateTracker.GetState(rid);
-			if (stateEntry == nullptr)
-			{
-				continue;
-			}
-
-			// Compute combined read state across all queues for this resource
-			Hush::Graphics::EResourceState combinedReadState = Hush::Graphics::EResourceState::Undefined;
-			for (RenderPassNode *node : level.GetPassNodes())
-			{
-				Hush::Graphics::EResourceState readState = node->GetReadState(rid);
-				if (readState != Hush::Graphics::EResourceState::Undefined)
-				{
-					combinedReadState = combinedReadState | readState;
-				}
-			}
-
-			if (stateEntry->currentState != combinedReadState &&
-				combinedReadState != Hush::Graphics::EResourceState::Undefined)
-			{
-				Hush::RenderGraph::ResourceHandle *handle = resourceManager.GetResourceHandle(rid);
-				void *resource = (handle != nullptr) ? handle->GetNativePtr() : nullptr;
-
-				execCtx.reroutedBarriers.push_back(
-					Hush::Graphics::ResourceBarrierDescriptor{.resource = resource,
-															  .stateBefore = stateEntry->currentState,
-															  .stateAfter = combinedReadState,
-															  .subresource = UINT32_MAX});
-
-				// Update tracked state: after rerouted transition, resource is in combined read state
-				m_stateTracker.SetState(rid, combinedReadState, execCtx.mostCompetentQueueIndex);
-				m_stateTracker.SetMultiQueueRead(rid, true);
-			}
-		}
-	}
-
-	// --- Step 4: Build batches per queue ---
-	const auto &nodesPerQueue = level.GetNodesPerQueue();
-
-	for (uint32_t q = 0; q < queueCount; ++q)
-	{
-		QueueExecutionPlan &plan = execCtx.queuePlans[q];
-
-		const bool hasNodesOnQueue = (nodesPerQueue.size() > q) && !nodesPerQueue[q].empty();
-
-		if (!hasNodesOnQueue)
-		{
-			// No work on this queue, but if it's the most competent queue and there
-			// are rerouted barriers, we still need a transitions batch.
-			if (plan.isMostCompetentQueue && !execCtx.reroutedBarriers.empty())
-			{
-				CommandListBatch transitionBatch;
-				transitionBatch.isTransitionRerouteBatch = true;
-
-				// Wait on all other queues involved in cross-dependencies
-				for (uint32_t otherQ : crossDepQueues)
-				{
-					if (otherQ != q && m_queueFenceValues[otherQ] > 0)
-					{
-						transitionBatch.fenceWaits.push_back(Hush::Graphics::FenceWaitDescriptor{
-							.fence = m_queueFences[otherQ].get(), .value = m_queueFenceValues[otherQ]});
-					}
-				}
-
-				uint64_t signalVal = AllocateFenceValue(q);
-				transitionBatch.fenceSignals.push_back(
-					Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[q].get(), .value = signalVal});
-
-				plan.batches.push_back(std::move(transitionBatch));
-			}
-			continue;
-		}
-
-		const auto &nodesOnQueue = nodesPerQueue[q];
-
-		// If this queue IS the most competent queue, insert the rerouted
-		// transitions batch first.
-		if (plan.isMostCompetentQueue && !execCtx.reroutedBarriers.empty())
-		{
-			CommandListBatch transitionBatch;
-			transitionBatch.isTransitionRerouteBatch = true;
-
-			// Wait on all other queues involved in cross-deps that have submitted work
-			for (uint32_t otherQ : crossDepQueues)
-			{
-				if (otherQ != q && m_queueFenceValues[otherQ] > 0)
-				{
-					transitionBatch.fenceWaits.push_back(Hush::Graphics::FenceWaitDescriptor{
-						.fence = m_queueFences[otherQ].get(), .value = m_queueFenceValues[otherQ]});
-				}
-			}
-
-			uint64_t transitionSignalVal = AllocateFenceValue(q);
-			transitionBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[q].get(), .value = transitionSignalVal});
-
-			plan.batches.push_back(std::move(transitionBatch));
-		}
-
-		// Build work batches for this queue.
-		// Batches are split when a fence signal or wait is required.
-		if (plan.requiresTransitionRerouting)
-		{
-			BuildBatchesForReroutedQueue(plan, nodesOnQueue, execCtx, q);
-		}
-		else
-		{
-			BuildBatchesForIndependentQueue(plan, nodesOnQueue, q);
-		}
-	}
-
-	return execCtx;
-}
-
-void RenderGraphExecutor::BuildBatchesForReroutedQueue(QueueExecutionPlan &plan,
-													   const std::vector<RenderPassNode *> &nodesOnQueue,
-													   const DependencyLevelExecutionContext &execCtx,
-													   uint32_t queueIndex)
-{
-	// Queues involved in cross-deps: batch all passes together, separated
-	// only by signal requirements. The initial batch may have a wait on
-	// the most-competent queue's transition fence.
-	CommandListBatch currentBatch;
-
-	// If not the most competent queue, wait on the transition fence
-	if (!plan.isMostCompetentQueue && !execCtx.reroutedBarriers.empty())
-	{
-		uint32_t mcq = execCtx.mostCompetentQueueIndex;
-		if (m_queueFenceValues[mcq] > 0)
-		{
-			currentBatch.fenceWaits.push_back(Hush::Graphics::FenceWaitDescriptor{.fence = m_queueFences[mcq].get(),
-																				  .value = m_queueFenceValues[mcq]});
-		}
-	}
-	// If IS the most competent queue, wait on own fence (transition batch signaled it)
-	else if (plan.isMostCompetentQueue && !execCtx.reroutedBarriers.empty())
-	{
-		currentBatch.fenceWaits.push_back(Hush::Graphics::FenceWaitDescriptor{.fence = m_queueFences[queueIndex].get(),
-																			  .value = m_queueFenceValues[queueIndex]});
-	}
-
-	for (RenderPassNode *passNode : nodesOnQueue)
-	{
-		// If this pass must signal (it has cross-queue dependents), we need
-		// to close the current batch with a signal and start a new one.
-		if (passNode->IsSyncSignalRequired() && !currentBatch.commandLists.empty())
-		{
-			uint64_t sigVal = AllocateFenceValue(queueIndex);
-			passNode->m_fenceSignalValue = sigVal;
-			currentBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[queueIndex].get(), .value = sigVal});
-
-			plan.batches.push_back(std::move(currentBatch));
-			currentBatch = CommandListBatch{};
-		}
-
-		// nullptr placeholder — filled during submission with a real command list
-		currentBatch.commandLists.push_back(nullptr);
-
-		// If this pass must signal and it's the only (or last) entry
-		if (passNode->IsSyncSignalRequired() && currentBatch.fenceSignals.empty())
-		{
-			uint64_t sigVal = AllocateFenceValue(queueIndex);
-			passNode->m_fenceSignalValue = sigVal;
-			currentBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[queueIndex].get(), .value = sigVal});
-		}
-	}
-
-	// Close final batch with a signal so downstream levels can depend on it
-	if (!currentBatch.commandLists.empty())
-	{
-		if (currentBatch.fenceSignals.empty())
-		{
-			uint64_t sigVal = AllocateFenceValue(queueIndex);
-			currentBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[queueIndex].get(), .value = sigVal});
-		}
-		plan.batches.push_back(std::move(currentBatch));
-	}
-}
-
-void RenderGraphExecutor::BuildBatchesForIndependentQueue(QueueExecutionPlan &plan,
-														  const std::vector<RenderPassNode *> &nodesOnQueue,
-														  uint32_t queueIndex)
-{
-	// Queues NOT involved in cross-deps: batch passes, split on wait/signal.
-	CommandListBatch currentBatch;
-
-	for (RenderPassNode *passNode : nodesOnQueue)
-	{
-		// Check if this pass needs to wait on other queues
-		bool needsWait = false;
-		for (RenderPassNode *syncNode : passNode->GetNodesToSync())
-		{
-			if (syncNode->GetQueueIndex() != queueIndex && syncNode->m_fenceSignalValue > 0)
-			{
-				needsWait = true;
-				break;
-			}
-		}
-
-		// If needs wait, start a new batch (the waiting pass goes into the new batch)
-		if (needsWait && !currentBatch.commandLists.empty())
-		{
-			plan.batches.push_back(std::move(currentBatch));
-			currentBatch = CommandListBatch{};
-		}
-
-		// Add waits for this pass
-		if (needsWait)
-		{
-			for (RenderPassNode *syncNode : passNode->GetNodesToSync())
-			{
-				if (syncNode->GetQueueIndex() != queueIndex && syncNode->m_fenceSignalValue > 0)
-				{
-					currentBatch.fenceWaits.push_back(
-						Hush::Graphics::FenceWaitDescriptor{.fence = m_queueFences[syncNode->GetQueueIndex()].get(),
-															.value = syncNode->m_fenceSignalValue});
-				}
-			}
-		}
-
-		// nullptr placeholder — filled during submission
-		currentBatch.commandLists.push_back(nullptr);
-
-		// If this pass must signal, close this batch
-		if (passNode->IsSyncSignalRequired())
-		{
-			uint64_t sigVal = AllocateFenceValue(queueIndex);
-			passNode->m_fenceSignalValue = sigVal;
-			currentBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[queueIndex].get(), .value = sigVal});
-
-			plan.batches.push_back(std::move(currentBatch));
-			currentBatch = CommandListBatch{};
-		}
-	}
-
-	// Close final batch
-	if (!currentBatch.commandLists.empty())
-	{
-		if (currentBatch.fenceSignals.empty())
-		{
-			uint64_t sigVal = AllocateFenceValue(queueIndex);
-			currentBatch.fenceSignals.push_back(
-				Hush::Graphics::FenceSignalDescriptor{.fence = m_queueFences[queueIndex].get(), .value = sigVal});
-		}
-		plan.batches.push_back(std::move(currentBatch));
-	}
-}
-
-void RenderGraphExecutor::Execute(RenderGraph &graph)
-{
-	ZoneScoped;
-	HUSH_ASSERT(graph.IsCompiled(), "Cannot execute a dirty render graph! Call Compile() first.");
-	HUSH_ASSERT(m_device != nullptr, "Graphics device cannot be null!");
-
-	const uint32_t queueCount = graph.GetDetectedQueueCount();
-
-	// --- Step 1: Realize any unrealized transient resources ---
-	RealizeResources(graph);
-
-	// --- Step 2: Initialize resource state tracking from the graph ---
-	m_stateTracker.InitializeFromGraph(graph);
-
-	// --- Step 3: Ensure per-queue timeline fences exist ---
-	EnsureFencesCreated(queueCount);
-
-	// Keep all command lists alive for the duration of execution.
-	// Command lists are created per-pass and must survive until their
-	// corresponding queue submission completes.
-	std::vector<std::unique_ptr<Hush::Graphics::ICommandList>> ownedCommandLists;
-
-	ResourceManager &resourceManager = graph.GetResourceManager();
-
-	// --- Step 4: Execute passes level by level ---
-	for (RenderGraph::DependencyLevel &level : graph.GetDependencyLevels())
-	{
-		// Build the execution context: barriers, rerouting, batches
-		DependencyLevelExecutionContext execCtx = BuildExecutionContext(level, resourceManager, queueCount);
-
-		const auto &nodesPerQueue = level.GetNodesPerQueue();
-
-		// Record and submit each queue's batches
-		for (uint32_t q = 0; q < queueCount; ++q)
-		{
-			QueueExecutionPlan &plan = execCtx.queuePlans[q];
-			if (plan.batches.empty())
-			{
-				continue;
-			}
-
-			Hush::Graphics::ICommandQueue *queue = GetQueueByIndex(q);
-
-			// Per-queue pass iterator: consumed as we fill batches with real command lists
-			const bool hasNodesOnQueue = (nodesPerQueue.size() > q) && !nodesPerQueue[q].empty();
-			const auto &queueNodes = hasNodesOnQueue ? nodesPerQueue[q] : std::vector<RenderPassNode *>{};
-			size_t passIndex = 0;
-
-			for (CommandListBatch &batch : plan.batches)
-			{
-				Hush::Graphics::SubmitInfo submitInfo;
-				submitInfo.waitFences = batch.fenceWaits;
-				submitInfo.signalFences = batch.fenceSignals;
-
-				if (batch.isTransitionRerouteBatch)
-				{
-					// --- Rerouted transitions batch ---
-					// Create a dedicated command list, record all rerouted barriers,
-					// and submit it with the batch's fence waits/signals.
-					auto transitionCmd = CreateCommandListForQueue(q);
-					transitionCmd->Reset();
-
-					if (!execCtx.reroutedBarriers.empty())
-					{
-						transitionCmd->ResourceBarrier(std::span<const Hush::Graphics::ResourceBarrierDescriptor>(
-							execCtx.reroutedBarriers.data(), execCtx.reroutedBarriers.size()));
-					}
-
-					transitionCmd->Close();
-					submitInfo.commandLists.push_back(transitionCmd.get());
-					ownedCommandLists.push_back(std::move(transitionCmd));
-				}
-				else
-				{
-					// --- Work batch ---
-					// Each nullptr in batch.commandLists corresponds to one pass
-					// from the per-queue node list, consumed in order.
-					for (size_t i = 0; i < batch.commandLists.size(); ++i)
-					{
-						if (passIndex >= queueNodes.size())
-						{
-							break;
-						}
-
-						RenderPassNode *passNode = queueNodes[passIndex];
-						++passIndex;
-
-						// Create a command list for this pass
-						auto cmdList = CreateCommandListForQueue(q);
-						cmdList->Reset();
-
-						// Compute and record resource barriers for this pass
-						std::vector<Hush::Graphics::ResourceBarrierDescriptor> passBarriers;
-						ComputeBarriersForPass(*passNode, resourceManager, passBarriers);
-
-						if (!passBarriers.empty())
-						{
-							cmdList->ResourceBarrier(std::span<const Hush::Graphics::ResourceBarrierDescriptor>(
-								passBarriers.data(), passBarriers.size()));
-						}
-
-						// Execute the pass's recorded work
-						passNode->Execute(cmdList.get(), resourceManager);
-
-						cmdList->Close();
-						submitInfo.commandLists.push_back(cmdList.get());
-						ownedCommandLists.push_back(std::move(cmdList));
-					}
-				}
-
-				// Submit the batch with its fence waits and signals
-				queue->SubmitBatched(submitInfo);
-			}
-		}
-	}
+	return SubmitPlan(graph, scratch);
 }

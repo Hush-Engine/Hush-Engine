@@ -332,6 +332,7 @@ private:
 																		  .texture = device->GetCurrentFrameTexture(),
 																	  });
 
+				ctx.Write(data.backbuffer, EResourceState::RenderTarget);
 				m_backbufferResourceId = data.backbuffer;
 
 				// Never cull the ImGui pass — the editor UI must always be
@@ -417,10 +418,15 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		graph.UpdateImport<ImportedTextureResource>(m_backbufferResourceId,
-													ImportedTextureResource{
-														.texture = device->GetCurrentFrameTexture(),
-													});
+		if (!graph
+				 .UpdateImport<ImportedTextureResource>(
+					 m_backbufferResourceId, ImportedTextureResource{.texture = device->GetCurrentFrameTexture()},
+					 EResourceState::Undefined)
+				 .has_value())
+		{
+			Hush::LogError("Failed to replace the backbuffer import");
+			graph.Invalidate();
+		}
 	}
 
 	/// @brief Steal ownership of the current scene texture from the render

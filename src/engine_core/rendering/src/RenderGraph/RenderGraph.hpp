@@ -19,6 +19,7 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <memory_resource>
 #include <string>
 #include <string_view>
 #include <limits>
@@ -26,6 +27,7 @@
 #include <boost/unordered/unordered_flat_set.hpp>
 #include "RHI/GraphicsTypes.hpp"
 #include "ResourceHandle.hpp"
+#include "Result.hpp"
 
 namespace Hush::Graphics
 {
@@ -78,6 +80,20 @@ struct boost::hash<Hush::RenderGraph::ResourceId>
 
 namespace Hush::RenderGraph
 {
+	enum class EGraphError : uint8_t
+	{
+		None,
+		InvalidResource,
+		InvalidQueue,
+		QueueMapLocked,
+		DuplicateResource,
+		NotCompiled,
+		InvalidState,
+		UnsupportedTransition,
+		DeviceFailure,
+		Cycle,
+	};
+
 	/// Manages logical resources within the render graph, including creation,
 	/// tracking, and resolution.
 	///
@@ -159,11 +175,11 @@ namespace Hush::RenderGraph
 		/// @param id The ResourceId of the imported resource to update.
 		/// @param newResource The replacement resource instance.
 		template <ResourceConcept T>
-		void UpdateResource(const ResourceId &id, T &&newResource)
+		[[nodiscard]]
+		bool UpdateResource(const ResourceId &id, T &&newResource)
 		{
 			auto *handle = GetResourceHandle(id);
-			HUSH_ASSERT(handle != nullptr, "UpdateResource: ResourceId not found in manager!");
-			handle->UpdateExternalResource<T>(std::forward<T>(newResource));
+			return handle != nullptr && handle->UpdateExternalResource<T>(std::forward<T>(newResource));
 		}
 
 		/// Iterate over all resource handles (used by the executor for realization)
@@ -268,7 +284,7 @@ namespace Hush::RenderGraph
 		friend class RenderGraph;
 		friend class RenderGraphExecutor;
 
-		static constexpr uint64_t INVALID_SYNC_INDEX = std::numeric_limits<uint64_t>::max();
+		static constexpr uint64_t INVALID_SYNC_INDEX = 0;
 
 	public:
 		enum class EPassCullingMode : uint8_t
@@ -277,7 +293,7 @@ namespace Hush::RenderGraph
 			NeverCull,
 		};
 
-		RenderPassNode(std::string_view name, uint32_t nodeId, EPassType passType, std::unique_ptr<PassBase> &&pass,
+		RenderPassNode(std::string_view name, uint32_t nodeId, EPassType passType, std::shared_ptr<PassBase> &&pass,
 					   uint32_t queueIndex = std::numeric_limits<uint32_t>::max())
 			: m_name(name),
 			  m_pass(std::move(pass)),
@@ -286,6 +302,18 @@ namespace Hush::RenderGraph
 																			  : static_cast<uint32_t>(passType)),
 			  m_unorderedPassIndex(nodeId)
 		{
+		}
+
+		~RenderPassNode() = default;
+		RenderPassNode(const RenderPassNode &) = delete;
+		RenderPassNode &operator=(const RenderPassNode &) = delete;
+		RenderPassNode(RenderPassNode &&) noexcept = default;
+		RenderPassNode &operator=(RenderPassNode &&) noexcept = default;
+
+		[[nodiscard]]
+		std::shared_ptr<const void> GetLifetimeToken() const
+		{
+			return m_pass;
 		}
 
 		[[nodiscard]]
@@ -396,13 +424,15 @@ namespace Hush::RenderGraph
 		/// Nodes this pass must wait on (cross-queue dependencies, after SSIS culling).
 		std::vector<RenderPassNode *> m_nodesToSync;
 
-		std::unique_ptr<PassBase> m_pass;
+		std::shared_ptr<PassBase> m_pass;
 		EPassType m_passType;
 		EPassCullingMode m_cullingMode = EPassCullingMode::CullIfPossible;
 
 		uint32_t m_queueIndex = 0;
 		uint32_t m_unorderedPassIndex = 0;
 		uint32_t m_dependencyLevelIndex = 0;
+		uint64_t m_queueSequence = 0;
+		uint64_t m_scheduleIndex = 0;
 
 		/// True if this node has a cross-queue dependency that requires a fence signal.
 		bool m_syncSignalRequired = false;
@@ -479,6 +509,12 @@ namespace Hush::RenderGraph
 			}
 
 			[[nodiscard]]
+			const boost::unordered_flat_set<uint32_t> &GetQueuesInvolvedInSharedReads() const noexcept
+			{
+				return m_queuesInvolvedInSharedReads;
+			}
+
+			[[nodiscard]]
 			const boost::unordered_flat_set<ResourceId> &GetResourcesReadByMultipleQueues() const noexcept
 			{
 				return m_resourcesReadByMultipleQueues;
@@ -506,10 +542,11 @@ namespace Hush::RenderGraph
 			/// Detect which resources are read by more than one queue in this level.
 			/// Populates m_resourcesReadByMultipleQueues and
 			/// m_queuesInvolvedInCrossDependencies.
-			void DetectMultiQueueReads();
+			void DetectMultiQueueReads(std::pmr::memory_resource &scratch);
 
 		private:
 			boost::unordered_flat_set<uint32_t> m_queuesInvolvedInCrossDependencies;
+			boost::unordered_flat_set<uint32_t> m_queuesInvolvedInSharedReads;
 			boost::unordered_flat_set<ResourceId> m_resourcesReadByMultipleQueues;
 			std::vector<std::vector<RenderPassNode *>> m_nodesPerQueue;
 
@@ -535,7 +572,7 @@ namespace Hush::RenderGraph
 			ResourceId Write(ResourceId id, Hush::Graphics::EResourceState desiredState =
 												Hush::Graphics::EResourceState::UnorderedAccess);
 
-			/// Create a transient resource inside of the pass.
+			/// Declare a transient resource. Does not declare an access; call Read/Write explicitly.
 			///
 			/// The resource descriptor is stored and a default-constructed resource
 			/// instance is created, but actual GPU allocation is deferred until the
@@ -545,8 +582,12 @@ namespace Hush::RenderGraph
 			ResourceId Create([[maybe_unused]] std::string_view name,
 							  [[maybe_unused]] const typename T::Descriptor &&desc)
 			{
+				if (m_renderGraph.m_resourceManager.GetResourceId(name).id != 0)
+				{
+					m_renderGraph.m_buildError = EGraphError::DuplicateResource;
+					return {};
+				}
 				ResourceId id{m_renderGraph.m_nextResourceId++};
-				m_passNode.AddWrittenResource(id);
 
 				// Create the handle with a default-constructed resource — NOT realized yet.
 				// The executor will call handle.CreateResource(device) before execution.
@@ -557,7 +598,8 @@ namespace Hush::RenderGraph
 				return id;
 			}
 
-			/// Import an external resource into the graph (e.g. swapchain image).
+			/// Declare an external resource (e.g. swapchain image), without an implicit read.
+			/// Call Read/Write explicitly. Producers precede consumers in registration order.
 			///
 			/// Imported resources are considered already realized because they are
 			/// created and managed outside the graph. The executor will NOT call
@@ -572,8 +614,12 @@ namespace Hush::RenderGraph
 			ResourceId Import([[maybe_unused]] std::string_view name, T &&externalResource,
 							  Hush::Graphics::EResourceState initialState = Hush::Graphics::EResourceState::Undefined)
 			{
+				if (m_renderGraph.m_resourceManager.GetResourceId(name).id != 0)
+				{
+					m_renderGraph.m_buildError = EGraphError::DuplicateResource;
+					return {};
+				}
 				ResourceId id{m_renderGraph.m_nextResourceId++};
-				m_passNode.AddReadResource(id);
 
 				Hush::RenderGraph::ResourceHandle handle =
 					Hush::RenderGraph::ResourceHandle(typename T::Descriptor{}, std::forward<T>(externalResource),
@@ -593,7 +639,12 @@ namespace Hush::RenderGraph
 			[[nodiscard]]
 			ResourceId GetResourceIdByName(std::string_view name) const
 			{
-				return m_renderGraph.m_resourceManager.GetResourceId(name);
+				const auto id = m_renderGraph.m_resourceManager.GetResourceId(name);
+				if (id.id == 0)
+				{
+					m_renderGraph.m_buildError = EGraphError::InvalidResource;
+				}
+				return id;
 			}
 
 		private:
@@ -628,9 +679,19 @@ namespace Hush::RenderGraph
 		/// multi-queue backends the default mapping (Graphics=0, Compute=1,
 		/// Transfer=2) is used.  Single-queue backends (WebGPU) should set
 		/// all entries to 0.
-		void SetQueueMap(EPassType passType, uint32_t queueIndex) noexcept
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> SetQueueMap(EPassType passType, uint32_t queueIndex)
 		{
+			if (!m_passes.empty())
+			{
+				return EGraphError::QueueMapLocked;
+			}
+			if (static_cast<uint32_t>(passType) >= PASS_TYPE_COUNT || queueIndex >= PASS_TYPE_COUNT)
+			{
+				return EGraphError::InvalidQueue;
+			}
 			m_queueMap[static_cast<uint32_t>(passType)] = queueIndex;
+			return Hush::Success();
 		}
 
 		/// Get the physical queue index for a given logical pass type.
@@ -648,7 +709,7 @@ namespace Hush::RenderGraph
 		const PassData &AddPass(EPassType passType, std::string_view name, BuildFn &&buildFn, ExecuteFn &&execFn)
 		{
 			// Create the pass execution context
-			auto pass = std::make_unique<Pass<PassData, ExecuteFn>>(std::forward<ExecuteFn>(execFn));
+			auto pass = std::make_shared<Pass<PassData, ExecuteFn>>(std::forward<ExecuteFn>(execFn));
 			auto &passData = pass->data;
 
 			const auto passNodeId = static_cast<uint32_t>(m_passes.size());
@@ -657,7 +718,15 @@ namespace Hush::RenderGraph
 			// device-provided lookup table.  Single-queue backends like WebGPU
 			// collapse all types to queue 0, avoiding unnecessary cross-queue
 			// synchronisation.
-			const uint32_t queueIndex = m_queueMap[static_cast<uint32_t>(passType)];
+			const auto typeIndex = static_cast<uint32_t>(passType);
+			if (typeIndex >= PASS_TYPE_COUNT)
+			{
+				m_buildError = EGraphError::InvalidQueue;
+			}
+			const uint32_t queueIndex = typeIndex < PASS_TYPE_COUNT ? m_queueMap[typeIndex] : 0;
+
+			// Compiled pointers must be discarded BEFORE vector reallocation.
+			Invalidate();
 
 			// Create the pass node
 			m_passes.emplace_back(name, passNodeId, passType, std::move(pass), queueIndex);
@@ -674,7 +743,11 @@ namespace Hush::RenderGraph
 		}
 
 		/// Compile the render graph, optimizing and culling passes as needed.
-		void Compile();
+		/// Scratch allocations are destroyed before returning (also on failure).
+		/// The caller may use the engine's frame resource or a graph-owner's pool;
+		/// cached graph storage and pass/resource lifetimes never use this resource.
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> Compile(std::pmr::memory_resource &scratch = *std::pmr::get_default_resource());
 
 		/// Check if the render graph is dirty and needs recompilation.
 		[[nodiscard]]
@@ -705,10 +778,20 @@ namespace Hush::RenderGraph
 		///           at the original Import() call site.
 		/// @param id            The ResourceId returned by the original Import().
 		/// @param newResource   The replacement resource instance to move in.
+		/// @param incomingState State established by the caller. The caller must
+		/// guarantee external readiness and imported RHI object lifetime. Even
+		/// an unchanged pointer starts a new instance; old storage is retired separately.
 		template <ResourceConcept T>
-		void UpdateImport(ResourceId id, T &&newResource)
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> UpdateImport(ResourceId id, T &&newResource,
+													 Graphics::EResourceState incomingState)
 		{
-			m_resourceManager.UpdateResource<T>(id, std::forward<T>(newResource));
+			if (!m_resourceManager.UpdateResource<T>(id, std::forward<T>(newResource)))
+			{
+				return EGraphError::InvalidResource;
+			}
+			m_importedResourceInitialStates[id] = incomingState;
+			return Hush::Success();
 		}
 
 		/// Mark a compiled graph as dirty, forcing a full rebuild next frame.
@@ -722,6 +805,10 @@ namespace Hush::RenderGraph
 		/// dimensions, a scene change that adds/removes passes, etc.
 		void Invalidate() noexcept
 		{
+			if (m_state == ERenderGraphState::Compiled)
+			{
+				ClearCompiledData();
+			}
 			m_state = ERenderGraphState::Dirty;
 		}
 
@@ -755,6 +842,18 @@ namespace Hush::RenderGraph
 			return m_dependencyLevels;
 		}
 
+		/// Diagnostic count of compiled RAW/WAR/WAW edges, before synchronization culling.
+		[[nodiscard]]
+		size_t GetDependencyEdgeCount() const noexcept
+		{
+			size_t count = 0;
+			for (const auto &edges : m_adjacencyList)
+			{
+				count += edges.size();
+			}
+			return count;
+		}
+
 		[[nodiscard]]
 		uint32_t GetDetectedQueueCount() const noexcept
 		{
@@ -784,22 +883,23 @@ namespace Hush::RenderGraph
 
 	private:
 		/// Builds the adjacency list representing pass dependencies.
-		void BuildAdjacencyList();
+		void BuildAdjacencyList(std::pmr::memory_resource &scratch);
 
-		/// Depth-first search for topological sorting and cycle detection
-		void DFS(uint32_t nodeIndex, std::vector<bool> &visited, std::vector<bool> &onStack, bool &isCyclic);
+		/// Rebuild all compiled state; no pointer survives a pass-vector mutation.
+		void ClearCompiledData() noexcept;
 
-		/// Topological sort of the graph
-		void TopologicalSort();
+		/// Iterative topological sort with release-build cycle detection.
+		bool TopologicalSort(std::pmr::memory_resource &scratch);
 
 		/// Build dependency levels using longest path algorithm
 		void BuildDependencyLevels();
 
 		/// Finalize dependency levels by organizing passes per queue
-		void FinalizeDependencyLevels();
+		void FinalizeDependencyLevels(std::pmr::memory_resource &scratch);
 
 		/// Cull redundant synchronization points using SSIS algorithm
 		void CullRedundantSyncPoints();
+		void CullNodeSyncPoints(RenderPassNode &node, const RenderPassNode *previous) const;
 
 	private:
 		/// List of passes in the render graph
@@ -815,6 +915,8 @@ namespace Hush::RenderGraph
 		std::vector<DependencyLevel> m_dependencyLevels;
 
 		ResourceManager m_resourceManager;
+		// Keep the identity alive after executor destruction; a reused address is not the same context.
+		std::shared_ptr<const void> m_executionContext;
 
 		/// Initial resource states for imported (external) resources.
 		/// Stored during build phase so the executor can initialize its
@@ -822,6 +924,7 @@ namespace Hush::RenderGraph
 		boost::unordered_flat_map<ResourceId, Hush::Graphics::EResourceState> m_importedResourceInitialStates;
 
 		ERenderGraphState m_state = ERenderGraphState::Dirty;
+		EGraphError m_buildError = EGraphError::None;
 		uint32_t m_detectedQueueCount = 1;
 		uint32_t m_nextResourceId = 1;
 

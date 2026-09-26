@@ -150,7 +150,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		InputManager::SendWheelEvent(event.wheel.x, event.wheel.y);
 		break;
 	case SDL_EVENT_DROP_FILE:
-		if (m_dropCallback && event.drop.data)
+		if (m_dropCallback && event.drop.data != nullptr)
 		{
 			m_dropCallback(std::filesystem::path(event.drop.data));
 		}
@@ -165,10 +165,21 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 	// this->m_windowRenderer->HandleEvent(&event);
 }
 
+void Hush::WindowRenderer::WaitIdle()
+{
+	if (m_renderDevice != nullptr)
+	{
+		m_renderDevice->GetExecutor().WaitIdle();
+	}
+}
+
 Hush::WindowRenderer::~WindowRenderer()
 {
+	WaitIdle();
+	m_renderDevice.reset();
+	m_windowRenderer.reset(); // Release/unconfigure the surface while its SDL window still exists.
 	SDL_DestroyWindow(this->m_windowPtr);
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	SDL_Quit();
 #endif
 }
@@ -190,7 +201,7 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 	{
 		return true;
 	}
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	return rc;
 #else

@@ -53,6 +53,7 @@ if ("HUSH_WEBGPU_IMPL" IN_LIST HUSH_RENDERER_IMPL)
         src/WebGPU/WebGPUBuffer.cpp
         src/WebGPU/WebGPUCommandList.cpp
         src/WebGPU/WebGPUCommandQueue.cpp
+        src/WebGPU/WebGPUFence.cpp
         src/WebGPU/WebGPUGraphicsDevice.cpp
         src/WebGPU/WebGPUTexture.cpp
         src/WebGPU/WebGPUSampler.cpp

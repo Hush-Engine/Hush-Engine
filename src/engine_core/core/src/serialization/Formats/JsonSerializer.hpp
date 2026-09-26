@@ -8,6 +8,7 @@
 
 #include "Assertions.hpp"
 #include <Result.hpp>
+#include <rapidjson/memorystream.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/reader.h>
@@ -428,7 +429,7 @@ namespace Hush::Serialization
 	public:
 		JsonDeserializer(std::string_view json)
 			: m_input(json),
-			  m_stream(json.data())
+			  m_stream(json.data(), json.size())
 		{
 		}
 
@@ -616,8 +617,8 @@ namespace Hush::Serialization
 		/// token is buffered (a subsequent @ref Next / @ref ReadKey returns it), and
 		/// this function returns false.
 		///
-		/// Note: the returned view is not null-terminated. Pass it to a new
-		/// @ref JsonDeserializer only after copying it into a null-terminated buffer.
+		/// The returned view can be passed directly to another @ref JsonDeserializer
+		/// while the original input buffer remains alive.
 		/// @return true and sets @p out on success, false otherwise.
 		bool PeekObject(std::string_view &out);
 
@@ -644,8 +645,8 @@ namespace Hush::Serialization
 		/// object's closing brace.
 		///
 		/// The returned view points into the original input buffer and remains valid
-		/// while that buffer is alive. It is not null-terminated; copy it into a
-		/// null-terminated buffer before passing it to a new @ref JsonDeserializer.
+		/// while that buffer is alive and can be passed directly to another
+		/// @ref JsonDeserializer.
 		/// If the next token is not an object start, @p out is left untouched, the
 		/// token is buffered (a subsequent @ref Next / @ref ReadKey returns it), and
 		/// this function returns false.
@@ -661,8 +662,8 @@ namespace Hush::Serialization
 		/// @ref Next returns the same `ArrayStart` token. Repeated calls return the
 		/// same view.
 		///
-		/// Note: the returned view is not null-terminated. Pass it to a new
-		/// @ref JsonDeserializer only after copying it into a null-terminated buffer.
+		/// The returned view can be passed directly to another @ref JsonDeserializer
+		/// while the original input buffer remains alive.
 		/// @return true and sets @p out on success, false otherwise.
 		bool PeekArray(std::string_view &out);
 
@@ -688,8 +689,8 @@ namespace Hush::Serialization
 		/// array's closing bracket.
 		///
 		/// The returned view points into the original input buffer and remains valid
-		/// while that buffer is alive. It is not null-terminated; copy it into a
-		/// null-terminated buffer before passing it to a new @ref JsonDeserializer.
+		/// while that buffer is alive and can be passed directly to another
+		/// @ref JsonDeserializer.
 		/// @return true and sets @p out on success, false otherwise.
 		bool ReadArray(std::string_view &out);
 
@@ -716,7 +717,7 @@ namespace Hush::Serialization
 
 	private:
 		std::string_view m_input;
-		rapidjson::StringStream m_stream;
+		rapidjson::MemoryStream m_stream;
 		rapidjson::Reader m_reader;
 		RapidjsonWalker m_walker;
 		EToken m_walkerToken = EToken::None;

@@ -73,7 +73,7 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// --------------------------------------------------------------
 		// FAST PATH — graph topology is unchanged, skip recompilation.
 		// --------------------------------------------------------------
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScopedN("RenderGraph::FastPath");
 #endif
 
@@ -91,7 +91,7 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// Clear the previous frame's render graph (passes, resources,
 		// compilation state) and reset the executor's per-frame state.
 		// Fence objects themselves are kept alive and reused across frames.
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScopedN("RenderGraph::FullRebuild");
 #endif
 
@@ -111,13 +111,18 @@ void Hush::Graphics::RenderGraphSystem::OnPreRender()
 		// synchronization point culling.  If the graph is somehow already
 		// compiled (no builder added any passes, or a builder called
 		// Compile() itself), Compile() is a no-op.
-		m_renderDevice->Compile();
+		const auto result = m_renderDevice->Compile();
+		if (!result.has_value())
+		{
+			Hush::LogFormat(Hush::ELogLevel::Error, "Render graph compilation failed: {}",
+							static_cast<unsigned>(result.error()));
+		}
 	}
 }
 
 void Hush::Graphics::RenderGraphSystem::OnRender()
 {
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 	ZoneScoped;
 #endif
 	if (!m_renderDevice->IsCompiled())
@@ -127,7 +132,12 @@ void Hush::Graphics::RenderGraphSystem::OnRender()
 		return;
 	}
 
-	m_renderDevice->Execute();
+	const auto result = m_renderDevice->Execute();
+	if (!result.has_value())
+	{
+		Hush::LogFormat(Hush::ELogLevel::Error, "Render graph execution rejected: {}",
+						static_cast<unsigned>(result.error()));
+	}
 }
 
 void Hush::Graphics::RenderGraphSystem::OnPostRender()

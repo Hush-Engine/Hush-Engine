@@ -3,6 +3,7 @@
 #include "HushPak.hpp"
 #include "FileSystem.hpp"
 #include "IFile.hpp"
+#include <filesystem>
 #include <memory>
 #include <vector>
 #include <string>
@@ -23,7 +24,7 @@ namespace Hush
 		/// Map the file at the given path into memory.
 		/// On Emscripten, falls back to reading the entire file into a buffer.
 		[[nodiscard]]
-		bool Open(std::string_view path);
+		bool Open(const std::filesystem::path &path);
 
 		/// Pointer to the mapped data (read-only).
 		const std::byte *Data() const
@@ -57,7 +58,7 @@ namespace Hush
 	{
 	public:
 		/// Load a .hushpak file from the given OS path.
-		explicit PakFileSystem(std::string_view bundlePath);
+		explicit PakFileSystem(const std::filesystem::path &bundlePath);
 
 		PakFileSystem(const PakFileSystem &) = delete;
 		PakFileSystem(PakFileSystem &&) noexcept = default;

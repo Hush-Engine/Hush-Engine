@@ -1,3 +1,4 @@
+
 /*! \file RenderGraph.cpp
 	\author Alan Ramirez Herrera
 	\date 2025-11-17
@@ -8,428 +9,369 @@
 	point culling. All execution logic (fences, barriers, batching, submission)
 	lives in RenderGraphExecutor.cpp.
 */
-
 #include "RenderGraph.hpp"
-#include <Assertions.hpp>
 #include <algorithm>
 
 using namespace Hush::RenderGraph;
 
-void RenderGraph::Compile()
+void RenderGraph::ClearCompiledData() noexcept
 {
-	if (m_state == ERenderGraphState::Compiled)
-	{
-		return; // Already compiled
-	}
-
-	// Clear previous compilation data
 	m_adjacencyList.clear();
 	m_topologicalOrderedNodes.clear();
 	m_dependencyLevels.clear();
 	m_detectedQueueCount = 1;
-
-	// Build and optimize the graph
-	BuildAdjacencyList();
-	TopologicalSort();
-	BuildDependencyLevels();
-	FinalizeDependencyLevels();
-	CullRedundantSyncPoints();
-
-	m_state = ERenderGraphState::Compiled;
+	for (auto &node : m_passes)
+	{
+		node.m_nodesToSync.clear();
+		node.m_syncIndexSet.clear();
+		node.m_syncSignalRequired = false;
+		node.m_fenceSignalValue = 0;
+		node.m_dependencyLevelIndex = 0;
+		node.m_queueSequence = 0;
+		node.m_scheduleIndex = 0;
+	}
 }
 
-void RenderGraph::BuildAdjacencyList()
+Hush::Result<void, EGraphError> RenderGraph::Compile(std::pmr::memory_resource &scratch)
 {
+	if (m_state == ERenderGraphState::Compiled)
+	{
+		return Hush::Success();
+	}
+	ClearCompiledData();
+	if (m_buildError != EGraphError::None)
+	{
+		return m_buildError;
+	}
+	BuildAdjacencyList(scratch);
+	if (!TopologicalSort(scratch))
+	{
+		ClearCompiledData();
+		return EGraphError::Cycle;
+	}
+	BuildDependencyLevels();
+	FinalizeDependencyLevels(scratch);
+	CullRedundantSyncPoints();
+	m_state = ERenderGraphState::Compiled;
+	return Hush::Success();
+}
+
+void RenderGraph::BuildAdjacencyList(std::pmr::memory_resource &scratch)
+{
+	constexpr uint32_t none = std::numeric_limits<uint32_t>::max();
+	struct History
+	{
+		explicit History(std::pmr::memory_resource &resource)
+			: readers(&resource)
+		{
+		}
+		uint32_t writer = none;
+		std::pmr::vector<uint32_t> readers;
+	};
+	std::pmr::vector<History> histories{&scratch};
+	histories.reserve(m_nextResourceId);
+	for (uint32_t id = 0; id < m_nextResourceId; ++id)
+	{
+		histories.emplace_back(scratch);
+	}
+
+	// A producer can be discovered through several resources. Stamp once per
+	// consumer rather than hashing each edge or searching its adjacency list.
+	std::pmr::vector<uint32_t> seen(m_passes.size(), none, &scratch);
 	m_adjacencyList.resize(m_passes.size());
 
-	// Build adjacency list by checking write-to-read dependencies
-	for (uint32_t nodeIndex = 0; nodeIndex < m_passes.size(); ++nodeIndex)
+	for (uint32_t consumer = 0; consumer < m_passes.size(); ++consumer)
 	{
-		RenderPassNode &passNode = m_passes[nodeIndex];
-		std::vector<uint32_t> &adjacentNodeIndices = m_adjacencyList[nodeIndex];
+		auto &node = m_passes[consumer];
+		auto addEdge = [&](uint32_t producer) {
+			if (producer == none || producer == consumer || seen[producer] == consumer)
+			{
+				return;
+			}
+			seen[producer] = consumer;
+			m_adjacencyList[producer].push_back(consumer);
+			if (m_passes[producer].m_queueIndex != node.m_queueIndex)
+			{
+				m_passes[producer].SetHasCrossDependency(node);
+			}
+		};
 
-		for (uint32_t otherNodeIndex = 0; otherNodeIndex < m_passes.size(); ++otherNodeIndex)
+		for (ResourceId id : node.m_readResources)
 		{
-			if (nodeIndex == otherNodeIndex)
+			// A read-modify-write is ONE access to the preceding epoch.
+			if (node.m_writtenResources.contains(id))
 			{
-				continue; // Skip self-dependency
+				continue;
 			}
+			auto &history = histories[id.id];
+			addEdge(history.writer);
+			history.readers.push_back(consumer);
+		}
 
-			RenderPassNode &otherPassNode = m_passes[otherNodeIndex];
-
-			// Check if otherPassNode reads any resource written by passNode
-			for (const ResourceId &otherReadResource : otherPassNode.m_readResources)
+		for (ResourceId id : node.m_writtenResources)
+		{
+			auto &history = histories[id.id];
+			addEdge(history.writer);
+			for (uint32_t reader : history.readers)
 			{
-				if (passNode.WritesResource(otherReadResource))
-				{
-					// passNode -> otherPassNode dependency
-					adjacentNodeIndices.push_back(otherNodeIndex);
-
-					// Check for cross-queue dependency
-					if (otherPassNode.m_queueIndex != passNode.m_queueIndex)
-					{
-						passNode.SetHasCrossDependency(otherPassNode);
-					}
-
-					break; // No need to check other resources
-				}
+				addEdge(reader);
 			}
+			history.readers.clear();
+			history.writer = consumer;
 		}
 	}
 }
 
-void RenderGraph::DFS(uint32_t nodeIndex, std::vector<bool> &visited, std::vector<bool> &onStack, bool &isCyclic)
+bool RenderGraph::TopologicalSort(std::pmr::memory_resource &scratch)
 {
-	if (isCyclic)
+	// Kahn traversal avoids recursion on long chains and retains cycle checking
+	// if explicit dependency edges are added in the future.
+	std::pmr::vector<uint32_t> indegree(m_passes.size(), &scratch);
+	for (const auto &edges : m_adjacencyList)
 	{
-		return;
-	}
-
-	visited[nodeIndex] = true;
-	onStack[nodeIndex] = true;
-
-	// Visit all adjacent nodes
-	for (uint32_t neighborIndex : m_adjacencyList[nodeIndex])
-	{
-		if (onStack[neighborIndex])
+		for (uint32_t next : edges)
 		{
-			// We found a back edge, indicating a cycle
-			isCyclic = true;
-			return;
-		}
-
-		if (!visited[neighborIndex])
-		{
-			DFS(neighborIndex, visited, onStack, isCyclic);
+			++indegree[next];
 		}
 	}
-
-	onStack[nodeIndex] = false;
-
-	// Add to result in post-order
-	m_topologicalOrderedNodes.push_back(&m_passes[nodeIndex]);
-}
-
-void RenderGraph::TopologicalSort()
-{
-	m_topologicalOrderedNodes.clear();
-	std::vector<bool> visited(m_passes.size(), false);
-	std::vector<bool> onStack(m_passes.size(), false);
-	bool isCyclic = false;
-
-	for (uint32_t nodeIndex = 0; nodeIndex < m_passes.size(); ++nodeIndex)
+	m_topologicalOrderedNodes.reserve(m_passes.size());
+	for (uint32_t i = 0; i < m_passes.size(); ++i)
 	{
-		if (!visited[nodeIndex])
+		if (indegree[i] == 0)
 		{
-			DFS(nodeIndex, visited, onStack, isCyclic);
-
-			HUSH_ASSERT(!isCyclic, "Render graph contains cycles! Cannot proceed with execution.");
+			m_topologicalOrderedNodes.push_back(&m_passes[i]);
 		}
 	}
-
-	// Reverse to get correct topological order
-	std::reverse(m_topologicalOrderedNodes.begin(), m_topologicalOrderedNodes.end());
+	for (size_t cursor = 0; cursor < m_topologicalOrderedNodes.size(); ++cursor)
+	{
+		for (uint32_t next : m_adjacencyList[m_topologicalOrderedNodes[cursor]->m_unorderedPassIndex])
+		{
+			if (--indegree[next] == 0)
+			{
+				m_topologicalOrderedNodes.push_back(&m_passes[next]);
+			}
+		}
+	}
+	return m_topologicalOrderedNodes.size() == m_passes.size();
 }
 
 void RenderGraph::BuildDependencyLevels()
 {
-	// Longest path algorithm to determine dependency levels
-	std::vector<int32_t> longestPathLengths(m_passes.size(), 0);
-
-	uint32_t maxLevelIndex = 0;
-
-	// Calculate longest path for each node
-	for (RenderPassNode *node : m_topologicalOrderedNodes)
+	if (m_passes.empty())
 	{
-		const uint32_t nodeOriginalIndex = node->m_unorderedPassIndex;
-
-		// Update distances to adjacent nodes
-		for (uint32_t adjacentNodeIndex : m_adjacencyList[nodeOriginalIndex])
+		return;
+	}
+	uint32_t maxLevel = 0;
+	for (const auto *node : m_topologicalOrderedNodes)
+	{
+		for (uint32_t next : m_adjacencyList[node->m_unorderedPassIndex])
 		{
-			int32_t newPathLength = longestPathLengths[nodeOriginalIndex] + 1;
-			if (longestPathLengths[adjacentNodeIndex] < newPathLength)
-			{
-				longestPathLengths[adjacentNodeIndex] = newPathLength;
-				maxLevelIndex = std::max(maxLevelIndex, static_cast<uint32_t>(newPathLength));
-			}
+			auto &level = m_passes[next].m_dependencyLevelIndex;
+			level = std::max(level, node->m_dependencyLevelIndex + 1);
+			maxLevel = std::max(maxLevel, level);
 		}
 	}
-
-	// Resize to accommodate all levels (0-indexed)
-	m_dependencyLevels.resize(maxLevelIndex + 1);
-
-	// Assign nodes to their dependency levels
-	uint32_t i = 0;
-	for (RenderPassNode &node : m_passes)
+	m_dependencyLevels.resize(maxLevel + 1);
+	for (auto &node : m_passes)
 	{
-		const auto levelIndex = static_cast<uint32_t>(longestPathLengths[i]);
-
-		DependencyLevel &level = m_dependencyLevels[levelIndex];
-		level.m_levelIndex = levelIndex;
+		auto &level = m_dependencyLevels[node.m_dependencyLevelIndex];
+		level.m_levelIndex = node.m_dependencyLevelIndex;
 		level.AddNode(&node);
-
-		node.m_dependencyLevelIndex = levelIndex;
-
-		// Track maximum queue index
 		m_detectedQueueCount = std::max(m_detectedQueueCount, node.m_queueIndex + 1);
-		++i;
 	}
 }
 
-void RenderGraph::FinalizeDependencyLevels()
+void RenderGraph::FinalizeDependencyLevels(std::pmr::memory_resource &scratch)
 {
-	// Organize passes per queue within each dependency level
-	for (DependencyLevel &level : m_dependencyLevels)
+	std::array<uint64_t, PASS_TYPE_COUNT> sequence{};
+	uint64_t scheduleIndex = 0;
+	for (auto &level : m_dependencyLevels)
 	{
 		level.m_nodesPerQueue.resize(m_detectedQueueCount);
-
-		for (RenderPassNode *node : level.m_passNodes)
+		for (auto *node : level.m_passNodes)
 		{
-			const uint32_t queueIndex = node->m_queueIndex;
-			level.m_nodesPerQueue[queueIndex].push_back(node);
-
-			// Track queues involved in cross-dependencies
-			if (node->m_syncSignalRequired)
-			{
-				level.m_queuesInvolvedInCrossDependencies.insert(queueIndex);
-			}
+			level.m_nodesPerQueue[node->m_queueIndex].push_back(node);
+			node->m_queueSequence = ++sequence[node->m_queueIndex];
+			node->m_scheduleIndex = ++scheduleIndex;
 		}
-
-		// Detect multi-queue reads for transition rerouting
-		level.DetectMultiQueueReads();
+		level.DetectMultiQueueReads(scratch);
 	}
+}
+
+void RenderGraph::CullNodeSyncPoints(RenderPassNode &node, const RenderPassNode *previous) const
+{
+	auto &knowledge = node.m_syncIndexSet;
+	knowledge.assign(m_detectedQueueCount, RenderPassNode::INVALID_SYNC_INDEX);
+	if (previous != nullptr)
+	{
+		knowledge = previous->m_syncIndexSet;
+	}
+	// FIFO covers all earlier producers on a queue. At most three candidates
+	// remain, regardless of the pass's original fan-in.
+	std::array<RenderPassNode *, PASS_TYPE_COUNT> closest{};
+	for (auto *dependency : node.m_nodesToSync)
+	{
+		auto *&candidate = closest[dependency->m_queueIndex];
+		if (candidate == nullptr || candidate->m_queueSequence < dependency->m_queueSequence)
+		{
+			candidate = dependency;
+		}
+	}
+	// Later scheduled dependencies may already cover earlier candidates.
+	std::sort(closest.begin(), closest.end(), [](const auto *left, const auto *right) {
+		return (left != nullptr ? left->m_scheduleIndex : 0) > (right != nullptr ? right->m_scheduleIndex : 0);
+	});
+	node.m_nodesToSync.clear();
+	for (auto *dependency : closest)
+	{
+		if (dependency == nullptr || knowledge[dependency->m_queueIndex] >= dependency->m_queueSequence)
+		{
+			continue;
+		}
+		node.m_nodesToSync.push_back(dependency);
+		dependency->m_syncSignalRequired = true;
+		for (uint32_t q = 0; q < m_detectedQueueCount; ++q)
+		{
+			knowledge[q] = std::max(knowledge[q], dependency->m_syncIndexSet[q]);
+		}
+	}
+	knowledge[node.m_queueIndex] = node.m_queueSequence;
 }
 
 void RenderGraph::CullRedundantSyncPoints()
 {
-	// Initialize SSIS for each node
-	for (RenderPassNode &node : m_passes)
+	std::array<RenderPassNode *, PASS_TYPE_COUNT> previous{};
+	for (auto &node : m_passes)
 	{
-		node.m_syncIndexSet.resize(m_detectedQueueCount, RenderPassNode::INVALID_SYNC_INDEX);
+		node.m_syncSignalRequired = false;
 	}
-
-	// First pass: Build SSIS by finding closest dependencies on each queue
-	for (DependencyLevel &level : m_dependencyLevels)
+	for (auto &level : m_dependencyLevels)
 	{
-		for (RenderPassNode *passNode : level.m_passNodes)
+		for (auto *node : level.m_passNodes)
 		{
-			// Initialize own queue index with node's own index
-			passNode->m_syncIndexSet[passNode->m_queueIndex] = passNode->m_unorderedPassIndex;
-
-			// Find closest dependency on each other queue
-			for (RenderPassNode *depNode : passNode->m_nodesToSync)
-			{
-				const uint32_t depQueueIndex = depNode->m_queueIndex;
-				const uint32_t depNodeIndex = depNode->m_unorderedPassIndex;
-
-				uint64_t &currentClosest = passNode->m_syncIndexSet[depQueueIndex];
-
-				if (currentClosest == RenderPassNode::INVALID_SYNC_INDEX || depNodeIndex > currentClosest)
-				{
-					currentClosest = depNodeIndex;
-				}
-			}
+			CullNodeSyncPoints(*node, previous[node->m_queueIndex]);
+			previous[node->m_queueIndex] = node;
 		}
 	}
-
-	// Second pass: Cull redundant synchronizations using SSIS comparison
-	for (DependencyLevel &level : m_dependencyLevels)
+	for (auto &level : m_dependencyLevels)
 	{
-		for (RenderPassNode *passNode : level.m_passNodes)
+		for (const auto *node : level.m_passNodes)
 		{
-			if (passNode->m_nodesToSync.empty())
+			if (node->m_syncSignalRequired || !node->m_nodesToSync.empty())
 			{
-				continue;
+				level.m_queuesInvolvedInCrossDependencies.insert(node->m_queueIndex);
 			}
-
-			// Build list of queues we need to sync with
-			std::vector<uint32_t> queuesToSyncWith;
-			for (uint32_t q = 0; q < m_detectedQueueCount; ++q)
-			{
-				if (q != passNode->m_queueIndex && passNode->m_syncIndexSet[q] != RenderPassNode::INVALID_SYNC_INDEX)
-				{
-					queuesToSyncWith.push_back(q);
-				}
-			}
-
-			if (queuesToSyncWith.empty())
-			{
-				passNode->m_nodesToSync.clear();
-				continue;
-			}
-
-			// Iteratively find minimal set of nodes to sync with
-			std::vector<RenderPassNode *> nodesToKeep;
-			auto remainingDeps = passNode->m_nodesToSync;
-
-			while (!queuesToSyncWith.empty() && !remainingDeps.empty())
-			{
-				RenderPassNode *bestNode = nullptr;
-				uint32_t maxQueuesCovered = 0;
-
-				// Find node that covers maximum queues
-				for (RenderPassNode *depNode : remainingDeps)
-				{
-					uint32_t queuesCovered = 0;
-
-					for (uint32_t q : queuesToSyncWith)
-					{
-						// Compare SSIS values
-						uint64_t requiredSyncIndex = passNode->m_syncIndexSet[q];
-						uint64_t providedSyncIndex = depNode->m_syncIndexSet[q];
-
-						// For same queue, adjust by -1 due to SSIS assignment rule
-						if (q == passNode->m_queueIndex && requiredSyncIndex != RenderPassNode::INVALID_SYNC_INDEX)
-						{
-							requiredSyncIndex--;
-						}
-
-						if (providedSyncIndex != RenderPassNode::INVALID_SYNC_INDEX &&
-							requiredSyncIndex <= providedSyncIndex)
-						{
-							queuesCovered++;
-						}
-					}
-
-					if (queuesCovered > maxQueuesCovered)
-					{
-						maxQueuesCovered = queuesCovered;
-						bestNode = depNode;
-					}
-				}
-
-				if (bestNode != nullptr && maxQueuesCovered > 0)
-				{
-					nodesToKeep.push_back(bestNode);
-
-					// Remove covered queues
-					auto newEnd = std::remove_if(queuesToSyncWith.begin(), queuesToSyncWith.end(), [&](uint32_t q) {
-						uint64_t requiredSyncIndex = passNode->m_syncIndexSet[q];
-						uint64_t providedSyncIndex = bestNode->m_syncIndexSet[q];
-
-						if (q == passNode->m_queueIndex && requiredSyncIndex != RenderPassNode::INVALID_SYNC_INDEX)
-						{
-							requiredSyncIndex--;
-						}
-
-						return providedSyncIndex != RenderPassNode::INVALID_SYNC_INDEX &&
-							   requiredSyncIndex <= providedSyncIndex;
-					});
-					queuesToSyncWith.erase(newEnd, queuesToSyncWith.end());
-
-					// Remove best node from remaining deps
-					remainingDeps.erase(std::remove(remainingDeps.begin(), remainingDeps.end(), bestNode),
-										remainingDeps.end());
-				}
-				else
-				{
-					break; // No more beneficial nodes
-				}
-			}
-
-			// Replace with culled list
-			passNode->m_nodesToSync = nodesToKeep;
 		}
 	}
 }
 
-bool Hush::RenderGraph::RenderPassNode::WritesResource(ResourceId id) const
+bool RenderPassNode::WritesResource(ResourceId id) const
 {
-	return m_writtenResources.find(id) != m_writtenResources.end();
+	return m_writtenResources.contains(id);
 }
 
-void Hush::RenderGraph::RenderPassNode::SetHasCrossDependency(RenderPassNode &other)
+void RenderPassNode::SetHasCrossDependency(RenderPassNode &other)
 {
-	m_syncSignalRequired = true;
 	other.m_nodesToSync.push_back(this);
 }
 
-void Hush::RenderGraph::RenderPassNode::Execute(Hush::Graphics::ICommandList *cmdList, ResourceManager &resourceManager)
+void RenderPassNode::Execute(Hush::Graphics::ICommandList *cmdList, ResourceManager &resourceManager)
 {
 	m_pass->Execute(cmdList, resourceManager);
 }
 
-void Hush::RenderGraph::RenderPassNode::AddReadResource(ResourceId id)
+void RenderPassNode::AddReadResource(ResourceId id)
 {
 	m_readResources.insert(id);
 }
-void Hush::RenderGraph::RenderPassNode::AddWrittenResource(ResourceId id)
+void RenderPassNode::AddWrittenResource(ResourceId id)
 {
 	m_writtenResources.insert(id);
 }
-void Hush::RenderGraph::RenderPassNode::SetReadState(ResourceId id, Hush::Graphics::EResourceState state)
+void RenderPassNode::SetReadState(ResourceId id, Hush::Graphics::EResourceState state)
 {
 	m_resourceReadStates[id] = state;
 }
-Hush::Graphics::EResourceState Hush::RenderGraph::RenderPassNode::GetReadState(ResourceId id) const
+Hush::Graphics::EResourceState RenderPassNode::GetReadState(ResourceId id) const
 {
 	auto it = m_resourceReadStates.find(id);
 	return it != m_resourceReadStates.end() ? it->second : Hush::Graphics::EResourceState::Undefined;
 }
-Hush::Graphics::EResourceState Hush::RenderGraph::RenderPassNode::GetWriteState(ResourceId id) const
+Hush::Graphics::EResourceState RenderPassNode::GetWriteState(ResourceId id) const
 {
 	auto it = m_resourceWriteStates.find(id);
 	return it != m_resourceWriteStates.end() ? it->second : Hush::Graphics::EResourceState::Undefined;
 }
 
-void Hush::RenderGraph::RenderGraph::DependencyLevel::DetectMultiQueueReads()
+void RenderGraph::DependencyLevel::DetectMultiQueueReads(std::pmr::memory_resource &scratch)
 {
 	m_resourcesReadByMultipleQueues.clear();
-	m_queuesInvolvedInCrossDependencies.clear();
-
-	// Map: ResourceId -> set of queue indices that read it
-	boost::unordered_flat_map<ResourceId, boost::unordered_flat_set<uint32_t>> resourceReaders;
-
-	for (RenderPassNode *node : m_passNodes)
+	m_queuesInvolvedInSharedReads.clear();
+	using Entry = std::pair<const ResourceId, uint32_t>;
+	boost::unordered_flat_map<ResourceId, uint32_t, boost::hash<ResourceId>, std::equal_to<>,
+							  std::pmr::polymorphic_allocator<Entry>>
+		readers{std::pmr::polymorphic_allocator<Entry>{&scratch}};
+	for (const auto *node : m_passNodes)
 	{
-		for (const ResourceId &rid : node->m_readResources)
+		for (ResourceId id : node->m_readResources)
 		{
-			resourceReaders[rid].insert(node->m_queueIndex);
+			readers[id] |= 1U << node->m_queueIndex;
 		}
 	}
-
-	for (auto &[rid, queues] : resourceReaders)
+	for (auto [id, queues] : readers)
 	{
-		if (queues.size() > 1)
+		if ((queues & (queues - 1)) == 0)
 		{
-			m_resourcesReadByMultipleQueues.insert(rid);
-			for (uint32_t q : queues)
+			continue;
+		}
+		m_resourcesReadByMultipleQueues.insert(id);
+		for (uint32_t q = 0; q < PASS_TYPE_COUNT; ++q)
+		{
+			if ((queues & (1U << q)) != 0)
 			{
-				m_queuesInvolvedInCrossDependencies.insert(q);
+				m_queuesInvolvedInSharedReads.insert(q);
 			}
 		}
 	}
 }
 
-Hush::RenderGraph::ResourceId Hush::RenderGraph::RenderGraph::BuildContext::Read(
-	ResourceId id, Hush::Graphics::EResourceState desiredState)
+ResourceId RenderGraph::BuildContext::Read(ResourceId id, Hush::Graphics::EResourceState desiredState)
 {
+	if (m_renderGraph.m_resourceManager.GetResourceHandle(id) == nullptr)
+	{
+		m_renderGraph.m_buildError = EGraphError::InvalidResource;
+		return {};
+	}
 	m_passNode.AddReadResource(id);
 	m_passNode.SetReadState(id, desiredState);
 	return id;
 }
 
-Hush::RenderGraph::ResourceId Hush::RenderGraph::RenderGraph::BuildContext::Write(
-	ResourceId id, Hush::Graphics::EResourceState desiredState)
+ResourceId RenderGraph::BuildContext::Write(ResourceId id, Hush::Graphics::EResourceState desiredState)
 {
+	if (m_renderGraph.m_resourceManager.GetResourceHandle(id) == nullptr)
+	{
+		m_renderGraph.m_buildError = EGraphError::InvalidResource;
+		return {};
+	}
 	m_passNode.AddWrittenResource(id);
 	m_passNode.SetWriteState(id, desiredState);
 	return id;
 }
 
-void Hush::RenderGraph::RenderGraph::BuildContext::SetCullingMode(RenderPassNode::EPassCullingMode cullMode)
+void RenderGraph::BuildContext::SetCullingMode(RenderPassNode::EPassCullingMode cullMode)
 {
 	m_passNode.m_cullingMode = cullMode;
 }
 
-void Hush::RenderGraph::RenderGraph::Reset()
+void RenderGraph::Reset()
 {
+	ClearCompiledData();
 	m_passes.clear();
-	m_adjacencyList.clear();
-	m_topologicalOrderedNodes.clear();
-	m_dependencyLevels.clear();
 	m_importedResourceInitialStates.clear();
 	m_state = ERenderGraphState::Dirty;
-	m_nextResourceId = 1; // 0 is invalid
+	m_buildError = EGraphError::None;
+	m_nextResourceId = 1;
 	m_resourceManager.Clear();
+	m_executionContext.reset();
 }

@@ -36,6 +36,11 @@ public:
 	/// @return A handle to the desired symbol (essentially a function pointer)
 	static void *DynamicLoadSymbol(void *handle, const char *symbol);
 
+	/// @brief Closes a library opened with LibraryOpen (analogous to dlclose).
+	/// No symbol of the library may be used after this call.
+	/// @param handle Library handle to close
+	static void LibraryClose(void *handle);
+
 	/// @brief Gets the parent directory of the current executable file
 	/// @return Parent directory path value
 	static std::filesystem::path GetCurrentExecutablePath();

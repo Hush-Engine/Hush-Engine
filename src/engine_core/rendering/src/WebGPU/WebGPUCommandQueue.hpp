@@ -14,7 +14,7 @@ namespace Hush::Graphics
 	class WebGPUCommandQueue : public ICommandQueue
 	{
 	public:
-		WebGPUCommandQueue(wgpu::Queue queue, EQueueType type);
+		WebGPUCommandQueue(wgpu::Device device, wgpu::Instance instance, wgpu::Queue queue, EQueueType type);
 		~WebGPUCommandQueue() override = default;
 
 		WebGPUCommandQueue(const WebGPUCommandQueue &) = delete;
@@ -50,6 +50,9 @@ namespace Hush::Graphics
 		wgpu::CommandEncoder CreateEncoder(const char *label = nullptr);
 
 	private:
+		void SubmitCommands(std::span<ICommandList *const> commandLists);
+		wgpu::Device m_device;
+		wgpu::Instance m_instance;
 		wgpu::Queue m_queue;
 		EQueueType m_queueType;
 	};

@@ -23,6 +23,16 @@ namespace Hush
 	class ResourceManager;
 	class WindowRenderer;
 
+	namespace Reflection
+	{
+		class ReflectionDB;
+	}
+
+	namespace Modules
+	{
+		class ModuleRegistry;
+	}
+
 	class [[hush::export(Hush::Export::asHandle)]] HushEngine
 	{
 		/// Forward declaration of the internal implementation class, which is hidden from users of the engine.
@@ -84,6 +94,15 @@ namespace Hush
 			return &m_threadPool;
 		}
 
+		/// Returns the reflection database of the engine. Every module registers
+		/// its reflected types here.
+		[[nodiscard]]
+		Reflection::ReflectionDB *GetReflectionDB() noexcept;
+
+		/// Returns the registry of the loaded gameplay modules.
+		[[nodiscard]]
+		Modules::ModuleRegistry *GetModuleRegistry() noexcept;
+
 		Hush::WindowRenderer *GetWindowRenderer() noexcept;
 
 		VirtualFilesystem *GetVirtualFilesystem() noexcept;
@@ -123,6 +142,10 @@ namespace Hush
 
 	private:
 		void AddDefaultSystems();
+
+		/// Registers the built-in reflected types and systems of the engine
+		/// into the reflection database, under the engine module.
+		void RegisterBuiltInTypes();
 
 		std::unique_ptr<IApplication> m_app = nullptr;
 		std::unique_ptr<HushEngineInternal> m_internal = nullptr;
