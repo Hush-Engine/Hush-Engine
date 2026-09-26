@@ -153,6 +153,7 @@ namespace Hush::Graphics
 			return m_surfaceFormat;
 		}
 
+		void PollCompletions() override;
 		void PollEvents();
 
 		ETextureFormat GetPreferredSwapchainFormat() const override;

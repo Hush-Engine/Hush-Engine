@@ -1,138 +1,116 @@
 /*! \file WebGPUCommandQueue.cpp
 	\author Alan Ramirez Herrera
 	\date 2026-02-17
-	\brief WebGPU command queue implementation
+	\brief Single-queue ordering with genuine GPU completion notifications.
 */
 #include "WebGPUCommandQueue.hpp"
 #include "WebGPUCommandList.hpp"
 #include "WebGPUFence.hpp"
-#include "Logger.hpp"
-#include "Profiling.hpp"
+#include "Profiling.hpp" // IWYU pragma: keep
+#include <stdexcept>
 
 namespace Hush::Graphics
 {
-
-	WebGPUCommandQueue::WebGPUCommandQueue(wgpu::Queue queue, EQueueType type)
-		: m_queue(queue),
+	WebGPUCommandQueue::WebGPUCommandQueue(wgpu::Device device, wgpu::Instance instance, wgpu::Queue queue,
+										   EQueueType type)
+		: m_device(device),
+		  m_instance(instance),
+		  m_queue(queue),
 		  m_queueType(type)
 	{
 	}
 
 	void WebGPUCommandQueue::Submit(std::span<ICommandList *> commandLists)
 	{
+		SubmitCommands(commandLists);
+	}
+
+	void WebGPUCommandQueue::SubmitCommands(std::span<ICommandList *const> commandLists)
+	{
 		ZoneScoped;
 		if (commandLists.empty())
 		{
 			return;
 		}
-
-		std::vector<wgpu::CommandBuffer> wgpuCommandBuffers;
-		wgpuCommandBuffers.reserve(commandLists.size());
-
-		for (ICommandList *cmdList : commandLists)
+		std::vector<wgpu::CommandBuffer> buffers;
+		buffers.reserve(commandLists.size());
+		for (auto *cmd : commandLists)
 		{
-			if (auto *webgpuCopyCmdList = dynamic_cast<WebGPUCopyCommandList *>(cmdList); webgpuCopyCmdList != nullptr)
+			if (auto *copy = dynamic_cast<WebGPUCopyCommandList *>(cmd))
 			{
-				wgpuCommandBuffers.push_back(webgpuCopyCmdList->GetCommandBuffer());
+				buffers.push_back(copy->GetCommandBuffer());
 			}
-			else if (auto *webgpuComputeCmdList = dynamic_cast<WebGPUComputeCommandList *>(cmdList);
-					 webgpuComputeCmdList != nullptr)
+			else if (auto *compute = dynamic_cast<WebGPUComputeCommandList *>(cmd))
 			{
-				wgpuCommandBuffers.push_back(webgpuComputeCmdList->GetCommandBuffer());
+				buffers.push_back(compute->GetCommandBuffer());
 			}
-			else if (auto *webgpuGfxCmdList = dynamic_cast<WebGPUGraphicsCommandList *>(cmdList);
-					 webgpuGfxCmdList != nullptr)
+			else if (auto *graphics = dynamic_cast<WebGPUGraphicsCommandList *>(cmd))
 			{
-				wgpuCommandBuffers.push_back(webgpuGfxCmdList->GetCommandBuffer());
+				buffers.push_back(graphics->GetCommandBuffer());
 			}
 			else
 			{
-				Hush::LogError("Unsupported command list type submitted to WebGPUCommandQueue");
+				throw std::invalid_argument("Unsupported WebGPU command list");
 			}
 		}
-
-		m_queue.submit(wgpuCommandBuffers.size(), wgpuCommandBuffers.data());
+		m_queue.submit(buffers.size(), buffers.data());
 	}
 
-	void WebGPUCommandQueue::SubmitBatched(const SubmitInfo &submitInfo)
+	void WebGPUCommandQueue::SubmitBatched(const SubmitInfo &info)
 	{
 		ZoneScoped;
-		// WebGPU has a single queue, so cross-queue GPU waits don't apply.
-		// We honour the contract by performing CPU-side waits on the emulated
-		// fence values so that the render graph executor's ordering invariants
-		// are respected even though the GPU work is already serialized.
-		for (const auto &wait : submitInfo.waitFences)
+		for (const auto &wait : info.waitFences)
 		{
-			if (wait.fence != nullptr)
+			Wait(wait.fence, wait.value);
+		}
+		for (const auto &signal : info.signalFences)
+		{
+			const auto *fence = dynamic_cast<WebGPUFence *>(signal.fence);
+			if (fence == nullptr || !fence->BelongsTo(m_queue) || signal.value <= fence->GetPendingValue())
 			{
-				auto *webgpuFence = dynamic_cast<WebGPUFence *>(wait.fence);
-				// CPU-side spin/wait — in practice the value should already be
-				// reached because WebGPU serializes everything on one queue.
-				if (webgpuFence != nullptr)
-				{
-					webgpuFence->WaitCPU(wait.value);
-				}
+				throw std::invalid_argument("Invalid WebGPU timeline signal");
 			}
 		}
-
-		if (!submitInfo.commandLists.empty())
+		SubmitCommands(info.commandLists);
+		for (const auto &signal : info.signalFences)
 		{
-			// Submit expects a span of ICommandList*; the vector is contiguous.
-			Submit(std::span<ICommandList *>(const_cast<ICommandList **>(submitInfo.commandLists.data()),
-											 submitInfo.commandLists.size()));
-		}
-
-		for (const auto &signal : submitInfo.signalFences)
-		{
-			if (signal.fence != nullptr)
-			{
-				auto *webgpuFence = dynamic_cast<WebGPUFence *>(signal.fence);
-				if (webgpuFence != nullptr)
-				{
-					webgpuFence->SignalCPU(signal.value);
-				}
-			}
+			Signal(signal.fence, signal.value);
 		}
 	}
 
 	void WebGPUCommandQueue::Signal(IFence *fence, uint64_t value)
 	{
-		if (fence == nullptr)
+		auto *webgpu = dynamic_cast<WebGPUFence *>(fence);
+		if (webgpu == nullptr || !webgpu->BelongsTo(m_queue))
 		{
-			return;
+			throw std::invalid_argument("WebGPU cannot signal a foreign fence");
 		}
-
-		// CPU-side emulation: immediately mark the fence as signaled.
-		// Because WebGPU serializes all work on a single queue the signal is
-		// logically "after" all previously submitted work.
-		auto *webgpuFence = dynamic_cast<WebGPUFence *>(fence);
-		if (webgpuFence != nullptr)
-		{
-			webgpuFence->SignalCPU(value);
-		}
+		webgpu->SignalGPU(value);
 	}
 
 	void WebGPUCommandQueue::Wait(IFence *fence, uint64_t value)
 	{
-		if (fence == nullptr)
+		if (fence != nullptr && fence->GetCompletedValue() >= value)
 		{
 			return;
 		}
-
-		// CPU-side emulation: block until the emulated fence reaches the value.
-		// In practice the value should already be reached since WebGPU has only
-		// one queue, but we honour the contract for correctness.
-		auto *webgpuFence = dynamic_cast<WebGPUFence *>(fence);
-		if (webgpuFence != nullptr)
+		const auto *webgpu = dynamic_cast<WebGPUFence *>(fence);
+		if (webgpu == nullptr || !webgpu->BelongsTo(m_queue) || value > webgpu->GetPendingValue())
 		{
-			webgpuFence->WaitCPU(value);
+			throw std::invalid_argument("WebGPU cannot wait for foreign or not-yet-submitted work");
 		}
+		// This exact point was already submitted on this queue: FIFO supplies the
+		// GPU dependency. Never turn a queue dependency into a per-frame CPU wait.
 	}
 
 	void WebGPUCommandQueue::WaitIdle()
 	{
-		// WebGPU doesn't have direct waitIdle
-		// Could implement with fences/callbacks if needed
+		WebGPUFence completion(m_device, m_instance, m_queue);
+		completion.SignalGPU(1);
+		if (!completion.WaitCPU(1))
+		{
+			throw std::runtime_error("WebGPU queue completion failed");
+		}
 	}
 
 	void *WebGPUCommandQueue::GetNativeHandle() const
@@ -142,9 +120,6 @@ namespace Hush::Graphics
 
 	wgpu::CommandEncoder WebGPUCommandQueue::CreateEncoder(const char * /*label*/)
 	{
-		// Note: This helper method is not used in the current implementation
-		// Command encoders should be created directly from the device
 		return {};
 	}
-
 } // namespace Hush::Graphics

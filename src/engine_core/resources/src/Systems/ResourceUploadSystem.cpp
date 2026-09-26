@@ -183,6 +183,8 @@ void Hush::Renderer::ResourceUploadSystem::BuildUploadPass(RenderGraph::RenderGr
 			// in its own build callback to establish a dependency edge.
 			data.syncToken = ctx.Create<Hush::Graphics::DummyResource>(
 				RenderGraph::RenderGraph::RESOURCE_UPLOAD_SYNC_TOKEN_NAME, {});
+			ctx.Read(data.stagingBufferResource, Hush::Graphics::EResourceState::CopySource);
+			ctx.Write(data.syncToken, Hush::Graphics::EResourceState::Undefined);
 
 			// Never cull this pass — even if nobody reads the sync token
 			// yet, we still want the copies to happen.
@@ -226,9 +228,17 @@ void Hush::Renderer::ResourceUploadSystem::UpdateUploadPassImports(RenderGraph::
 	// pointer might have been recreated (unlikely since we keep it alive).
 	// Update the imported resource in-place so the executor sees the
 	// current native handle.
-	graph.UpdateImport<Graphics::ImportedBufferResource>(
-		m_stagingBufferResourceId, Graphics::ImportedBufferResource{.buffer = m_stagingBuffer.get()});
+	if (!graph
+			 .UpdateImport<Graphics::ImportedBufferResource>(
+				 m_stagingBufferResourceId, Graphics::ImportedBufferResource{.buffer = m_stagingBuffer.get()},
+				 Graphics::EResourceState::CopySource)
+			 .has_value())
+	{
+		Hush::LogError("Failed to replace the staging buffer import");
+		graph.Invalidate();
+	}
 }
+// pi-lens-ignore: clang-tidy:readability-function-cognitive-complexity
 void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 {
 	size_t uploadCount = 0;

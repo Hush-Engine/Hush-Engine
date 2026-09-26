@@ -50,6 +50,12 @@ namespace Hush::Graphics
 			return texture.get();
 		}
 
+		[[nodiscard]]
+		IGraphicsTexture *GetBarrierResource() const
+		{
+			return Get();
+		}
+
 		/// @brief Check if the resource is valid
 		[[nodiscard]]
 		bool IsValid() const
@@ -76,6 +82,12 @@ namespace Hush::Graphics
 		IGraphicsTexture *Get() const
 		{
 			return texture;
+		}
+
+		[[nodiscard]]
+		IGraphicsTexture *GetBarrierResource() const
+		{
+			return Get();
 		}
 
 		/// @brief Check if the resource is valid
@@ -119,6 +131,12 @@ namespace Hush::Graphics
 			return buffer.get();
 		}
 
+		[[nodiscard]]
+		IGraphicsBuffer *GetBarrierResource() const
+		{
+			return Get();
+		}
+
 		/// @brief Check if the resource is valid
 		[[nodiscard]]
 		bool IsValid() const
@@ -145,6 +163,12 @@ namespace Hush::Graphics
 		IGraphicsBuffer *Get() const
 		{
 			return buffer;
+		}
+
+		[[nodiscard]]
+		IGraphicsBuffer *GetBarrierResource() const
+		{
+			return Get();
 		}
 
 		/// @brief Check if the resource is valid

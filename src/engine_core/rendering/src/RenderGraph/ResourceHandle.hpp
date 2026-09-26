@@ -7,6 +7,8 @@
 #pragma once
 
 #include <type_traits>
+#include <atomic>
+#include <cstdint>
 #include <memory>
 #include <concepts>
 #include "Assertions.hpp"
@@ -14,7 +16,9 @@
 namespace Hush::Graphics
 {
 	class IGraphicsDevice;
-}
+	class IGraphicsBuffer;
+	class IGraphicsTexture;
+} // namespace Hush::Graphics
 
 namespace Hush::RenderGraph
 {
@@ -49,8 +53,6 @@ namespace Hush::RenderGraph
 		friend class RenderGraph;
 
 	public:
-		static constexpr uint32_t RESOURCE_INITIAL_VERSION = 1;
-
 		ResourceHandle() = delete;
 		ResourceHandle(const ResourceHandle &) = delete;
 		ResourceHandle(ResourceHandle &&) noexcept = default;
@@ -69,6 +71,20 @@ namespace Hush::RenderGraph
 		uint32_t GetResourceId() const noexcept
 		{
 			return m_resourceId;
+		}
+
+		/// Unique for this resource instance, including replacements at the same address.
+		[[nodiscard]]
+		uint64_t GetInstanceId() const noexcept
+		{
+			return m_resourcePtr->instanceId;
+		}
+
+		/// Keeps graph-owned storage alive; imported raw RHI objects remain caller-owned.
+		[[nodiscard]]
+		std::shared_ptr<const void> GetLifetimeToken() const
+		{
+			return m_resourcePtr;
 		}
 
 		/// @brief Check whether the underlying GPU resource has been allocated.
@@ -117,21 +133,18 @@ namespace Hush::RenderGraph
 			m_resourcePtr->BeforeWrite(flags, ctx);
 		}
 
-		/// @brief Get an opaque pointer to the underlying native GPU resource.
-		///
-		/// Used by the render graph's barrier computation to populate
-		/// ResourceBarrierDescriptor::resource. The actual type depends on the
-		/// concrete resource (e.g. ID3D12Resource*, VkImage, wgpu::Texture, etc.).
-		///
-		/// @return Opaque pointer to the native resource, or nullptr if not yet created.
+		/// RHI buffer/texture pointer, NEVER the graph wrapper or native API handle.
+		/// Dependency-only resources have no barrier object.
 		[[nodiscard]]
-		void *GetNativePtr() const
+		void *GetBarrierResource() const
 		{
-			if (m_resourcePtr)
-			{
-				return m_resourcePtr->GetNativePtr();
-			}
-			return nullptr;
+			return m_resourcePtr->GetBarrierResource();
+		}
+
+		[[nodiscard]]
+		bool SupportsBarriers() const
+		{
+			return m_resourcePtr->SupportsBarriers();
 		}
 
 		template <ResourceConcept T>
@@ -153,37 +166,26 @@ namespace Hush::RenderGraph
 			return derivedPtr->resourceInstance;
 		}
 
-		/// @brief Replace the resource instance of an External (imported) handle in-place.
-		///
-		/// This is used to update per-frame imported resources (e.g. the current
-		/// swapchain backbuffer) without tearing down and rebuilding the entire
-		/// render graph.  The graph topology, compilation state, and resource IDs
-		/// all remain unchanged — only the underlying data pointer is swapped.
-		///
-		/// @pre The handle must be External (imported).  Calling this on a
-		///      Transient handle is a logic error and will assert.
-		/// @tparam T Must satisfy ResourceConcept and match the type originally
-		///           used when the resource was imported.
-		/// @param newResource The new resource instance to move into the handle.
+		/// Replace an import without mutating storage retained by submitted work.
+		/// Use RenderGraph::UpdateImport to also establish its incoming state.
 		template <ResourceConcept T>
-		void UpdateExternalResource(T &&newResource)
+		[[nodiscard]]
+		bool UpdateExternalResource(T &&newResource)
 		{
-			HUSH_ASSERT(m_handleType == EHandleType::External,
-						"UpdateExternalResource can only be called on imported (External) handles!");
-			HUSH_ASSERT(m_resourcePtr != nullptr, "Resource pointer cannot be null!");
-
-			auto *derivedPtr = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
-			HUSH_ASSERT(derivedPtr != nullptr, "Type mismatch: UpdateExternalResource<T> called with a different T "
-											   "than the one used at import time!");
-
-			derivedPtr->resourceInstance = std::forward<T>(newResource);
+			auto *model = dynamic_cast<ResourceModel<T> *>(m_resourcePtr.get());
+			if (m_handleType != EHandleType::External || model == nullptr)
+			{
+				return false;
+			}
+			m_resourcePtr = std::make_shared<ResourceModel<T>>(model->descriptor, std::forward<T>(newResource));
+			return true;
 		}
 
 	private:
 		template <ResourceConcept T>
 		ResourceHandle(const typename T::Descriptor &descriptor, T &&resourceInstance, EHandleType handleType,
 					   uint32_t resourceId)
-			: m_resourcePtr(std::make_unique<ResourceModel<T>>(descriptor, std::forward<T>(resourceInstance))),
+			: m_resourcePtr(std::make_shared<ResourceModel<T>>(descriptor, std::forward<T>(resourceInstance))),
 			  m_handleType(handleType),
 			  m_resourceId(resourceId),
 			  m_realized(handleType == EHandleType::External)
@@ -195,12 +197,14 @@ namespace Hush::RenderGraph
 		{
 		public:
 			IResourceModel() = default;
-			IResourceModel(const IResourceModel &) = default;
-			IResourceModel(IResourceModel &&) = default;
-			IResourceModel &operator=(const IResourceModel &) = default;
+			IResourceModel(const IResourceModel &) = delete;
+			IResourceModel(IResourceModel &&) = delete;
+			IResourceModel &operator=(const IResourceModel &) = delete;
 			IResourceModel &operator=(IResourceModel &&) = delete;
 
 			virtual ~IResourceModel() = default;
+
+			const uint64_t instanceId = NEXT_INSTANCE_ID.fetch_add(1, std::memory_order_relaxed);
 
 			virtual void CreateResource(Hush::Graphics::IGraphicsDevice *ctx) = 0;
 
@@ -213,10 +217,10 @@ namespace Hush::RenderGraph
 			[[nodiscard]]
 			virtual const void *GetDescriptorPtr() const = 0;
 
-			/// @brief Get an opaque pointer to the underlying native GPU resource.
-			/// @return Pointer to the native resource, or nullptr if unavailable.
 			[[nodiscard]]
-			virtual void *GetNativePtr() const = 0;
+			virtual void *GetBarrierResource() const = 0;
+			[[nodiscard]]
+			virtual bool SupportsBarriers() const = 0;
 		};
 
 		template <ResourceConcept T>
@@ -239,21 +243,29 @@ namespace Hush::RenderGraph
 			ResourceModel &operator=(ResourceModel &&) = delete;
 
 			ResourceModel(const typename T::Descriptor &descriptor, T &&obj)
-				: resourceInstance(std::forward<T>(obj)),
+				: resourceInstance(std::move(obj)),
 				  descriptor(descriptor)
 			{
 			}
 
-			~ResourceModel() override = default;
+			~ResourceModel() override
+			{
+				DestroyResource(m_creator);
+			}
 
 			void CreateResource(Hush::Graphics::IGraphicsDevice *ctx) override
 			{
 				resourceInstance.CreateResource(descriptor, ctx);
+				m_creator = ctx;
 			}
 
 			void DestroyResource(Hush::Graphics::IGraphicsDevice *ctx) override
 			{
-				resourceInstance.DestroyResource(descriptor, ctx);
+				if (m_creator != nullptr)
+				{
+					resourceInstance.DestroyResource(descriptor, ctx);
+					m_creator = nullptr;
+				}
 			}
 
 			void BeforeRead(uint32_t flags, void *ctx) override
@@ -278,25 +290,41 @@ namespace Hush::RenderGraph
 				return &descriptor;
 			}
 
+			static constexpr bool HAS_BARRIER_RESOURCE = requires(const T &resource) {
+				{ resource.GetBarrierResource() } -> std::same_as<Graphics::IGraphicsBuffer *>;
+			} || requires(const T &resource) {
+				{ resource.GetBarrierResource() } -> std::same_as<Graphics::IGraphicsTexture *>;
+			};
+
 			[[nodiscard]]
-			void *GetNativePtr() const override
+			void *GetBarrierResource() const override
 			{
-				// Return the address of the resource instance itself as an opaque
-				// pointer. Concrete resource types (e.g. a Vulkan texture wrapper)
-				// can override or expose their own native handle through their type.
-				return const_cast<T *>(&resourceInstance);
+				if constexpr (HAS_BARRIER_RESOURCE)
+				{
+					return resourceInstance.GetBarrierResource();
+				}
+				return nullptr;
+			}
+
+			[[nodiscard]]
+			bool SupportsBarriers() const override
+			{
+				return HAS_BARRIER_RESOURCE;
 			}
 
 			T resourceInstance;
 			const typename T::Descriptor descriptor;
+
+		private:
+			Graphics::IGraphicsDevice *m_creator = nullptr;
 		};
 
 	private:
-		std::unique_ptr<IResourceModel> m_resourcePtr;
+		inline static std::atomic<uint64_t> NEXT_INSTANCE_ID{1};
+		std::shared_ptr<IResourceModel> m_resourcePtr;
 
 		const EHandleType m_handleType;
 		const uint32_t m_resourceId{};
-		uint32_t m_version = 0;
 
 		/// Whether the underlying GPU resource has been allocated.
 		/// External resources start as realized; transient resources start as

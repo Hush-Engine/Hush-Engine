@@ -102,6 +102,8 @@ function(hush_minject_target tgt)
 endfunction()
 
 
+set(HUSH_TOOLS_VERSION "v0.3.6")
+
 # Paths to locally built hush tools. When set, the downloads are skipped.
 # This is useful when working on the hush-llvm repository.
 set(HUSH_REFLECTION_TOOL_PATH "$ENV{HUSH_REFLECTION_TOOL_PATH}" CACHE FILEPATH "Path to a local hush-reflection binary")
@@ -111,8 +113,8 @@ if (CMAKE_HOST_WIN32)
     if (HUSH_REFLECTION_TOOL_PATH)
         set(HUSH_REFLECTION_BIN "${HUSH_REFLECTION_TOOL_PATH}")
     else ()
-        set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.4/hush-reflection.exe")
-        set (HUSH_REFLECTION_HASH "8d7a87fa267b1c17a5f22334c3e9ea4da627f32889b6150715d35bf24bac1821")
+        set (HUSH_REFLECTION_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/${HUSH_TOOLS_VERSION}/hush-reflection.exe")
+        set (HUSH_REFLECTION_HASH "d67659b51c9fd3791e7bf0d3279c35b4846592eae4010d672e2fabd856104d29")
 
         download_hush_file(
                 URL ${HUSH_REFLECTION_URL}
@@ -126,8 +128,8 @@ if (CMAKE_HOST_WIN32)
     if (HUSH_EXPORT_TOOL_PATH)
         set(HUSH_EXPORT_BIN "${HUSH_EXPORT_TOOL_PATH}")
     else ()
-        set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/v0.3.4/hush-export.exe")
-        set (HUSH_EXPORT_HASH "4e85b43500fdd68c827bda8a739d511b95465de6b74f5d07ab068a84834c2a75")
+        set (HUSH_EXPORT_URL "https://github.com/Hush-Engine/hush-llvm/releases/download/${HUSH_TOOLS_VERSION}/hush-export.exe")
+        set (HUSH_EXPORT_HASH "b3e15be21040afed7bd71445804f45d92016722946a328b617da7b82a12638f2")
 
         download_hush_file(
                 URL ${HUSH_EXPORT_URL}
@@ -139,6 +141,30 @@ if (CMAKE_HOST_WIN32)
     endif ()
 else ()
     # Keep the full tool bundle intact: builtin headers live next to bin/.
+    # Select host tools even when cross-compiling (e.g. Linux -> WebAssembly).
+    if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" AND
+        (NOT HUSH_REFLECTION_TOOL_PATH OR NOT HUSH_EXPORT_TOOL_PATH))
+        if (NOT CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+            message(FATAL_ERROR "Hush tools ${HUSH_TOOLS_VERSION} require an x64 Linux host; provide local tool paths for ${CMAKE_HOST_SYSTEM_PROCESSOR}.")
+        endif ()
+        set(HUSH_TOOLS_ARCHIVE "hush-tools-linux-x64-${HUSH_TOOLS_VERSION}.tar.gz")
+        download_hush_file(
+            URL "https://github.com/Hush-Engine/hush-llvm/releases/download/${HUSH_TOOLS_VERSION}/hush-tools-linux-x64.tar.gz"
+            FILENAME "${HUSH_TOOLS_ARCHIVE}"
+            EXPECTED_HASH "4ca30672a8edb155c54b84e7e683da37c1d81eaa7dd2024cfece1efee9c60d84"
+        )
+        set(HUSH_TOOLS_DIR "${CMAKE_BINARY_DIR}/hush-tools/${HUSH_TOOLS_VERSION}")
+        set(HUSH_REFLECTION_BIN "${HUSH_TOOLS_DIR}/hush-tools-linux-x64/bin/hush-reflection")
+        set(HUSH_EXPORT_BIN "${HUSH_TOOLS_DIR}/hush-tools-linux-x64/bin/hush-export")
+        if (NOT EXISTS "${HUSH_REFLECTION_BIN}" OR NOT EXISTS "${HUSH_EXPORT_BIN}")
+            file(MAKE_DIRECTORY "${HUSH_TOOLS_DIR}")
+            file(ARCHIVE_EXTRACT INPUT "${CMAKE_BINARY_DIR}/${HUSH_TOOLS_ARCHIVE}"
+                 DESTINATION "${HUSH_TOOLS_DIR}")
+        endif ()
+        if (NOT EXISTS "${HUSH_REFLECTION_BIN}" OR NOT EXISTS "${HUSH_EXPORT_BIN}")
+            message(FATAL_ERROR "The Hush tools archive does not contain the expected Linux executables.")
+        endif ()
+    endif ()
     if (HUSH_REFLECTION_TOOL_PATH)
         set(HUSH_REFLECTION_BIN "${HUSH_REFLECTION_TOOL_PATH}")
     else ()

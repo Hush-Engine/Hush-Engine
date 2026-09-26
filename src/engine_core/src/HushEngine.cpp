@@ -61,7 +61,8 @@ static const uint32_t NUM_THREADS = std::max(1u, std::thread::hardware_concurren
 #endif
 
 Hush::HushEngine::HushEngine()
-	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create({.numThreads = NUM_THREADS, .pinToCore = true}))
+	: m_threadPool(Hush::Threading::Executors::ThreadPool::Create({.numThreads = NUM_THREADS, .pinToCore = true})),
+	  m_elapsed{}
 {
 #if defined(HUSH_USE_MIMALLOC)
 	HushForceLinkAllocatorOverrides();
@@ -73,6 +74,12 @@ Hush::HushEngine::HushEngine()
 Hush::HushEngine::~HushEngine()
 {
 	this->Quit();
+	// Scene systems and the application own imported/bound GPU objects. Their
+	// destruction must follow GPU completion, not merely CPU submission.
+	if (m_internal->windowRenderer != nullptr)
+	{
+		m_internal->windowRenderer->WaitIdle();
+	}
 	// Systems can own Flecs queries and module callbacks. Tear them down while
 	// the scene world and loaded module libraries are both still alive.
 	if (m_app != nullptr)

@@ -90,6 +90,8 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 																				.usage = ETextureUsage::DepthStencil,
 																			});
 
+			ctx.Write(data.renderTexture, EResourceState::RenderTarget);
+			ctx.Write(data.depthTexture, EResourceState::DepthStencilWrite);
 			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
 		},
 		[self](ScenePassData &data, ICommandList *cmdList, const Hush::RenderGraph::ResourceManager &resourceManager) {

@@ -278,6 +278,27 @@ namespace Hush::Graphics
 			}
 		}
 
+		/// Whether combining these read requirements preserves a valid backend state/layout.
+		/// Only equal states and shader-read stages share a layout by default. Backends
+		/// may be more conservative; do not blindly OR copy/depth/present layouts.
+		[[nodiscard]]
+		virtual bool CanCombineReadStates(EResourceState left, EResourceState right) const
+		{
+			if (left == right)
+			{
+				return true;
+			}
+			const auto bits = static_cast<uint32_t>(left | right);
+			return left != EResourceState::Undefined && right != EResourceState::Undefined &&
+				   (bits & ~static_cast<uint32_t>(EResourceState::AnyShaderAccess)) == 0;
+		}
+
+		/// Pump completion notifications without waiting for GPU work.
+		/// Backends with autonomous completion reporting need no override.
+		virtual void PollCompletions()
+		{
+		}
+
 		/// @brief Begin a new frame
 		/// @return Swapchain texture handle, or nullptr on failure
 		virtual void BeginFrame() = 0;

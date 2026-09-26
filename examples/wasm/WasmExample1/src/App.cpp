@@ -458,6 +458,7 @@ private:
 													  .format = ETextureFormat::BGRA8_UNORM,
 													  .usage = ETextureUsage::RenderTarget | ETextureUsage::CopySource,
 												  });
+				ctx.Write(data.renderTexture, EResourceState::RenderTarget);
 			},
 
 			[this](TrianglePassData &data, Hush::Graphics::ICommandList *cmdList,
@@ -506,11 +507,12 @@ private:
 
 			// BUILD PHASE -------------------------------------------------
 			[&trianglePassData, device, this](RenderGraph::BuildContext &ctx, CopyToBackbufferPassData &data) {
-				data.renderTexture = ctx.Read(trianglePassData.renderTexture);
+				data.renderTexture = ctx.Read(trianglePassData.renderTexture, EResourceState::CopySource);
 				data.backbuffer =
 					ctx.Import<ImportedTextureResource>("Backbuffer", ImportedTextureResource{
 																		  .texture = device->GetCurrentFrameTexture(),
 																	  });
+				ctx.Write(data.backbuffer, EResourceState::CopyDestination);
 				m_backbufferResourceId = data.backbuffer;
 			},
 
@@ -535,10 +537,15 @@ private:
 
 		IGraphicsDevice *device = m_engine->GetWindowRenderer()->GetGraphicsDevice();
 
-		graph.UpdateImport<ImportedTextureResource>(m_backbufferResourceId,
-													ImportedTextureResource{
-														.texture = device->GetCurrentFrameTexture(),
-													});
+		if (!graph
+				 .UpdateImport<ImportedTextureResource>(
+					 m_backbufferResourceId, ImportedTextureResource{.texture = device->GetCurrentFrameTexture()},
+					 EResourceState::Undefined)
+				 .has_value())
+		{
+			Hush::LogError("Failed to replace the backbuffer import");
+			graph.Invalidate();
+		}
 	}
 
 	Hush::HushEngine *m_engine;

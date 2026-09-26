@@ -53,7 +53,7 @@ namespace Hush::Graphics
 
 		// Create command queue
 		wgpu::Queue queue = m_device.getQueue();
-		m_graphicsQueue = std::make_unique<WebGPUCommandQueue>(queue, EQueueType::Graphics);
+		m_graphicsQueue = std::make_unique<WebGPUCommandQueue>(m_device, m_instance, queue, EQueueType::Graphics);
 
 		// Query capabilities
 		QueryCapabilities();
@@ -65,6 +65,10 @@ namespace Hush::Graphics
 	{
 		LogTrace("Destroying WebGPU Graphics Device");
 
+		if (m_graphicsQueue)
+		{
+			m_graphicsQueue->WaitIdle();
+		}
 		FlushDeletionQueue();
 
 		m_graphicsQueue.reset();
@@ -442,7 +446,7 @@ namespace Hush::Graphics
 
 	std::unique_ptr<IFence> WebGPUGraphicsDevice::CreateFence(uint64_t initialValue)
 	{
-		return std::make_unique<WebGPUFence>(initialValue);
+		return std::make_unique<WebGPUFence>(m_device, m_instance, m_graphicsQueue->GetQueue(), initialValue);
 	}
 
 	void WebGPUGraphicsDevice::BeginFrame()
@@ -785,10 +789,19 @@ namespace Hush::Graphics
 		}
 	}
 
+	void WebGPUGraphicsDevice::PollCompletions()
+	{
+#ifdef WEBGPU_BACKEND_WGPU
+		m_device.poll(0u, nullptr);
+#else
+		m_instance.processEvents();
+#endif
+	}
+
 	void WebGPUGraphicsDevice::PollEvents()
 	{
 #ifdef WEBGPU_BACKEND_WGPU
-		m_device.poll(true, nullptr);
+		m_device.poll(1u, nullptr);
 #endif
 	}
 

@@ -412,6 +412,8 @@ namespace Hush::Graphics
 		/// @brief Bitmask of EResourceState values supported for transitions on the graphics queue.
 		/// Graphics queues typically support all states.
 		uint32_t graphicsQueueSupportedStates = static_cast<uint32_t>(EResourceState::GenericRead) |
+												static_cast<uint32_t>(EResourceState::Present) |
+												static_cast<uint32_t>(EResourceState::DepthStencilRead) |
 												static_cast<uint32_t>(EResourceState::RenderTarget) |
 												static_cast<uint32_t>(EResourceState::DepthStencilWrite) |
 												static_cast<uint32_t>(EResourceState::UnorderedAccess) |
