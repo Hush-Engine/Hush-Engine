@@ -16,6 +16,14 @@ else()
     set(WEBGPU_BACKEND "WGPU")
 endif()
 add_subdirectory(WebGPU-distribution)
+if (EMSCRIPTEN)
+    # Host-side reflection/binding tools do not run emcc's --use-port logic.
+    # Expose the C headers explicitly alongside the distribution's C++ wrapper.
+    FetchContent_GetProperties(emdawnwebgpu SOURCE_DIR HUSH_EMDAWNWEBGPU_SOURCE_DIR)
+    target_include_directories(webgpu INTERFACE
+        "${HUSH_EMDAWNWEBGPU_SOURCE_DIR}/webgpu/include"
+    )
+endif()
 # TODO: migrate to SDL3
 add_subdirectory(sdl3webgpu)
 # add_subdirectory(sdl2webgpu)

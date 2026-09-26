@@ -303,7 +303,10 @@ namespace Hush::RenderGraph
 				{
 					return resourceInstance.GetBarrierResource();
 				}
-				return nullptr;
+				else
+				{
+					return nullptr;
+				}
 			}
 
 			[[nodiscard]]

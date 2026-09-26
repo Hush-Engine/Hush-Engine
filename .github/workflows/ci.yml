@@ -235,7 +235,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build pkg-config \
-            autoconf autoconf-archive automake libtool \
+            autoconf autoconf-archive automake libtool libltdl-dev \
             libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev \
             libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev \
             libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev \
