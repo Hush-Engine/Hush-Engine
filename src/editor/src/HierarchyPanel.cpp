@@ -6,6 +6,7 @@
 #include <Assertions.hpp>
 #include <memory_resource>
 #include <optional>
+#include <string>
 #include <string_view>
 #include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
@@ -152,11 +153,13 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 	// PERF: Temp strings
 	std::string_view key = entity.GetKey();
 	std::string display {name.GetName()};
+	display.append(" (");
 	if (!key.empty()) {
-		display.append(" (");
 		display.append(key);
-		display.append(")");
+		display.append(", ");
 	}
+	display.append(std::to_string(entity.GetId()));
+	display.append(")");
 	if (this->m_state == EState::Renaming && this->m_editorInfo.GetData<EditorInfo>()->currentSelection.value == entity.GetId()) {
 		display.clear();
 	}
