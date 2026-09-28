@@ -2,11 +2,12 @@
 #include "Result.hpp"
 #include "crypto/Hashing.hpp"
 #include "Logger.hpp"
+#include "Platform.hpp"
 #include <algorithm>
 #include <cstring>
 #include <fstream>
 
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 // Emscripten: full-read fallback (no mmap)
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -61,11 +62,11 @@ namespace Hush
 		Close();
 	}
 
-	bool MappedFile::Open(std::string_view path)
+	bool MappedFile::Open(const std::filesystem::path &path)
 	{
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 		// Emscripten: full-read into memory
-		std::ifstream file(std::string(path), std::ios::binary | std::ios::ate);
+		std::ifstream file(path, std::ios::binary | std::ios::ate);
 		if (!file)
 		{
 			return false;
@@ -80,8 +81,7 @@ namespace Hush
 
 #elif defined(_WIN32)
 		// Windows: CreateFileMapping + MapViewOfFile
-		std::wstring wpath(path.begin(), path.end());
-		HANDLE hFile = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+		HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
 								   FILE_ATTRIBUTE_NORMAL, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE)
 		{
@@ -114,7 +114,7 @@ namespace Hush
 
 #else
 		// Linux / macOS: mmap
-		int fd = open(std::string(path).c_str(), O_RDONLY);
+		int fd = open(path.c_str(), O_RDONLY);
 		if (fd < 0)
 		{
 			return false;
@@ -145,7 +145,7 @@ namespace Hush
 
 	void MappedFile::Close()
 	{
-#if defined(HUSH_PLATFORM_EMSCRIPTEN)
+#if HUSH_PLATFORM_EMSCRIPTEN
 		m_fallback.clear();
 #elif defined(_WIN32)
 		if (m_data)
@@ -174,11 +174,13 @@ namespace Hush
 
 	// ── PakFileSystem ────────────────────────────────────────────────────────
 
-	PakFileSystem::PakFileSystem(std::string_view bundlePath)
+	PakFileSystem::PakFileSystem(const std::filesystem::path &bundlePath)
 	{
+		const std::u8string utf8Path = bundlePath.generic_u8string();
+		const std::string_view displayPath(reinterpret_cast<const char *>(utf8Path.data()), utf8Path.size());
 		if (!m_mappedFile.Open(bundlePath))
 		{
-			LogFormat(ELogLevel::Error, "PakFileSystem: failed to open bundle: {}", bundlePath);
+			LogFormat(ELogLevel::Error, "PakFileSystem: failed to open bundle: {}", displayPath);
 			return;
 		}
 
@@ -186,7 +188,7 @@ namespace Hush
 		auto pak = HushPak::Read(data);
 		if (!pak.has_value())
 		{
-			LogFormat(ELogLevel::Error, "PakFileSystem: invalid bundle: {}", bundlePath);
+			LogFormat(ELogLevel::Error, "PakFileSystem: invalid bundle: {}", displayPath);
 			m_mappedFile = MappedFile(); // reset
 			return;
 		}

@@ -4,15 +4,29 @@
 #include "Components/WorldTransform.hpp"
 #include "ISystem.hpp"
 #include "Query.hpp"
+
+#include <reflection/Type.hpp>
+#include <serialization/Deserialization.hpp>
+#include <serialization/Serialization.hpp>
+#include <Hushgen.hpp>
+
+#if __has_include("TransformationSystem.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "TransformationSystem.hushgen.hpp"
+#endif
+
 namespace Hush
 {
 
 	// Takes care of all transformation calculations per entity
 	// this also determines how entities are rendered since their global transform component is updated
-	class TransformationSystem final : public ISystem
+	class [[hush::system]] TransformationSystem final : public ISystem
 	{
+		HUSH_GENERATED_BODY
 	public:
-		using ISystem::ISystem;
+		explicit TransformationSystem(Scene &scene)
+			: ISystem(scene)
+		{
+		}
 
 		void Init() override;
 

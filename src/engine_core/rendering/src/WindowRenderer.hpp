@@ -45,6 +45,9 @@ namespace Hush
 
 		~WindowRenderer();
 
+		/// Drain before callers release application-owned GPU resources at shutdown.
+		void WaitIdle();
+
 		IRenderer *GetInternalRenderer() noexcept;
 
 		[[nodiscard]]

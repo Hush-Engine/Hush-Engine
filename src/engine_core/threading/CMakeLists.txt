@@ -14,9 +14,8 @@ add_library(Hush::Threading ALIAS HushThreading)
 
 target_link_libraries(HushThreading PUBLIC Hush::Log Hush::Utils Hush::Memory)
 
-if (linux)
-    target_link_libraries(HushThreading PUBLIC pthread)
-endif()
+find_package(Threads REQUIRED)
+target_link_libraries(HushThreading PUBLIC Threads::Threads)
 
 if (EMSCRIPTEN)
     # target_link_libraries(HushThreading PUBLIC pthread)

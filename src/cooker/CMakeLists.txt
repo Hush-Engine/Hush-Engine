@@ -18,12 +18,8 @@ hush_add_library(
 )
 add_library(Hush::Cooker ALIAS HushCooker)
 
-target_sources(HushCooker PUBLIC
-    $<TARGET_OBJECTS:HushAssets>
-    $<TARGET_OBJECTS:HushRendering>
-    $<TARGET_OBJECTS:HushResources>
-)
-
+# Do not forward engine objects as interface sources: Hush::Engine already
+# supplies them to the editor. Standalone cooker targets link them directly.
 target_link_libraries(HushCooker PUBLIC
     Hush::Assets
     Hush::Rendering
@@ -40,6 +36,7 @@ hush_add_executable(
 )
 target_link_libraries(HushCookerCli PRIVATE
     Hush::Cooker
+    Hush::Resources
     Hush::Assets
     Hush::Filesystem
     Hush::Core
@@ -61,11 +58,9 @@ add_test_target(
 )
 
 # add_test_target only links the ENGINE_TARGET (HushCooker) + Hush::Log + Catch2.
-# HushCooker forwards HushRendering's objects (WindowRenderer, RenderGraphSystem),
-# which need Hush::Input (InputManager) and Hush::Core (Scene/RawQuery). Mirror the
-# CLI's link set so the test links. (Guarded: the target only exists when tests are on.)
+# Link engine object libraries directly, matching the standalone CLI.
 if (TARGET HushCookerTest)
     target_link_libraries(HushCookerTest PRIVATE
         Hush::Assets Hush::Filesystem Hush::Core Hush::Utils
-        Hush::Threading Hush::Input Hush::Rendering Hush::Memory)
+        Hush::Threading Hush::Input Hush::Rendering Hush::Resources Hush::Memory)
 endif()

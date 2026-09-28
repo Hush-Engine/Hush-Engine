@@ -20,6 +20,7 @@ namespace Hush::Networking
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_OSX
+	template <uint32_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{
@@ -27,6 +28,7 @@ namespace Hush::Networking
 		return system(cmd);
 	}
 #elif HUSH_PLATFORM_LINUX
+	template <uint32_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 	constexpr auto SystemOpenURL(const char (&url)[N])
 	{

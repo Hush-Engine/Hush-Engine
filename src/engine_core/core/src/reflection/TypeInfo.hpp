@@ -8,6 +8,8 @@
 #include "TypeTraits.hpp"
 #include "FunctionInfo.hpp"
 #include "FieldInfo.hpp"
+#include "Metadata.hpp"
+#include "ModuleHandle.hpp"
 
 #include <vector>
 #include <optional>
@@ -15,7 +17,7 @@
 namespace Hush::Reflection
 {
 
-	class TypeInfo
+	class TypeInfo : public MetadataHolder
 	{
 
 	public:
@@ -157,6 +159,28 @@ namespace Hush::Reflection
 		void SetAlignment(std::size_t alignment)
 		{
 			this->m_alignment = alignment;
+		}
+
+		/// Sets the module that owns this type. Called by the reflection
+		/// database when the type is registered.
+		void SetOwner(ModuleHandle module)
+		{
+			this->m_owner = module;
+		}
+
+		/// Gets the module that owns this type.
+		[[nodiscard]]
+		ModuleHandle GetOwner() const
+		{
+			return m_owner;
+		}
+
+		/// Returns true when this type belongs to the engine module, which
+		/// means it is a built-in type that is never unloaded.
+		[[nodiscard]]
+		bool IsBuiltin() const
+		{
+			return m_owner == ENGINE_MODULE_HANDLE;
 		}
 
 		/// Creates an instance of this type with the given arguments and returns it as a Variant.
@@ -318,6 +342,7 @@ namespace Hush::Reflection
 
 	private:
 		TypeId m_id;
+		ModuleHandle m_owner = ENGINE_MODULE_HANDLE;
 		std::vector<FunctionInfo> m_constructors;
 		std::vector<InPlaceCtor> m_inPlaceCtors;
 		std::vector<FunctionInfo> m_functions;

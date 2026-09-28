@@ -15,6 +15,16 @@
 
 namespace Hush::Graphics
 {
+	// The distribution's handle wrappers do not release their native references.
+	template <class Handle>
+	static void ReleaseHandle(Handle &handle)
+	{
+		if (handle != nullptr)
+		{
+			handle.release();
+			handle = nullptr;
+		}
+	}
 
 	static wgpu::TextureFormat GetTextureFormat(IGraphicsTexture *texture)
 	{
@@ -94,25 +104,15 @@ namespace Hush::Graphics
 
 	WebGPUCopyCommandList::~WebGPUCopyCommandList()
 	{
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-		if (m_commandBuffer != nullptr)
-		{
-			m_commandBuffer.release();
-		}
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 	}
 
 	void WebGPUCopyCommandList::Reset()
 	{
 		ZoneScoped;
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-
-		m_commandBuffer = nullptr;
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 
 		wgpu::CommandEncoderDescriptor encoderDesc{};
 		encoderDesc.label = WGPUStringView("Copy Command Encoder");
@@ -131,7 +131,7 @@ namespace Hush::Graphics
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Copy Command Buffer");
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
-		m_encoder.release();
+		ReleaseHandle(m_encoder);
 		m_isRecording = false;
 	}
 
@@ -272,14 +272,9 @@ namespace Hush::Graphics
 			m_computePass.end();
 			m_computePass.release();
 		}
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-		if (m_commandBuffer != nullptr)
-		{
-			m_commandBuffer.release();
-		}
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 	}
 
 	void WebGPUComputeCommandList::Reset()
@@ -288,16 +283,11 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
-			m_computePass.release();
-			m_inComputePass = false;
 		}
-
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-
-		m_commandBuffer = nullptr;
+		m_inComputePass = false;
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 
 		wgpu::CommandEncoderDescriptor encoderDesc{};
 		encoderDesc.label = WGPUStringView("Compute Command Encoder");
@@ -323,7 +313,8 @@ namespace Hush::Graphics
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Compute Command Buffer");
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
-		m_encoder.release();
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_encoder);
 		m_isRecording = false;
 	}
 
@@ -538,14 +529,10 @@ namespace Hush::Graphics
 			m_computePass.end();
 			m_computePass.release();
 		}
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-		if (m_commandBuffer != nullptr)
-		{
-			m_commandBuffer.release();
-		}
+		ReleaseHandle(m_renderPass);
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 	}
 
 	void WebGPUGraphicsCommandList::Reset()
@@ -554,23 +541,17 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
-			m_renderPass.release();
-			m_inRenderPass = false;
 		}
-
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
-			m_computePass.release();
-			m_inComputePass = false;
 		}
-
-		if (m_isRecording && m_encoder != nullptr)
-		{
-			m_encoder.release();
-		}
-
-		m_commandBuffer = nullptr;
+		m_inRenderPass = false;
+		m_inComputePass = false;
+		ReleaseHandle(m_renderPass);
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_commandBuffer);
+		ReleaseHandle(m_encoder);
 
 		wgpu::CommandEncoderDescriptor encoderDesc{};
 		encoderDesc.label = WGPUStringView("Graphics Command Encoder", WGPU_STRLEN);
@@ -603,7 +584,9 @@ namespace Hush::Graphics
 		wgpu::CommandBufferDescriptor cmdBufferDesc{};
 		cmdBufferDesc.label = WGPUStringView("Graphics Command Buffer", WGPU_STRLEN);
 		m_commandBuffer = m_encoder.finish(cmdBufferDesc);
-		m_encoder.release();
+		ReleaseHandle(m_renderPass);
+		ReleaseHandle(m_computePass);
+		ReleaseHandle(m_encoder);
 		m_isRecording = false;
 	}
 
@@ -997,7 +980,7 @@ namespace Hush::Graphics
 		HUSH_ASSERT(m_inRenderPass, "Not in a render pass");
 
 		m_renderPass.end();
-		m_renderPass.release();
+		ReleaseHandle(m_renderPass);
 		m_inRenderPass = false;
 	}
 
@@ -1046,7 +1029,7 @@ namespace Hush::Graphics
 		if (m_inRenderPass)
 		{
 			m_renderPass.end();
-			m_renderPass.release();
+			ReleaseHandle(m_renderPass);
 			m_inRenderPass = false;
 		}
 

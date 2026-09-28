@@ -14,6 +14,7 @@
 #include <cassert>
 #include <coroutine>
 #include <exception>
+#include <utility>
 
 namespace Hush::Threading
 {

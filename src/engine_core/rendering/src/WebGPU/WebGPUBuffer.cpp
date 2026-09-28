@@ -8,7 +8,7 @@
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "Assertions.hpp"
 #include "Logger.hpp"
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 #include "Profiling.hpp"
 #include <webgpu.h>
 #endif
@@ -55,7 +55,7 @@ namespace Hush::Graphics
 
 	void *WebGPUBuffer::Map(Graphics::IGraphicsDevice *device)
 	{
-#ifndef HUSH_PLATFORM_EMSCRIPTEN
+#if !HUSH_PLATFORM_EMSCRIPTEN
 		ZoneScoped;
 #endif
 		(void)device;

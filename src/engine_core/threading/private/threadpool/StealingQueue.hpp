@@ -11,6 +11,7 @@
 #include <new>
 #include <array>
 #include <limits>
+#include <memory>
 #include <tuple>
 #include <optional>
 #include "Platform.hpp"

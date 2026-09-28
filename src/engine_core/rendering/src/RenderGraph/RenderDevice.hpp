@@ -40,12 +40,16 @@ namespace Hush::RenderGraph
 			// On multi-queue backends (D3D12, Vulkan) this is the identity
 			// mapping.  On single-queue backends (WebGPU) every pass type
 			// collapses to queue 0, which eliminates all cross-queue sync.
-			m_graph.SetQueueMap(EPassType::Graphics,
-								device->MapPassTypeToQueueIndex(Hush::Graphics::EQueueType::Graphics));
-			m_graph.SetQueueMap(EPassType::Compute,
-								device->MapPassTypeToQueueIndex(Hush::Graphics::EQueueType::Compute));
-			m_graph.SetQueueMap(EPassType::Transfer,
-								device->MapPassTypeToQueueIndex(Hush::Graphics::EQueueType::Transfer));
+			for (uint32_t type = 0; type < RenderGraph::PASS_TYPE_COUNT; ++type)
+			{
+				const auto result =
+					m_graph.SetQueueMap(static_cast<EPassType>(type),
+										device->MapPassTypeToQueueIndex(static_cast<Hush::Graphics::EQueueType>(type)));
+				if (!result.has_value())
+				{
+					m_configurationError = result.error();
+				}
+			}
 		}
 
 		~RenderDevice() = default;
@@ -102,12 +106,14 @@ namespace Hush::RenderGraph
 		/// This performs topological sort, dependency level assignment, and
 		/// SSIS-based synchronization point culling. It is a no-op if the
 		/// graph is already compiled.
-		void Compile()
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> Compile()
 		{
-			if (m_graph.IsDirty())
+			if (m_configurationError != EGraphError::None)
 			{
-				m_graph.Compile();
+				return m_configurationError;
 			}
+			return m_graph.Compile();
 		}
 
 		/// Execute the compiled render graph.
@@ -120,41 +126,44 @@ namespace Hush::RenderGraph
 		///
 		/// @pre The graph must be compiled (not dirty). Call Compile() first
 		///      or use CompileAndExecute().
-		void Execute()
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> Execute()
 		{
-			m_executor.Execute(m_graph);
+			if (!m_graph.IsCompiled())
+			{
+				return EGraphError::NotCompiled;
+			}
+			return m_executor.Execute(m_graph);
 		}
 
 		/// Convenience method: compile (if dirty) then execute.
 		///
 		/// This is the typical call in a frame loop after all passes have
 		/// been registered.
-		void CompileAndExecute()
+		[[nodiscard]]
+		Hush::Result<void, EGraphError> CompileAndExecute()
 		{
-			Compile();
-			Execute();
+			const auto result = Compile();
+			if (!result.has_value())
+			{
+				return result.error();
+			}
+			return Execute();
 		}
 
-		/// Reset the render graph and executor state for a fresh frame.
-		///
-		/// Clears all passes, resources, and compilation state from the graph.
-		/// Resets the executor's per-frame fence counters and resource state
-		/// tracker (fence objects themselves are reused).
-		///
-		/// Call this at the start of a frame (before or after BeginFrame) if
-		/// you are rebuilding the graph each frame. If your graph is static
-		/// across frames, you only need to call this when the graph changes.
+		/// Exceptional full rebuild: drain GPU work before releasing graph objects.
+		/// Ordinary frames use SoftReset. Live timeline values never reset.
 		void Reset()
 		{
+			m_executor.WaitIdle();
 			m_graph.Reset();
 			m_executor.ResetFrameState();
 		}
 
 		/// Lightweight per-frame reset that keeps the graph compiled.
 		///
-		/// Only resets the executor's per-frame state (resource state tracker
-		/// and fence value counters). The graph's passes, resources, topology,
-		/// and compilation output are all preserved.
+		/// Retires completed work and clears planning scratch without waiting.
+		/// Resource state/history, timeline values and compiled topology survive.
 		///
 		/// Use this instead of Reset() when the graph topology has not changed
 		/// and you only need to update per-frame imported resources (e.g.
@@ -267,6 +276,7 @@ namespace Hush::RenderGraph
 		/// Non-owning pointer to the graphics device backend.
 		/// Must outlive this RenderDevice.
 		Hush::Graphics::IGraphicsDevice *m_device = nullptr;
+		EGraphError m_configurationError = EGraphError::None;
 
 		/// The render graph — pure dependency graph of passes and resources.
 		/// Built by the user via AddPass(), compiled via Compile().

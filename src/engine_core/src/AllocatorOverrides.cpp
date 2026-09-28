@@ -1,5 +1,8 @@
 #if defined(HUSH_USE_MIMALLOC)
 
+// Hush owns the C++ allocation overrides so Tracy can observe them. On non-Windows
+// platforms, link mimalloc without its vcpkg "override" feature to avoid duplicate
+// new/delete definitions. C malloc/free remain with the platform allocator there.
 #include <mimalloc.h>
 
 #include <cstddef>

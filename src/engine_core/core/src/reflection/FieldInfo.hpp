@@ -6,6 +6,7 @@
 
 #pragma once
 #include "Variant.hpp"
+#include "Metadata.hpp"
 
 #include <span>
 #include <initializer_list>
@@ -15,7 +16,7 @@
 
 namespace Hush::Reflection
 {
-	class FieldInfo
+	class FieldInfo : public MetadataHolder
 	{
 	public:
 		using EVariantError = Variant::EVariantError;
@@ -23,13 +24,15 @@ namespace Hush::Reflection
 		using Setter = std::function<EVariantError(std::span<const VariantView>)>;
 		using Getter = std::function<Result<Variant, EVariantError>(std::span<const VariantView>)>;
 
-		FieldInfo(TypeId typeId, std::string name, Setter setter, Getter getter, uint64_t offset = 0)
+		FieldInfo(TypeId typeId, std::string name, Setter setter, Getter getter, uint64_t offset = 0,
+				  MetadataMap metadata = {})
 			: m_typeId(typeId),
 			  m_name(std::move(name)),
-			  m_setter(setter),
-			  m_getter(getter),
+			  m_setter(std::move(setter)),
+			  m_getter(std::move(getter)),
 			  m_offset(offset)
 		{
+			SetMetadata(std::move(metadata));
 		}
 
 		[[nodiscard]]

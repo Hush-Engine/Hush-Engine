@@ -21,6 +21,8 @@ hush_add_library(
         LIB_TYPE STATIC
         SRCS engine_core/src/main.cpp
              engine_core/src/HushEngine.cpp
+             engine_core/src/BuiltInTypes.cpp
+             engine_core/modules/src/ModuleBindingApi.cpp
              engine_core/src/AllocatorOverrides.cpp
              engine_core/src/stb_impl.cpp
         PUBLIC_HEADER_DIRS engine_core/src
@@ -32,12 +34,18 @@ target_link_libraries(HushEngine PUBLIC coreclr
         Hush::Libs
 )
 
+# BuiltInTypes.cpp includes the generated RegisterModule.hpp headers, so the
+# reflected targets must be generated first.
+add_dependencies(HushEngine HushCore HushResources HushModules)
+
+add_subdirectory(runtime)
+
 hush_add_executable(
         TARGET_NAME HushRuntime
-        SRCS engine_core/src/dummy.cpp
+        SRCS runtime/src/RuntimeMain.cpp
 )
 
-target_link_libraries(HushRuntime PRIVATE Hush::Engine Hush::Bindings)
+target_link_libraries(HushRuntime PRIVATE Hush::Engine Hush::Bindings Hush::RuntimeApp)
 
 hush_deploy_runtime_dlls(HushRuntime)
 

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstring>
+
 #include "TypeTraits.hpp"
 #include "TypeId.hpp"
 #include "Result.hpp"

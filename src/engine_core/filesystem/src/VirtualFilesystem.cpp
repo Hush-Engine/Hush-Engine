@@ -8,6 +8,7 @@
 #include "FileSystem.hpp"
 
 #include <Logger.hpp>
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 #include <optional>

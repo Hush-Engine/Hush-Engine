@@ -4,6 +4,7 @@
 
 #include "Entity.hpp"
 #include "serialization/SerializedEntity.hpp"
+#include "serialization/SerializedSystem.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -24,15 +25,9 @@ namespace Hush
 	class [[hush::reflect]] SceneAsset
 	{
 		static constexpr uint8_t HSCENE_V_MAJOR = 0;
-		static constexpr uint8_t HSCENE_V_MINOR = 1;
+		static constexpr uint8_t HSCENE_V_MINOR = 2;
 		HUSH_GENERATED_BODY
 	public:
-		// struct SerializedSystem
-		// {
-		// 	std::string type;
-		// 	int32_t order;
-		// };
-
 		// Some metadata
 		[[hush::property]]
 		uint8_t versionMajor = HSCENE_V_MAJOR;
@@ -42,6 +37,9 @@ namespace Hush
 		/// @brief UUID that corresponds to this scene asset
 		[[hush::property]]
 		uint64_t sceneId;
+
+		[[hush::property]]
+		std::vector<SerializedSystem> systems;
 
 		// entities
 		[[hush::property]]
