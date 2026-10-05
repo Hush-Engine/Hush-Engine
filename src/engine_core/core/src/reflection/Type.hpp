@@ -34,6 +34,7 @@
 namespace Hush::Reflection
 {
 	/// Result of registering a class into the reflection database.
+	[[hush::export]]
 	enum class ERegisterClassError : std::uint8_t
 	{
 		/// The type was registered.
@@ -141,6 +142,7 @@ namespace Hush::Reflection
 		/// @param module Module that owns the type.
 		/// @return None when the type was registered, DuplicateType when a type
 		/// with the same id was already registered.
+		[[hush::export]]
 		ERegisterClassError RegisterClass(TypeInfo typeInfo, ModuleHandle module = ENGINE_MODULE_HANDLE)
 		{
 			std::unique_lock lock(m_mutex);

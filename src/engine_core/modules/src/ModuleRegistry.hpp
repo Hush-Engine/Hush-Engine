@@ -43,6 +43,10 @@ namespace Hush::Modules
 		Rust,
 		DotNetCoreClr,
 		DotNetNativeAot,
+		Beef,
+		Odin,
+		Jai,
+		Other, // User-specified foreign language
 	};
 
 	/// Registration state of a module record.

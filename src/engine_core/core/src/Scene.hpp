@@ -90,7 +90,7 @@ namespace Hush
 
 		~Scene();
 
-		/// Must be called before Init
+		/// @brief Must be called before Init, essentially the first thing any Hush::IApplication needs to call
 		void HookEvents();
 
 		/// Init is called when the scene is initialized.
@@ -245,7 +245,7 @@ namespace Hush
 		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
 		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
 		[[nodiscard]]
-		EntityId Lookup(NullTerminatedStringView tag) const;
+		EntityId LookupCStr(NullTerminatedStringView tag) const;
 
 		// HACK: Marshallable version
 		[[hush::export]] [[nodiscard]]

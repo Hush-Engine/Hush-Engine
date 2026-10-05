@@ -302,7 +302,7 @@ TEST_CASE("Handwritten native module loads and registers", "[modules]")
 {
 	Hush::Reflection::ReflectionDB db;
 	Hush::Modules::ModuleRegistry registry(db);
-	Hush::Modules::NativeModuleLoader loader(registry, nullptr, nullptr);
+	Hush::Modules::DynamicModuleLoader loader(registry, nullptr, nullptr);
 
 	auto module = loader.Load(HUSH_TEST_MODULE_NAME, "ManifestModule", Hush::Modules::EModuleKind::Rust);
 	REQUIRE(!module.has_error());
@@ -340,7 +340,7 @@ TEST_CASE("Generated native module registers a reflected system", "[modules]")
 {
 	Hush::Reflection::ReflectionDB db;
 	Hush::Modules::ModuleRegistry registry(db);
-	Hush::Modules::NativeModuleLoader loader(registry, nullptr, nullptr);
+	Hush::Modules::DynamicModuleLoader loader(registry, nullptr, nullptr);
 
 	auto module = loader.Load(HUSH_GENERATED_TEST_MODULE_NAME);
 	REQUIRE(!module.has_error());
@@ -363,9 +363,9 @@ TEST_CASE("Missing module library fails cleanly", "[modules]")
 {
 	Hush::Reflection::ReflectionDB db;
 	Hush::Modules::ModuleRegistry registry(db);
-	Hush::Modules::NativeModuleLoader loader(registry, nullptr, nullptr);
+	Hush::Modules::DynamicModuleLoader loader(registry, nullptr, nullptr);
 
 	auto module = loader.Load("this-module-does-not-exist.dll");
 	REQUIRE(module.has_error());
-	REQUIRE(module.error() == Hush::Modules::NativeModuleLoader::EError::LibraryLoadFailed);
+	REQUIRE(module.error() == Hush::Modules::DynamicModuleLoader::EError::LibraryLoadFailed);
 }

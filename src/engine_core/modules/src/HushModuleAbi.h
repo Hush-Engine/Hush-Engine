@@ -8,6 +8,8 @@
 	types and no ownership conventions cross this boundary.
 */
 
+// TODO (Nef): We should look into the bindings generator also generating this contract
+
 #pragma once
 
 #include <stdint.h>
@@ -75,7 +77,11 @@ extern "C"
 		HushSystemLifecycle_Shutdown = 1 << 3,
 		HushSystemLifecycle_PreRender = 1 << 4,
 		HushSystemLifecycle_Render = 1 << 5,
-		HushSystemLifecycle_PostRender = 1 << 6
+		HushSystemLifecycle_PostRender = 1 << 6,
+		HushSystemLifecycle_All = HushSystemLifecycle_Init | HushSystemLifecycle_Update |
+								  HushSystemLifecycle_FixedUpdate | HushSystemLifecycle_Shutdown |
+								  HushSystemLifecycle_PreRender | HushSystemLifecycle_Render |
+								  HushSystemLifecycle_PostRender
 	} HushSystemLifecycle;
 
 	/// Callback table of a foreign language runtime. One table is registered per

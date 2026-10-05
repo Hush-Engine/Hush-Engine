@@ -9,6 +9,7 @@
 #include "Entity.hpp"
 #include "Scene.hpp"
 #include <string_view>
+#include <filesystem>
 
 namespace Hush
 {
@@ -23,6 +24,9 @@ namespace Hush
 		IApplication &operator=(IApplication &&) = default;
 
 		virtual ~IApplication() = default;
+
+		// This should scan all relevant module paths and find their dlls, maybe a default implmenation would be good(?
+		virtual void LoadModules(const std::filesystem::path& modulesRoot) = 0;
 
 		virtual void Init() = 0;
 

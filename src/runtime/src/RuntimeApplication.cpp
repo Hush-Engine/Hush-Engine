@@ -97,7 +97,7 @@ void Hush::RuntimeApplication::Init()
 
 void Hush::RuntimeApplication::LoadModules(const RuntimeManifest &manifest, const std::filesystem::path &manifestDir)
 {
-	Modules::NativeModuleLoader nativeLoader(*m_engine->GetModuleRegistry(), m_engine, &HUSH_FUNCPTR_TABLE);
+	Modules::DynamicModuleLoader nativeLoader(*m_engine->GetModuleRegistry(), m_engine, &HUSH_FUNCPTR_TABLE);
 
 	for (const RuntimeModuleManifest &module : manifest.modules)
 	{
@@ -126,7 +126,7 @@ void Hush::RuntimeApplication::LoadModules(const RuntimeManifest &manifest, cons
 		// native-module, rust and dotnet-nativeaot are all native libraries
 		// with the same entry point.
 		const std::filesystem::path modulePath = manifestDir / PathFromUtf8(module.path);
-		Result<ModuleHandle, Modules::NativeModuleLoader::EError> loaded =
+		Result<ModuleHandle, Modules::DynamicModuleLoader::EError> loaded =
 			nativeLoader.Load(modulePath, module.name, kind);
 		if (loaded.has_error())
 		{
@@ -163,7 +163,7 @@ void Hush::RuntimeApplication::CreateSystems(const RuntimeManifest &manifest)
 
 void Hush::RuntimeApplication::Update(float delta)
 {
-	m_scene->Update(delta);
+	m_scene->Update(delta, false);
 }
 
 void Hush::RuntimeApplication::FixedUpdate(float delta)

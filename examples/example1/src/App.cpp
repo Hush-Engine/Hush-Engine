@@ -115,6 +115,11 @@ public:
 
 	~ExampleApp() override = default;
 
+
+	void LoadModules(const std::filesystem::path& modulesRoot) override {
+		(void)modulesRoot;
+	}
+
 	void Init() override
 	{
 		if (!InitShaderResources())

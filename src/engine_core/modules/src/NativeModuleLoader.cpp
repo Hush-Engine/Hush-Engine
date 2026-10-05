@@ -13,7 +13,7 @@
 #include <filesystem>
 #include <type_traits>
 
-Hush::Modules::NativeModuleLoader::NativeModuleLoader(ModuleRegistry &registry, HushEngine *engine,
+Hush::Modules::DynamicModuleLoader::DynamicModuleLoader(ModuleRegistry &registry, HushEngine *engine,
 													  const HushFuncPtrTable *hushApi)
 	: m_registry(registry),
 	  m_engine(engine),
@@ -21,7 +21,7 @@ Hush::Modules::NativeModuleLoader::NativeModuleLoader(ModuleRegistry &registry, 
 {
 }
 
-Hush::Result<Hush::ModuleHandle, Hush::Modules::NativeModuleLoader::EError> Hush::Modules::NativeModuleLoader::Load(
+Hush::Result<Hush::ModuleHandle, Hush::Modules::DynamicModuleLoader::EError> Hush::Modules::DynamicModuleLoader::Load(
 	const std::filesystem::path &path, std::string_view moduleName, EModuleKind kind)
 {
 	Result<SharedLibrary, SharedLibrary::EError> libraryResult = SharedLibrary::OpenSharedLibrary(path);
@@ -52,7 +52,8 @@ Hush::Result<Hush::ModuleHandle, Hush::Modules::NativeModuleLoader::EError> Hush
 		return EError::RegistrationFailed;
 	}
 
-	NativeModuleHost host;
+	// There is no reason why a foreign module cannot use this exact same path
+	NativeModuleHost host{};
 	host.engine = m_engine;
 	host.reflectionDB = &m_registry.GetReflectionDB();
 	host.moduleRegistry = &m_registry;

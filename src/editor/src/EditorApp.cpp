@@ -16,6 +16,9 @@
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "LibManager.hpp"
+#include "../modules/src/ModuleRegistry.hpp"
+#include "../modules/src/NativeModuleLoader.hpp"
 #include "NullTerminatedStringView.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
@@ -44,12 +47,14 @@
 #include "RenderGraph/RenderGraph.hpp"
 #include "Logger.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_wgpu.h>
 
 #include <algorithm>
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
 #include <string_view>
 #include "Profiling.hpp"
@@ -67,16 +72,16 @@ class EditorApp final : public Hush::IApplication
 		"Your scene must be saved to a file before playing!";
 	static constexpr std::string_view SCENE_SAVED_ERR = "Failed to save scene!";
 
-	// HACK: Scripting (Hardcoded for the game jam for now)
-	#if HUSH_PLATFORM_WIN
+// HACK: Scripting (Hardcoded for the game jam for now)
+#if HUSH_PLATFORM_WIN
 	static constexpr Hush::NullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
-				"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
-	#elif HUSH_PLATFORM_OSX
+		"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
+#elif HUSH_PLATFORM_OSX
 	static constexpr Hush::NulNullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
-				"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
-	#else
-	#error "Platform not supported for the game jam!"
-	#endif
+		"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
+#else
+#error "Platform not supported for the game jam!"
+#endif
 
 public:
 	explicit EditorApp(Hush::HushEngine *engine)
@@ -135,6 +140,39 @@ public:
 		});
 	}
 
+	void LoadModules(const std::filesystem::path &modulesRoot) override
+	{
+		auto moduleLoader = Hush::Modules::DynamicModuleLoader(*this->m_engine->GetModuleRegistry(), this->m_engine,
+															  &HUSH_FUNCPTR_TABLE);
+		// Go and check how many directories we have on the modules
+		auto dirIt = std::filesystem::directory_iterator{modulesRoot};
+		for (const std::filesystem::directory_entry &entry : dirIt)
+		{
+			// For each dir, we want to find out where the dll is, we need a convention for this
+			// Maybe modules/{Directory}/bin/{Directory}.dll, plain and simple?
+			std::filesystem::path binaryLocation = entry.path() / "bin/";
+			std::string moduleName = entry.path().stem().string();
+			binaryLocation /= moduleName + LibManager::LIB_FILE_EXTENSION.data();
+			if (!std::filesystem::exists(binaryLocation))
+			{
+				Hush::LogFormat(Hush::ELogLevel::Warn,
+								"Module {} does not have a corresponding {}{} binary file, try rebuilding your module "
+								"and placing it under the modules/{}/bin folder",
+								moduleName, moduleName, LibManager::LIB_FILE_EXTENSION, moduleName);
+				continue;
+			}
+			// The binary file exists, we can load it with a scripting host
+			auto loadRes = moduleLoader.Load(binaryLocation, moduleName, Hush::Modules::EModuleKind::Beef);
+			// Get the table of runtime ops
+			if (loadRes.has_error())
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "Failed to load module {} (err: {})", moduleName,
+								magic_enum::enum_name(loadRes.error()));
+				continue;
+			}
+		}
+	}
+
 	void Init() override
 	{
 		// Make the giant System pool
@@ -187,9 +225,11 @@ public:
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
+		this->LoadModules((projRoot / "modules").string());
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 
-		this->m_scriptingHost->Initialize(SCRIPTING_PROJ_DLL_PATH, this->m_engine->GetVirtualFilesystem(), this->GetScene());
+		this->m_scriptingHost->Initialize(SCRIPTING_PROJ_DLL_PATH, this->m_engine->GetVirtualFilesystem(),
+										  this->GetScene());
 		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
 		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
 
@@ -256,10 +296,12 @@ public:
 				m_cookedDirectory.HandleFileEvent(ev.path, ev.type == Hush::FileWatchEvent::Type::Added,
 												  ev.type == Hush::FileWatchEvent::Type::Removed,
 												  ev.type == Hush::FileWatchEvent::Type::Modified);
-				if (ev.type == Hush::FileWatchEvent::Type::Modified) {
+				if (ev.type == Hush::FileWatchEvent::Type::Modified)
+				{
 					Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
 					auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
-					if (res.has_error() || ev.path != res.value()) {
+					if (res.has_error() || ev.path != res.value())
+					{
 						return;
 					}
 					// Modified the scripting, we need to reload the host

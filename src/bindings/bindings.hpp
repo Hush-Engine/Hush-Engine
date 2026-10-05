@@ -15,7 +15,7 @@
 
 #include "HushEngine.hpp"
 #include "Scene.hpp"
-#include "ModuleBindingApi.hpp"
+#include "../engine_core/modules/src/ModuleBindingApi.hpp"
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"
 #include "Systems/RenderingSystemAPI.hpp"

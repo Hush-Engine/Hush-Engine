@@ -25,7 +25,7 @@ namespace Hush::Modules
 	/// Loads native gameplay modules (C++, Rust cdylib, NativeAOT C#) from
 	/// dynamic libraries. Every library must export the HushRegisterModule
 	/// entry point.
-	class NativeModuleLoader
+	class DynamicModuleLoader
 	{
 	public:
 		enum class EError : std::uint8_t
@@ -42,7 +42,7 @@ namespace Hush::Modules
 		/// null in tests.
 		/// @param hushApi Generated Hush API function table. May be null when
 		/// the module does not use the generated API.
-		NativeModuleLoader(ModuleRegistry &registry, HushEngine *engine, const HushFuncPtrTable *hushApi);
+		DynamicModuleLoader(ModuleRegistry &registry, HushEngine *engine, const HushFuncPtrTable *hushApi);
 
 		/// Loads the library at the given path and calls its module entry
 		/// point. When the entry point fails, everything the module

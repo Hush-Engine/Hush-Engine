@@ -7,6 +7,7 @@
 #pragma once
 #include "Variant.hpp"
 #include "Metadata.hpp"
+#include "reflection/TypeId.hpp"
 
 #include <span>
 #include <initializer_list>
@@ -14,9 +15,13 @@
 #include <array>
 #include <algorithm>
 
+#if __has_include("FieldInfo.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "FieldInfo.hpp"
+#endif
+
 namespace Hush::Reflection
 {
-	class FieldInfo : public MetadataHolder
+	class [[hush::export]] FieldInfo : public MetadataHolder
 	{
 	public:
 		using EVariantError = Variant::EVariantError;
@@ -34,6 +39,10 @@ namespace Hush::Reflection
 		{
 			SetMetadata(std::move(metadata));
 		}
+
+		/// @brief Marshallable version of the FieldInfo constructor to expose it to the foreign lang bindings
+		[[hush::export]]
+		static void MakeFieldInfo(uint64_t typeId)
 
 		[[nodiscard]]
 		TypeId GetTypeId() const
