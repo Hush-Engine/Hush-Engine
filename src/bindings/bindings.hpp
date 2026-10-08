@@ -15,6 +15,8 @@
 
 #include "HushEngine.hpp"
 #include "Scene.hpp"
+#include "reflection/Variant.hpp"
+#include "reflection/FieldInfo.hpp"
 #include "../engine_core/modules/src/ModuleBindingApi.hpp"
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"

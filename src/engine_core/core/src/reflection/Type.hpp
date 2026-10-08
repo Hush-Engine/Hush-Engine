@@ -13,6 +13,7 @@
 #include <span>
 #include <vector>
 
+#include "HushBindings.hpp"
 #include "TypeTraits.hpp"
 #include "TypeId.hpp"
 #include "TypeInfo.hpp"
@@ -34,8 +35,7 @@
 namespace Hush::Reflection
 {
 	/// Result of registering a class into the reflection database.
-	[[hush::export]]
-	enum class ERegisterClassError : std::uint8_t
+	enum class [[hush::export]] ERegisterClassError : std::uint8_t
 	{
 		/// The type was registered.
 		None = 0,
@@ -44,7 +44,7 @@ namespace Hush::Reflection
 		DuplicateType = 1,
 	};
 
-	class ReflectionDB
+	class [[hush::export(Hush::Export::asHandle)]] ReflectionDB
 	{
 	public:
 		template <typename T>
@@ -142,20 +142,10 @@ namespace Hush::Reflection
 		/// @param module Module that owns the type.
 		/// @return None when the type was registered, DuplicateType when a type
 		/// with the same id was already registered.
+		ERegisterClassError RegisterClass(TypeInfo typeInfo, ModuleHandle module = ENGINE_MODULE_HANDLE);
+
 		[[hush::export]]
-		ERegisterClassError RegisterClass(TypeInfo typeInfo, ModuleHandle module = ENGINE_MODULE_HANDLE)
-		{
-			std::unique_lock lock(m_mutex);
-			TypeId id = typeInfo.GetId();
-			if (m_types.find(id) != m_types.end())
-			{
-				return ERegisterClassError::DuplicateType;
-			}
-			typeInfo.SetOwner(module);
-			m_types.insert_or_assign(id, std::move(typeInfo));
-			m_moduleTypes[module].push_back(id);
-			return ERegisterClassError::None;
-		}
+		ERegisterClassError RegisterForeignClass(std::string_view name, size_t size, size_t alignment, ModuleHandle module);
 
 		/// Removes every type that belongs to the given module. The engine
 		/// module cannot be unregistered.

@@ -30,6 +30,7 @@ if (HUSH_ENABLE_TESTS AND NOT EMSCRIPTEN)
     add_library(HushTestModule MODULE tests/TestNativeModule.cpp)
     target_include_directories(HushTestModule PRIVATE src ../core/src ../utils/src
             ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include)
+    target_link_libraries(HushTestModule PRIVATE HushCore HushLog HushUtils HushThreading HushMemory)
     set_all_warnings(HushTestModule)
     set_target_properties(HushTestModule PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:HushModulesTest>"
@@ -52,6 +53,7 @@ if (HUSH_ENABLE_TESTS AND NOT EMSCRIPTEN)
     )
     target_include_directories(HushGeneratedTestModule PRIVATE src ../core/src ../utils/src
             ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include)
+    target_link_libraries(HushGeneratedTestModule PRIVATE HushCore HushLog HushUtils HushThreading HushMemory)
     set_target_properties(HushGeneratedTestModule PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:HushModulesTest>"
             LIBRARY_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:HushModulesTest>")

@@ -7,7 +7,6 @@
 #pragma once
 
 #include <cstdint>
-
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
 #ifdef _WIN64
