@@ -1,6 +1,7 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
+#include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/Material3D.hpp"
@@ -30,6 +31,8 @@
 #include "UI.hpp"
 #include "ScenePanel.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "reflection/FieldInfo.hpp"
+#include "reflection/TypeInfo.hpp"
 #include <memory>
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
@@ -187,11 +190,10 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
 	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
 	// BUG: This may produce a dangling ptr if the storage moves, use a compref instead
-	activeScene->CreateQuery<ScriptingHost>().Each([this]([[maybe_unused]]
-																	  Entity &entity,
-																	  ScriptingHost &scriptingHostRef) {
-		this->m_scriptingHost = &scriptingHostRef;
-	});
+	activeScene->CreateQuery<ScriptingHost>().Each(
+		[this]([[maybe_unused]]
+			   Entity &entity,
+			   ScriptingHost &scriptingHostRef) { this->m_scriptingHost = &scriptingHostRef; });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -265,7 +267,7 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
 			break;
 		case Hush::EComponentPropertyType::Vector3:
-			UI::Vec3Edit(propertyName.data(), reinterpret_cast<float*>(ptrToSerialize));
+			UI::Vec3Edit(propertyName.data(), reinterpret_cast<float *>(ptrToSerialize));
 			break;
 		default:
 			// LogError("Type of property is not implemented for inspector serialization");
@@ -279,7 +281,8 @@ void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
 // Also, every entity in the editor should probably have a list of how they ordered their components ???
 void Hush::InspectorPanel::RenderProperties()
 {
-	if (!this->m_inspectTarget->IsAlive()) {
+	if (!this->m_inspectTarget->IsAlive())
+	{
 		this->m_inspectTarget.reset();
 		return;
 	}
@@ -311,6 +314,21 @@ void Hush::InspectorPanel::RenderProperties()
 
 	// Now, for any user defined components, we use the functions inside of their archetype
 	// HACK: Super bad awful approach
+	// Iterate the current entity of the components that have a serializable comp
+	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
+		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
+		auto *inspectable = ent.GetComponent<InspectableComponent>();
+		if (inspectable == nullptr || !inspectable->reflectedTypeId.IsValid())
+		{
+			return;
+		}
+		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
+		const Reflection::TypeInfo* ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
+		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
+		for (const Reflection::FieldInfo& field : fields) {
+			(void)field;
+		}
+	});
 	const std::vector<ScriptingComponentSerializationInfo> &serializableComps =
 		this->m_scriptingHost->GetAvailableComponentSerializationData();
 

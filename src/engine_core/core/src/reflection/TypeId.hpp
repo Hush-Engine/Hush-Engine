@@ -9,10 +9,13 @@
 #include <cstdint>
 #include <functional>
 
+#include "HushBindings.hpp"
+
 namespace Hush::Reflection
 {
-	struct TypeId
+	struct [[hush::export]] TypeId
 	{
+		[[hush::export]]
 		std::uint64_t id{};
 
 		[[nodiscard]]
@@ -25,6 +28,12 @@ namespace Hush::Reflection
 		bool operator!=(const TypeId &other) const
 		{
 			return id != other.id;
+		}
+
+		[[nodiscard]]
+		bool IsValid() const
+		{
+			return id != 0;
 		}
 	};
 } // namespace Hush::Reflection

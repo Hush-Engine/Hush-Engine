@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <string_view>
 #include <unordered_map>
 #include <shared_mutex>
 #include <mutex>
@@ -147,6 +148,9 @@ namespace Hush::Reflection
 		[[hush::export]]
 		ERegisterClassError RegisterForeignClass(std::string_view name, size_t size, size_t alignment, ModuleHandle module);
 
+		[[hush::export]]
+		bool AddFieldToForeignClass(TypeId classType, std::string_view fieldName, TypeId type, uint64_t offset);
+
 		/// Removes every type that belongs to the given module. The engine
 		/// module cannot be unregistered.
 		///
@@ -246,6 +250,18 @@ namespace Hush::Reflection
 
 		[[nodiscard]]
 		const TypeInfo *GetTypeInfo(TypeId id) const
+		{
+			std::shared_lock lock(m_mutex);
+			const auto it = m_types.find(id);
+			if (it != m_types.end())
+			{
+				return &it->second;
+			}
+
+			return nullptr;
+		}
+
+		TypeInfo *GetTypeInfo(TypeId id)
 		{
 			std::shared_lock lock(m_mutex);
 			const auto it = m_types.find(id);

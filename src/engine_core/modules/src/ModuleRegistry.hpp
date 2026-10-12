@@ -64,7 +64,7 @@ namespace Hush::Modules
 	struct ForeignSystemDescriptor
 	{
 		Reflection::TypeId typeId;
-		std::string name;
+		std::string_view name;
 		uint16_t order = 0;
 		uint32_t lifecycleMask = 0;
 	};
