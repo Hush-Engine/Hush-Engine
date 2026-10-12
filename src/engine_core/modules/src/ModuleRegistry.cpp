@@ -65,6 +65,7 @@ namespace
 			m_system->OnPostRender();
 		}
 
+		[[nodiscard]]
 		std::string_view GetName() const override
 		{
 			return m_system->GetName();
@@ -225,6 +226,8 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 
 	Reflection::TypeInfo typeInfo(descriptor.typeId);
 	typeInfo.SetName(descriptor.name);
+	// We point the string view to this std::string that is kept in memory for as long as the type lives
+	descriptor.name = typeInfo.GetName();
 	typeInfo.AddMetadata(Reflection::METADATA_KEY_SYSTEM.data(), "true");
 	if (m_reflectionDB.RegisterClass(std::move(typeInfo), module) != Reflection::ERegisterClassError::None)
 	{
