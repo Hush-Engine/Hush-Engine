@@ -56,13 +56,9 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 
-	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each([this]([[maybe_unused]]
-																	  Entity &entity,
-																	  EditorInfo &infoRef,
-																	  ScriptingHost &scriptingHostRef) {
-		this->m_editorInfo = &infoRef;
-		this->m_scriptingHost = &scriptingHostRef;
-	});
+	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
+													   Entity &entity,
+													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
 }
 
 void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
@@ -81,8 +77,7 @@ void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->AddComponentPopup();
 		break;
 	case EState::AddSystemMode: {
-		bool popupOpen =
-			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_systemSelectionState);
+		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, &this->m_systemSelectionState);
 		if (!popupOpen)
 		{
 			this->CloseCommandMode();

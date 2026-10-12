@@ -88,8 +88,6 @@ namespace Hush
 
 		EditorInfo *m_editorInfo;
 
-		ScriptingHost *m_scriptingHost;
-
 		// For the selection state of any pop up
 		int32_t m_selectedItem = -1;
 

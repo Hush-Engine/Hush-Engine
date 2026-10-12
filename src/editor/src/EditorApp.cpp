@@ -72,17 +72,6 @@ class EditorApp final : public Hush::IApplication
 		"Your scene must be saved to a file before playing!";
 	static constexpr std::string_view SCENE_SAVED_ERR = "Failed to save scene!";
 
-// HACK: Scripting (Hardcoded for the game jam for now)
-#if HUSH_PLATFORM_WIN
-	static constexpr Hush::NullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
-		"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.dll";
-#elif HUSH_PLATFORM_OSX
-	static constexpr Hush::NulNullTerminatedStringView SCRIPTING_PROJ_DLL_PATH =
-		"res://beef-hush/build/Debug_Win64/beef-hush/beef-hush.so";
-#else
-#error "Platform not supported for the game jam!"
-#endif
-
 public:
 	explicit EditorApp(Hush::HushEngine *engine)
 		: m_engine(engine),
@@ -227,12 +216,6 @@ public:
 
 		this->LoadModules((projRoot / "modules").string());
 		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-
-		this->m_scriptingHost->Initialize(SCRIPTING_PROJ_DLL_PATH, this->m_engine->GetVirtualFilesystem(),
-										  this->GetScene());
-		this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
-
 		this->m_resourceManager = m_engine->GetResourceManager();
 
 		// ── ImGui initialization ────────────────────────────────────
@@ -266,6 +249,8 @@ public:
 		wgpuInitInfo.DepthStencilFormat = WGPUTextureFormat_Undefined;
 		ImGui_ImplWGPU_Init(&wgpuInitInfo);
 
+		this->m_scene->Init();
+
 		// Register the render graph builder component so the RenderGraphSystem
 		// picks it up automatically and wires our passes into the frame.
 		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithKey("EditorRenderGraphBuilder");
@@ -277,7 +262,6 @@ public:
 			this->UpdatePerFrameResources(graph);
 		};
 
-		this->m_scene->Init();
 		// Create a directional light
 		// Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
 		// dirLightEntity.AddComponent<Hush::WorldTransform>();
@@ -298,14 +282,17 @@ public:
 												  ev.type == Hush::FileWatchEvent::Type::Modified);
 				if (ev.type == Hush::FileWatchEvent::Type::Modified)
 				{
-					Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
-					auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
-					if (res.has_error() || ev.path != res.value())
-					{
-						return;
-					}
-					// Modified the scripting, we need to reload the host
-					this->m_scriptingHost->Reload(SCRIPTING_PROJ_DLL_PATH, vfs, this->GetScene());
+					// TODO: This would be the reload
+					//
+					// 
+					// Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
+					// auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
+					// if (res.has_error() || ev.path != res.value())
+					// {
+					// 	return;
+					// }
+					// // Modified the scripting, we need to reload the host
+					// this->m_scriptingHost->Reload(SCRIPTING_PROJ_DLL_PATH, vfs, this->GetScene());
 				}
 			});
 		}

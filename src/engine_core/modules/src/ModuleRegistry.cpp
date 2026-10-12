@@ -10,8 +10,11 @@
 #include "ModuleSystem.hpp"
 #include "Scene.hpp"
 #include "SharedLibrary.hpp"
+#include "reflection/TypeId.hpp"
 
+#include <algorithm>
 #include <optional>
+#include <string_view>
 
 Hush::Modules::ModuleRecord::ModuleRecord() = default;
 Hush::Modules::ModuleRecord::~ModuleRecord() = default;
@@ -120,7 +123,8 @@ Hush::Result<Hush::ModuleHandle, Hush::Modules::ModuleRegistry::EError> Hush::Mo
 	BeginModuleRegistration(std::string_view name, EModuleKind kind, std::uint32_t abiVersion)
 {
 	std::unique_lock lock(m_mutex);
-	if (name.empty() || std::ranges::any_of(m_modules, [name](const auto &entry) { return entry.second.name == name; }))
+	if (name.empty() ||
+		std::ranges::any_of(m_modules, [name](const auto &entry) { return entry.second.name == name; }))
 	{
 		return name.empty() ? EError::InvalidState : EError::DuplicateModule;
 	}
@@ -212,8 +216,9 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 	{
 		return EError::InvalidState;
 	}
+	uint64_t checkerHash = Hashing::Fnv1a64(descriptor.name);
 	if (descriptor.name.empty() || descriptor.order > ISystem::MAX_ORDER ||
-		Reflection::TypeId{Hashing::Fnv1a64(descriptor.name)} != descriptor.typeId)
+		Reflection::TypeId{checkerHash} != descriptor.typeId)
 	{
 		return EError::InvalidState;
 	}
@@ -231,7 +236,7 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 }
 
 Hush::Result<std::unique_ptr<Hush::ISystem>, Hush::Modules::ModuleRegistry::EError> Hush::Modules::ModuleRegistry::
-	CreateSystem(ModuleHandle module, Reflection::TypeId typeId, Scene &scene)
+	CreateSystem(ModuleHandle module, Reflection::TypeId typeId, Scene &scene) const
 {
 	std::optional<SystemDescriptor> nativeDescriptor;
 	std::optional<ForeignSystemDescriptor> foreignDescriptor;

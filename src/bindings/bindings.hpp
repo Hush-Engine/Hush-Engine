@@ -23,5 +23,6 @@
 #include "Systems/RenderingSystemAPI.hpp"
 #include "Shared/Camera.hpp"
 #include "Components/MeshReference.hpp"
+#include "crypto/Hashing.hpp"
 
 // NOLINTEND
