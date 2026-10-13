@@ -71,7 +71,8 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 {
 	this->HandleInput();
-	if (this->m_state == EState::DeletePopupOpen) {
+	if (this->m_state == EState::DeletePopupOpen)
+	{
 		// Add to the deletion queue
 		ImVec2 windowSize = ImGui::GetWindowViewport()->Size;
 		windowSize.x *= 0.5f;
@@ -81,18 +82,22 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 		ImGui::OpenPopup("Delete Entity");
 		ImGui::BeginPopup("Delete Entity", ImGuiWindowFlags_NoResize);
 
-		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
-		SelectedItemInfo& selection = editorInfo->currentSelection;
+		auto *editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		SelectedItemInfo &selection = editorInfo->currentSelection;
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(selection.value);
-		ImGui::Text("Are you sure you want to delete '%s' and all components associated with it?", ent.QueryName().data());
-		bool didSubmit = InputManager::IsKeyDownThisFrame(EKeyCode::KpEnter) || InputManager::IsKeyDownThisFrame(EKeyCode::RETURN);
-		if (ImGui::Button("Yes") || didSubmit) {
+		ImGui::Text("Are you sure you want to delete '%s' and all components associated with it?",
+					ent.QueryName().data());
+		bool didSubmit =
+			InputManager::IsKeyDownThisFrame(EKeyCode::KpEnter) || InputManager::IsKeyDownThisFrame(EKeyCode::RETURN);
+		if (ImGui::Button("Yes") || didSubmit)
+		{
 			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
 			selection.value = 0;
 			this->m_state = EState::None;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("No") || InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE)) {
+		if (ImGui::Button("No") || InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE))
+		{
 			this->m_state = EState::None;
 		}
 		// Should we set the editorInfo comp to a selection of none??
@@ -126,15 +131,19 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 	ImGui::End();
 }
 
-void Hush::HierarchyPanel::HandleInput() {
-	if (this->m_state == EState::Renaming && InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE)) {
+void Hush::HierarchyPanel::HandleInput()
+{
+	if (this->m_state == EState::Renaming && InputManager::IsKeyDownThisFrame(EKeyCode::ESCAPE))
+	{
 		this->m_state = EState::None;
 	}
-	if (InputManager::IsKeyDownThisFrame(EKeyCode::DEL)){
+	if (InputManager::IsKeyDownThisFrame(EKeyCode::DEL))
+	{
 		// Nesting bc I don't want to fetch this comp every frame
-		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
-		SelectedItemInfo& selection = editorInfo->currentSelection;
-		if (selection.type == ESelectedItemType::Entity && selection.value != Entity::INVALID_ENTITY_ID) {
+		auto *editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		SelectedItemInfo &selection = editorInfo->currentSelection;
+		if (selection.type == ESelectedItemType::Entity && selection.value != Entity::INVALID_ENTITY_ID)
+		{
 			this->m_state = EState::DeletePopupOpen;
 		}
 	}
@@ -143,7 +152,8 @@ void Hush::HierarchyPanel::HandleInput() {
 void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const Entity::Name &name,
 														InspectorPanel *inspector)
 {
-	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesToNodes | ImGuiTreeNodeFlags_AllowOverlap;
+	ImGuiTreeNodeFlags flags =
+		ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesToNodes | ImGuiTreeNodeFlags_AllowOverlap;
 	if (entity.GetChildCount() < 1)
 	{
 		flags |= ImGuiTreeNodeFlags_Leaf;
@@ -152,15 +162,18 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 
 	// PERF: Temp strings
 	std::string_view key = entity.GetKey();
-	std::string display {name.GetName()};
+	std::string display{name.GetName()};
 	display.append(" (");
-	if (!key.empty()) {
+	if (!key.empty())
+	{
 		display.append(key);
 		display.append(", ");
 	}
 	display.append(std::to_string(entity.GetId()));
 	display.append(")");
-	if (this->m_state == EState::Renaming && this->m_editorInfo.GetData<EditorInfo>()->currentSelection.value == entity.GetId()) {
+	if (this->m_state == EState::Renaming &&
+		this->m_editorInfo.GetData<EditorInfo>()->currentSelection.value == entity.GetId())
+	{
 		display.clear();
 	}
 	ImGui::BeginGroup();
@@ -170,40 +183,48 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 		inspector->SetInspectTarget(entity.GetId());
 	}
 
-	if (UI::IsItemDoubleClicked() || InputManager::IsKeyDownThisFrame(EKeyCode::F2)) {
+	if (UI::IsItemDoubleClicked() || InputManager::IsKeyDownThisFrame(EKeyCode::F2))
+	{
 		this->m_state = EState::Renaming;
-		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		auto *editorInfo = this->m_editorInfo.GetData<EditorInfo>();
 		editorInfo->currentSelection.type = ESelectedItemType::Entity;
 		editorInfo->currentSelection.value = entity.GetId();
 	}
 
-	if (this->m_state == EState::Renaming) {
+	if (this->m_state == EState::Renaming)
+	{
 
-		auto* editorInfo = this->m_editorInfo.GetData<EditorInfo>();
+		auto *editorInfo = this->m_editorInfo.GetData<EditorInfo>();
 		// Stop renaming, we clicked something else
-		if (editorInfo->currentSelection.type != ESelectedItemType::Entity) {
+		if (editorInfo->currentSelection.type != ESelectedItemType::Entity)
+		{
 			this->m_state = EState::None;
 		}
-		else if (editorInfo->currentSelection.type == ESelectedItemType::Entity && editorInfo->currentSelection.value == entity.GetId()) {
+		else if (editorInfo->currentSelection.type == ESelectedItemType::Entity &&
+				 editorInfo->currentSelection.value == entity.GetId())
+		{
 			// Draw our rename
 			ImGui::SameLine();
-	        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x); 
+			ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 
-	        ImGui::SetKeyboardFocusHere();
-	        bool renamed = ImGui::InputText("##Rename", this->m_entityRenameBuffer.data(), this->m_entityRenameBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue);
+			ImGui::SetKeyboardFocusHere();
+			bool renamed = ImGui::InputText("##Rename", this->m_entityRenameBuffer.data(),
+											this->m_entityRenameBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue);
 
-			if (renamed) {
-				Entity::Name* nameComp = entity.GetComponent<Entity::Name>();
+			if (renamed)
+			{
+				Entity::Name *nameComp = entity.GetComponent<Entity::Name>();
 				nameComp->SetName({this->m_entityRenameBuffer.data()});
 				this->m_entityRenameBuffer.fill(0);
 				this->m_state = EState::None;
 			}
 
-	        ImGui::PopItemWidth();
+			ImGui::PopItemWidth();
 		}
 	}
 
-	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+	{
 		ImGui::Text("Move: %s", display.c_str());
 		Entity::EntityId entityToMoveId = entity.GetId();
 		ImGui::SetDragDropPayload("MOVED_ENTITY", &entityToMoveId, sizeof(Entity::EntityId), ImGuiCond_Always);
@@ -211,14 +232,15 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 		ImGui::EndDragDropSource();
 	}
 
-	if (ImGui::BeginDragDropTarget()) {
-		const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MOVED_ENTITY");
-		if (payload != nullptr) {
-			Entity::EntityId id = *(reinterpret_cast<Entity::EntityId*>(payload->Data));
+	if (ImGui::BeginDragDropTarget())
+	{
+		const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("MOVED_ENTITY");
+		if (payload != nullptr)
+		{
+			Entity::EntityId id = *(reinterpret_cast<Entity::EntityId *>(payload->Data));
 			Entity toMove = this->m_activeScene->EntityFromIdUnchecked(id);
 
 			toMove.SetParent(entity);
-
 		}
 		ImGui::EndDragDropTarget();
 	}

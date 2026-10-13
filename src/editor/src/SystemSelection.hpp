@@ -15,7 +15,10 @@ namespace Hush::SystemSelection
 	{
 		std::unordered_set<uint64_t> checked; // typeId.id of each checked system
 
-		void Clear() { checked.clear(); }
+		void Clear()
+		{
+			checked.clear();
+		}
 	};
 
 	bool RenderSystemListWindow(Scene *scene, State *state);

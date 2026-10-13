@@ -24,7 +24,7 @@ namespace Hush
 		/// @param virtualPath Virtual path to the cooked mesh asset.
 		/// @return Id of the created entity, or Entity::INVALID_ENTITY_ID on failure.
 		[[hush::export]]
-		Entity::EntityId (*instantiateMeshEntities)(const char* virtualPath, void* instance);
+		Entity::EntityId (*instantiateMeshEntities)(const char *virtualPath, void *instance);
 
 		[[hush::export]]
 		void *instance;

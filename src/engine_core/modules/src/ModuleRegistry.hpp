@@ -218,7 +218,8 @@ namespace Hush::Modules
 		/// Finds a module by its display name.
 		Result<ModuleHandle, EError> FindModuleByName(std::string_view name);
 
-		const std::unordered_map<ModuleHandle, ModuleRecord>& GetAllModules() const {
+		const std::unordered_map<ModuleHandle, ModuleRecord> &GetAllModules() const
+		{
 			return this->m_modules;
 		}
 

@@ -5,12 +5,13 @@
 namespace Hush
 {
 	// Small component tag that will trigger deletion on this system
-	struct EntityMarkedForDeletion {};
+	struct EntityMarkedForDeletion
+	{
+	};
 
 	class EntityManagerSystem final : public ISystem
 	{
 	public:
-
 		using ISystem::ISystem;
 
 		/// Init() is called when the system is initialized.
@@ -39,10 +40,10 @@ namespace Hush
 		/// GetName() is used to get the name of the system
 		/// @return Name of the system
 		[[nodiscard]]
-		std::string_view GetName() const override {
+		std::string_view GetName() const override
+		{
 			return "EntityManagerSystem";
 		}
-
 
 		/// @brief This system should be our very last one to run (at least the last one to interact with entity stuff)
 		[[nodiscard]]
@@ -50,7 +51,7 @@ namespace Hush
 		{
 			return MAX_ORDER;
 		}
-		
+
 	private:
 		Query<EntityMarkedForDeletion> m_markedForDeletion;
 	};

@@ -124,8 +124,7 @@ Hush::Result<Hush::ModuleHandle, Hush::Modules::ModuleRegistry::EError> Hush::Mo
 	BeginModuleRegistration(std::string_view name, EModuleKind kind, std::uint32_t abiVersion)
 {
 	std::unique_lock lock(m_mutex);
-	if (name.empty() ||
-		std::ranges::any_of(m_modules, [name](const auto &entry) { return entry.second.name == name; }))
+	if (name.empty() || std::ranges::any_of(m_modules, [name](const auto &entry) { return entry.second.name == name; }))
 	{
 		return name.empty() ? EError::InvalidState : EError::DuplicateModule;
 	}

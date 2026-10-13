@@ -52,14 +52,14 @@ namespace Hush
 		void SetPerspectiveProjectionMatrix(const float radFov, const float width, const float height,
 											const float nearP, const float farP);
 
-
 		// Optional out direction parameter for primitive "Ray"
 		[[hush::export]]
-		glm::vec3 ScreenToWorldPos(glm::mat4 viewMatrix, glm::vec2 mousePos, glm::vec3* outDirection = nullptr) const;
+		glm::vec3 ScreenToWorldPos(glm::mat4 viewMatrix, glm::vec2 mousePos, glm::vec3 *outDirection = nullptr) const;
 
 		// HACK: Temp just for the jam, see Transform for more details
 		[[hush::export]]
-		glm::vec3 ScreenToWorldPosUnsafe(float* viewMatrix, glm::vec2 mousePos, glm::vec3* outDirection = nullptr) const;
+		glm::vec3 ScreenToWorldPosUnsafe(float *viewMatrix, glm::vec2 mousePos,
+										 glm::vec3 *outDirection = nullptr) const;
 
 		// BACKLOG: Support passing an UP vector instead of hardcoding it to our Y plane
 		[[hush::export]]

@@ -13,14 +13,16 @@ namespace Hush
 		JumpMode
 	};
 
-	enum class ESelectedItemType {
+	enum class ESelectedItemType
+	{
 		None = 0,
 		Entity,
 		Component,
 		File
 	};
 
-	struct SelectedItemInfo {
+	struct SelectedItemInfo
+	{
 		ESelectedItemType type = ESelectedItemType::None;
 		uint64_t value = 0; // Could be a pointer, could be an ImGui ID, could be an entity id, a file, etc
 	};

@@ -26,13 +26,13 @@
 class LibManager
 {
 public:
-	#if HUSH_PLATFORM_WIN
+#if HUSH_PLATFORM_WIN
 	constexpr static std::string_view LIB_FILE_EXTENSION = ".dll";
-	#else
+#else
 	constexpr static std::string_view LIB_FILE_EXTENSION = ".dylib";
-	#endif
+#endif
 	/// @brief Opens the selected library path (analogous to dlopen)
-	// 
+	//
 	/// @param libraryPath Path of the dynamically linked library
 	/// @return A handle of the desired library or null
 	static void *LibraryOpen(const char *libraryPath);

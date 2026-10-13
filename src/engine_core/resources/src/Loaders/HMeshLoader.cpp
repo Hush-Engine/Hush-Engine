@@ -120,7 +120,8 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 		// Cooked format doesn't store these — use passthrough defaults so texture values are used as-is
 		existingMat->SetProperty("metal_rough_factors", glm::vec4(1.0f, 1.0f, 0.0f, 0.0f));
 		// existingMat->SetProperty("optionFlags", 1u); // USE_NORMALS_FLAG
-		if (materialInfo[i].pass == EMaterialPass::Mask) {
+		if (materialInfo[i].pass == EMaterialPass::Mask)
+		{
 			existingMat->SetProperty("alphaCutoff", materialInfo[i].alphaCutoff);
 		}
 		existingMat->SetName(matName);
@@ -205,9 +206,8 @@ bool HMeshLoader::LoadMeshFromBinary(std::span<const std::byte> data, MeshRefere
 			// re-cooked mesh shares the same TextureComponent as the original load.
 			std::string texUniqueName = std::string(mat->GetName()) + std::string("_") + std::string(&(tex.name[0]));
 			// Binding 1 = albedo (sRGB-encoded); all others are linear data.
-			const Graphics::ETextureFormat texFormat = (tex.binding == 1)
-				? Graphics::ETextureFormat::RGBA8_SRGB
-				: Graphics::ETextureFormat::RGBA8_UNORM;
+			const Graphics::ETextureFormat texFormat =
+				(tex.binding == 1) ? Graphics::ETextureFormat::RGBA8_SRGB : Graphics::ETextureFormat::RGBA8_UNORM;
 			auto loadRes = resourceManager->LoadTextureFromData(texUniqueName, {texData.data(), tex.size}, texFormat);
 			if (loadRes.has_error())
 			{

@@ -100,7 +100,8 @@ namespace Hush
 		/// @brief Default PBR material descriptor for instancing any other material
 		Graphics::Material3DDescriptor &GetPBRDescriptor();
 
-		const RenderingContext* GetRenderingContext() {
+		const RenderingContext *GetRenderingContext()
+		{
 			return &this->m_renderingContext;
 		}
 

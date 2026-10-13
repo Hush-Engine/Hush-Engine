@@ -1,6 +1,6 @@
 #include "MeshReference.hpp"
 
-void Hush::MeshReference::CalculateBounds(glm::vec3 *outCenter, glm::vec3 *outSize) 
+void Hush::MeshReference::CalculateBounds(glm::vec3 *outCenter, glm::vec3 *outSize)
 {
 	HUSH_ASSERT(outCenter != nullptr && outSize != nullptr, "Center and size pointers should not be null!");
 	const std::vector<Mesh::Vertex> &vertices = this->m_mesh->GetVertexBuffer();

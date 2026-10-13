@@ -18,7 +18,8 @@
 
 namespace Hush::Tests
 {
-	class [[hush::system(Hush::Reflection::order(17))]] GeneratedModuleSystem final : public ISystem
+	class [[hush::system(Hush::Reflection::order(17))]]
+	GeneratedModuleSystem final : public ISystem
 	{
 		HUSH_GENERATED_BODY
 

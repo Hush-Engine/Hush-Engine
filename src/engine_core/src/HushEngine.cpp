@@ -289,6 +289,7 @@ void Hush::HushEngine::ResetSceneScopeMemory() noexcept
 	this->m_internal->sceneMemoryPool.Reset();
 }
 
-uint64_t Hush::HushEngine::GetFrameNumber() const noexcept {
+uint64_t Hush::HushEngine::GetFrameNumber() const noexcept
+{
 	return this->m_frameNumber;
 }

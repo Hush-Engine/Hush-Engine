@@ -59,7 +59,7 @@
 using namespace Hush::Graphics;
 
 // HACK: hacky function, see its implementation for details
-Hush::Entity::EntityId InstantiateMeshEntities(const char* virtualPath, void* instance);
+Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *instance);
 
 void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
 {
@@ -469,15 +469,17 @@ void Hush::RenderingSystem::OnPreRender()
 
 	// This is a query because we'll want to support multiple dir lights later
 	int32_t dirLightsCount = 0;
-	this->m_directionalLightsQuery.Each([this, &dirLightsCount](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
-		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
-		this->m_cachedSceneData.sunlightColor.w = light.intensity;
-		glm::vec3 dir = xform.Forward();
-		this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
-		dirLightsCount++;
-	});
+	this->m_directionalLightsQuery.Each(
+		[this, &dirLightsCount](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
+			this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
+			this->m_cachedSceneData.sunlightColor.w = light.intensity;
+			glm::vec3 dir = xform.Forward();
+			this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
+			dirLightsCount++;
+		});
 
-	if (dirLightsCount <= 0) {
+	if (dirLightsCount <= 0)
+	{
 		this->m_cachedGameSceneData.sunlightColor = Color::Black().GetRGBA32F();
 		this->m_cachedSceneData.sunlightColor = Color::Black().GetRGBA32F();
 	}
@@ -566,7 +568,6 @@ void Hush::RenderingSystem::OnPreRender()
 			for (const auto &surface : mesh->GetSurfaces())
 			{
 				Graphics::IBindGroup *matBindGroup = nullptr;
-
 
 				Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
 				if (!mat.IsNull())
@@ -684,10 +685,10 @@ void Hush::RenderingSystem::OnPostRender()
 
 // HACK: Utility for the user side API, this is, in fact, quite bad but it's because this
 // class should NOT belong to the editor at all
-Hush::Entity::EntityId InstantiateMeshEntities(const char* virtualPath, void* instance)
+Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *instance)
 {
 	using namespace Hush;
-	auto* self = reinterpret_cast<RenderingSystem*>(instance);
+	auto *self = reinterpret_cast<RenderingSystem *>(instance);
 	Scene &scene = self->GetScene();
 	ResourceManager *resourceManager = scene.GetEngine()->GetResourceManager();
 	VirtualFilesystem *vfs = scene.GetEngine()->GetVirtualFilesystem();
@@ -920,7 +921,11 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 		meshDesc.primitive.cullMode = ECullModeFlags::Back;
 		meshDesc.primitive.frontFace = EFrontFace::CounterClockwise;
 
-		meshDesc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM, .blendEnabled = true, .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}, .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
+		meshDesc.colorTargets = {
+			{.format = ETextureFormat::BGRA8_UNORM,
+			 .blendEnabled = true,
+			 .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha},
+			 .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 
 		meshDesc.depthStencil = {.enabled = true,
 								 .format = ETextureFormat::D32_FLOAT,

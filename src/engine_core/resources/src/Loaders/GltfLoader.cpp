@@ -122,13 +122,11 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			const fastgltf::math::nvec3 &emission = rawMaterial.emissiveFactor;
 			(void)emission;
 			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
-			MaterialInfo mat = {
-				.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
-				.resource = materialResourceId,
-				.alphaCutoff = rawMaterial.alphaCutoff,
-				.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()},
-				.emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}
-			};
+			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
+								.resource = materialResourceId,
+								.alphaCutoff = rawMaterial.alphaCutoff,
+								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()},
+								.emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);
 
@@ -370,7 +368,8 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		meshRef->SetName(mesh.name);
 
 		std::filesystem::path basePath = hostPathRes.value().parent_path();
-		bool hadGltfTangents = ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
+		bool hadGltfTangents =
+			ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
 
 		// Generate the material per primitive here
 
@@ -522,7 +521,6 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
 	EMaterialPass passType = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(material.alphaMode);
 
-
 	ResourceManager *resourceManager = renderingContext.resourceManager;
 	const Graphics::Material3DDescriptor *defaultMaterialDesc = renderingContext.materialDescriptor;
 	Graphics::IGraphicsDevice *graphicsDevice = renderingContext.device;
@@ -543,15 +541,16 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 								  *reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
 															   material.emissiveFactor.z(), material.emissiveStrength));
-	if (passType == EMaterialPass::Mask) {
+	if (passType == EMaterialPass::Mask)
+	{
 		materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
 	}
 
-	materialInstance->SetProperty("metal_rough_factors", glm::vec4(material.pbrData.metallicFactor, material.pbrData.roughnessFactor, 0.0f, 0.0f));
+	materialInstance->SetProperty("metal_rough_factors", glm::vec4(material.pbrData.metallicFactor,
+																   material.pbrData.roughnessFactor, 0.0f, 0.0f));
 	constexpr uint32_t useNormalsFlag = 1;
 	materialInstance->SetProperty("optionFlags", useNormalsFlag);
 	materialInstance->SetName(material.name);
-
 
 	// glTF PBR bindings: 1 = baseColor, 2 = metallicRoughness,
 	//                     3 = normal, 4 = emissive

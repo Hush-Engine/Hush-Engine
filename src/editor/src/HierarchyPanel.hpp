@@ -25,12 +25,12 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
-		enum class EState {
+		enum class EState
+		{
 			None = 0,
 			DeletePopupOpen,
 			Renaming
 		};
-
 
 		// NOTE: Maybe centralize this into an EditorInput file or something
 		void HandleInput();

@@ -152,8 +152,10 @@ void Hush::Entity::Destroy(Entity &&entity)
 	scene->DestroyEntity(std::move(entity));
 }
 
-void Hush::Entity::QueueDestroy(Entity &&entity) {
-	if (!entity.IsAlive()) {
+void Hush::Entity::QueueDestroy(Entity &&entity)
+{
+	if (!entity.IsAlive())
+	{
 		// Something beat us to the deletion
 		return;
 	}

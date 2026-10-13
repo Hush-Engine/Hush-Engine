@@ -292,25 +292,27 @@ namespace Hush::Reflection
 		TypeId m_typeId;
 	};
 
-	// BUG: This is a really stupid workaround for exposing the variant to foreign modules because there are still a lot of issues with
-	// hush::export, specifically typedefs with no fwd declarations
-	class [[hush::export]] ForeignVariant {
+	// BUG: This is a really stupid workaround for exposing the variant to foreign modules because there are still a lot
+	// of issues with hush::export, specifically typedefs with no fwd declarations
+	class [[hush::export]] ForeignVariant
+	{
 	public:
 		[[hush::export]]
-		void Initialize(std::span<uint8_t> innerData, uint64_t typeId) {
+		void Initialize(std::span<uint8_t> innerData, uint64_t typeId)
+		{
 			// NYI: Variant construction
 			(void)innerData;
 			(void)typeId;
 		}
 
-		Variant& GetInnerVariant() {
+		Variant &GetInnerVariant()
+		{
 			return this->m_variant;
 		}
-		
+
 	private:
 		friend class Variant;
 		Variant m_variant;
-		
 	};
 
 } // namespace Hush::Reflection

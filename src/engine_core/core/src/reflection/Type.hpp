@@ -146,7 +146,8 @@ namespace Hush::Reflection
 		ERegisterClassError RegisterClass(TypeInfo typeInfo, ModuleHandle module = ENGINE_MODULE_HANDLE);
 
 		[[hush::export]]
-		ERegisterClassError RegisterForeignClass(std::string_view name, size_t size, size_t alignment, ModuleHandle module);
+		ERegisterClassError RegisterForeignClass(std::string_view name, size_t size, size_t alignment,
+												 ModuleHandle module);
 
 		[[hush::export]]
 		bool AddFieldToForeignClass(TypeId classType, std::string_view fieldName, TypeId type, uint64_t offset);

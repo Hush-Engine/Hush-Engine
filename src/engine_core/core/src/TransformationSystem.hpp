@@ -19,7 +19,8 @@ namespace Hush
 
 	// Takes care of all transformation calculations per entity
 	// this also determines how entities are rendered since their global transform component is updated
-	class [[hush::system]] TransformationSystem final : public ISystem
+	class [[hush::system]]
+	TransformationSystem final : public ISystem
 	{
 		HUSH_GENERATED_BODY
 	public:

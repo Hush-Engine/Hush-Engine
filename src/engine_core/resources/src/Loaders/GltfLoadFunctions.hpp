@@ -73,9 +73,8 @@ namespace Hush::GltfLoadFunctions
 		}
 		const fastgltf::Accessor &foundAccessor = asset.accessors[attribute->accessorIndex];
 		result.reserve(foundAccessor.count);
-		fastgltf::iterateAccessor<BufferType>(asset, foundAccessor, [&result](BufferType val) {
-		    result.push_back(val);
-		});
+		fastgltf::iterateAccessor<BufferType>(asset, foundAccessor,
+											  [&result](BufferType val) { result.push_back(val); });
 		return result;
 	}
 

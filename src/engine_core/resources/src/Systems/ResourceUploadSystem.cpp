@@ -304,10 +304,8 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 			// Fast path: another entity sharing the same Mesh already uploaded the
 			// GPU buffers this frame (or a prior frame). Just mark this entity as done
 			// without touching the staging buffer.
-			if (meshRef.GetGpuVertexBuffer() != nullptr &&
-				meshRef.GetGpuVertexBuffer()->GetSize() >= vertexBytes &&
-				meshRef.GetGpuIndexBuffer() != nullptr &&
-				meshRef.GetGpuIndexBuffer()->GetSize() >= indexBytes)
+			if (meshRef.GetGpuVertexBuffer() != nullptr && meshRef.GetGpuVertexBuffer()->GetSize() >= vertexBytes &&
+				meshRef.GetGpuIndexBuffer() != nullptr && meshRef.GetGpuIndexBuffer()->GetSize() >= indexBytes)
 			{
 				m_entitiesToMarkAsUploaded.push_back(entity.GetId());
 				++uploadCount;

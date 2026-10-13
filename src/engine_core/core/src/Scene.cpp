@@ -46,14 +46,14 @@ Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *t
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
-	
+
 	ecs_os_set_api_defaults();
 	// Memory tracking with Tracy in Flecs incurs in a lock, we do not want that
 	// ecs_os_api_t osApi = ecs_os_get_api();
 	// osApi.malloc_ = HushFlecsMalloc;
 	// osApi.realloc_ = HushFlecsRealloc;
 	// osApi.free_ = HushFlecsFree;
-	this->m_world = reinterpret_cast<void*>(ecs_init());
+	this->m_world = reinterpret_cast<void *>(ecs_init());
 }
 // NOLINTEND
 
@@ -640,7 +640,7 @@ namespace
 			return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
 		}
 	}
-}
+} // namespace
 
 inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk)
 {
@@ -657,9 +657,7 @@ inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserialize
 	}
 
 inline Hush::Scene::EError DeserializeComponents(
-	Hush::Scene *scene,
-	Hush::Serialization::JsonDeserializer &deserializer,
-	Hush::Entity &entity,
+	Hush::Scene *scene, Hush::Serialization::JsonDeserializer &deserializer, Hush::Entity &entity,
 	std::vector<std::pair<Hush::Entity::EntityId, Hush::Entity::EntityId>> *pendingPairs)
 {
 	using namespace Hush;
@@ -709,7 +707,8 @@ inline Hush::Scene::EError DeserializeComponents(
 		if (serComp != nullptr && serComp->deserialize != nullptr)
 		{
 			auto *rawInstance = static_cast<std::uint8_t *>(instance);
-			// Purposefully not doing an if-check bc we currently have a lot of components failing this check but deserializing correctly
+			// Purposefully not doing an if-check bc we currently have a lot of components failing this check but
+			// deserializing correctly
 			serComp->deserialize(rawInstance, deserializer, serComp->ctx);
 			// if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
 			// {
@@ -724,33 +723,33 @@ inline Hush::Scene::EError DeserializeComponents(
 	return Scene::EError::None;
 }
 
-	// Hush::Scene::EError DeserializeComponents(Hush::Scene *scene, const std::vector<ParsedComponent> &components,
-	// 										  Hush::Entity &entity)
-	// {
-	// 	using namespace Hush;
-	// 	for (const ParsedComponent &component : components)
-	// 	{
-	// 		Entity componentEntity = scene->CreateEntityWithKey(component.key);
-	// 		void *instance = entity.AddComponentRaw(componentEntity.GetId());
-	// 		Serializable *serializer = componentEntity.GetComponent<Serializable>();
-	// 		if (serializer == nullptr || serializer->deserialize == nullptr)
-	// 		{
-	// 			continue;
-	// 		}
+// Hush::Scene::EError DeserializeComponents(Hush::Scene *scene, const std::vector<ParsedComponent> &components,
+// 										  Hush::Entity &entity)
+// {
+// 	using namespace Hush;
+// 	for (const ParsedComponent &component : components)
+// 	{
+// 		Entity componentEntity = scene->CreateEntityWithKey(component.key);
+// 		void *instance = entity.AddComponentRaw(componentEntity.GetId());
+// 		Serializable *serializer = componentEntity.GetComponent<Serializable>();
+// 		if (serializer == nullptr || serializer->deserialize == nullptr)
+// 		{
+// 			continue;
+// 		}
 
-	// 		Serialization::JsonDeserializer deserializer(component.json);
-	// 		auto *rawInstance = static_cast<std::uint8_t *>(instance);
-	// 		if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
-	// 		{
-	// 			return Scene::EError::BadSceneFormat;
-	// 		}
-	// 		if (serializer->postDeserialize != nullptr)
-	// 		{
-	// 			serializer->postDeserialize(rawInstance, entity.GetId(), serializer->type, serializer->ctx);
-	// 		}
-	// 	}
-	// 	return Scene::EError::None;
-	// }
+// 		Serialization::JsonDeserializer deserializer(component.json);
+// 		auto *rawInstance = static_cast<std::uint8_t *>(instance);
+// 		if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
+// 		{
+// 			return Scene::EError::BadSceneFormat;
+// 		}
+// 		if (serializer->postDeserialize != nullptr)
+// 		{
+// 			serializer->postDeserialize(rawInstance, entity.GetId(), serializer->type, serializer->ctx);
+// 		}
+// 	}
+// 	return Scene::EError::None;
+// }
 
 Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 {
@@ -808,9 +807,9 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 	auto *flecsWorld = static_cast<ecs_world_t *>(m_world);
 	for (const auto &[entityId, savedPairId] : pendingPairs)
 	{
-		Entity::EntityId oldFirst  = Entity::GetPairFirst(savedPairId);
+		Entity::EntityId oldFirst = Entity::GetPairFirst(savedPairId);
 		Entity::EntityId oldSecond = Entity::GetPairSecond(savedPairId);
-		Entity::EntityId newFirst  = idRemap.count(oldFirst)  ? idRemap.at(oldFirst)  : oldFirst;
+		Entity::EntityId newFirst = idRemap.count(oldFirst) ? idRemap.at(oldFirst) : oldFirst;
 		Entity::EntityId newSecond = idRemap.count(oldSecond) ? idRemap.at(oldSecond) : oldSecond;
 		ecs_add_id(flecsWorld, entityId, ecs_pair(newFirst, newSecond));
 	}
@@ -912,7 +911,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 			// (the pair ID has bit 63 set and would exceed INT64_MAX as unsigned).
 			if (Entity::IsPairId(comp))
 			{
-				constexpr const char* emptyStr = "";
+				constexpr const char *emptyStr = "";
 				serialErr = jsonSerializer.BeginObject();
 				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
 				serialErr = jsonSerializer.Serialize("key", std::string_view{emptyStr});

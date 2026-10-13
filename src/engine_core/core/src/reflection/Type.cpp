@@ -11,7 +11,8 @@
 #include "reflection/Variant.hpp"
 #include <span>
 
-Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterClass(TypeInfo typeInfo, ModuleHandle module) 
+Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterClass(TypeInfo typeInfo,
+																					ModuleHandle module)
 {
 	std::unique_lock lock(m_mutex);
 	TypeId id = typeInfo.GetId();
@@ -25,9 +26,12 @@ Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterCl
 	return ERegisterClassError::None;
 }
 
-
-Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterForeignClass(std::string_view name, size_t size, size_t alignment, ModuleHandle module) {
-	TypeInfo ti{ { Hashing::Fnv1a64(name) }  };
+Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterForeignClass(std::string_view name,
+																						   size_t size,
+																						   size_t alignment,
+																						   ModuleHandle module)
+{
+	TypeInfo ti{{Hashing::Fnv1a64(name)}};
 	ti.SetName(name);
 	ti.SetSize(size);
 	ti.SetAlignment(alignment);
@@ -35,14 +39,17 @@ Hush::Reflection::ERegisterClassError Hush::Reflection::ReflectionDB::RegisterFo
 	return this->RegisterClass(ti, module);
 }
 
-
-bool Hush::Reflection::ReflectionDB::AddFieldToForeignClass(TypeId classType, std::string_view fieldName, TypeId type, uint64_t offset) {
-	TypeInfo* ti = this->GetTypeInfo(classType);
-	if (ti == nullptr) {
+bool Hush::Reflection::ReflectionDB::AddFieldToForeignClass(TypeId classType, std::string_view fieldName, TypeId type,
+															uint64_t offset)
+{
+	TypeInfo *ti = this->GetTypeInfo(classType);
+	if (ti == nullptr)
+	{
 		return false;
 	}
 	// HACK: Not doing anything for setters and getters yet
-	FieldInfo fi { type, std::string(fieldName), [](std::span<const VariantView>){ return EVariantError::None; }, [](std::span<const VariantView>) -> Result<Variant, EVariantError> { return Variant{}; }, offset};
+	FieldInfo fi{type, std::string(fieldName), [](std::span<const VariantView>) { return EVariantError::None; },
+				 [](std::span<const VariantView>) -> Result<Variant, EVariantError> { return Variant{}; }, offset};
 	ti->AddField(fi);
 	return true;
 }

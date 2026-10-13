@@ -41,7 +41,8 @@ void Hush::TitleBarMenuPanel::OnRender([[maybe_unused]] float deltaTime) noexcep
 			ImGui::EndMenu();
 		}
 		// Put this way back in the center
-		if (ImGui::Button("Play")) {
+		if (ImGui::Button("Play"))
+		{
 			// Emit events
 			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
 			Entity::EntityId playId = this->m_activeScene->Lookup(PLAY_TIME_EVENT_KEY);
@@ -81,7 +82,7 @@ void Hush::TitleBarMenuPanel::SaveSceneDialog(IGFD::FileDialog *fileDialog)
 
 			// Get the editor entity and save the last path
 			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
-			auto* editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+			auto *editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
 			editorInfo->lastUsedScenePath = path;
 		}
 		else
@@ -121,7 +122,7 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 
 			// Get the editor entity and save the last path
 			Entity editorEnt = this->m_activeScene->CreateEntityWithKey(ENGINE_MANAGER);
-			auto* editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+			auto *editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
 			editorInfo->lastUsedScenePath = path;
 		}
 		else
@@ -134,7 +135,8 @@ void Hush::TitleBarMenuPanel::LoadSceneDialog(IGFD::FileDialog *fileDialog)
 	fileDialog->Close();
 }
 
-void Hush::TitleBarMenuPanel::TriggerLoadScene() {
+void Hush::TitleBarMenuPanel::TriggerLoadScene()
+{
 	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
 
 	// BACKLOG: Use our own file dialog instead of ImGui's
@@ -148,7 +150,8 @@ void Hush::TitleBarMenuPanel::TriggerLoadScene() {
 	fileDialog->OpenDialog("LoadScene", "Load Scene...", ".hscene", config);
 }
 
-void Hush::TitleBarMenuPanel::TriggerSaveScene() {
+void Hush::TitleBarMenuPanel::TriggerSaveScene()
+{
 	IGFD::FileDialog *fileDialog = ImGuiFileDialog::Instance();
 
 	// BACKLOG: Use our own file dialog instead of ImGui's
@@ -175,10 +178,12 @@ void Hush::TitleBarMenuPanel::FileMenuOptions()
 		this->LoadSceneDialog(fileDialog);
 	}
 
-	if (ImGui::IsKeyChordPressed(ImGuiKey_O | ImGuiMod_Ctrl)) {
+	if (ImGui::IsKeyChordPressed(ImGuiKey_O | ImGuiMod_Ctrl))
+	{
 		this->TriggerLoadScene();
 	}
-	if (ImGui::IsKeyChordPressed(ImGuiKey_S | ImGuiMod_Shift | ImGuiMod_Ctrl)) {
+	if (ImGui::IsKeyChordPressed(ImGuiKey_S | ImGuiMod_Shift | ImGuiMod_Ctrl))
+	{
 		this->TriggerSaveScene();
 	}
 

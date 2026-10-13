@@ -115,11 +115,12 @@ glm::mat4 Hush::Transform::GetTransformationMatrix() const
 	return this->m_transform;
 }
 
-void Hush::Transform::GetTransformationMatrixUnsafe(float* outMatrix, size_t count) const {
+void Hush::Transform::GetTransformationMatrixUnsafe(float *outMatrix, size_t count) const
+{
 	HUSH_ASSERT(count == 16, "16 floats is the only acceptable count for this matrix!");
 
 	glm::mat4 mat = this->GetTransformationMatrix();
-	float* data = glm::value_ptr(mat);
+	float *data = glm::value_ptr(mat);
 	std::memcpy(outMatrix, data, sizeof(float) * count);
 }
 

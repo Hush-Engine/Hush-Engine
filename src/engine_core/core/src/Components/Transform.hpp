@@ -78,7 +78,7 @@ namespace Hush
 
 		// HACK: Temporary method for the jam because the generated Matrix4 has only 4 floats
 		[[hush::export]]
-		void GetTransformationMatrixUnsafe(float* outMatrix, size_t count) const;
+		void GetTransformationMatrixUnsafe(float *outMatrix, size_t count) const;
 
 		[[hush::export]] [[nodiscard]]
 		glm::mat4 XForm(const Transform &other) const;

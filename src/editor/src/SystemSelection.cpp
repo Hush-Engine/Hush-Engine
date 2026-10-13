@@ -43,10 +43,10 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 	// moduleName string_views point into record.name (std::string) — null-terminated, safe for ImGui.
 	struct VisibleEntry
 	{
-		ModuleHandle       module;
-		std::string_view   moduleName;
+		ModuleHandle module;
+		std::string_view moduleName;
 		Reflection::TypeId typeId;
-		std::string        name; // owned — ForeignSystemDescriptor::name may not be null-terminated
+		std::string name; // owned — ForeignSystemDescriptor::name may not be null-terminated
 	};
 
 	std::vector<VisibleEntry> visible;
@@ -71,9 +71,8 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 	}
 
 	// Sort by module name so a single pass can group entries under headers.
-	std::sort(visible.begin(), visible.end(), [](const VisibleEntry &a, const VisibleEntry &b) {
-		return a.moduleName < b.moduleName;
-	});
+	std::sort(visible.begin(), visible.end(),
+			  [](const VisibleEntry &a, const VisibleEntry &b) { return a.moduleName < b.moduleName; });
 
 	// Scrollable list
 	const float listH = ImGui::GetContentRegionAvail().y - btnBarH;
@@ -85,14 +84,16 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 	{
 		if (entry.moduleName != currentModule)
 		{
-			if (headerOpen) {
+			if (headerOpen)
+			{
 				ImGui::TreePop();
 			}
 			currentModule = entry.moduleName;
 			headerOpen = ImGui::TreeNodeEx(currentModule.data(),
-                ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
+										   ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 		}
-		if (!headerOpen) {
+		if (!headerOpen)
+		{
 			continue;
 		}
 
@@ -100,16 +101,19 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 		ImGui::PushID((int)(entry.typeId.id & 0xFFFFFFFFu));
 		if (ImGui::Checkbox(entry.name.c_str(), &isChecked))
 		{
-			if (isChecked) {
+			if (isChecked)
+			{
 				state->checked.insert(entry.typeId.id);
 			}
-			else {
+			else
+			{
 				state->checked.erase(entry.typeId.id);
 			}
 		}
 		ImGui::PopID();
 	}
-	if (headerOpen) {
+	if (headerOpen)
+	{
 		ImGui::TreePop();
 	}
 
@@ -131,19 +135,21 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 
 	ImGui::SameLine();
 
-	ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.20f, 0.47f, 0.90f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.47f, 0.90f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.57f, 1.00f, 1.0f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.15f, 0.40f, 0.80f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.40f, 0.80f, 1.0f));
 
 	if (!anyChecked)
 		ImGui::BeginDisabled();
 
-	// PERF(Nef): This is still quite bad, we could make it better by saving both the module handle and the system id in our set
+	// PERF(Nef): This is still quite bad, we could make it better by saving both the module handle and the system id in
+	// our set
 	if (ImGui::Button("Add System", ImVec2(btnW, 0)))
 	{
 		for (const auto &entry : visible)
 		{
-			if (!state->checked.contains(entry.typeId.id)) {
+			if (!state->checked.contains(entry.typeId.id))
+			{
 				continue;
 			}
 
@@ -155,16 +161,16 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *st
 			else
 			{
 				Entity toast = scene->CreateEntity();
-				toast.EmplaceComponent<ToastNotification>(
-					std::string("Created system: ") + entry.name, 2.f,
-					ToastNotification::EToastType::Info);
+				toast.EmplaceComponent<ToastNotification>(std::string("Created system: ") + entry.name, 2.f,
+														  ToastNotification::EToastType::Info);
 			}
 		}
 		state->Clear();
 		shouldKeepOpen = false;
 	}
 
-	if (!anyChecked) {
+	if (!anyChecked)
+	{
 		ImGui::EndDisabled();
 	}
 

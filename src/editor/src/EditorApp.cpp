@@ -131,7 +131,7 @@ public:
 	void LoadModules(const std::filesystem::path &modulesRoot) override
 	{
 		auto moduleLoader = Hush::Modules::DynamicModuleLoader(*this->m_engine->GetModuleRegistry(), this->m_engine,
-															  &HUSH_FUNCPTR_TABLE);
+															   &HUSH_FUNCPTR_TABLE);
 		// Go and check how many directories we have on the modules
 		auto dirIt = std::filesystem::directory_iterator{modulesRoot};
 		for (const std::filesystem::directory_entry &entry : dirIt)
@@ -282,7 +282,7 @@ public:
 				{
 					// TODO: This would be the reload
 					//
-					// 
+					//
 					// Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
 					// auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
 					// if (res.has_error() || ev.path != res.value())

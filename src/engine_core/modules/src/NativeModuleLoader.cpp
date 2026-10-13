@@ -14,7 +14,7 @@
 #include <type_traits>
 
 Hush::Modules::DynamicModuleLoader::DynamicModuleLoader(ModuleRegistry &registry, HushEngine *engine,
-													  const HushFuncPtrTable *hushApi)
+														const HushFuncPtrTable *hushApi)
 	: m_registry(registry),
 	  m_engine(engine),
 	  m_hushApi(hushApi)

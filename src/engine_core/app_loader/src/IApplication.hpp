@@ -26,7 +26,7 @@ namespace Hush
 		virtual ~IApplication() = default;
 
 		// This should scan all relevant module paths and find their dlls, maybe a default implmenation would be good(?
-		virtual void LoadModules(const std::filesystem::path& modulesRoot) = 0;
+		virtual void LoadModules(const std::filesystem::path &modulesRoot) = 0;
 
 		virtual void Init() = 0;
 

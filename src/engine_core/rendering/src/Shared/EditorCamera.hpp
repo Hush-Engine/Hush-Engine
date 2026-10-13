@@ -13,7 +13,8 @@ namespace Hush
 #include "EditorCamera.hushgen.hpp"
 #endif
 
-	class [[hush::reflect]] EditorCamera final : public Camera
+	class [[hush::reflect]]
+	EditorCamera final : public Camera
 	{
 		HUSH_GENERATED_BODY
 	public:

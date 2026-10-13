@@ -52,7 +52,8 @@ namespace Hush
 	class Scene;
 
 	using ObserverCallback_t = void (*)(Entity::EntityId, void *);
-	// Same as the one above, but you get a reference to this scene instead of a component... Mostly here for type safety
+	// Same as the one above, but you get a reference to this scene instead of a component... Mostly here for type
+	// safety
 	using EntityEventCallback_t = void (*)(Entity::EntityId, Scene *);
 
 	class HushEngine;
@@ -375,7 +376,7 @@ namespace Hush
 			// First, get the entity id, and check if the component is registered.
 			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
-			
+
 			LogFormat(ELogLevel::Info, "Registered comp {} with size {}", info.name, info.size);
 
 			return InternalRegisterCppComponent(status, componentId, info);

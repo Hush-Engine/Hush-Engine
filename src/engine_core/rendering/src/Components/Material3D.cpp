@@ -502,7 +502,8 @@ namespace Hush::Graphics
 	}
 
 	void Material3D::OnEachPropertyMut(
-		std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>, int32_t propertyCount)> callback)
+		std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>, int32_t propertyCount)>
+			callback)
 	{
 		int32_t count = 0;
 		for (auto &entry : this->m_propertyMap)
@@ -516,7 +517,7 @@ namespace Hush::Graphics
 				this->m_propertiesDirty = true;
 			}
 			count++;
- 		}
+		}
 	}
 
 	uint64_t Material3D::GetUniformBufferSize() const noexcept

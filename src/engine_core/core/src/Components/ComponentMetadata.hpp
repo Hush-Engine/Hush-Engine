@@ -8,8 +8,8 @@
 #include <string_view>
 #include "HushBindings.hpp"
 
-namespace Hush {
-
+namespace Hush
+{
 
 	/// @brief Mirrors ECompPropertyType from the scripting library's compile-time serialization registry
 	enum EComponentPropertyType : uint64_t
@@ -31,7 +31,7 @@ namespace Hush {
 		Vector3 = Hashing::Fnv1a64("Vector3"),
 		Vector2 = Hashing::Fnv1a64("Vector2")
 	};
-	
+
 	struct [[hush::export]] InspectableComponent
 	{
 		[[hush::export]]
@@ -42,9 +42,10 @@ namespace Hush {
 			return "InspectableComponent";
 		}
 
-		static constexpr std::uint64_t TypeId() {
+		static constexpr std::uint64_t TypeId()
+		{
 			return Hashing::Fnv1a64(TypeName());
 		}
 
 	}; // Raw tag for user-defined components
-}
+} // namespace Hush

@@ -256,19 +256,20 @@ void Hush::InspectorPanel::RenderProperties()
 		}
 
 		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
-		const Reflection::TypeInfo* ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
+		const Reflection::TypeInfo *ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
-		auto *compMem = reinterpret_cast<uint8_t*>(this->m_inspectTarget.value().GetComponentRaw(compId));
+		auto *compMem = reinterpret_cast<uint8_t *>(this->m_inspectTarget.value().GetComponentRaw(compId));
 
 		std::string title = std::format("{}#{}", ti->GetName(), compId);
 		ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 
 		int32_t cntr = 0;
-		for (const Reflection::FieldInfo& field : fields) {
+		for (const Reflection::FieldInfo &field : fields)
+		{
 			ImGui::PushID(cntr);
 			std::string_view propertyName = field.GetName();
 
-			void* ptrToSerialize = compMem + field.GetOffset();
+			void *ptrToSerialize = compMem + field.GetOffset();
 
 			switch (field.GetTypeId().id)
 			{
@@ -317,5 +318,4 @@ void Hush::InspectorPanel::RenderProperties()
 			cntr++;
 		}
 	});
-
 }

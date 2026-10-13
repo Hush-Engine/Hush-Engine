@@ -35,7 +35,8 @@ namespace Hush
 	public:
 #pragma warning(push)
 #pragma warning(disable : 4324)
-		// NOTE (Nef): I removed alignas properties because it caused a mismatch with Slang's layout (we were expecting 64 bytes of stride and we ended up with 80)
+		// NOTE (Nef): I removed alignas properties because it caused a mismatch with Slang's layout (we were expecting
+		// 64 bytes of stride and we ended up with 80)
 		struct Vertex
 		{
 			glm::vec3 position{};
