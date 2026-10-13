@@ -1,5 +1,6 @@
 #include "HushEngine.hpp"
 #include "ApplicationLoader.hpp"
+#include "InputManager.hpp"
 #include "Logger.hpp"
 #include "ResourceManager.hpp"
 #include "Scene.hpp"
@@ -155,6 +156,8 @@ void Hush::HushEngine::Init(int argc, char **argv)
 
 	AddDefaultSystems();
 
+	InputManager::Init();
+
 	this->m_app->Init();
 }
 
@@ -197,6 +200,7 @@ void Hush::HushEngine::Run()
 
 	InputManager::ResetMouseAcceleration();
 	InputManager::ResetCharData();
+	InputManager::MarkPressedKeysForNextFrame();
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	m_elapsed = end - start;
@@ -283,4 +287,9 @@ std::pmr::memory_resource *Hush::HushEngine::GetSceneScopeAllocator() noexcept
 void Hush::HushEngine::ResetSceneScopeMemory() noexcept
 {
 	this->m_internal->sceneMemoryPool.Reset();
+}
+
+uint64_t Hush::HushEngine::GetFrameNumber() const noexcept
+{
+	return this->m_frameNumber;
 }

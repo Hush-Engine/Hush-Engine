@@ -3,6 +3,7 @@
 #include "Components/ComponentMetadata.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "Components/LocalTransform.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/RenderGraphBuilderComponent.hpp"
@@ -34,9 +35,12 @@
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Shared/Types/Color.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
 #include "Vector4Math.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WindowManager.hpp"
+#include "crypto/Hashing.hpp"
 #include <cstdint>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/quaternion_common.hpp>
@@ -53,6 +57,9 @@
 #include "serialization/Serialization.hpp"
 
 using namespace Hush::Graphics;
+
+// HACK: hacky function, see its implementation for details
+Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *instance);
 
 void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self)
 {
@@ -146,6 +153,99 @@ void Hush::RenderingSystem::BuildScenePassFunction(Hush::RenderGraph::RenderGrap
 					cmd->SetBindGroup(1, draw.materialBindGroup);
 				}
 				cmd->DrawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
+			}
+
+			cmd->EndRenderPass();
+		});
+}
+
+void Hush::RenderingSystem::BuildGameViewPassFunction(Hush::RenderGraph::RenderGraph &graph,
+													  Hush::RenderingSystem *self)
+{
+	using namespace Hush::Graphics;
+	using namespace Hush::RenderGraph;
+
+	using RenderGraphBuildContext_t = Hush::RenderGraph::RenderGraph::BuildContext;
+
+	struct GameViewPassData
+	{
+		ResourceId renderTexture;
+		ResourceId depthTexture;
+	};
+
+	graph.AddPass<GameViewPassData>(
+		EPassType::Graphics, "GameViewPass",
+		[self](RenderGraphBuildContext_t &ctx, GameViewPassData &data) {
+			const glm::u32vec2 bufferSize = self->m_cachedGameViewportSize;
+
+			data.renderTexture = ctx.Create<TextureResource>(
+				"GameViewPass_RenderTexture", TextureDescriptor{
+												  .width = bufferSize.x,
+												  .height = bufferSize.y,
+												  .format = ETextureFormat::BGRA8_UNORM,
+												  .usage = ETextureUsage::RenderTarget | ETextureUsage::Sampled,
+											  });
+
+			data.depthTexture = ctx.Create<TextureResource>("GameViewPass_DepthTexture",
+															TextureDescriptor{.width = bufferSize.x,
+																			  .height = bufferSize.y,
+																			  .format = ETextureFormat::D32_FLOAT,
+																			  .usage = ETextureUsage::DepthStencil});
+
+			ctx.SetCullingMode(RenderPassNode::EPassCullingMode::NeverCull);
+		},
+		[self](GameViewPassData &data, ICommandList *cmdList,
+			   const Hush::RenderGraph::ResourceManager &resourceManager) {
+			auto *cmd = dynamic_cast<IGraphicsCommandList *>(cmdList);
+			if (cmd == nullptr)
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "[GameViewPass] Failed to get graphics command list.");
+				return;
+			}
+
+			RenderPassDescriptor renderPass{};
+			renderPass.debugLabel = "GameViewPass";
+
+			RenderPassColorAttachment colorAttachment{};
+			colorAttachment.texture = resourceManager.GetResource<TextureResource>(data.renderTexture)->texture.get();
+			colorAttachment.loadOp = ELoadOp::Clear;
+			colorAttachment.storeOp = EStoreOp::Store;
+			colorAttachment.clearValue = ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f};
+			renderPass.AddColorAttachment(colorAttachment);
+
+			RenderPassDepthStencilAttachment depthAttachment{};
+			depthAttachment.texture = resourceManager.GetResource<TextureResource>(data.depthTexture)->texture.get();
+			depthAttachment.depthLoadOp = ELoadOp::Clear;
+			depthAttachment.depthStoreOp = EStoreOp::Store;
+			depthAttachment.depthClearValue = 1.0f;
+			renderPass.SetDepthStencilAttachment(depthAttachment);
+
+			cmd->BeginRenderPass(renderPass);
+
+			if (self->m_hasValidGameCamera)
+			{
+				cmd->SetViewport(0, 0, static_cast<float>(self->m_cachedGameViewportSize.x),
+								 static_cast<float>(self->m_cachedGameViewportSize.y), 0, 1);
+
+				auto *graphicsDevice = WindowManager::GetMainWindow()->GetGraphicsDevice();
+				graphicsDevice->WriteBuffer(self->m_gameSceneDataBuffer.get(), 0, &self->m_cachedGameSceneData,
+											sizeof(SceneData));
+
+				// The editor grid is an editing aid, the game view only renders scene meshes
+				cmd->BindPipeline(self->m_meshPipeline.get());
+
+				for (const auto &draw : self->m_meshDrawList)
+				{
+					cmd->SetVertexBuffer(0, draw.vertexBuffer);
+					cmd->SetIndexBuffer(draw.indexBuffer);
+					cmd->SetBindGroup(0, self->m_gameMeshSceneBindGroup.get(),
+									  std::span<const uint32_t>{&draw.dynamicOffset, 1});
+					if (draw.materialBindGroup != nullptr)
+					{
+						cmd->SetBindGroup(1, draw.materialBindGroup);
+					}
+					cmd->DrawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
+				}
 			}
 
 			cmd->EndRenderPass();
@@ -256,11 +356,18 @@ void Hush::RenderingSystem::Init()
 	{
 		Serializable &ser = camRefComp.AddComponent<Serializable>();
 		ser.serialize = &Serializable::DefaultSerialize<Camera>;
+		ser.deserialize = &Serializable::DefaultDeserialize<Camera>;
 	}
 	// Weird, but this is how flecs creates systems, they are associated with an entity and we can query for them
 	Entity selfEntity = this->GetScene().CreateEntityWithKey("RenderingSystem");
 	auto &renderingSystemRef = selfEntity.AddComponent<RenderingSystem *>();
 	renderingSystemRef = this;
+	auto &renderingSystemAPIRef = selfEntity.AddComponent<RenderingSystemAPI>();
+	renderingSystemAPIRef.instantiateMeshEntities = &::InstantiateMeshEntities;
+	renderingSystemAPIRef.instance = this;
+
+	// Expose the scripting-facing API through the interface component so scripts
+	// can query the RenderingSystemAPI component and call into the system.
 
 	// TODO: Check why we can't do Cache::All
 	this->m_renderableTargetsQuery =
@@ -274,11 +381,26 @@ void Hush::RenderingSystem::Init()
 
 	this->m_editorCameraQuery = this->GetScene().CreateQuery<EditorCamera>();
 
+	this->m_gameCameraQuery = this->GetScene().CreateQuery<Camera, WorldTransform>();
+
 	this->m_directionalLightsQuery = this->GetScene().CreateQuery<DirectionalLight, WorldTransform>();
 
 	// Make sure we have the data so that initialization order does not matter
 	auto scenePanelQuery = this->GetScene().CreateQuery<const ScenePanelSizeComp>(RawQuery::ECacheMode::None);
 	scenePanelQuery.Each([this](const ScenePanelSizeComp &sizeComp) { this->m_cachedViewportSize = sizeComp.size; });
+
+	auto gamePanelQuery = this->GetScene().CreateQuery<const GamePanelSizeComp>(RawQuery::ECacheMode::None);
+	gamePanelQuery.Each([this](const GamePanelSizeComp &sizeComp) {
+		this->m_cachedGameViewportSize = sizeComp.size;
+		this->m_cachedGameViewportPosition = sizeComp.position;
+	});
+
+	this->GetScene().AddComponentObserver<GamePanelSizeComp>(
+		EComponentObserverType::Set, [this](Entity::EntityId entity, GamePanelSizeComp *panelSize) {
+			(void)entity;
+			this->m_cachedGameViewportSize = panelSize->size;
+			this->m_cachedGameViewportPosition = panelSize->position;
+		});
 
 	// We need to load the shaders here
 	// Access the filesystem
@@ -300,7 +422,10 @@ void Hush::RenderingSystem::Init()
 
 	Entity sceneBuilderEnt = this->GetScene().CreateEntityWithKey("SceneRenderGraph");
 	auto &scenePassBuilder = sceneBuilderEnt.AddComponent<RenderGraph::RenderGraphBuilderComponent>();
-	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) { BuildScenePassFunction(graph, this); };
+	scenePassBuilder.builderFunc = [this](RenderGraph::RenderGraph &graph) {
+		BuildScenePassFunction(graph, this);
+		BuildGameViewPassFunction(graph, this);
+	};
 	scenePassBuilder.frameUpdateFunc = [](Hush::RenderGraph::RenderGraph &) {};
 
 	this->m_pbrMaterialDescriptor = {
@@ -310,6 +435,7 @@ void Hush::RenderingSystem::Init()
 		.fragmentEntry = "fragMain",
 		.compilationResult = &this->m_pbrCompilationData,
 		.colorTargetFormat = ETextureFormat::BGRA8_UNORM,
+		.blendEnabled = true,
 	};
 
 	HushEngine *engine = this->GetScene().GetEngine();
@@ -342,12 +468,21 @@ void Hush::RenderingSystem::OnPreRender()
 	ZoneScoped;
 
 	// This is a query because we'll want to support multiple dir lights later
-	this->m_directionalLightsQuery.Each([this](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
-		this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
-		this->m_cachedSceneData.sunlightColor.w = light.intensity;
-		glm::vec3 dir = xform.Forward();
-		this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
-	});
+	int32_t dirLightsCount = 0;
+	this->m_directionalLightsQuery.Each(
+		[this, &dirLightsCount](Entity::EntityId, DirectionalLight &light, WorldTransform &xform) {
+			this->m_cachedSceneData.sunlightColor = light.color.GetRGBA32F();
+			this->m_cachedSceneData.sunlightColor.w = light.intensity;
+			glm::vec3 dir = xform.Forward();
+			this->m_cachedSceneData.sunlightDirection = glm::vec4(dir.x, dir.y, dir.z, light.intensity);
+			dirLightsCount++;
+		});
+
+	if (dirLightsCount <= 0)
+	{
+		this->m_cachedGameSceneData.sunlightColor = Color::Black().GetRGBA32F();
+		this->m_cachedSceneData.sunlightColor = Color::Black().GetRGBA32F();
+	}
 
 	this->m_editorCameraQuery.Each([this](Entity::EntityId ent, EditorCamera &editorCam) {
 		(void)ent;
@@ -364,10 +499,29 @@ void Hush::RenderingSystem::OnPreRender()
 		this->m_cachedViewUniforms.pos = glm::vec4(pos.x, pos.y, pos.z, 1.0);
 
 		// Scene data for mesh rendering
+		this->m_cachedSceneData.cameraPos = pos;
 		this->m_cachedSceneData.view = view;
 		this->m_cachedSceneData.proj = proj;
 		this->m_cachedSceneData.viewproj = viewProj;
 		this->m_cachedSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
+	});
+
+	// Game view data comes from entities with a Camera component, NOT from the editor camera.
+	// The view matrix is the inverse of the entity's world transform (the camera looks down its forward axis).
+	this->m_hasValidGameCamera = false;
+	this->m_gameCameraQuery.Each([this](Entity::EntityId, Camera &cam, WorldTransform &xform) {
+		cam.SetViewportSize((float)(this->m_cachedGameViewportSize.x), (float)(this->m_cachedGameViewportSize.y));
+		cam.SetViewportOffset(this->m_cachedGameViewportPosition);
+		glm::mat4 view = glm::inverse(xform.GetTransformationMatrix());
+		glm::mat4 proj = cam.GetProjectionMatrix();
+
+		this->m_cachedGameSceneData.view = view;
+		this->m_cachedGameSceneData.proj = proj;
+		this->m_cachedGameSceneData.viewproj = proj * view;
+		this->m_cachedGameSceneData.ambientColor = glm::vec4(0.1f, 0.1f, 0.15f, 1.0f);
+		this->m_cachedGameSceneData.sunlightDirection = this->m_cachedSceneData.sunlightDirection;
+		this->m_cachedGameSceneData.sunlightColor = this->m_cachedSceneData.sunlightColor;
+		this->m_hasValidGameCamera = true;
 	});
 
 	m_meshDrawList.clear();
@@ -415,11 +569,37 @@ void Hush::RenderingSystem::OnPreRender()
 			{
 				Graphics::IBindGroup *matBindGroup = nullptr;
 
-				auto *mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource).Get();
-				if (mat != nullptr)
+				Ref<Material3D> mat = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
+				if (!mat.IsNull())
 				{
 					mat->FlushProperties(device);
-					auto it = m_materialBindGroupCache.find(mat);
+
+					// Map known PBR bindings to their fallback defaults. Used both
+					// when building a bind group (null slot -> default) and when
+					// validating the cache, so the cached snapshot and the current
+					// material state compare consistently. Comparing the raw slot
+					// pointer (nullptr for unbound slots) against the cached resolved
+					// default would spuriously invalidate the entry on EVERY surface,
+					// freeing a bind group that an already-built draw still
+					// references (a deterministic dangling-pointer crash once a mesh
+					// has more than one surface).
+					auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
+						switch (binding)
+						{
+						case 1:
+							return m_defaultColorTex.get();
+						case 2:
+							return m_defaultMetalRoughTex.get();
+						case 3:
+							return m_defaultNormalTex.get();
+						case 4:
+							return m_defaultEmissiveTex.get();
+						default:
+							return m_defaultColorTex.get();
+						}
+					};
+
+					auto it = m_materialBindGroupCache.find(mat.Get());
 					if (it != m_materialBindGroupCache.end())
 					{
 						// Validate cache: check if any texture pointer changed (async upload completion).
@@ -427,8 +607,9 @@ void Hush::RenderingSystem::OnPreRender()
 						const auto &slots = mat->GetTextureSlots();
 						for (const auto &slot : slots)
 						{
+							IGraphicsTexture *currentTex =
+								slot.texture != nullptr ? slot.texture : defaultTextureForBinding(slot.binding);
 							auto cachedTex = it->second.textures.find(slot.binding);
-							IGraphicsTexture *currentTex = slot.texture;
 							if (cachedTex == it->second.textures.end())
 							{
 								if (currentTex != nullptr)
@@ -461,23 +642,6 @@ void Hush::RenderingSystem::OnPreRender()
 
 						CachedMaterialBindGroup cachedEntry;
 
-						// Map known PBR bindings to their fallback defaults.
-						auto defaultTextureForBinding = [&](uint32_t binding) -> IGraphicsTexture * {
-							switch (binding)
-							{
-							case 1:
-								return m_defaultColorTex.get();
-							case 2:
-								return m_defaultMetalRoughTex.get();
-							case 3:
-								return m_defaultNormalTex.get();
-							case 4:
-								return m_defaultEmissiveTex.get();
-							default:
-								return m_defaultColorTex.get();
-							}
-						};
-
 						const auto &slots = mat->GetTextureSlots();
 						for (const auto &slot : slots)
 						{
@@ -490,7 +654,7 @@ void Hush::RenderingSystem::OnPreRender()
 						bgDesc.entries.push_back({.binding = 5, .sampler = m_defaultSampler.get()});
 
 						cachedEntry.bindGroup = device->CreateBindGroup(bgDesc);
-						auto [newIt, _] = m_materialBindGroupCache.emplace(mat, std::move(cachedEntry));
+						auto [newIt, _] = m_materialBindGroupCache.emplace(mat.Get(), std::move(cachedEntry));
 						it = newIt;
 					}
 					matBindGroup = it->second.bindGroup.get();
@@ -517,6 +681,64 @@ void Hush::RenderingSystem::OnPreRender()
 
 void Hush::RenderingSystem::OnPostRender()
 {
+}
+
+// HACK: Utility for the user side API, this is, in fact, quite bad but it's because this
+// class should NOT belong to the editor at all
+Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *instance)
+{
+	using namespace Hush;
+	auto *self = reinterpret_cast<RenderingSystem *>(instance);
+	Scene &scene = self->GetScene();
+	ResourceManager *resourceManager = scene.GetEngine()->GetResourceManager();
+	VirtualFilesystem *vfs = scene.GetEngine()->GetVirtualFilesystem();
+
+	Entity entity = scene.CreateEntityWithName("RuntimeMesh");
+	entity.AddComponent<WorldTransform>();
+	entity.AddComponent<LocalTransform>();
+
+	// The mesh is keyed by the asset path so every instance of the same asset
+	// shares one Mesh (and later one set of GPU buffers).
+	const uint32_t resourceId = Hashing::Fnv1a(virtualPath);
+	Ref<Mesh> mesh = resourceManager->AllocateRefKnwonID<Mesh>(resourceId);
+	auto &meshRefComp = entity.EmplaceComponent<MeshReference>(mesh);
+	meshRefComp.SetResourcePath(virtualPath, "RuntimeMesh");
+
+	// Parse the cooked HAsset only once; later instances reuse the shared Mesh.
+	if (mesh->GetVertexBuffer().empty())
+	{
+		auto openRes = vfs->OpenFile(virtualPath);
+		HUSH_ASSERT(!openRes.has_error(), "InstantiateMeshEntities: cannot open '{}' (is the asset cooked?)",
+					virtualPath);
+		if (openRes.has_error())
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+
+		const size_t fileSize = openRes.value()->GetFileInfo().size;
+		std::vector<std::byte> buffer(fileSize);
+		auto readRes = openRes.value()->Read(buffer);
+		HUSH_ASSERT(!readRes.has_error(), "InstantiateMeshEntities: failed to read '{}'", virtualPath);
+		if (readRes.has_error())
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+
+		const bool loaded = HMeshLoader::LoadMeshFromBinary(buffer, &meshRefComp, self->GetRenderingContext());
+		HUSH_ASSERT(loaded, "InstantiateMeshEntities: '{}' is not a valid cooked mesh asset", virtualPath);
+		if (!loaded)
+		{
+			scene.DestroyEntity(entity);
+			return Entity::INVALID_ENTITY_ID;
+		}
+	}
+
+	// Let ResourceUploadSystem create + upload the GPU vertex/index buffers.
+	entity.AddComponent<Renderer::GpuUploadComponent>();
+
+	return entity.GetId();
 }
 
 std::string_view Hush::RenderingSystem::GetName() const
@@ -672,6 +894,9 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 	{
 		SamplerDescriptor samplerDesc{};
 		samplerDesc.debugName = "DefaultMeshSampler";
+		samplerDesc.addressModeU = EAddressMode::Repeat;
+		samplerDesc.addressModeV = EAddressMode::Repeat;
+		samplerDesc.addressModeW = EAddressMode::Repeat;
 		m_defaultSampler = device->CreateSampler(samplerDesc);
 	}
 
@@ -696,7 +921,11 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 		meshDesc.primitive.cullMode = ECullModeFlags::Back;
 		meshDesc.primitive.frontFace = EFrontFace::CounterClockwise;
 
-		meshDesc.colorTargets = {{.format = ETextureFormat::BGRA8_UNORM}};
+		meshDesc.colorTargets = {
+			{.format = ETextureFormat::BGRA8_UNORM,
+			 .blendEnabled = true,
+			 .colorBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha},
+			 .alphaBlend = {.srcFactor = EBlendFactor::SrcAlpha, .dstFactor = EBlendFactor::OneMinusSrcAlpha}}};
 
 		meshDesc.depthStencil = {.enabled = true,
 								 .format = ETextureFormat::D32_FLOAT,
@@ -735,6 +964,12 @@ Hush::Graphics::ShaderCompilationResult Hush::RenderingSystem::SetupMeshPipeline
 													.usage = EBufferUsage::Uniform,
 													.memoryAccess = EMemoryAccess::CPUNone,
 													.debugName = "SceneDataBuffer"});
+
+	// The game view has its own scene data buffer so both cameras can be uploaded on the same frame
+	this->m_gameSceneDataBuffer = device->CreateBuffer({.size = sizeof(SceneData),
+														.usage = EBufferUsage::Uniform,
+														.memoryAccess = EMemoryAccess::CPUNone,
+														.debugName = "GameSceneDataBuffer"});
 
 	// This assumes the material will always be the default PBR, which is fine for a general buffer, but, we will need
 	// per material buffers
@@ -780,4 +1015,12 @@ void Hush::RenderingSystem::CreateMeshSceneBindGroup(Graphics::IGraphicsDevice *
 		{.binding = 0, .buffer = this->m_sceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
 		{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = this->m_meshModelSlotSize}};
 	this->m_meshSceneBindGroup = device->CreateBindGroup(sceneBgDesc);
+
+	// Same model buffer as the editor scene pass, only the camera data differs
+	BindGroupDescriptor gameSceneBgDesc{};
+	gameSceneBgDesc.layout = this->m_meshSceneBindGroupLayout.get();
+	gameSceneBgDesc.entries = {
+		{.binding = 0, .buffer = this->m_gameSceneDataBuffer.get(), .offset = 0, .size = sizeof(SceneData)},
+		{.binding = 1, .buffer = this->m_meshModelBuffer.get(), .offset = 0, .size = this->m_meshModelSlotSize}};
+	this->m_gameMeshSceneBindGroup = device->CreateBindGroup(gameSceneBgDesc);
 }

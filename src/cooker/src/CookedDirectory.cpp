@@ -136,7 +136,7 @@ namespace Hush
 			srcFile.read(reinterpret_cast<char *>(srcData.data()), static_cast<std::streamsize>(srcSize));
 
 			CookContext ctx;
-			ctx.sourceVPath = std::filesystem::relative(path, m_projectRoot).generic_string();
+			ctx.sourceVPath = "res://" + std::filesystem::relative(path, m_projectRoot).generic_string();
 			ctx.frameAllocator = this->m_frameAllocator;
 
 			auto result = m_cooker.CookToBlob(srcData, AssetCooker::ExtensionFromPath(path), meta, ctx);
@@ -211,7 +211,7 @@ namespace Hush
 
 		auto &meta = metaResult.value();
 		CookContext ctx;
-		ctx.sourceVPath = std::filesystem::relative(asset.sourcePath, m_projectRoot).generic_string();
+		ctx.sourceVPath = "res://" + std::filesystem::relative(asset.sourcePath, m_projectRoot).generic_string();
 		ctx.frameAllocator = this->m_frameAllocator;
 
 		auto result = m_cooker.CookToBlob(srcData, AssetCooker::ExtensionFromPath(asset.sourcePath), meta, ctx);

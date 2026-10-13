@@ -9,12 +9,14 @@ hush_add_library(
         src/Query.cpp
         src/QueryBuilder.cpp
         src/TransformationSystem.cpp
+        src/EntityManagerSystem.cpp
         src/EcsTerms.cpp
         src/serialization/Serialization.cpp
         src/serialization/Deserialization.cpp
         src/serialization/Formats/JsonSerializer.cpp
         src/traits/EntityTraits.cpp
         src/reflection/Type.cpp
+        src/reflection/TypeInfo.cpp
         src/reflection/Variant.cpp
         PUBLIC_HEADER_DIRS src
         PRIVATE_HEADER_DIRS private

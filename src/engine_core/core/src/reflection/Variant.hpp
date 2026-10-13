@@ -6,11 +6,23 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstring>
+#include <span>
 
 #include "TypeTraits.hpp"
 #include "TypeId.hpp"
 #include "Result.hpp"
+#include "Platform.hpp"
+
+#if __has_include("Variant.hushgen.hpp") && !defined(HUSH_HEADER_PARSING)
+#include "Variant.hushgen.hpp"
+#endif
+
+#if HUSH_COMPILER_MSVC
+#pragma warning(push)
+#pragma warning(disable : 5030) // Attribute not recognized
+#endif
 
 namespace Hush::Reflection
 {
@@ -19,9 +31,10 @@ namespace Hush::Reflection
 	/// A VariantView that holds a reference to any type.
 	struct VariantView
 	{
-		enum class EVariantError : uint8_t
+		enum class [[hush::export]] EVariantError : uint8_t
 		{
-			NonSameType = 0,
+			None = 0,
+			NonSameType = 1,
 		};
 
 		VariantView()
@@ -277,6 +290,29 @@ namespace Hush::Reflection
 		Dtor m_dtor = nullptr;
 		EVariantStatus m_status = EVariantStatus::None;
 		TypeId m_typeId;
+	};
+
+	// BUG: This is a really stupid workaround for exposing the variant to foreign modules because there are still a lot
+	// of issues with hush::export, specifically typedefs with no fwd declarations
+	class [[hush::export]] ForeignVariant
+	{
+	public:
+		[[hush::export]]
+		void Initialize(std::span<uint8_t> innerData, uint64_t typeId)
+		{
+			// NYI: Variant construction
+			(void)innerData;
+			(void)typeId;
+		}
+
+		Variant &GetInnerVariant()
+		{
+			return this->m_variant;
+		}
+
+	private:
+		friend class Variant;
+		Variant m_variant;
 	};
 
 } // namespace Hush::Reflection

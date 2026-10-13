@@ -9,6 +9,7 @@
 
 #include "Components/TextureComponent.hpp"
 #include "IResourceManager.hpp"
+#include "RHI/GraphicsTypes.hpp"
 #include "Shared/ImageTexture.hpp"
 #include "Ref.hpp"
 #include "Shared/Mesh.hpp"
@@ -100,8 +101,9 @@ namespace Hush
 		///             The resource manager does not perform any decoding or format conversion on the data.
 		///
 		/// @return A reference to the loaded texture, or an error if the texture could not be created.
-		Result<Ref<TextureComponent>, EError> LoadTextureFromData(std::string_view name,
-																  std::span<const std::byte> data);
+		Result<Ref<TextureComponent>, EError> LoadTextureFromData(
+			std::string_view name, std::span<const std::byte> data,
+			Graphics::ETextureFormat format = Graphics::ETextureFormat::RGBA8_UNORM);
 
 		void FreePending() override;
 

@@ -25,7 +25,7 @@ hush_add_library(
              engine_core/modules/src/ModuleBindingApi.cpp
              engine_core/src/AllocatorOverrides.cpp
              engine_core/src/stb_impl.cpp
-        PUBLIC_HEADER_DIRS engine_core/src
+        PUBLIC_HEADER_DIRS engine_core/src engine_core/modules
 )
 
 add_library(Hush::Engine ALIAS HushEngine)

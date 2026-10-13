@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <type_traits>
 #include <cstdint>
 #include <string_view>
@@ -23,6 +24,11 @@ namespace Hush
 		{ T::TypeId() } -> std::same_as<std::uint64_t>;
 		{ T::TypeName() } -> std::same_as<std::string_view>;
 		std::is_same_v<std::remove_cvref_t<T>, T>;
+	};
+
+	template <typename T>
+	concept HasCustomTypeName = requires {
+		{ T::TypeId() } -> std::same_as<std::string_view>;
 	};
 
 	namespace Reflection

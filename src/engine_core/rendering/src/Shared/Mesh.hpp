@@ -2,6 +2,7 @@
 
 #include "Vector3Math.hpp"
 #include "Shared/GPUMeshBuffers.hpp"
+#include "RHI/IGraphicsBuffer.hpp"
 #include <glm/ext/vector_float2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -34,13 +35,15 @@ namespace Hush
 	public:
 #pragma warning(push)
 #pragma warning(disable : 4324)
+		// NOTE (Nef): I removed alignas properties because it caused a mismatch with Slang's layout (we were expecting
+		// 64 bytes of stride and we ended up with 80)
 		struct Vertex
 		{
-			alignas(16) glm::vec3 position{};
-			alignas(16) glm::vec3 normal = Vector3Math::RIGHT;
-			alignas(16) glm::vec4 color = glm::vec4{1.f};
-			alignas(16) glm::vec4 tangent;
-			alignas(8) glm::vec2 uv{};
+			glm::vec3 position{};
+			glm::vec3 normal = Vector3Math::RIGHT;
+			glm::vec4 color = glm::vec4{1.f};
+			glm::vec4 tangent;
+			glm::vec2 uv{};
 		};
 
 #pragma warning(pop)
@@ -107,11 +110,42 @@ namespace Hush
 
 		void CalculateNormals();
 
+		/// @brief Get the shared GPU vertex buffer (nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuVertexBuffer() const
+		{
+			return m_gpuVertexBuffer.get();
+		}
+
+		/// @brief Get the shared GPU index buffer (nullptr before upload).
+		[[nodiscard]]
+		Graphics::IGraphicsBuffer *GetGpuIndexBuffer() const
+		{
+			return m_gpuIndexBuffer.get();
+		}
+
+		/// @brief Set the shared GPU vertex buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuVertexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuVertexBuffer = std::move(buffer);
+		}
+
+		/// @brief Set the shared GPU index buffer. Called by ResourceUploadSystem after staging.
+		void SetGpuIndexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
+		{
+			m_gpuIndexBuffer = std::move(buffer);
+		}
+
 	private:
 		std::vector<uint32_t> m_indices;
 		std::vector<Vertex> m_vertices;
 		std::string m_name;
 		std::vector<GeoSurface> m_surfaces;
 		GPUMeshBuffers m_meshBuffers;
+
+		/// @brief Shared GPU vertex buffer,owned here so all MeshReference instances
+		/// pointing to this Mesh reuse the same buffer instead of duplicating it.
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuIndexBuffer;
 	};
 } // namespace Hush

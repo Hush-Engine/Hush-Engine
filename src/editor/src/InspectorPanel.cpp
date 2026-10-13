@@ -1,11 +1,14 @@
 #include "InspectorPanel.hpp"
 #include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
+#include "Components/ComponentMetadata.hpp"
+#include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/MeshReference.hpp"
 #include "Components/Transform.hpp"
 #include "Components/WorldTransform.hpp"
+#include "Entity.hpp"
 #include "HushEngine.hpp"
 #include "Logger.hpp"
 #include "RHI/ShaderCompiler.hpp"
@@ -15,6 +18,7 @@
 #include "imgui/imgui.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/trigonometric.hpp>
@@ -26,6 +30,8 @@
 #include "UI.hpp"
 #include "ScenePanel.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "reflection/FieldInfo.hpp"
+#include "reflection/TypeInfo.hpp"
 #include <memory>
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
@@ -61,6 +67,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 	ImGui::Text("%s#%zu", name.data(), idx);
 
 	auto drawPropertyFlags = [](const char *label, Graphics::EBindingDataTypeFlags *typeFlags) {
+		ImGui::PushID(label);
 		if (UI::FlagsBegin(label))
 		{
 			UI::FlagItem("As Color", Graphics::EBindingDataTypeFlags::AsColor, typeFlags);
@@ -68,17 +75,18 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 			UI::FlagsEnd();
 		}
 		ImGui::SameLine();
+		ImGui::PopID();
 	};
 
-	component->OnEachPropertyMut([&drawPropertyFlags](std::string_view propName,
-													  Graphics::MaterialPropertyInfo *infoRef,
-													  std::span<std::byte> uniformRange) {
+	component->OnEachPropertyMut([&drawPropertyFlags, idx](std::string_view propName,
+														   Graphics::MaterialPropertyInfo *infoRef,
+														   std::span<std::byte> uniformRange, int32_t propertyIndex) {
 		// NYI: We should still show something about this property, but have it collapsed and grayed out or something
 		if (Bitwise::HasCompositeFlag(infoRef->typeFlags, Graphics::EBindingDataTypeFlags::IsPrivate))
 		{
 			return false;
 		}
-		ImGui::PushID(propName.data());
+		ImGui::PushID(static_cast<int32_t>(idx));
 		Graphics::EBindingDataTypeFlags flags = infoRef->typeFlags;
 
 		// This indicates whether the material's CPU-side buffer was modified, NOT the property's flags or any other
@@ -86,6 +94,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 		bool wasModified = false;
 		bool asColor = Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::AsColor);
 
+		ImGui::PushID(propertyIndex);
 		if (Bitwise::HasCompositeFlag(flags, Graphics::EBindingDataTypeFlags::Vec3))
 		{
 			drawPropertyFlags(propName.data(), &infoRef->typeFlags);
@@ -114,6 +123,7 @@ void Hush::Serialize(Hush::Graphics::Material3D *component, size_t idx)
 		}
 
 		ImGui::PopID();
+		ImGui::PopID();
 		return wasModified;
 	});
 }
@@ -137,15 +147,6 @@ void Hush::Serialize(MeshReference *component, const char *entityName)
 		Serialize(const_cast<Graphics::Material3D *>(currMat.Get()), i);
 	}
 
-	// for (size_t i = 0; i < surfaces.size(); i++)
-	// {
-	// 	const GeoSurface &surface = surfaces[i];
-	// 	if (ImGui::CollapsingHeader((std::string("Surface") + std::to_string(i)).c_str(),
-	// 								ImGuiTreeNodeFlags_DefaultOpen))
-	// 	{
-	// 		Serialize(surface.material.get(), std::to_string(i).c_str());
-	// 	}
-	// }
 	ImGui::Unindent(NESTED_INDENT_SIZE);
 }
 
@@ -185,14 +186,15 @@ void Hush::InspectorPanel::OnRender([[maybe_unused]] float deltaTime)
 void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 {
 	this->m_activeScene = activeScene;
-
-	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
-													   Entity &entity,
-													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
+	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
+	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
 {
+	auto *info = this->m_editorInfo.GetData<EditorInfo>();
+	info->currentSelection.type = ESelectedItemType::Entity;
+	info->currentSelection.value = entity;
 	this->m_inspectTarget = this->m_activeScene->EntityFromId(entity);
 	UI::Get().GetPanel<ScenePanel>().SetGizmoTarget(entity);
 }
@@ -211,6 +213,11 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 // Also, every entity in the editor should probably have a list of how they ordered their components ???
 void Hush::InspectorPanel::RenderProperties()
 {
+	if (!this->m_inspectTarget->IsAlive())
+	{
+		this->m_inspectTarget.reset();
+		return;
+	}
 	Entity::Name *entityName = this->m_inspectTarget->GetComponent<Entity::Name>();
 	HUSH_ASSERT(entityName != nullptr, "Inspectable entities MUST have a name component!");
 	ImGui::SeparatorText(entityName->GetName().data());
@@ -236,4 +243,79 @@ void Hush::InspectorPanel::RenderProperties()
 	{
 		Serialize(camComponent);
 	}
+
+	// Now, for any user defined components, we use the functions inside of their archetype
+	// HACK: Super bad awful approach
+	// Iterate the current entity of the components that have a serializable comp
+	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
+		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
+		auto *inspectable = ent.GetComponent<InspectableComponent>();
+		if (inspectable == nullptr || !inspectable->reflectedTypeId.IsValid())
+		{
+			return;
+		}
+
+		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
+		const Reflection::TypeInfo *ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
+		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
+		auto *compMem = reinterpret_cast<uint8_t *>(this->m_inspectTarget.value().GetComponentRaw(compId));
+
+		std::string title = std::format("{}#{}", ti->GetName(), compId);
+		ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+		int32_t cntr = 0;
+		for (const Reflection::FieldInfo &field : fields)
+		{
+			ImGui::PushID(cntr);
+			std::string_view propertyName = field.GetName();
+
+			void *ptrToSerialize = compMem + field.GetOffset();
+
+			switch (field.GetTypeId().id)
+			{
+			case Hush::EComponentPropertyType::I8:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S8, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U8:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U8, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I16:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S16, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U16:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U16, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S32, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U32, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S64, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U64, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::F32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_Float, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::F64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::Bool:
+				ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
+				break;
+			case Hush::EComponentPropertyType::Vector3:
+				UI::Vec3Edit(propertyName.data(), reinterpret_cast<float *>(ptrToSerialize));
+				break;
+			default:
+				// LogError("Type of property is not implemented for inspector serialization");
+				break;
+			}
+
+			ImGui::PopID();
+			cntr++;
+		}
+	});
 }

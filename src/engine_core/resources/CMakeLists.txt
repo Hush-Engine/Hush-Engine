@@ -9,6 +9,7 @@ hush_add_library(
              src/Loaders/GltfLoader.cpp
              src/Loaders/HMeshLoader.cpp
              src/Components/MeshReference.hpp
+             src/Components/MeshReference.cpp
         # SRCS src/ResourceManager.cpp
         # src/Loaders/VulkanLoader.cpp
         src/Loaders/GltfLoadFunctions.cpp

@@ -1,13 +1,17 @@
 #pragma once
 
+#include "Assertions.hpp"
 #include "Components/Material3D.hpp"
 #include "Components/TextureComponent.hpp"
 #include "RHI/IGraphicsBuffer.hpp"
 #include "Shared/Mesh.hpp"
 #include "Ref.hpp"
+#include "Vector3Math.hpp"
 #include "crypto/Hashing.hpp"
 
 #include <cstdint>
+#include <glm/ext/vector_float3.hpp>
+#include <limits>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
@@ -28,7 +32,7 @@ namespace Hush
 	/// @brief Small wrapper around the `Mesh` data structure, internally, this is useful for caching using our
 	/// reference counting system
 	// This structure is intended as a bridge between cached resource data and the rendering pipeline
-	class [[hush::reflect]] MeshReference
+	class [[hush::reflect]] [[hush::export]] MeshReference
 	{
 		HUSH_GENERATED_BODY
 	public:
@@ -56,29 +60,37 @@ namespace Hush
 		}
 
 		/// @brief Get the GPU vertex buffer for this mesh (may be nullptr before upload).
+		/// Delegates to the shared Mesh so all instances of the same asset share one buffer.
 		[[nodiscard]]
 		Graphics::IGraphicsBuffer *GetGpuVertexBuffer() const
 		{
-			return m_gpuVertexBuffer.get();
+			return m_mesh.IsNull() ? nullptr : m_mesh->GetGpuVertexBuffer();
 		}
 
-		/// @brief Set the GPU vertex buffer. Called by ResourceUploadSystem after staging.
+		/// @brief Set the GPU vertex buffer. Stored on the shared Mesh, not per-entity.
 		void SetGpuVertexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
 		{
-			m_gpuVertexBuffer = std::move(buffer);
+			if (!m_mesh.IsNull())
+			{
+				m_mesh->SetGpuVertexBuffer(std::move(buffer));
+			}
 		}
 
 		/// @brief Get the GPU index buffer for this mesh (may be nullptr before upload).
+		/// Delegates to the shared Mesh so all instances of the same asset share one buffer.
 		[[nodiscard]]
 		Graphics::IGraphicsBuffer *GetGpuIndexBuffer() const
 		{
-			return m_gpuIndexBuffer.get();
+			return m_mesh.IsNull() ? nullptr : m_mesh->GetGpuIndexBuffer();
 		}
 
-		/// @brief Set the GPU index buffer. Called by ResourceUploadSystem after staging.
+		/// @brief Set the GPU index buffer. Stored on the shared Mesh, not per-entity.
 		void SetGpuIndexBuffer(std::unique_ptr<Graphics::IGraphicsBuffer> buffer)
 		{
-			m_gpuIndexBuffer = std::move(buffer);
+			if (!m_mesh.IsNull())
+			{
+				m_mesh->SetGpuIndexBuffer(std::move(buffer));
+			}
 		}
 
 		void PushMaterial(Ref<Graphics::Material3D> &material)
@@ -112,6 +124,10 @@ namespace Hush
 			return m_materialTextureRefs;
 		}
 
+		// BACKLOG: Make this return an AABB instead
+		[[hush::export]]
+		void CalculateBounds(glm::vec3 *outCenter, glm::vec3 *outSize);
+
 		// HACK: Temporary method, will allow us to load data from deserialization
 		void SetResourcePath(std::string_view path, std::string_view name)
 		{
@@ -138,13 +154,7 @@ namespace Hush
 		[[hush::property]]
 		std::vector<uint32_t> m_materialIds;
 
-		/// @brief GPU vertex buffer, owned by this component and populated by ResourceUploadSystem.
-		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuVertexBuffer;
-
-		/// @brief GPU index buffer, owned by this component and populated by ResourceUploadSystem.
-		std::unique_ptr<Graphics::IGraphicsBuffer> m_gpuIndexBuffer;
-
-		// Temporary: raw Material3D* key, not safe if a material is destroyed mid-frame.
+		// HACK: raw Material3D* key, not safe if a material is destroyed mid-frame.
 		// Will need a safer referencing system later (e.g. material ID or weak handle).
 		std::unordered_map<const Graphics::Material3D *, std::unordered_map<uint32_t, Ref<TextureComponent>>>
 			m_materialTextureRefs;

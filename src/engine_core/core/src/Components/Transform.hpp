@@ -33,46 +33,57 @@ namespace Hush
 		[[nodiscard]]
 		const glm::vec3 *GetPosition() const noexcept;
 
+		[[hush::export]]
 		glm::vec3 *GetPosition() noexcept;
 
-		void SetScale(const glm::vec3 &scale) noexcept;
+		[[hush::export]]
+		glm::vec3 GetPositionValue() const noexcept;
 
-		[[nodiscard]]
-		const glm::vec3 &GetScale() const noexcept;
+		[[hush::export]]
+		void SetScale(glm::vec3 scale) noexcept;
+
+		[[hush::export]] [[nodiscard]]
+		glm::vec3 GetScale() const noexcept;
 
 		glm::vec3 &GetScale() noexcept;
 
+		[[hush::export]]
 		void SetRotationQuat(const glm::quat &rotationQuat) noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::quat GetRotationQuat() const noexcept;
 
+		[[hush::export]]
 		void SetEulerAngles(const glm::vec3 &euler) noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 GetEulerAngles() const noexcept;
 
 		[[nodiscard]]
 		glm::mat3 GetRotationMatrix() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Forward() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Up() const noexcept;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::vec3 Right() const noexcept;
 
 		void SetTransformationMatrix(const glm::mat4 &xform);
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 GetTransformationMatrix() const;
 
-		[[nodiscard]]
+		// HACK: Temporary method for the jam because the generated Matrix4 has only 4 floats
+		[[hush::export]]
+		void GetTransformationMatrixUnsafe(float *outMatrix, size_t count) const;
+
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 XForm(const Transform &other) const;
 
-		[[nodiscard]]
+		[[hush::export]] [[nodiscard]]
 		glm::mat4 InvXForm(const Transform &other) const;
 
 		glm::mat4 operator*(const Transform &other) const;

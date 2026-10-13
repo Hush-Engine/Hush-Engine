@@ -20,6 +20,14 @@ namespace Hush::Graphics
 	{
 	}
 
+	WebGPUCommandQueue::~WebGPUCommandQueue()
+	{
+		if (m_queue != nullptr)
+		{
+			m_queue.release();
+		}
+	}
+
 	void WebGPUCommandQueue::Submit(std::span<ICommandList *> commandLists)
 	{
 		SubmitCommands(commandLists);

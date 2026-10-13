@@ -49,7 +49,12 @@ namespace Hush
 		Set
 	};
 
+	class Scene;
+
 	using ObserverCallback_t = void (*)(Entity::EntityId, void *);
+	// Same as the one above, but you get a reference to this scene instead of a component... Mostly here for type
+	// safety
+	using EntityEventCallback_t = void (*)(Entity::EntityId, Scene *);
 
 	class HushEngine;
 
@@ -59,6 +64,9 @@ namespace Hush
 	class [[hush::export(Hush::Export::asHandle)]] Scene
 	{
 		constexpr static std::uint16_t ORDER_BUCKET_SIZE = ISystem::MAX_ORDER + 1;
+
+		constexpr static uint32_t SCENE_FMT_VERSION_MAJOR = 0;
+		constexpr static uint32_t SCENE_FMT_VERSION_MINOR = 2;
 
 		friend class HushEngine;
 
@@ -83,11 +91,14 @@ namespace Hush
 
 		~Scene();
 
+		/// @brief Must be called before Init, essentially the first thing any Hush::IApplication needs to call
+		void HookEvents();
+
 		/// Init is called when the scene is initialized.
 		void Init();
 
 		/// Update is called every frame.
-		void Update(float delta);
+		void Update(float delta, bool isEditor);
 
 		/// FixedUpdate is called every fixed frame.
 		void FixedUpdate(float delta);
@@ -156,6 +167,8 @@ namespace Hush
 		[[hush::export]]
 		void AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
 									 EComponentObserverType observerType, ObserverCallback_t callback);
+
+		Entity::EntityId AddEventObserverRaw(Entity::EntityId event, EntityEventCallback_t callback);
 
 		/// Registers a callback that gets called whenever a component receives the specified event
 		// @param observerType Component event type
@@ -233,7 +246,11 @@ namespace Hush
 		// NOTE: not [[hush::export]] — the binding generator can't yet marshal
 		// NullTerminatedStringView (Hush-Engine/hush-llvm#8). Re-export once supported.
 		[[nodiscard]]
-		EntityId Lookup(NullTerminatedStringView tag) const;
+		EntityId LookupCStr(NullTerminatedStringView tag) const;
+
+		// HACK: Marshallable version
+		[[hush::export]] [[nodiscard]]
+		EntityId Lookup(std::string_view tag) const;
 
 		[[nodiscard]]
 		const std::vector<Entity::EntityId> &GetAllRegisteredComponents() const;
@@ -360,6 +377,8 @@ namespace Hush
 			auto [status, componentId] = ComponentTraits::detail::GetEntityId<T>(GetUniqueId());
 			const ComponentTraits::ComponentInfo info = ComponentTraits::GetComponentInfo<T>();
 
+			LogFormat(ELogLevel::Info, "Registered comp {} with size {}", info.name, info.size);
+
 			return InternalRegisterCppComponent(status, componentId, info);
 		}
 
@@ -432,7 +451,7 @@ namespace Hush
 		/// Thread pool used by the scene for parallel operations
 		Threading::Executors::ThreadPool *m_threadPool;
 
-		void *m_world;
+		void *m_world = nullptr;
 
 		ScriptingSystemInterface *m_scriptingInterface = nullptr;
 

@@ -22,6 +22,8 @@ namespace Hush
 		glm::vec4 ambientColor;
 		glm::vec4 sunlightDirection; // .w = sun power
 		glm::vec4 sunlightColor;
+		glm::vec3 cameraPos;
+		float pad;
 	};
 
 	/// @brief Uniform descriptor of the material that matches the PBR's material definition on the mesh shader

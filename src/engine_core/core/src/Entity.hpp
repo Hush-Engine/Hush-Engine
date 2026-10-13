@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Assertions.hpp"
+#include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
@@ -16,6 +17,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <Hushgen.hpp>
 
@@ -106,8 +108,10 @@ namespace Hush
 
 			void SetName(std::string_view name)
 			{
-				HUSH_COND_FAIL_MSG(name.size() <= MAX_ENTITY_NAME_LENGTH,
-								   "Maximum character length for entity name was exceeded");
+				if (name.size() >= MAX_ENTITY_NAME_LENGTH)
+				{
+					LogFormat(ELogLevel::Warn, "Maximum character length for entity name was exceeded");
+				}
 				size_t copyLength = std::min(name.size(), MAX_ENTITY_NAME_LENGTH);
 				std::copy_n(name.data(), copyLength, this->m_name.data());
 				// NOLINTNEXTLINE
@@ -286,6 +290,8 @@ namespace Hush
 		/// pointer and you have an observer that's listening for changes
 		void NotifyComponentModifiedRaw(Entity::EntityId componentId);
 
+		void EmitEvent(Entity::EntityId event);
+
 		ComponentRef CreateComponentReferenceRaw(EntityId componentId);
 
 		/// Add a component to the entity.
@@ -299,6 +305,9 @@ namespace Hush
 		/// @return Pointer to the component.
 		[[nodiscard]] [[hush::export]]
 		void *GetComponentRaw(EntityId componentId);
+
+		[[nodiscard]] [[hush::export]]
+		const void *GetComponentConstRaw(EntityId componentId) const;
 
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
@@ -338,6 +347,12 @@ namespace Hush
 		/// @param entity Entity to destroy.
 		static void Destroy(Entity &&entity);
 
+		/// @brief Destroys an entity on the next available tick of the EntityManager System
+		/// @details This function is useful to destroy any entities that might be in use by other
+		/// systems at the time of its intended destruction; instead of immediately removing the entity
+		/// from the world, it waits until the @ref EntityManagerSystem ticks again to remove it
+		static void QueueDestroy(Entity &&entity);
+
 		void SetParent(const Entity &parent);
 
 		[[hush::export]]
@@ -370,6 +385,16 @@ namespace Hush
 		std::string_view GetKey() const;
 
 		[[nodiscard]]
+		std::string_view QueryName() const;
+
+		// HACK: To avoid exporting a string view
+		[[hush::export]]
+		void GetKey(std::span<char> buffer) const;
+
+		[[hush::export]]
+		void QueryName(std::span<char> buffer) const;
+
+		[[nodiscard]]
 		inline bool IsValid() const
 		{
 			return this->m_entityId != INVALID_ENTITY_ID;
@@ -377,6 +402,31 @@ namespace Hush
 
 		[[nodiscard]] [[hush::export]]
 		bool IsAlive() const;
+
+		/// @brief Returns true if the given entity ID encodes a flecs relationship pair.
+		/// Flecs sets bit 63 (ECS_PAIR = 1ULL << 63) on all pair IDs. Pair components have
+		/// size zero and cannot be serialized like normal components.
+		[[nodiscard]]
+		static constexpr bool IsPairId(EntityId id) noexcept
+		{
+			return (id & (EntityId(1) << 63)) != 0;
+		}
+
+		/// Extracts the relation (first) 32-bit entity index from a pair ID.
+		/// Flecs encodes pairs as ECS_PAIR | (relation << 32) | target.
+		[[nodiscard]]
+		static constexpr EntityId GetPairFirst(EntityId id) noexcept
+		{
+			constexpr EntityId ID_FLAGS_MASK = EntityId(0xFF) << 56;
+			return (id & ~ID_FLAGS_MASK) >> 32;
+		}
+
+		/// Extracts the target (second) 32-bit entity index from a pair ID (lower 32 bits).
+		[[nodiscard]]
+		static constexpr EntityId GetPairSecond(EntityId id) noexcept
+		{
+			return id & EntityId(0xFFFFFFFF);
+		}
 
 	private:
 		friend class Scene;

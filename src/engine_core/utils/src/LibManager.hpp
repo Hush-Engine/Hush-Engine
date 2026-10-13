@@ -5,6 +5,7 @@
 //  Created by Leonidas Neftali Gonzalez Campos on 13/12/23.
 //
 #pragma once
+#include <string_view>
 #ifdef _WIN32
 #include <Shlwapi.h>
 #define WIN32_LEAN_AND_MEAN
@@ -25,7 +26,13 @@
 class LibManager
 {
 public:
+#if HUSH_PLATFORM_WIN
+	constexpr static std::string_view LIB_FILE_EXTENSION = ".dll";
+#else
+	constexpr static std::string_view LIB_FILE_EXTENSION = ".dylib";
+#endif
 	/// @brief Opens the selected library path (analogous to dlopen)
+	//
 	/// @param libraryPath Path of the dynamically linked library
 	/// @return A handle of the desired library or null
 	static void *LibraryOpen(const char *libraryPath);

@@ -2,11 +2,11 @@
 #include "Assertions.hpp"
 #include "BitwiseUtils.hpp"
 #include "CommandPanel.hpp"
+#include "GamePanel.hpp"
 #include "HierarchyPanel.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
 #include "NotificationPanel.hpp"
-#include "ScriptingHost.hpp"
 #include "TitleBarMenuPanel.hpp"
 #include "ScenePanel.hpp"
 #include <cstring>
@@ -57,6 +57,7 @@ void Hush::UI::Init(Scene *parentScene)
 	ADD_PANEL(parentScene, this->m_activePanels, TitleBarMenuPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, NotificationPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ScenePanel);
+	ADD_PANEL(parentScene, this->m_activePanels, GamePanel);
 	ADD_PANEL(parentScene, this->m_activePanels, HierarchyPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, ContentPanel);
 	ADD_PANEL(parentScene, this->m_activePanels, CommandPanel);
@@ -407,6 +408,11 @@ bool Hush::UI::BeginToolBar()
 {
 	constexpr ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_None;
 	return ImGui::Begin("##toolbar", nullptr, toolbarFlags);
+}
+
+bool Hush::UI::IsItemDoubleClicked()
+{
+	return ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
 }
 
 ImGuiID Hush::UI::DockSpace(const char *dockspaceId, const char *name, ImGuiDockNodeFlags additionalFlags)

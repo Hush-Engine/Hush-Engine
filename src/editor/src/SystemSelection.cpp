@@ -1,36 +1,35 @@
 #include "SystemSelection.hpp"
 #include "Assertions.hpp"
+#include "HushEngine.hpp"
 #include "Logger.hpp"
 #include "Scene.hpp"
-#include "ScriptingHost.hpp"
+#include "ModuleRegistry.hpp"
 #include "UI.hpp"
+#include "UIUtils.hpp"
 
 #include <imgui/imgui.h>
-#include <magic_enum/magic_enum.hpp>
+#include <algorithm>
+#include <string>
+#include <vector>
 
-constexpr int32_t MAX_COLUMNS = 4;		// hard cap (change to 5 if preferred)
-constexpr float MIN_COL_WIDTH = 120.0f; // below this, don't add another column
-constexpr float COL_GAP = 8.0f;
-constexpr float MIN_ROW_HEIGHT = 18.0f;
-constexpr float MAX_ROW_HEIGHT = 28.0f;
-constexpr int32_t IDEAL_ROWS = 6; // target rows before spilling to a new column
-
-bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::ScriptingHost *scriptingHost,
-												   int32_t *selectedSystemIndex)
+bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, State *state)
 {
-	HUSH_ASSERT(selectedSystemIndex != nullptr, "A pointer to the selected / desired system is needed");
-	const std::vector<ScriptingSystemInfo> &items = scriptingHost->GetAvailableSystems();
-	ImGui::SetNextWindowSize(ImVec2(520, 480), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSizeConstraints(ImVec2(300, 200), ImVec2(FLT_MAX, FLT_MAX));
+	HUSH_ASSERT(state != nullptr, "A valid SystemSelection::State is needed");
+	Modules::ModuleRegistry *registry = scene->GetEngine()->GetModuleRegistry();
+	const auto &modules = registry->GetAllModules();
+
+	ImGui::SetNextWindowSize(ImVec2(420, 480), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSizeConstraints(ImVec2(280, 200), ImVec2(FLT_MAX, FLT_MAX));
 
 	UI::BeginCenterPopup("System List");
 
 	const float btnW = 100.0f;
 	const float btnSpacing = ImGui::GetStyle().ItemSpacing.x;
-	const float btnBarH = ImGui::GetFrameHeightWithSpacing();
+	const float btnBarH = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
 
 	bool shouldKeepOpen = true;
-	// --- Search bar (full width) ---
+
+	// Search bar
 	static char searchBuf[128] = "";
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 	ImGui::InputTextWithHint("##search", "Search...", searchBuf, sizeof(searchBuf));
@@ -38,94 +37,99 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	// --- Filter ---
-	// std::string query(searchBuf);
-	// std::transform(query.begin(), query.end(), query.begin(), ::tolower);
+	const std::string_view search = searchBuf;
 
-	// std::vector<const SystemItem*> filtered;
-	// for (auto& item : items) {
-	//     std::string lower = item.name;
-	//     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-	//     if (query.empty() || lower.find(query) != std::string::npos)
-	//         filtered.push_back(&item);
-	// }
-
-	// const int   itemCount = (int)filtered.size();
-	const size_t itemCount = items.size();
-	const float totalW = ImGui::GetContentRegionAvail().x;
-	const float gridH = ImGui::GetContentRegionAvail().y - btnBarH - ImGui::GetStyle().ItemSpacing.y;
-
-	// --- Compute column count ---
-	// Start from the number of columns needed to keep rows <= IDEAL_ROWS,
-	// then clamp to MAX_COLUMNS and to what actually fits width-wise.
-	int32_t cols = 1;
-	if (itemCount > 0)
+	// Pre-filter: collect visible systems, skipping non-Active modules and non-matching names.
+	// moduleName string_views point into record.name (std::string) — null-terminated, safe for ImGui.
+	struct VisibleEntry
 	{
-		// How many columns do we need so that rows-per-col <= IDEAL_ROWS?
-		cols = (int32_t)std::ceil((float)itemCount / (float)IDEAL_ROWS);
-		cols = std::max(1, std::min(cols, MAX_COLUMNS));
+		ModuleHandle module;
+		std::string_view moduleName;
+		Reflection::TypeId typeId;
+		std::string name; // owned — ForeignSystemDescriptor::name may not be null-terminated
+	};
 
-		// Walk back if a column would be too narrow to be readable
-		while (cols > 1)
+	std::vector<VisibleEntry> visible;
+	for (const auto &[handle, record] : modules)
+	{
+		if (record.state != Modules::EModuleState::Active)
+			continue;
+
+		for (const auto &sys : record.foreignSystems)
 		{
-			float colW = (totalW - COL_GAP * (float)(cols - 1)) / (float)cols;
-			if (colW >= MIN_COL_WIDTH)
-			{
-				break;
-			}
-			--cols;
+			if (!search.empty() && sys.name.find(search) == std::string_view::npos)
+				continue;
+			visible.push_back({handle, record.name, sys.typeId, std::string(sys.name)});
+		}
+		for (const auto &sys : record.nativeSystems)
+		{
+			std::string_view sysName = sys.name ? sys.name : "";
+			if (!search.empty() && sysName.find(search) == std::string_view::npos)
+				continue;
+			visible.push_back({handle, record.name, sys.typeId, std::string(sysName)});
 		}
 	}
 
-	const size_t rows = (itemCount + cols - 1) / cols; // ceil(itemCount / cols)
-	const float colW = (totalW - COL_GAP * (float)(cols - 1)) / (float)cols;
+	// Sort by module name so a single pass can group entries under headers.
+	std::sort(visible.begin(), visible.end(),
+			  [](const VisibleEntry &a, const VisibleEntry &b) { return a.moduleName < b.moduleName; });
 
-	// Row height shrinks proportionally to fill the available grid height,
-	// but is clamped between MIN and MAX so text stays legible.
-	float rowH =
-		(rows > 0) ? (gridH - ImGui::GetStyle().ItemSpacing.y * (float)(rows - 1)) / (float)rows : MAX_ROW_HEIGHT;
-	rowH = std::max(MIN_ROW_HEIGHT, std::min(rowH, MAX_ROW_HEIGHT));
+	// Scrollable list
+	const float listH = ImGui::GetContentRegionAvail().y - btnBarH;
+	ImGui::BeginChild("##syslist", ImVec2(0.0f, listH), 0, ImGuiWindowFlags_None);
 
-	// --- Grid child (no scrollbar; everything fits by design) ---
-	ImGui::BeginChild("##grid", ImVec2(0.0f, gridH), 0, ImGuiWindowFlags_NoScrollbar);
-
-	for (size_t row = 0; row < rows; ++row)
+	std::string_view currentModule;
+	bool headerOpen = false;
+	for (const auto &entry : visible)
 	{
-		for (size_t col = 0; col < cols; ++col)
+		if (entry.moduleName != currentModule)
 		{
-			size_t idx = (col * rows) + row; // column-major fill (left-to-right, top-to-bottom)
-			if (idx >= itemCount)
+			if (headerOpen)
 			{
-				break;
+				ImGui::TreePop();
 			}
-
-			if (col > 0)
-			{
-				ImGui::SameLine((float)col * (colW + COL_GAP));
-			}
-
-			ImGui::PushID(items[idx].registryIndex);
-			bool selected = *selectedSystemIndex >= 0 && idx == static_cast<size_t>(*selectedSystemIndex);
-			ImGui::Selectable(items[idx].name, &selected, 0, ImVec2(colW, rowH));
-			if (selected)
-			{
-				*selectedSystemIndex = static_cast<int32_t>(idx);
-			}
-			ImGui::PopID();
+			currentModule = entry.moduleName;
+			headerOpen = ImGui::TreeNodeEx(currentModule.data(),
+										   ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 		}
+		if (!headerOpen)
+		{
+			continue;
+		}
+
+		bool isChecked = state->checked.contains(entry.typeId.id);
+		ImGui::PushID((int)(entry.typeId.id & 0xFFFFFFFFu));
+		if (ImGui::Checkbox(entry.name.c_str(), &isChecked))
+		{
+			if (isChecked)
+			{
+				state->checked.insert(entry.typeId.id);
+			}
+			else
+			{
+				state->checked.erase(entry.typeId.id);
+			}
+		}
+		ImGui::PopID();
+	}
+	if (headerOpen)
+	{
+		ImGui::TreePop();
 	}
 
 	ImGui::EndChild();
 
-	// --- Bottom-right buttons ---
+	// Bottom buttons
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - (btnW * 2 + btnSpacing));
+	const bool anyChecked = !state->checked.empty();
+
+	ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - (btnW * 2.0f + btnSpacing));
 
 	if (ImGui::Button("Cancel", ImVec2(btnW, 0)))
 	{
-		// TODO: cancel
+		state->Clear();
 		shouldKeepOpen = false;
 	}
 
@@ -135,26 +139,42 @@ bool Hush::SystemSelection::RenderSystemListWindow(Hush::Scene *scene, Hush::Scr
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.57f, 1.00f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.40f, 0.80f, 1.0f));
 
+	if (!anyChecked)
+		ImGui::BeginDisabled();
+
+	// PERF(Nef): This is still quite bad, we could make it better by saving both the module handle and the system id in
+	// our set
 	if (ImGui::Button("Add System", ImVec2(btnW, 0)))
 	{
-		// TODO: add
-		const ScriptingSystemInfo &systemInfo = items[*selectedSystemIndex];
-		auto createResult = scriptingHost->CreateSystem(systemInfo);
-		if (createResult.has_error())
+		for (const auto &entry : visible)
 		{
-			LogFormat(ELogLevel::Error, "Could not create system {}. Error: {}", systemInfo.name,
-					  magic_enum::enum_name(createResult.error()));
+			if (!state->checked.contains(entry.typeId.id))
+			{
+				continue;
+			}
+
+			const auto err = registry->AddSystemToScene(entry.module, entry.typeId, *scene);
+			if (err != Modules::ModuleRegistry::EError::None)
+			{
+				LogFormat(ELogLevel::Error, "Could not add system {}", entry.name);
+			}
+			else
+			{
+				Entity toast = scene->CreateEntity();
+				toast.EmplaceComponent<ToastNotification>(std::string("Created system: ") + entry.name, 2.f,
+														  ToastNotification::EToastType::Info);
+			}
 		}
-		else
-		{
-			scene->AddScriptingSystem(createResult.value());
-			// Maybe make a toast notification(?
-		}
+		state->Clear();
 		shouldKeepOpen = false;
 	}
 
-	ImGui::PopStyleColor(3);
+	if (!anyChecked)
+	{
+		ImGui::EndDisabled();
+	}
 
+	ImGui::PopStyleColor(3);
 	ImGui::End();
 	return shouldKeepOpen;
 }

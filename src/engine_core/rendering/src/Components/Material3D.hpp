@@ -240,7 +240,7 @@ namespace Hush::Graphics
 		/// @param callback function to call on each property binding, should return true if any changes were made to
 		/// the property value (i.e, changing a color), false otherwise
 		void OnEachPropertyMut(
-			std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>)> callback);
+			std::function<bool(std::string_view, MaterialPropertyInfo *, std::span<std::byte>, int32_t)> callback);
 
 		/// @brief Get the total uniform buffer size in bytes.
 		[[nodiscard]]

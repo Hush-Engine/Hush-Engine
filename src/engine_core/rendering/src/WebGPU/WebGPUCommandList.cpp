@@ -270,6 +270,7 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 		}
 		ReleaseHandle(m_computePass);
 		ReleaseHandle(m_commandBuffer);
@@ -305,6 +306,7 @@ namespace Hush::Graphics
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 
@@ -520,10 +522,12 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
+			m_renderPass.release();
 		}
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 		}
 		ReleaseHandle(m_renderPass);
 		ReleaseHandle(m_computePass);
@@ -566,12 +570,14 @@ namespace Hush::Graphics
 		if (m_inRenderPass && m_renderPass != nullptr)
 		{
 			m_renderPass.end();
+			m_renderPass.release();
 			m_inRenderPass = false;
 		}
 
 		if (m_inComputePass && m_computePass != nullptr)
 		{
 			m_computePass.end();
+			m_computePass.release();
 			m_inComputePass = false;
 		}
 

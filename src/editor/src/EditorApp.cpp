@@ -11,23 +11,28 @@
 #include "CookerService.hpp"
 #include "CookedDirectory.hpp"
 #include "Entity.hpp"
+#include "EntityManagerSystem.hpp"
 #include "FileWatcher.hpp"
 #include "HushEngine.hpp"
 #include "IApplication.hpp"
 #include "ISystem.hpp"
+#include "LibManager.hpp"
+#include "../modules/src/ModuleRegistry.hpp"
+#include "../modules/src/NativeModuleLoader.hpp"
+#include "NullTerminatedStringView.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Scene.hpp"
 #include "Shared/DirectionalLight.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "TransformationSystem.hpp"
 #include "UI.hpp"
+#include "UIUtils.hpp"
 #include "VirtualFilesystem.hpp"
 #include "WebGPU/WebGPUGraphicsDevice.hpp"
 #include "backends/imgui_impl_sdl3.h"
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
-#include "ScriptingHost.hpp"
 #include "imguizmo/ImGuizmo.h"
 #include "systems/EditorCameraSystem.hpp"
 #include "systems/RenderingSystem.hpp"
@@ -41,12 +46,16 @@
 #include "RenderGraph/RenderGraph.hpp"
 #include "Logger.hpp"
 
+#include <filesystem>
+#include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_wgpu.h>
 
 #include <algorithm>
+#include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <string_view>
 #include "Profiling.hpp"
 
 // This is temporary lol
@@ -57,6 +66,11 @@
 
 class EditorApp final : public Hush::IApplication
 {
+	// UX: Create a better message
+	static constexpr std::string_view SCENE_PATH_NOT_SET_ON_PLAY_ERR =
+		"Your scene must be saved to a file before playing!";
+	static constexpr std::string_view SCENE_SAVED_ERR = "Failed to save scene!";
+
 public:
 	explicit EditorApp(Hush::HushEngine *engine)
 		: m_engine(engine),
@@ -76,21 +90,97 @@ public:
 		ImGui::DestroyContext();
 	}
 
+	void HookEvents()
+	{
+		Hush::Entity event = this->m_scene->CreateEntityWithKey(Hush::PLAY_TIME_EVENT_KEY);
+		this->m_scene->AddEventObserverRaw(event.GetId(), [](Hush::Entity::EntityId entity, Hush::Scene *scene) {
+			// Save our scene state
+			std::string sceneJson;
+			Hush::Entity editorEnt = scene->EntityFromIdUnchecked(entity);
+			auto *editorInfo = editorEnt.GetComponent<Hush::EditorInfo>();
+
+			if (editorInfo->lastUsedScenePath.empty())
+			{
+				// Send an error
+				Hush::Entity errEnt = scene->CreateEntity();
+				errEnt.EmplaceComponent<Hush::ToastNotification>(SCENE_PATH_NOT_SET_ON_PLAY_ERR, 4.0f,
+																 Hush::ToastNotification::EToastType::Error);
+				return;
+			}
+
+			Hush::Scene::EError err = scene->ToSceneAsset(sceneJson);
+			{
+				std::ofstream output;
+				output.open(editorInfo->lastUsedScenePath);
+				output << sceneJson;
+				output.close();
+			}
+			if (err != Hush::Scene::EError::None)
+			{
+				Hush::Entity errEnt = scene->CreateEntity();
+				errEnt.EmplaceComponent<Hush::ToastNotification>(SCENE_SAVED_ERR, 4.0f,
+																 Hush::ToastNotification::EToastType::Error);
+			}
+			editorInfo->isPlaying = true;
+			// TODO: Destroy all User systems and recreate them
+			// Call onto the scene's init func again
+			scene->Init();
+		});
+	}
+
+	void LoadModules(const std::filesystem::path &modulesRoot) override
+	{
+		auto moduleLoader = Hush::Modules::DynamicModuleLoader(*this->m_engine->GetModuleRegistry(), this->m_engine,
+															   &HUSH_FUNCPTR_TABLE);
+		// Go and check how many directories we have on the modules
+		auto dirIt = std::filesystem::directory_iterator{modulesRoot};
+		for (const std::filesystem::directory_entry &entry : dirIt)
+		{
+			// For each dir, we want to find out where the dll is, we need a convention for this
+			// Maybe modules/{Directory}/bin/{Directory}.dll, plain and simple?
+			std::filesystem::path binaryLocation = entry.path() / "bin/";
+			std::string moduleName = entry.path().stem().string();
+			binaryLocation /= moduleName + LibManager::LIB_FILE_EXTENSION.data();
+			if (!std::filesystem::exists(binaryLocation))
+			{
+				Hush::LogFormat(Hush::ELogLevel::Warn,
+								"Module {} does not have a corresponding {}{} binary file, try rebuilding your module "
+								"and placing it under the modules/{}/bin folder",
+								moduleName, moduleName, LibManager::LIB_FILE_EXTENSION, moduleName);
+				continue;
+			}
+			// The binary file exists, we can load it with a scripting host
+			auto loadRes = moduleLoader.Load(binaryLocation, moduleName, Hush::Modules::EModuleKind::Beef);
+			// Get the table of runtime ops
+			if (loadRes.has_error())
+			{
+				Hush::LogFormat(Hush::ELogLevel::Error, "Failed to load module {} (err: {})", moduleName,
+								magic_enum::enum_name(loadRes.error()));
+				continue;
+			}
+		}
+	}
+
 	void Init() override
 	{
 		// Make the giant System pool
 		this->m_cameraSystem = std::make_unique<Hush::EditorCameraSystem>(*this->m_scene);
 		auto windowSize = m_engine->GetWindowRenderer()->GetWindowSize();
 
+		// Must be the first thing to get called
+		this->m_scene->HookEvents();
+
 		this->m_scene->CreateEntityWithKey(EDITOR_CAMERA)
 			.EmplaceComponent<Hush::EditorCamera>(45.0f, static_cast<float>(windowSize.x),
 												  static_cast<float>(windowSize.y), 0.1f, 1000.0f);
 		this->m_scene->AddEngineSystem(new Hush::RenderingSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(new Hush::TransformationSystem(*this->m_scene));
+		this->m_scene->AddEngineSystem(new Hush::EntityManagerSystem(*this->m_scene));
 		this->m_scene->AddEngineSystem(this->m_cameraSystem.get());
 		Hush::Entity entt = this->m_scene->CreateEntityWithKey(ENGINE_MANAGER);
 
 		entt.AddComponent<Hush::EditorInfo>();
+		this->m_editorInfoRef = entt.CreateComponentReference<Hush::EditorInfo>();
 		this->m_resourceManager = &entt.AddComponent<Hush::ResourceManager>();
 
 		Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
@@ -123,17 +213,13 @@ public:
 
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
-		// Scripting
-		// constexpr std::string_view scriptingProjDllPath =
-		// "C:/Users/nefes/Personal/HushBindingGen/build/Debug_Win64/beef-hush/beef-hush.dll";
-		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
-		// this->m_scriptingHost->Initialize(scriptingProjDllPath);
-		// this->m_scriptingHost->GetStartScriptingConnectionFn()(&HUSH_FUNCPTR_TABLE, this->m_scene->GetEngine());
-		// this->m_scene->SetScriptingInterface(this->m_scriptingHost->GetScriptingSystemInterface());
-
+		this->LoadModules((projRoot / "modules").string());
 		this->m_resourceManager = m_engine->GetResourceManager();
 
 		// ── ImGui initialization ────────────────────────────────────
+		ImGui::SetAllocatorFunctions(
+			[](std::size_t size, void *) noexcept -> void * { return ::operator new(size, std::nothrow); },
+			[](void *p, void *) noexcept { ::operator delete(p); });
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO &io = ImGui::GetIO();
@@ -161,6 +247,8 @@ public:
 		wgpuInitInfo.DepthStencilFormat = WGPUTextureFormat_Undefined;
 		ImGui_ImplWGPU_Init(&wgpuInitInfo);
 
+		this->m_scene->Init();
+
 		// Register the render graph builder component so the RenderGraphSystem
 		// picks it up automatically and wires our passes into the frame.
 		Hush::Entity renderGraphBuilderEntity = this->m_scene->CreateEntityWithKey("EditorRenderGraphBuilder");
@@ -172,13 +260,13 @@ public:
 			this->UpdatePerFrameResources(graph);
 		};
 
-		this->m_scene->Init();
 		// Create a directional light
 		// Hush::Entity dirLightEntity = this->m_scene->CreateEntityWithName("Directional Light");
 		// dirLightEntity.AddComponent<Hush::WorldTransform>();
 		// dirLightEntity.AddComponent<Hush::LocalTransform>();
 		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
+		this->HookEvents();
 	}
 
 	void Update(float delta) override
@@ -190,10 +278,25 @@ public:
 				m_cookedDirectory.HandleFileEvent(ev.path, ev.type == Hush::FileWatchEvent::Type::Added,
 												  ev.type == Hush::FileWatchEvent::Type::Removed,
 												  ev.type == Hush::FileWatchEvent::Type::Modified);
+				if (ev.type == Hush::FileWatchEvent::Type::Modified)
+				{
+					// TODO: This would be the reload
+					//
+					//
+					// Hush::VirtualFilesystem *vfs = this->m_engine->GetVirtualFilesystem();
+					// auto res = vfs->ResolveHostPath(SCRIPTING_PROJ_DLL_PATH);
+					// if (res.has_error() || ev.path != res.value())
+					// {
+					// 	return;
+					// }
+					// // Modified the scripting, we need to reload the host
+					// this->m_scriptingHost->Reload(SCRIPTING_PROJ_DLL_PATH, vfs, this->GetScene());
+				}
 			});
 		}
 
-		this->m_scene->Update(delta);
+		bool isEditor = !(this->m_editorInfoRef.GetData<Hush::EditorInfo>()->isPlaying);
+		this->m_scene->Update(delta, isEditor);
 	}
 
 	void FixedUpdate(float delta) override
@@ -208,6 +311,7 @@ public:
 		// The texture was realized during the previous frame's OnPreRender
 		// (graph compile + resource realization).
 		UpdateScenePanelTexture();
+		UpdateGamePanelTexture();
 
 		// Start a new ImGui frame (platform + renderer backends + core)
 		ImGui_ImplWGPU_NewFrame();
@@ -234,6 +338,17 @@ public:
 			{
 				m_sceneBufferSize = scenePanel.GetPanelSize();
 				m_sceneBufferDirty = true;
+			}
+		}
+
+		auto &gamePanel = m_userInterface.GetPanel<Hush::GamePanel>();
+		if (gamePanel.ConsumeResized())
+		{
+			const auto newSize = gamePanel.GetPanelSize();
+			if (newSize.x > 0 && newSize.y > 0)
+			{
+				m_gameBufferSize = gamePanel.GetPanelSize();
+				m_gameBufferDirty = true;
 			}
 		}
 
@@ -268,6 +383,22 @@ public:
 			m_engine->GetWindowRenderer()->GetRenderDevice().Invalidate();
 		}
 
+		// Same as above, but for the game cameras (entities with a Camera
+		// component).  The WorldTransform term excludes the editor camera,
+		// which never has one.
+		if (m_gameBufferDirty)
+		{
+			m_gameBufferDirty = false;
+
+			glm::u32vec2 newSize = m_gameBufferSize;
+			this->m_scene->CreateQuery<Hush::Camera, Hush::WorldTransform>().Each(
+				[&newSize](Hush::Entity &, Hush::Camera &cam, Hush::WorldTransform &) {
+					cam.SetViewportSize(static_cast<float>(newSize.x), static_cast<float>(newSize.y));
+				});
+
+			m_engine->GetWindowRenderer()->GetRenderDevice().Invalidate();
+		}
+
 		// If the render graph is about to be rebuilt (Invalidated by us
 		// above, or externally by a window resize), steal the current
 		// scene texture out of the graph BEFORE Reset() destroys it.
@@ -277,6 +408,7 @@ public:
 		if (renderDevice.IsDirty())
 		{
 			CacheCurrentSceneTexture();
+			CacheCurrentGameTexture();
 		}
 
 		this->m_scene->PreRender();
@@ -504,15 +636,89 @@ private:
 		m_userInterface.SetSceneTextureView(nullptr, 0, 0);
 	}
 
+	/// @brief Steal ownership of the current game view texture from the render
+	///        graph so it survives a graph Reset().
+	void CacheCurrentGameTexture()
+	{
+		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
+		if (windowRenderer == nullptr)
+		{
+			return;
+		}
+
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
+
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("GameViewPass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
+
+		if (texRes != nullptr && texRes->texture != nullptr)
+		{
+			m_cachedGameTexture = std::move(texRes->texture);
+		}
+	}
+
+	void UpdateGamePanelTexture()
+	{
+		Hush::WindowRenderer *windowRenderer = m_engine->GetWindowRenderer();
+		if (windowRenderer == nullptr)
+		{
+			return;
+		}
+
+		auto &resourceManager = windowRenderer->GetRenderGraph().GetResourceManager();
+
+		Hush::RenderGraph::ResourceId id = resourceManager.GetResourceId("GameViewPass_RenderTexture");
+		if (id == Hush::RenderGraph::ResourceId{})
+		{
+			m_userInterface.SetGameTextureView(nullptr, 0, 0);
+			return;
+		}
+
+		auto *texRes = resourceManager.GetResource<Hush::Graphics::TextureResource>(id);
+
+		if (texRes != nullptr && texRes->texture != nullptr)
+		{
+			// New texture is realized — swap to it and release the old cache.
+			m_cachedGameTexture.reset();
+
+			Hush::Graphics::IGraphicsTexture *tex = texRes->texture.get();
+			void *nativeView = tex->GetNativeView();
+
+			m_userInterface.SetGameTextureView(nativeView, tex->GetWidth(), tex->GetHeight());
+			return;
+		}
+
+		// New texture is not realized yet (graph was just rebuilt).
+		// If we have a cached copy of the previous texture, keep
+		// displaying it — no flicker, no stale pointer.
+		if (m_cachedGameTexture != nullptr)
+		{
+			void *nativeView = m_cachedGameTexture->GetNativeView();
+			m_userInterface.SetGameTextureView(nativeView, m_cachedGameTexture->GetWidth(),
+											   m_cachedGameTexture->GetHeight());
+			return;
+		}
+
+		// No texture available at all (first frame).
+		m_userInterface.SetGameTextureView(nullptr, 0, 0);
+	}
+
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
-	Hush::ScriptingHost *m_scriptingHost = nullptr;
 	uintptr_t m_testSystem = 0;
 
 	/// Holds the previous scene texture alive across a render graph rebuild
 	/// so the ScenePanel's raw WGPUTextureView pointer doesn't dangle.
 	/// Released once the new texture is realized.
 	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedSceneTexture;
+
+	/// Same as above, but for the GamePanel's game view texture.
+	std::unique_ptr<Hush::Graphics::IGraphicsTexture> m_cachedGameTexture;
 
 	Hush::HushEngine *m_engine = nullptr;
 
@@ -522,6 +728,7 @@ private:
 	std::unique_ptr<Hush::FileWatcher> m_fileWatcher;
 	Hush::CookedDirectory m_cookedDirectory;
 	std::unique_ptr<Hush::CookerService> m_cookerService;
+	Hush::ComponentRef m_editorInfoRef;
 
 	/// Current desired size for the scene render texture (matches the
 	/// Scene panel's content region).  Updated each frame after DrawPanels.
@@ -530,6 +737,14 @@ private:
 	/// Set to true when the scene panel resizes; consumed in OnPreRender
 	/// to invalidate the render graph before the next rebuild.
 	bool m_sceneBufferDirty = false;
+
+	/// Current desired size for the game view render texture (matches the
+	/// Game panel's content region).  Updated each frame after DrawPanels.
+	glm::u32vec2 m_gameBufferSize{1, 1};
+
+	/// Set to true when the game panel resizes; consumed in OnPreRender
+	/// to invalidate the render graph before the next rebuild.
+	bool m_gameBufferDirty = false;
 
 	/// Resource ID of the imported swapchain backbuffer (updated each frame).
 	Hush::RenderGraph::ResourceId m_backbufferResourceId{};

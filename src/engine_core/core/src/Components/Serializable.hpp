@@ -25,10 +25,10 @@ namespace Hush
 		EError (*deserialize)(uint8_t *instance, Serialization::JsonDeserializer &deserializer, void *ctx) = nullptr;
 		void (*postDeserialize)(uint8_t *instance, Entity::EntityId containerEntity, Entity::EntityId componentType,
 								void *ctx) = nullptr;
-		void *ctx;
+		void *ctx = nullptr;
 
 		/// @brief Component type this serializable references
-		Entity::EntityId type;
+		Entity::EntityId type = Entity::INVALID_ENTITY_ID;
 
 		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough
 		template <class T>

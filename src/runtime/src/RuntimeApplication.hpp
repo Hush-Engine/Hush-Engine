@@ -36,6 +36,11 @@ namespace Hush
 
 		~RuntimeApplication() override = default;
 
+		void LoadModules(const std::filesystem::path &modulesRoot) override
+		{
+			(void)modulesRoot;
+		}
+
 		/// Loads the manifest, mounts the content, loads the modules and
 		/// creates the configured systems.
 		void Init() override;

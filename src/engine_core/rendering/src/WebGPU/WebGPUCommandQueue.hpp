@@ -15,7 +15,7 @@ namespace Hush::Graphics
 	{
 	public:
 		WebGPUCommandQueue(wgpu::Device device, wgpu::Instance instance, wgpu::Queue queue, EQueueType type);
-		~WebGPUCommandQueue() override = default;
+		~WebGPUCommandQueue() override;
 
 		WebGPUCommandQueue(const WebGPUCommandQueue &) = delete;
 		WebGPUCommandQueue(WebGPUCommandQueue &&) = delete;
@@ -41,6 +41,7 @@ namespace Hush::Graphics
 		[[nodiscard]]
 		void *GetNativeHandle() const override;
 
+		/// @brief Returns the handle to the queue that's referenced in this wrapper (the wrapper is owning)
 		[[nodiscard]]
 		wgpu::Queue GetQueue() const
 		{

@@ -4,7 +4,9 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include "Assertions.hpp"
 #include "Mat4Math.hpp"
 
 Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, const glm::quat &rotation)
@@ -15,8 +17,10 @@ Hush::Transform::Transform(const glm::vec3 &position, const glm::vec3 &scale, co
 void Hush::Transform::SetPosition(glm::vec3 position) noexcept
 {
 	this->m_transform[Mat4Math::TRANSLATION_COLUMN] = glm::vec4(position, 1.0F);
+	this->m_dirty = true;
 }
 
+// TODO: Remove these two functions, access should not skip the dirty flag
 const glm::vec3 *Hush::Transform::GetPosition() const noexcept
 {
 	// WARN: This is potentially undefined behaviour, but, should work for all compilers
@@ -31,13 +35,18 @@ glm::vec3 *Hush::Transform::GetPosition() noexcept
 	return reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
 }
 
-void Hush::Transform::SetScale(const glm::vec3 &scale) noexcept
+glm::vec3 Hush::Transform::GetPositionValue() const noexcept
+{
+	return *reinterpret_cast<glm::vec3 *>(&this->m_transform[Mat4Math::TRANSLATION_COLUMN]);
+}
+
+void Hush::Transform::SetScale(glm::vec3 scale) noexcept
 {
 	this->m_scale = scale;
 	this->m_dirty = true;
 }
 
-const glm::vec3 &Hush::Transform::GetScale() const noexcept
+glm::vec3 Hush::Transform::GetScale() const noexcept
 {
 	return this->m_scale;
 }
@@ -104,6 +113,15 @@ glm::mat4 Hush::Transform::GetTransformationMatrix() const
 	this->m_transform = Mat4Math::ComposeTRS(*position, this->m_rotation, this->m_scale);
 	this->m_dirty = false;
 	return this->m_transform;
+}
+
+void Hush::Transform::GetTransformationMatrixUnsafe(float *outMatrix, size_t count) const
+{
+	HUSH_ASSERT(count == 16, "16 floats is the only acceptable count for this matrix!");
+
+	glm::mat4 mat = this->GetTransformationMatrix();
+	float *data = glm::value_ptr(mat);
+	std::memcpy(outMatrix, data, sizeof(float) * count);
 }
 
 glm::mat4 Hush::Transform::XForm(const Transform &other) const

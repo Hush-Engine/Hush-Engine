@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "HushBindings.hpp"
 #include "HushModuleAbi.h"
 
 #include "ISystem.hpp"
@@ -43,6 +44,10 @@ namespace Hush::Modules
 		Rust,
 		DotNetCoreClr,
 		DotNetNativeAot,
+		Beef,
+		Odin,
+		Jai,
+		Other, // User-specified foreign language
 	};
 
 	/// Registration state of a module record.
@@ -59,9 +64,9 @@ namespace Hush::Modules
 	struct ForeignSystemDescriptor
 	{
 		Reflection::TypeId typeId;
-		std::string name;
-		std::uint16_t order = 0;
-		std::uint32_t lifecycleMask = 0;
+		std::string_view name;
+		uint16_t order = 0;
+		uint32_t lifecycleMask = 0;
 	};
 
 	/// Everything the engine knows about one loaded module.
@@ -197,7 +202,7 @@ namespace Hush::Modules
 		/// Native systems are created directly, foreign systems are wrapped in
 		/// a ModuleSystem adapter.
 		Result<std::unique_ptr<ISystem>, EError> CreateSystem(ModuleHandle module, Reflection::TypeId typeId,
-															  Scene &scene);
+															  Scene &scene) const;
 
 		/// Creates a system from the stable names stored in manifests and scene assets.
 		Result<std::unique_ptr<ISystem>, EError> CreateSystem(std::string_view moduleName, std::string_view typeName,
@@ -212,6 +217,11 @@ namespace Hush::Modules
 
 		/// Finds a module by its display name.
 		Result<ModuleHandle, EError> FindModuleByName(std::string_view name);
+
+		const std::unordered_map<ModuleHandle, ModuleRecord> &GetAllModules() const
+		{
+			return this->m_modules;
+		}
 
 		/// Removes the module and every reflected type it owns. Native module
 		/// libraries remain loaded until their last live system is destroyed.
@@ -234,6 +244,7 @@ namespace Hush::Modules
 		Reflection::ReflectionDB &m_reflectionDB;
 
 		mutable std::shared_mutex m_mutex;
+		// This used to be a std::unordered_map, there's no reason this can't be just a linear array tho
 		std::unordered_map<ModuleHandle, ModuleRecord> m_modules;
 		ModuleHandle m_nextHandle = ENGINE_MODULE_HANDLE + 1;
 	};

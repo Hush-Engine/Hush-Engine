@@ -8,7 +8,6 @@
 #include "Logger.hpp"
 #include "Scene.hpp"
 #include "ScenePanel.hpp"
-#include "ScriptingHost.hpp"
 #include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
@@ -56,13 +55,9 @@ void Hush::CommandPanel::Init(Scene *activeScene) noexcept
 	this->m_activeScene = activeScene;
 	this->m_currentlyAvailableCommands = {BUILT_IN_COMMANDS.begin(), BUILT_IN_COMMANDS.end()};
 
-	activeScene->CreateQuery<EditorInfo, ScriptingHost>().Each([this]([[maybe_unused]]
-																	  Entity &entity,
-																	  EditorInfo &infoRef,
-																	  ScriptingHost &scriptingHostRef) {
-		this->m_editorInfo = &infoRef;
-		this->m_scriptingHost = &scriptingHostRef;
-	});
+	activeScene->CreateQuery<EditorInfo>().Each([this]([[maybe_unused]]
+													   Entity &entity,
+													   EditorInfo &infoRef) { this->m_editorInfo = &infoRef; });
 }
 
 void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
@@ -81,8 +76,7 @@ void Hush::CommandPanel::OnRender([[maybe_unused]] float deltaTime)
 		this->AddComponentPopup();
 		break;
 	case EState::AddSystemMode: {
-		bool popupOpen =
-			SystemSelection::RenderSystemListWindow(this->m_activeScene, this->m_scriptingHost, &this->m_selectedItem);
+		bool popupOpen = SystemSelection::RenderSystemListWindow(this->m_activeScene, &this->m_systemSelectionState);
 		if (!popupOpen)
 		{
 			this->CloseCommandMode();
@@ -156,6 +150,7 @@ void Hush::CommandPanel::CloseCommandMode()
 	this->m_selectedCommandIdx = -1;
 	this->m_selectedItem = -1;
 	this->m_keyboardFocusSet = false;
+	this->m_systemSelectionState.Clear();
 	if (this->m_editorInfo->currentState == EEditorState::CommandMode)
 	{
 		this->m_editorInfo->currentState = EEditorState::None;
@@ -345,8 +340,9 @@ void Hush::CommandPanel::AddComponentPopup()
 
 	// Find all components
 	const std::vector<Entity::EntityId> &registeredComps = this->m_activeScene->GetAllRegisteredComponents();
-	popupState.options.reserve(registeredComps.size());
-	for (Entity::EntityId id : registeredComps)
+	std::vector<Entity::EntityId> allComponentIds{registeredComps.begin(), registeredComps.end()};
+	popupState.options.reserve(allComponentIds.size());
+	for (Entity::EntityId id : allComponentIds)
 	{
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(id);
 		popupState.options.emplace_back(ent.GetKey());
@@ -359,7 +355,7 @@ void Hush::CommandPanel::AddComponentPopup()
 		Entity *entityRef;
 		const std::vector<Entity::EntityId> *compsArr;
 	};
-	PopupCtx popupCtx{.entityRef = &inspectedEntity, .compsArr = &registeredComps};
+	PopupCtx popupCtx{.entityRef = &inspectedEntity, .compsArr = &allComponentIds};
 
 	popupState.ctx = &popupCtx;
 

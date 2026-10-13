@@ -15,8 +15,15 @@
 
 #include "HushEngine.hpp"
 #include "Scene.hpp"
-#include "ModuleBindingApi.hpp"
+#include "reflection/Variant.hpp"
+#include "reflection/FieldInfo.hpp"
+#include "../engine_core/modules/src/ModuleBindingApi.hpp"
 #include "Components/Transform.hpp"
 #include "InputManager.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
+#include "Shared/Camera.hpp"
+#include "Components/MeshReference.hpp"
+#include "crypto/Hashing.hpp"
+#include "Components/ComponentMetadata.hpp"
 
 // NOLINTEND

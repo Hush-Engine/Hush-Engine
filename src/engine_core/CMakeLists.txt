@@ -8,7 +8,6 @@ add_subdirectory(renderer)
 add_subdirectory(rendering)
 add_subdirectory(utils)
 add_subdirectory(memory)
-add_subdirectory(scripting)
 add_subdirectory(resources)
 add_subdirectory(filesystem)
 add_subdirectory(threading)
@@ -23,7 +22,6 @@ target_link_libraries(HushLibs INTERFACE
         Hush::Input $<TARGET_OBJECTS:HushInput>
         Hush::Log $<TARGET_OBJECTS:HushLog>
         Hush::Rendering $<TARGET_OBJECTS:HushRendering>
-        Hush::Scripting $<TARGET_OBJECTS:HushScripting>
         Hush::Utils $<TARGET_OBJECTS:HushUtils>
         Hush::Resources $<TARGET_OBJECTS:HushResources>
         Hush::Filesystem $<TARGET_OBJECTS:HushFilesystem>

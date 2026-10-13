@@ -27,7 +27,7 @@ namespace Hush
 
 		std::optional<Entity> m_inspectTarget = std::nullopt;
 
-		EditorInfo *m_editorInfo = nullptr;
+		ComponentRef m_editorInfo{};
 
 		Scene *m_activeScene;
 	};

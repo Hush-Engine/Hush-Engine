@@ -20,6 +20,8 @@ struct SceneData
     float4 ambientColor;
     float4 sunlightDirection; // .w = sun power
     float4 sunlightColor;
+    vec3 cameraPos;
+    float _pad;
 };
 
 struct ModelData
@@ -120,11 +122,6 @@ float3 calculateTangentGramSchmidt(float3 normal, float3 tangent)
 float3 viewMatExtractFwd(float4x4 viewMatrix)
 {
     return float3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-}
-
-float3 viewMatExtractPos(float4x4 viewMatrix)
-{
-    return -float3(viewMatrix[3][0], viewMatrix[3][1], viewMatrix[3][2]);
 }
 
 float3 scalarPow(float3 v, float n)
@@ -252,7 +249,7 @@ struct FragmentOutput
 FragmentOutput fragMain(VertexOutput input)
 {
     float4 texColor = colorTex.Sample(defaultSampler, input.outUV);
-    float alpha = texColor.w;
+    float alpha = texColor.w * materialData.colorFactors.a;
     if (alpha < materialData.alphaCutoff)
     {
         discard;
@@ -287,7 +284,7 @@ FragmentOutput fragMain(VertexOutput input)
         return o;
     }
 
-    float3 fragToCamDir = normalize(viewMatExtractPos(u_sceneData.view) - input.outWorldPos);
+    float3 fragToCamDir = normalize(u_sceneData.cameraPos - input.outWorldPos);
     params.View = fragToCamDir;
     params.NdotV = max(dot(params.Normal, params.View), 0.0);
 
@@ -299,6 +296,10 @@ FragmentOutput fragMain(VertexOutput input)
     float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
 
     FragmentOutput o;
-    o.color = float4(ambient + directLight + emission, texColor.a);
+    vec3 finalColor = vec3(ambient + directLight + emission);
+    finalColor = finalColor / (finalColor + vec3(1.0f));
+    const float gamma = 1.0f;
+    finalColor = pow(finalColor, vec3(1.0f / gamma, 1.0f / gamma, 1.0f / gamma));
+    o.color = vec4(finalColor, alpha);
     return o;
 }

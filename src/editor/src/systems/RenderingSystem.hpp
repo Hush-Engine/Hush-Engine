@@ -5,13 +5,16 @@
 #include "Components/WorldTransform.hpp"
 #include "CookerService.hpp"
 #include "Entity.hpp"
+#include "HushBindings.hpp"
 #include "ISystem.hpp"
 #include "Loaders/CrossLoaderDefinitions.hpp"
 #include "Query.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Shared/DirectionalLight.hpp"
+#include "Shared/Camera.hpp"
 #include "Shared/EditorCamera.hpp"
 #include "Shared/PBRMaterial.hpp"
+#include "Systems/RenderingSystemAPI.hpp"
 #include "VirtualFilesystem.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/glm.hpp>
@@ -66,7 +69,16 @@ namespace Hush
 	class RenderingSystem final : public ISystem
 	{
 	public:
-		using ISystem::ISystem;
+		explicit RenderingSystem(Scene &scene)
+			: ISystem(scene)
+		{
+			// Run AFTER ResourceUploadSystem (order 0). Its OnPreRender maps the
+			// staging buffer and issues a blocking device-wide poll(); running
+			// concurrently with this system's queue.writeBuffer calls (both were
+			// in the default order-0 parallel bucket) corrupts wgpu's internal
+			// heap. Separation keeps every system's wgpu access single-threaded.
+			SetOrder(1);
+		}
 
 		void Init() override;
 
@@ -88,8 +100,15 @@ namespace Hush
 		/// @brief Default PBR material descriptor for instancing any other material
 		Graphics::Material3DDescriptor &GetPBRDescriptor();
 
+		const RenderingContext *GetRenderingContext()
+		{
+			return &this->m_renderingContext;
+		}
+
 	private:
 		static void BuildScenePassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
+
+		static void BuildGameViewPassFunction(Hush::RenderGraph::RenderGraph &graph, Hush::RenderingSystem *self);
 
 		void SetupGridPipeline(Graphics::IGraphicsDevice *device, VirtualFilesystem *vfs,
 							   Graphics::ShaderCompiler *shaderCompiler);
@@ -101,10 +120,17 @@ namespace Hush
 
 		Query<const MeshReference, const WorldTransform> m_renderableTargetsQuery;
 		Query<EditorCamera> m_editorCameraQuery;
+		Query<Camera, WorldTransform> m_gameCameraQuery;
 
 		GridViewUniforms m_cachedViewUniforms{};
 		SceneData m_cachedSceneData{};
 		glm::u32vec2 m_cachedViewportSize{1, 1};
+
+		// Game view (rendered from an entity's Camera component)
+		SceneData m_cachedGameSceneData{};
+		glm::u32vec2 m_cachedGameViewportSize{1, 1};
+		glm::vec2 m_cachedGameViewportPosition{};
+		bool m_hasValidGameCamera = false;
 
 		// Lighting
 		Query<DirectionalLight, WorldTransform> m_directionalLightsQuery;
@@ -130,9 +156,11 @@ namespace Hush
 		std::unique_ptr<Graphics::IBindGroupLayout> m_meshSceneBindGroupLayout;
 		std::unique_ptr<Graphics::IBindGroupLayout> m_meshMaterialBindGroupLayout;
 		std::unique_ptr<Graphics::IBindGroup> m_meshSceneBindGroup;
+		std::unique_ptr<Graphics::IBindGroup> m_gameMeshSceneBindGroup;
 		std::unique_ptr<Graphics::IBindGroup> m_meshMaterialBindGroup;
 
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_sceneDataBuffer;
+		std::unique_ptr<Graphics::IGraphicsBuffer> m_gameSceneDataBuffer;
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshModelBuffer;
 		std::unique_ptr<Graphics::IGraphicsBuffer> m_meshMaterialBuffer;
 		uint32_t m_meshModelSlotSize = 0;

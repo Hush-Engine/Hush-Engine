@@ -72,17 +72,32 @@ namespace Hush::Graphics
 		FlushDeletionQueue();
 
 		m_graphicsQueue.reset();
+
+		// Release the frame texture before unconfiguring the surface so its
+		// registry slot is freed while the surface is still valid.
+		m_currentFrameTexture = WebGPUTexture();
 		m_currentFrameView = nullptr;
 
-		if (static_cast<WGPUSurface>(m_surface) != nullptr)
+		if (m_surface != nullptr)
 		{
 			m_surface.unconfigure();
+			m_surface.release();
 		}
 
-		m_surface = nullptr;
-		m_device = nullptr;
-		m_adapter = nullptr;
-		m_instance = nullptr;
+		if (m_device != nullptr)
+		{
+			m_device.release();
+		}
+
+		if (m_adapter != nullptr)
+		{
+			m_adapter.release();
+		}
+
+		if (m_instance != nullptr)
+		{
+			m_instance.release();
+		}
 
 		LogTrace("WebGPU Graphics Device destroyed");
 	}
@@ -110,6 +125,17 @@ namespace Hush::Graphics
 	{
 		wgpu::DeviceDescriptor deviceDesc{};
 		deviceDesc.label = wgpu::StringView("Hush Graphics Device");
+
+		// Wire up the uncaptured-error and device-lost callbacks so wgpu
+		// validation/device errors surface in the engine log instead of being
+		// silently dropped (the old default wgpu handler only writes to stderr).
+		deviceDesc.uncapturedErrorCallbackInfo.callback = &WebGPUGraphicsDevice::OnDeviceError;
+		deviceDesc.uncapturedErrorCallbackInfo.userdata1 = this;
+
+		deviceDesc.deviceLostCallbackInfo.callback = &WebGPUGraphicsDevice::OnDeviceLost;
+		deviceDesc.deviceLostCallbackInfo.userdata1 = this;
+		deviceDesc.deviceLostCallbackInfo.mode = wgpu::CallbackMode::AllowSpontaneous;
+
 		m_device = m_adapter.requestDevice(deviceDesc);
 		HUSH_ASSERT(m_device, "Failed to request WebGPU device");
 
@@ -234,6 +260,7 @@ namespace Hush::Graphics
 	std::unique_ptr<IGraphicsBuffer> WebGPUGraphicsDevice::CreateBuffer(const BufferDescriptor &descriptor)
 	{
 		wgpu::Buffer buffer = this->CreateBufferInternal(descriptor);
+
 		if (buffer == nullptr)
 		{
 			// Error is logged on the internal function
@@ -257,7 +284,7 @@ namespace Hush::Graphics
 			return;
 		}
 
-		wgpu::Queue queue = m_device.getQueue();
+		wgpu::Queue queue = this->m_graphicsQueue->GetQueue();
 		queue.writeBuffer(webgpuBuffer->GetBuffer(), offset, data, static_cast<size_t>(size));
 	}
 
@@ -303,9 +330,11 @@ namespace Hush::Graphics
 			encoder.copyBufferToBuffer(oldBuffer, 0, buff, 0, bytesToCopy);
 
 			wgpu::CommandBuffer cmdBuffer = encoder.finish();
+			encoder.release();
 			wgpu::Queue nativeQueue = static_cast<WGPUQueue>(this->m_graphicsQueue->GetNativeHandle());
 
 			nativeQueue.submit(cmdBuffer);
+			cmdBuffer.release();
 		}
 
 		// Destroy the current buffer
@@ -518,6 +547,15 @@ namespace Hush::Graphics
 		emscripten_sleep(0);
 #else
 		m_surface.present();
+		// Release the current frame texture so wgpu-core can free its registry slot
+		// before we poll. This prevents the surface FutureId Vec from growing unboundedly.
+		m_currentFrameTexture = WebGPUTexture();
+#ifdef WEBGPU_BACKEND_WGPU
+		// Wait for GPU completion and resolve all pending wgpu-core futures
+		// (command encoder finish, surface texture, pass encoders) so their
+		// FutureId/registry slots are recycled each frame.
+		m_device.poll(true, nullptr);
+#endif
 #endif
 		m_currentFrameView = nullptr;
 		FlushDeletionQueue();
@@ -770,22 +808,32 @@ namespace Hush::Graphics
 		}
 	}
 
-	void WebGPUGraphicsDevice::OnDeviceError(WGPUErrorType type, char const *message, void * /*userdata*/)
+	void WebGPUGraphicsDevice::OnDeviceError(WGPUDevice const *device, WGPUErrorType type, WGPUStringView message,
+											 void *userdata, void * /*userdata2*/)
 	{
-		LogFormat(ELogLevel::Error, "WebGPU Error ({}): {}", magic_enum::enum_name(type),
-				  message != nullptr ? message : "Unknown error");
+		(void)device;
+		auto *self = static_cast<WebGPUGraphicsDevice *>(userdata);
+		(void)self;
+		std::string_view msg = (message.data != nullptr && message.length != WGPU_STRLEN)
+								   ? std::string_view(message.data, message.length)
+								   : std::string_view(message.data);
+		LogFormat(ELogLevel::Error, "WebGPU Error ({}): {}", magic_enum::enum_name(type), msg);
 	}
 
-	void WebGPUGraphicsDevice::OnDeviceLost(WGPUDeviceLostReason reason, char const *message, void *userdata)
+	void WebGPUGraphicsDevice::OnDeviceLost(WGPUDevice const *device, WGPUDeviceLostReason reason,
+											WGPUStringView message, void *userdata, void * /*userdata2*/)
 	{
-		auto *device = static_cast<WebGPUGraphicsDevice *>(userdata);
+		(void)device;
+		auto *self = static_cast<WebGPUGraphicsDevice *>(userdata);
 
-		LogFormat(ELogLevel::Error, "WebGPU Device Lost ({}): {}", magic_enum::enum_name(reason),
-				  message != nullptr ? message : "Unknown reason");
+		std::string_view msg = (message.data != nullptr && message.length != WGPU_STRLEN)
+								   ? std::string_view(message.data, message.length)
+								   : std::string_view(message.data);
+		LogFormat(ELogLevel::Error, "WebGPU Device Lost ({}): {}", magic_enum::enum_name(reason), msg);
 
-		if (device != nullptr)
+		if (self != nullptr)
 		{
-			device->m_initialized = false;
+			self->m_initialized = false;
 		}
 	}
 

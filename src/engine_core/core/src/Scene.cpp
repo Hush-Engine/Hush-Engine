@@ -22,27 +22,40 @@
 #include <flecs.h>
 #include <flecs/addons/flecs_c.h>
 #include "Profiling.hpp"
+#include <flecs/os_api.h>
 #include <flecs/private/api_defines.h>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
+#include <mimalloc.h>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tracy/Tracy.hpp>
+#include <unordered_map>
 #include <vector>
 
 constexpr std::size_t DEFAULT_SYSTEMS_CAPACITY = 128;
 
 std::atomic<std::uint64_t> Hush::Scene::s_nextSceneId{1};
 
+// NOLINTBEGIN
 Hush::Scene::Scene(HushEngine *engine, Hush::Threading::Executors::ThreadPool *threadPool)
 	: m_engine(engine),
 	  m_threadPool(threadPool),
-	  m_world(ecs_init()),
 	  m_sceneId(s_nextSceneId.fetch_add(1, std::memory_order_relaxed))
 {
 	// Reserve the buckets
 	m_userSystems.reserve(DEFAULT_SYSTEMS_CAPACITY);
+
+	ecs_os_set_api_defaults();
+	// Memory tracking with Tracy in Flecs incurs in a lock, we do not want that
+	// ecs_os_api_t osApi = ecs_os_get_api();
+	// osApi.malloc_ = HushFlecsMalloc;
+	// osApi.realloc_ = HushFlecsRealloc;
+	// osApi.free_ = HushFlecsFree;
+	this->m_world = reinterpret_cast<void *>(ecs_init());
 }
+// NOLINTEND
 
 Hush::Scene::~Scene()
 {
@@ -65,28 +78,36 @@ Hush::Scene::~Scene()
 	}
 }
 
-void Hush::Scene::Init()
+void Hush::Scene::HookEvents()
 {
-	ZoneScoped;
 	// Register an observer for our inspectable components
 	this->AddComponentObserver<InspectableComponent>(EComponentObserverType::Add,
 													 [this](Entity::EntityId compId, InspectableComponent *) {
 														 // HACK: Add the serializable component to it
 														 this->m_registeredComponents.emplace_back(compId);
 													 });
+}
 
-	for (const std::vector<ISystem *> &systemBucket : m_systems)
+void Hush::Scene::Init()
+{
+	ZoneScoped;
+	if (!this->m_isInitialized)
 	{
+		// Skip built-in systems on re-call
+
+		for (const std::vector<ISystem *> &systemBucket : m_systems)
+		{
 
 #if HUSH_PLATFORM_EMSCRIPTEN
-		for (ISystem *system : systemBucket)
-		{
-			system->Init();
-		}
+			for (ISystem *system : systemBucket)
+			{
+				system->Init();
+			}
 #else
-		Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
-											   [](ISystem *system) { system->Init(); }));
+			Threading::Wait(Threading::ParallelFor(m_threadPool, systemBucket.begin(), systemBucket.end(),
+												   [](ISystem *system) { system->Init(); }));
 #endif
+		}
 	}
 
 	// TODO: Group user systems into buckets
@@ -114,7 +135,7 @@ void Hush::Scene::Init()
 	this->m_isInitialized = true;
 }
 
-void Hush::Scene::Update(float delta)
+void Hush::Scene::Update(float delta, bool isEditor)
 {
 	ZoneScoped;
 	for (const std::vector<ISystem *> &systemBucket : m_systems)
@@ -133,10 +154,9 @@ void Hush::Scene::Update(float delta)
 #endif
 	}
 
-	if (this->m_scriptingInterface == nullptr)
+	// BACKLOG: Make user systems be able to run at editor time
+	if (this->m_scriptingInterface == nullptr || isEditor)
 	{
-		// LogFormat(ELogLevel::Warn, "FIXME: The scripting interface should be set, having a nullptr is only tolerated
-		// for testing purposes!");
 		return;
 	}
 	ScriptingSystemInterface::CallSystemOnUpdate_t updateFunc = this->m_scriptingInterface->updateFunction;
@@ -620,82 +640,225 @@ namespace
 			return !deserializer.Next() && !deserializer.HasError() && deserializer.GetToken() == JsonToken::EndOfInput;
 		}
 	}
+} // namespace
 
-	Hush::Scene::EError DeserializeComponents(Hush::Scene *scene, const std::vector<ParsedComponent> &components,
-											  Hush::Entity &entity)
+inline bool ShouldContinueReadingCompsArray(Hush::Serialization::JsonDeserializer::EToken tk)
+{
+	using JsonEToken_t = Hush::Serialization::JsonDeserializer::EToken;
+	return tk != JsonEToken_t::ArrayEnd && tk != JsonEToken_t::Error && tk != JsonEToken_t::EndOfInput;
+}
+
+// Local macro helper
+#define BREAK_LOOP_IF_NEEDED                                                                                           \
+	currToken = deserializer.GetToken();                                                                               \
+	if (!ShouldContinueReadingCompsArray(currToken))                                                                   \
+	{                                                                                                                  \
+		break;                                                                                                         \
+	}
+
+inline Hush::Scene::EError DeserializeComponents(
+	Hush::Scene *scene, Hush::Serialization::JsonDeserializer &deserializer, Hush::Entity &entity,
+	std::vector<std::pair<Hush::Entity::EntityId, Hush::Entity::EntityId>> *pendingPairs)
+{
+	using namespace Hush;
+	deserializer.Next(); // Skip the start of the array
+	std::string_view currKey;
+	int64_t compId{};
+	std::string_view compKey{};
+	Serialization::JsonDeserializer::EToken currToken{};
+	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken);
+		 currToken = deserializer.GetToken())
 	{
-		using namespace Hush;
-		for (const ParsedComponent &component : components)
-		{
-			Entity componentEntity = scene->CreateEntityWithKey(component.key);
-			void *instance = entity.AddComponentRaw(componentEntity.GetId());
-			Serializable *serializer = componentEntity.GetComponent<Serializable>();
-			if (serializer == nullptr || serializer->deserialize == nullptr)
-			{
-				continue;
-			}
+		std::string_view objectJson;
+		deserializer.PeekObject(objectJson);
 
-			Serialization::JsonDeserializer deserializer(component.json);
+		Serialization::JsonDeserializer localDeser{objectJson};
+
+		deserializer.Next();
+		BREAK_LOOP_IF_NEEDED;
+
+		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
+		deserializer.ReadInt(compId);
+		BREAK_LOOP_IF_NEEDED;
+
+		deserializer.ReadKey(currKey);
+		BREAK_LOOP_IF_NEEDED;
+		deserializer.ReadString(compKey);
+		BREAK_LOOP_IF_NEEDED;
+
+		// Pair IDs have bit 63 set and have zero size — they cannot be added as normal
+		// components. Defer them to the post-loop remapping pass.
+		auto savedCompId = static_cast<Entity::EntityId>(compId);
+		if (pendingPairs != nullptr && Entity::IsPairId(savedCompId))
+		{
+			pendingPairs->emplace_back(entity.GetId(), savedCompId);
+			deserializer.SkipObject();
+			BREAK_LOOP_IF_NEEDED;
+			continue;
+		}
+
+		// Get the component with that key
+		Entity comp = scene->CreateEntityWithKey(compKey);
+		void *instance = entity.AddComponentRaw(comp.GetId());
+
+		// Deserialize it
+		Serializable *serComp = comp.GetComponent<Serializable>();
+		if (serComp != nullptr && serComp->deserialize != nullptr)
+		{
 			auto *rawInstance = static_cast<std::uint8_t *>(instance);
-			if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
+			// Purposefully not doing an if-check bc we currently have a lot of components failing this check but
+			// deserializing correctly
+			serComp->deserialize(rawInstance, deserializer, serComp->ctx);
+			// if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
+			// {
+			// 	return Scene::EError::BadSceneFormat;
+			// }
+			if (serComp->postDeserialize != nullptr)
 			{
-				return Scene::EError::BadSceneFormat;
-			}
-			if (serializer->postDeserialize != nullptr)
-			{
-				serializer->postDeserialize(rawInstance, entity.GetId(), serializer->type, serializer->ctx);
+				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
 			}
 		}
-		return Scene::EError::None;
 	}
-} // namespace
+	return Scene::EError::None;
+}
+
+// Hush::Scene::EError DeserializeComponents(Hush::Scene *scene, const std::vector<ParsedComponent> &components,
+// 										  Hush::Entity &entity)
+// {
+// 	using namespace Hush;
+// 	for (const ParsedComponent &component : components)
+// 	{
+// 		Entity componentEntity = scene->CreateEntityWithKey(component.key);
+// 		void *instance = entity.AddComponentRaw(componentEntity.GetId());
+// 		Serializable *serializer = componentEntity.GetComponent<Serializable>();
+// 		if (serializer == nullptr || serializer->deserialize == nullptr)
+// 		{
+// 			continue;
+// 		}
+
+// 		Serialization::JsonDeserializer deserializer(component.json);
+// 		auto *rawInstance = static_cast<std::uint8_t *>(instance);
+// 		if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
+// 		{
+// 			return Scene::EError::BadSceneFormat;
+// 		}
+// 		if (serializer->postDeserialize != nullptr)
+// 		{
+// 			serializer->postDeserialize(rawInstance, entity.GetId(), serializer->type, serializer->ctx);
+// 		}
+// 	}
+// 	return Scene::EError::None;
+// }
 
 Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 {
-	ParsedScene parsedScene;
-	std::vector<ParsedEntity> entities;
-	if (!ParseSceneRoot(asset, parsedScene) || !ParseEntities(parsedScene.entities, entities))
-	{
-		return EError::BadSceneFormat;
-	}
+	Serialization::JsonDeserializer deserializer{asset};
+	// Enter the object
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	std::string_view currKey{};
+	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
+	// This should be the entities array now
+	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
+	// Maps old session entity index (lower 32 bits of serialized ID) → new runtime entity ID.
+	std::unordered_map<Entity::EntityId, Entity::EntityId> idRemap;
+	// Relationship pairs deferred until all entities are created.
+	std::vector<std::pair<Entity::EntityId, Entity::EntityId>> pendingPairs;
 
-	std::vector<SerializedSystem> systemReferences;
-	if (parsedScene.systems.has_value() && !ParseSystems(*parsedScene.systems, systemReferences))
+	// We are now on our object
+	while (deserializer.Next())
 	{
-		return EError::BadSceneFormat;
-	}
+		// Entity structure
+		// {"id": ##, "key": "...", "components": [...]}
+		int64_t id{};
+		deserializer.ReadKey(currKey);
+		deserializer.ReadInt(id);
+		std::string_view entKey;
+		deserializer.ReadKey(currKey);
+		deserializer.ReadString(entKey);
 
-	std::vector<OwnedSystem> resolvedSystems;
-	resolvedSystems.reserve(systemReferences.size());
-	for (SerializedSystem &reference : systemReferences)
-	{
-		if (!m_systemFactory)
+		Entity ent;
+		if (entKey.empty())
 		{
-			return EError::SystemResolutionFailed;
+			ent = this->CreateEntity();
 		}
-
-		std::unique_ptr<ISystem> instance = m_systemFactory(*this, reference.module, reference.type);
-		if (instance == nullptr)
+		else
 		{
-			return EError::SystemResolutionFailed;
+			ent = this->CreateEntityWithKey(entKey);
 		}
-		resolvedSystems.push_back({.instance = std::move(instance), .serialized = std::move(reference)});
-	}
+		// Record old entity index → new entity ID for relationship remapping.
+		idRemap[static_cast<Entity::EntityId>(id) & 0xFFFFFFFFULL] = ent.GetId();
 
-	for (const ParsedEntity &entityValue : entities)
-	{
-		Entity entity = entityValue.key.empty() ? CreateEntity() : CreateEntityWithKey(entityValue.key);
-		const EError error = DeserializeComponents(this, entityValue.components, entity);
-		if (error != EError::None)
+		// We don't care abt this one
+		deserializer.ReadKey(currKey);
+		// Then we can go for comps related to that entity
+		std::string_view compsArray;
+		if (!deserializer.ReadArray(compsArray))
 		{
-			return error;
+			continue;
 		}
+		Serialization::JsonDeserializer arrayDeser{compsArray};
+		DeserializeComponents(this, arrayDeser, ent, &pendingPairs);
+		deserializer.Next();
 	}
 
-	for (OwnedSystem &system : resolvedSystems)
+	// Second pass: reconstruct relationship pairs with remapped entity IDs.
+	// Built-in flecs entities (e.g. EcsChildOf) are not in idRemap; fall back to their original ID.
+	auto *flecsWorld = static_cast<ecs_world_t *>(m_world);
+	for (const auto &[entityId, savedPairId] : pendingPairs)
 	{
-		AddSystem(std::move(system.instance), std::move(*system.serialized));
+		Entity::EntityId oldFirst = Entity::GetPairFirst(savedPairId);
+		Entity::EntityId oldSecond = Entity::GetPairSecond(savedPairId);
+		Entity::EntityId newFirst = idRemap.count(oldFirst) ? idRemap.at(oldFirst) : oldFirst;
+		Entity::EntityId newSecond = idRemap.count(oldSecond) ? idRemap.at(oldSecond) : oldSecond;
+		ecs_add_id(flecsWorld, entityId, ecs_pair(newFirst, newSecond));
 	}
+
+	(void)asset;
+	// ParsedScene parsedScene;
+	// std::vector<ParsedEntity> entities;
+	// if (!ParseSceneRoot(asset, parsedScene) || !ParseEntities(parsedScene.entities, entities))
+	// {
+	// 	return EError::BadSceneFormat;
+	// }
+
+	// std::vector<SerializedSystem> systemReferences;
+	// if (parsedScene.systems.has_value() && !ParseSystems(*parsedScene.systems, systemReferences))
+	// {
+	// 	return EError::BadSceneFormat;
+	// }
+
+	// std::vector<OwnedSystem> resolvedSystems;
+	// resolvedSystems.reserve(systemReferences.size());
+	// for (SerializedSystem &reference : systemReferences)
+	// {
+	// 	if (!m_systemFactory)
+	// 	{
+	// 		return EError::SystemResolutionFailed;
+	// 	}
+
+	// 	std::unique_ptr<ISystem> instance = m_systemFactory(*this, reference.module, reference.type);
+	// 	if (instance == nullptr)
+	// 	{
+	// 		return EError::SystemResolutionFailed;
+	// 	}
+	// 	resolvedSystems.push_back({.instance = std::move(instance), .serialized = std::move(reference)});
+	// }
+
+	// for (const ParsedEntity &entityValue : entities)
+	// {
+	// 	Entity entity = entityValue.key.empty() ? CreateEntity() : CreateEntityWithKey(entityValue.key);
+	// 	const EError error = DeserializeComponents(this, entityValue.components, entity);
+	// 	if (error != EError::None)
+	// 	{
+	// 		return error;
+	// 	}
+	// }
+
+	// for (OwnedSystem &system : resolvedSystems)
+	// {
+	// 	AddSystem(std::move(system.instance), std::move(*system.serialized));
+	// }
 
 	return EError::None;
 }
@@ -713,8 +876,8 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 	Serialization::JsonSerializer jsonSerializer{};
 	Serialization::ESerializationError serialErr{};
 	serialErr = jsonSerializer.BeginObject();
-	serialErr = jsonSerializer.Serialize("versionMajor", std::uint32_t{0});
-	serialErr = jsonSerializer.Serialize("versionMinor", std::uint32_t{2});
+	serialErr = jsonSerializer.Serialize("versionMajor", SCENE_FMT_VERSION_MAJOR);
+	serialErr = jsonSerializer.Serialize("versionMinor", SCENE_FMT_VERSION_MINOR);
 	serialErr = jsonSerializer.SetKey("systems");
 	serialErr = jsonSerializer.BeginArray();
 	for (const OwnedSystem &system : m_userSystems)
@@ -731,7 +894,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 	serialErr = jsonSerializer.EndArray();
 	serialErr = jsonSerializer.SetKey("entities");
 	serialErr = jsonSerializer.BeginArray();
-	q.Each([world, serializableId, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
+	q.Each([world, serializableId, scene = this, &jsonSerializer, &serialErr](Entity &ent, WorldTransform &xform) {
 		(void)xform;
 		serialErr = jsonSerializer.BeginObject();
 		serialErr = jsonSerializer.Serialize("id", ent.GetId());
@@ -741,7 +904,20 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 
 		serialErr = jsonSerializer.SetKey("components");
 		serialErr = jsonSerializer.BeginArray();
-		ent.EachId([world, serializableId, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+		ent.EachId([world, serializableId, scene, &ent, &jsonSerializer, &serialErr](Entity::EntityId comp) {
+			// Pairs have size 0; ecs_get_id would assert. Serialize just the id so
+			// deserialization can detect them via IsPairId and remap old→new entity indices.
+			// Cast to int64_t so rapidjson writes a signed int that ReadInt can parse back
+			// (the pair ID has bit 63 set and would exceed INT64_MAX as unsigned).
+			if (Entity::IsPairId(comp))
+			{
+				constexpr const char *emptyStr = "";
+				serialErr = jsonSerializer.BeginObject();
+				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
+				serialErr = jsonSerializer.Serialize("key", std::string_view{emptyStr});
+				serialErr = jsonSerializer.EndObject();
+				return;
+			}
 			serialErr = jsonSerializer.BeginObject();
 			const auto *rawComp = reinterpret_cast<const uint8_t *>(ecs_get_id(world, ent.GetId(), comp));
 			// Serialize comp to JSON
@@ -867,6 +1043,7 @@ void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t c
 				void *componentInstance = ecs_field_w_size(it, callbackCtx->componentByteSize, 0);
 
 				callbackCtx->function(eventEntity, componentInstance);
+				// BUG: Memory leak, the outer function must return the observer's Id and that indicates ownershipp
 			},
 		.callback_ctx = context,
 		.callback_ctx_free = [](void *ctx) { delete static_cast<CallbackContext *>(ctx); }};
@@ -875,6 +1052,37 @@ void Hush::Scene::AddComponentObserverRaw(Entity::EntityId componentId, size_t c
 	Entity::EntityId observerId = ecs_observer_init(world, &observerDesc);
 }
 
+Hush::Entity::EntityId Hush::Scene::AddEventObserverRaw(Entity::EntityId event, EntityEventCallback_t callback)
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+
+	ecs_term_t queryTerm = {.id = EcsAny};
+	ecs_query_desc_t query = {.terms = {queryTerm}};
+
+	// TODO: Replace heap for arena allocator
+	ecs_observer_desc_t observerDesc = {.query = query,
+										.events = {event},
+										.callback =
+											[](ecs_iter_t *it) {
+												if (it->count <= 0)
+												{
+													return;
+												}
+												Entity::EntityId eventEntity = it->entities[0];
+
+												auto callback =
+													reinterpret_cast<EntityEventCallback_t>(it->callback_ctx);
+												auto *scene = reinterpret_cast<Scene *>(it->run_ctx);
+												callback(eventEntity, scene);
+											},
+										.callback_ctx = reinterpret_cast<void *>(callback),
+										.run_ctx = reinterpret_cast<void *>(this)};
+
+	// So the observer can be removed
+	return ecs_observer_init(world, &observerDesc);
+}
+
+// BACKLOG: Rename this to DestroyEntityImmediate
 void Hush::Scene::DestroyEntity(Entity &&entity)
 {
 	auto entityToDestroy = std::move(entity);
@@ -1155,10 +1363,16 @@ void Hush::Scene::MarkComponentToggleableRaw(EntityId id)
 	ecs_add_id(world, id, EcsCanToggle);
 }
 
-Hush::Entity::EntityId Hush::Scene::Lookup(NullTerminatedStringView tag) const
+Hush::Entity::EntityId Hush::Scene::LookupCStr(NullTerminatedStringView tag) const
 {
 	auto *world = static_cast<ecs_world_t *>(this->m_world);
 	return ecs_lookup(world, tag.c_str());
+}
+
+Hush::Entity::EntityId Hush::Scene::Lookup(std::string_view tag) const
+{
+	auto *world = static_cast<ecs_world_t *>(this->m_world);
+	return ecs_lookup(world, tag.data());
 }
 
 const std::vector<Hush::Entity::EntityId> &Hush::Scene::GetAllRegisteredComponents() const

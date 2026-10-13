@@ -23,6 +23,10 @@ namespace Hush
 		void OnRender(float deltaTime) noexcept override;
 
 	private:
+		void TriggerLoadScene();
+
+		void TriggerSaveScene();
+
 		void FileMenuOptions();
 
 		void SaveSceneDialog(IGFD::FileDialog *fileDialog);

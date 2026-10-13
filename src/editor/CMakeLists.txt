@@ -13,6 +13,7 @@ hush_add_executable(
              src/NotificationPanel.cpp
              src/InspectorPanel.cpp
              src/ScenePanel.cpp
+             src/GamePanel.cpp
              src/StatsPanel.cpp
              src/CommandPanel.cpp
              src/TitleBarMenuPanel.cpp

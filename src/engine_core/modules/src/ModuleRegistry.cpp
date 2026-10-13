@@ -10,8 +10,11 @@
 #include "ModuleSystem.hpp"
 #include "Scene.hpp"
 #include "SharedLibrary.hpp"
+#include "reflection/TypeId.hpp"
 
+#include <algorithm>
 #include <optional>
+#include <string_view>
 
 Hush::Modules::ModuleRecord::ModuleRecord() = default;
 Hush::Modules::ModuleRecord::~ModuleRecord() = default;
@@ -62,6 +65,7 @@ namespace
 			m_system->OnPostRender();
 		}
 
+		[[nodiscard]]
 		std::string_view GetName() const override
 		{
 			return m_system->GetName();
@@ -212,8 +216,9 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 	{
 		return EError::InvalidState;
 	}
+	uint64_t checkerHash = Hashing::Fnv1a64(descriptor.name);
 	if (descriptor.name.empty() || descriptor.order > ISystem::MAX_ORDER ||
-		Reflection::TypeId{Hashing::Fnv1a64(descriptor.name)} != descriptor.typeId)
+		Reflection::TypeId{checkerHash} != descriptor.typeId)
 	{
 		return EError::InvalidState;
 	}
@@ -227,11 +232,14 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 	}
 
 	it->second.foreignSystems.push_back(std::move(descriptor));
+	// We point the string view to this std::string that is kept in memory for as long as the type lives
+	ForeignSystemDescriptor &systemDescRef = it->second.foreignSystems.back();
+	systemDescRef.name = this->m_reflectionDB.GetTypeInfo(systemDescRef.typeId)->GetName();
 	return EError::None;
 }
 
 Hush::Result<std::unique_ptr<Hush::ISystem>, Hush::Modules::ModuleRegistry::EError> Hush::Modules::ModuleRegistry::
-	CreateSystem(ModuleHandle module, Reflection::TypeId typeId, Scene &scene)
+	CreateSystem(ModuleHandle module, Reflection::TypeId typeId, Scene &scene) const
 {
 	std::optional<SystemDescriptor> nativeDescriptor;
 	std::optional<ForeignSystemDescriptor> foreignDescriptor;

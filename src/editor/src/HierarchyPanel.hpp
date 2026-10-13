@@ -11,6 +11,7 @@
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
 #include "Query.hpp"
+#include <array>
 #include <unordered_set>
 
 namespace Hush
@@ -24,10 +25,24 @@ namespace Hush
 		void OnRender(float deltaTime) override;
 
 	private:
-		Scene *m_activeScene;
-		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
+		enum class EState
+		{
+			None = 0,
+			DeletePopupOpen,
+			Renaming
+		};
 
-		// Small helper without recursion
-		void GenerateEntitySelectableTree(const Entity &entity, const Entity::Name &name, InspectorPanel *inspector);
+		// NOTE: Maybe centralize this into an EditorInput file or something
+		void HandleInput();
+
+		Scene *m_activeScene;
+		ComponentRef m_editorInfo;
+		Query<WorldTransform, LocalTransform, Entity::Name> m_inspectableEntitiesQuery;
+		EState m_state = EState::None;
+		std::array<char, Entity::MAX_ENTITY_NAME_LENGTH> m_entityRenameBuffer{};
+
+		// Small helper WITH recursion
+		// PERF: Remove recursion from this function
+		void GenerateEntitySelectableTree(Entity &entity, const Entity::Name &name, InspectorPanel *inspector);
 	};
 } // namespace Hush

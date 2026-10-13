@@ -28,10 +28,17 @@ Hush::Graphics::WebGPUTexture &Hush::Graphics::WebGPUTexture::operator=(WebGPUTe
 {
 	if (this != &rhs)
 	{
-		if (m_texture != nullptr && !m_descriptor.ownedByExternalSource)
+		if (m_texture != nullptr)
 		{
 			m_view.release();
-			m_texture.destroy();
+			if (m_descriptor.ownedByExternalSource)
+			{
+				m_texture.release(); // swapchain texture: release our C-side ref, don't destroy
+			}
+			else
+			{
+				m_texture.destroy();
+			}
 		}
 		m_texture = std::move(rhs.m_texture);
 		m_view = std::move(rhs.m_view);
@@ -45,10 +52,17 @@ Hush::Graphics::WebGPUTexture &Hush::Graphics::WebGPUTexture::operator=(WebGPUTe
 
 Hush::Graphics::WebGPUTexture::~WebGPUTexture()
 {
-	if (m_texture != nullptr && !m_descriptor.ownedByExternalSource)
+	if (m_texture != nullptr)
 	{
 		m_view.release();
-		m_texture.destroy();
+		if (m_descriptor.ownedByExternalSource)
+		{
+			m_texture.release(); // swapchain texture: release our C-side ref, don't destroy
+		}
+		else
+		{
+			m_texture.destroy();
+		}
 	}
 }
 

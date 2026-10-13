@@ -77,7 +77,7 @@ bool Hush::Modules::RegisterForeignSystem(HushEngine *engine, ModuleHandle modul
 
 	ForeignSystemDescriptor nativeDescriptor;
 	nativeDescriptor.typeId = Reflection::TypeId{abiDescriptor->typeId};
-	nativeDescriptor.name = std::string(abiDescriptor->name.data, abiDescriptor->name.size);
+	nativeDescriptor.name = std::string_view(abiDescriptor->name.data, abiDescriptor->name.size);
 	nativeDescriptor.order = abiDescriptor->order;
 	nativeDescriptor.lifecycleMask = abiDescriptor->lifecycleMask;
 

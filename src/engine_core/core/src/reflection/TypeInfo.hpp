@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include "HushBindings.hpp"
 #include "TypeTraits.hpp"
 #include "FunctionInfo.hpp"
 #include "FieldInfo.hpp"
@@ -17,11 +18,11 @@
 namespace Hush::Reflection
 {
 
-	class TypeInfo : public MetadataHolder
+	class [[hush::export]] TypeInfo : public MetadataHolder
 	{
 
 	public:
-		enum class EInPlaceConstructorError
+		enum class [[hush::export(Hush::Export::ignore)]] EInPlaceConstructorError
 		{
 			None = 0,
 			InsufficientMemory = 1,
@@ -30,10 +31,10 @@ namespace Hush::Reflection
 			InvalidType = 4,
 		};
 
-		using InPlaceCtorFunc = EInPlaceConstructorError (*)(void *mem, std::span<const VariantView>);
-
 		struct InPlaceCtor
 		{
+
+			using InPlaceCtorFunc = EInPlaceConstructorError (*)(void *mem, std::span<const VariantView>);
 			InPlaceCtor(InPlaceCtorFunc callFunc, std::span<const TypeId> args)
 				: m_func(callFunc),
 				  m_argsCount(static_cast<uint8_t>(args.size()))
@@ -134,10 +135,8 @@ namespace Hush::Reflection
 			return m_name;
 		}
 
-		void SetName(std::string_view name)
-		{
-			this->m_name = name;
-		}
+		[[hush::export]]
+		void SetName(std::string_view name);
 
 		[[nodiscard]]
 		std::size_t GetSize() const
@@ -145,10 +144,8 @@ namespace Hush::Reflection
 			return m_size;
 		}
 
-		void SetSize(std::size_t size)
-		{
-			this->m_size = size;
-		}
+		[[hush::export]]
+		void SetSize(size_t size);
 
 		[[nodiscard]]
 		std::size_t GetAlignment() const
@@ -156,10 +153,8 @@ namespace Hush::Reflection
 			return m_alignment;
 		}
 
-		void SetAlignment(std::size_t alignment)
-		{
-			this->m_alignment = alignment;
-		}
+		[[hush::export]]
+		void SetAlignment(size_t alignment);
 
 		/// Sets the module that owns this type. Called by the reflection
 		/// database when the type is registered.

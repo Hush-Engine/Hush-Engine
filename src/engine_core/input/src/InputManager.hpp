@@ -8,9 +8,11 @@
 #include "definitions/KeyData.hpp"
 #include "definitions/MouseButton.hpp"
 #include "definitions/MouseData.hpp"
+#include <array>
 #include <glm/vec2.hpp>
 #include <unordered_map>
 #include <HushBindings.hpp>
+#include <vector>
 namespace Hush
 {
 
@@ -20,9 +22,12 @@ namespace Hush
 		Locked = 1
 	};
 
+	// TODO: This will not be static anymore
 	class InputManager
 	{
 	public:
+		static void Init();
+
 		/// @brief Evaluates to true whilst the key is pressed down
 		[[hush::export]]
 		static bool IsKeyDown(EKeyCode key);
@@ -47,9 +52,11 @@ namespace Hush
 		static bool FetchCharThisFrame(char *outChar);
 
 		/// @brief Gets the vector of the mouse's position in pixels
+		[[hush::export]]
 		static glm::vec2 GetMousePosition();
 
 		/// @brief Gets the vector of the mouse's acceleration in pixels/s^2
+		[[hush::export]]
 		static glm::vec2 GetMouseAcceleration();
 
 		static const glm::vec2 &GetMouseScrollAcceleration();
@@ -70,13 +77,15 @@ namespace Hush
 
 		static void SendCharEvent(char pressedChar);
 
+		static void MarkPressedKeysForNextFrame();
+
 		[[hush::export]]
 		static void SetCursorLock(ECursorLockMode lockMode);
 
 	private:
 		// TODO: Reserve memory for this map???
 		// NOLINTNEXTLINE
-		static std::unordered_map<EKeyCode, KeyData> S_KEY_DATA_BY_CODE;
+		static std::vector<KeyData> S_KEY_DATA_BY_CODE;
 
 		// NOLINTNEXTLINE
 		static MouseData S_MOUSE_DATA;

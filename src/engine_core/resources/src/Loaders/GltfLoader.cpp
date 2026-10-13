@@ -5,6 +5,8 @@
 #include "Components/MeshReference.hpp"
 #include "Components/WorldTransform.hpp"
 #include "Components/GpuUploadComponent.hpp"
+#include "Shared/MaterialOptions.hpp"
+#include "Shared/MaterialPass.hpp"
 #include "crypto/Hashing.hpp"
 #include <algorithm>
 #include <cstring>
@@ -16,6 +18,7 @@
 #include <fstream>
 #include <optional>
 #include "Logger.hpp"
+#include "RHI/GraphicsTypes.hpp"
 #include "RHI/IGraphicsDevice.hpp"
 #include "Ref.hpp"
 #include "ResourceManager.hpp"
@@ -77,12 +80,12 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, *gltfAsset, "NORMAL");
 		for (uint32_t i = 0; i < normalBuffer.size(); i++)
 		{
-			outVertexBuffer->at(i + initialVertex).normal = normalBuffer.at(i);
+
+			Mesh::Vertex &v = outVertexBuffer->at(i + initialVertex);
+			v.normal = normalBuffer.at(i);
 		}
 
 		// Load the UVs here
-		// TODO: LOADUVS()
-
 		std::vector<glm::vec2> texBuffer =
 			GltfLoadFunctions::FindAttributeByName<glm::vec2>(primitive, *gltfAsset, "TEXCOORD_0");
 
@@ -100,6 +103,13 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			outVertexBuffer->at(i + initialVertex).color = colors.at(i);
 		}
 
+		std::vector<glm::vec4> tangentBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec4>(primitive, *gltfAsset, "TANGENT");
+		for (uint32_t i = 0; i < tangentBuffer.size(); i++)
+		{
+			outVertexBuffer->at(i + initialVertex).tangent = tangentBuffer.at(i);
+		}
+
 		if (primitive.materialIndex.has_value())
 		{
 			size_t meshMatIdx = primitive.materialIndex.value();
@@ -109,11 +119,14 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 
 			const fastgltf::Material &rawMaterial = gltfAsset->materials[meshMatIdx];
 			auto albedo = rawMaterial.pbrData.baseColorFactor;
+			const fastgltf::math::nvec3 &emission = rawMaterial.emissiveFactor;
+			(void)emission;
 			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
 			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
 								.resource = materialResourceId,
 								.alphaCutoff = rawMaterial.alphaCutoff,
-								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()}};
+								.albedo = {albedo.x(), albedo.y(), albedo.z(), albedo.w()},
+								.emission = {emission.x(), emission.y(), emission.z(), rawMaterial.emissiveStrength}};
 			std::memcpy(&(mat.name[0]), rawMaterial.name.data(), rawMaterial.name.size());
 			outMaterials->push_back(mat);
 
@@ -207,7 +220,7 @@ Hush::GltfLoadFunctions::EError Hush::GLTFLoader::LoadAssetFromBinary(std::span<
 	return Hush::GltfLoadFunctions::EError::None;
 }
 
-void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
+bool Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
 										 const fastgltf::Mesh &mesh, const std::filesystem::path &basePath,
 										 Ref<Mesh> &innerMeshRef, MeshReference *meshRef)
 {
@@ -223,6 +236,15 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 	indexRef.clear();
 	vertexRef.clear();
 
+	// The mesh is shared (ref-counted) across every MeshReference that points
+	// at it, so re-importing the same glTF appends a duplicate surface on each
+	// drop unless we clear the list first. Without this, the second drop of the
+	// same model doubles the surfaces and the draw list, which (combined with a
+	// cache that used to rebuild per-surface) leaked a freed bind-group pointer
+	// into the first draw.
+	innerMeshRef->GetSurfaces().clear();
+
+	bool hasTangents = false;
 	for (const fastgltf::Primitive &primitive : mesh.primitives)
 	{
 		size_t initialVertex = vertexRef.size();
@@ -250,7 +272,8 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 			GltfLoadFunctions::FindAttributeByName<glm::vec3>(primitive, asset, "NORMAL");
 		for (uint32_t i = 0; i < normalBuffer.size(); i++)
 		{
-			vertexRef.at(i + initialVertex).normal = normalBuffer.at(i);
+			Mesh::Vertex &v = vertexRef.at(i + initialVertex);
+			v.normal = normalBuffer.at(i);
 		}
 
 		// Load the UVs here
@@ -270,6 +293,20 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 		for (uint32_t i = 0; i < colors.size(); i++)
 		{
 			vertexRef.at(i + initialVertex).color = colors.at(i);
+		}
+
+		// Load pre-computed tangents from the glTF. Normal maps are baked against
+		// these tangents, so using the engine's computed ones would produce wrong
+		// normal-map orientation (banding, rotated surface detail).
+		std::vector<glm::vec4> tangentBuffer =
+			GltfLoadFunctions::FindAttributeByName<glm::vec4>(primitive, asset, "TANGENT");
+		for (uint32_t i = 0; i < tangentBuffer.size(); i++)
+		{
+			vertexRef.at(i + initialVertex).tangent = tangentBuffer.at(i);
+		}
+		if (!tangentBuffer.empty())
+		{
+			hasTangents = true;
 		}
 
 		if (primitive.materialIndex.has_value())
@@ -296,6 +333,8 @@ void Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 
 		innerMeshRef->AddSurface(std::move(surfaceToAdd));
 	}
+
+	return hasTangents;
 }
 
 /// @brief This is a temporary function, we need to move this behavior to HushCooker, but this will work to prove we can
@@ -329,11 +368,15 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		meshRef->SetName(mesh.name);
 
 		std::filesystem::path basePath = hostPathRes.value().parent_path();
-		ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
+		bool hadGltfTangents =
+			ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
 
 		// Generate the material per primitive here
 
-		meshRef->CalculateTangentBasis();
+		if (!hadGltfTangents)
+		{
+			meshRef->CalculateTangentBasis();
+		}
 
 		// Load everything into Mesh components
 		// Add a GpuUploadComponent for the UploadResourceSystem to pick it up
@@ -416,11 +459,14 @@ bool Hush::GLTFLoader::LoadMeshes(const RenderingContext &renderingContext, cons
 
 		meshRef->SetName(mesh.name);
 		std::filesystem::path basePath = hostPathRes.value().parent_path();
-		ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef);
+		bool hadGltfTangents = ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef);
 
 		// Generate the material per primitive here
 
-		meshRef->CalculateTangentBasis();
+		if (!hadGltfTangents)
+		{
+			meshRef->CalculateTangentBasis();
+		}
 
 		// Load everything into Mesh components
 		// Add a GpuUploadComponent for the UploadResourceSystem to pick it up
@@ -480,8 +526,9 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	Graphics::IGraphicsDevice *graphicsDevice = renderingContext.device;
 
 	auto materialInstance = resourceManager->AllocateRef<Graphics::Material3D>(material.name);
+	materialInstance->SetCullMode(material.doubleSided ? ECullMode::None : ECullMode::Front);
 	materialInstance->SetMaterialPass(passType);
-
+	materialInstance->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);
 	if (!materialInstance->IsInitialized())
 	{
 		Graphics::Material3D::EError err = materialInstance->Init(graphicsDevice, *defaultMaterialDesc);
@@ -493,8 +540,14 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	materialInstance->SetProperty("colorFactors",
 								  *reinterpret_cast<const glm::vec4 *>(&material.pbrData.baseColorFactor));
 	materialInstance->SetProperty("emissionFactors", glm::vec4(material.emissiveFactor.x(), material.emissiveFactor.y(),
-															   material.emissiveFactor.z(), 1.0f));
-	materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
+															   material.emissiveFactor.z(), material.emissiveStrength));
+	if (passType == EMaterialPass::Mask)
+	{
+		materialInstance->SetProperty("alphaCutoff", material.alphaCutoff);
+	}
+
+	materialInstance->SetProperty("metal_rough_factors", glm::vec4(material.pbrData.metallicFactor,
+																   material.pbrData.roughnessFactor, 0.0f, 0.0f));
 	constexpr uint32_t useNormalsFlag = 1;
 	materialInstance->SetProperty("optionFlags", useNormalsFlag);
 	materialInstance->SetName(material.name);
@@ -506,17 +559,17 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	constexpr uint32_t kBindingNormal = 3;
 	constexpr uint32_t kBindingEmissive = 4;
 
-	auto loadMaterialTexture = [&](uint32_t binding, const auto &textureInfo, const char *texName) -> void {
+	auto loadMaterialTexture = [&](uint32_t binding, const auto &textureInfo, const char *texName) -> bool {
 		if (!textureInfo.has_value())
 		{
-			return;
+			return false;
 		}
 
 		size_t textureIdx = textureInfo->textureIndex;
 		const auto &gltfTexture = asset.textures.at(textureIdx);
 		if (!gltfTexture.imageIndex.has_value())
 		{
-			return;
+			return false;
 		}
 
 		size_t imageIdx = gltfTexture.imageIndex.value();
@@ -531,25 +584,27 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 		{
 			auto *gpuTex = existingIt->second->GetGpuTexture();
 			materialInstance->SetTexture(binding, gpuTex);
-			return;
+			return true;
 		}
 
 		auto imgData = LoadGlTfImageData(asset, image, basePath);
 		if (!imgData.has_value())
 		{
-			return;
+			return false;
 		}
 
-		auto result = resourceManager->LoadTextureFromData(texUniqueName, *imgData);
+		const Graphics::ETextureFormat texFormat = Graphics::ETextureFormat::RGBA8_UNORM;
+		auto result = resourceManager->LoadTextureFromData(texUniqueName, *imgData, texFormat);
 		if (result.has_error())
 		{
-			return;
+			return false;
 		}
 
 		Ref<TextureComponent> texRef = std::move(result.value());
 		auto *gpuTex = texRef->GetGpuTexture(); // May be null (async upload)
 		materialInstance->SetTexture(binding, gpuTex);
 		texRefs[binding] = std::move(texRef);
+		return true;
 	};
 
 	loadMaterialTexture(kBindingAlbedo, material.pbrData.baseColorTexture, "albedo");

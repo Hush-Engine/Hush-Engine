@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <functional>
+#include <thread>
 
 static constexpr uint64_t ROW_BYTE_ALIGNMENT = 256;
 
@@ -120,6 +122,9 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 	}
 	HUSH_ASSERT(mapped != nullptr, "Failed to map the staging buffer for CPU writes!");
 
+	LogFormat(ELogLevel::Trace, "[Upload] staging mapped on thread {}",
+			  std::hash<std::thread::id>{}(std::this_thread::get_id()));
+
 	// First half → meshes
 	m_meshStaging.cpuPtr = mapped;
 	m_meshStaging.offset = 0;
@@ -149,6 +154,23 @@ void Hush::Renderer::ResourceUploadSystem::OnPreRender()
 	}
 
 	m_bytesUploadedLastFrame = m_meshStaging.offset + m_textureStaging.offset;
+	if (m_bytesUploadedLastFrame > 0 || !m_pendingBufferCopies.empty() || !m_pendingTextureCopies.empty())
+	{
+		LogFormat(ELogLevel::Trace,
+				  "[Upload] staged {} bytes (mesh={}, tex={}), bufferCopies={}, texCopies={} on thread {}",
+				  m_bytesUploadedLastFrame, m_meshStaging.offset, m_textureStaging.offset, m_pendingBufferCopies.size(),
+				  m_pendingTextureCopies.size(), std::hash<std::thread::id>{}(std::this_thread::get_id()));
+	}
+
+	// Unmap the staging buffer here, right after the CPU memcpy staging, so the
+	// Transfer pass records its CopyBuffer / CopyBufferToTexture commands against
+	// an *unmapped* buffer. Unmapping later (inside the pass, after recording the
+	// copies but before submit) leaves a command encoder referencing a mapped
+	// buffer, which is a WebGPU spec violation and can corrupt wgpu's internal
+	// bookkeeping on frames that actually stage data.
+	LogFormat(ELogLevel::Trace, "[Upload] unmapping staging buffer (end of OnPreRender) on thread {}",
+			  std::hash<std::thread::id>{}(std::this_thread::get_id()));
+	m_stagingBuffer->Unmap();
 }
 
 void Hush::Renderer::ResourceUploadSystem::OnRender()
@@ -206,19 +228,26 @@ void Hush::Renderer::ResourceUploadSystem::BuildUploadPass(RenderGraph::RenderGr
 			// Issue all buffer-to-buffer copies (mesh vertex/index data).
 			for (const auto &copy : this->GetPendingBufferCopies())
 			{
+				LogFormat(ELogLevel::Trace, "[UploadPass] CopyBuffer src=staging[{}] dst={} dstOff={} size={}",
+						  copy.stagingOffset, static_cast<void *>(copy.destination), copy.destOffset, copy.size);
 				copyCmd->CopyBuffer(staging, copy.stagingOffset, copy.destination, copy.destOffset, copy.size);
 			}
 
 			// Issue all buffer-to-texture copies (texture pixel data).
 			for (const auto &texCopy : this->GetPendingTextureCopies())
 			{
+				LogFormat(ELogLevel::Trace,
+						  "[UploadPass] CopyBufferToTexture staging[{}] dst={} size={}x{} rowPitch={}",
+						  texCopy.stagingOffset, static_cast<void *>(texCopy.destination), texCopy.width,
+						  texCopy.height, texCopy.rowPitch);
 				copyCmd->CopyBufferToTexture(staging, texCopy.stagingOffset, texCopy.destination, texCopy.dstX,
 											 texCopy.dstY, texCopy.dstZ, texCopy.width, texCopy.height, texCopy.depth,
 											 texCopy.rowPitch);
 			}
 
-			// We are done with this, we must unmap the buffer
-			m_stagingBuffer->Unmap();
+			// The staging buffer was already unmapped at the end of OnPreRender
+			// (right after the CPU staging memcpy), so every copy recorded above
+			// references an unmapped buffer.
 		});
 }
 
@@ -272,6 +301,17 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 			const uint64_t indexBytes = indices.size() * sizeof(indices[0]);
 			const uint64_t totalBytes = vertexBytes + indexBytes;
 
+			// Fast path: another entity sharing the same Mesh already uploaded the
+			// GPU buffers this frame (or a prior frame). Just mark this entity as done
+			// without touching the staging buffer.
+			if (meshRef.GetGpuVertexBuffer() != nullptr && meshRef.GetGpuVertexBuffer()->GetSize() >= vertexBytes &&
+				meshRef.GetGpuIndexBuffer() != nullptr && meshRef.GetGpuIndexBuffer()->GetSize() >= indexBytes)
+			{
+				m_entitiesToMarkAsUploaded.push_back(entity.GetId());
+				++uploadCount;
+				continue;
+			}
+
 			// If the staging region is completely exhausted, stop processing
 			// further entries this frame.
 			if (m_meshStaging.Remaining() == 0)
@@ -303,6 +343,9 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 					.memoryAccess = Graphics::EMemoryAccess::CPUNone,
 					.debugName = "MeshVertexBuffer",
 				}));
+				LogFormat(ELogLevel::Trace, "[Upload] created VB size={} ptr={} on thread {}", vertexBytes,
+						  static_cast<void *>(meshRef.GetGpuVertexBuffer()),
+						  std::hash<std::thread::id>{}(std::this_thread::get_id()));
 			}
 
 			// Record a pending copy (staging → GPU vertex buffer).
@@ -330,6 +373,9 @@ void Hush::Renderer::ResourceUploadSystem::StageDirtyMeshes()
 					.memoryAccess = Graphics::EMemoryAccess::CPUNone,
 					.debugName = "MeshIndexBuffer",
 				}));
+				LogFormat(ELogLevel::Trace, "[Upload] created IB size={} ptr={} on thread {}", indexBytes,
+						  static_cast<void *>(meshRef.GetGpuIndexBuffer()),
+						  std::hash<std::thread::id>{}(std::this_thread::get_id()));
 			}
 
 			// Record a pending copy (staging → GPU index buffer).
