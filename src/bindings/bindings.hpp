@@ -24,5 +24,6 @@
 #include "Shared/Camera.hpp"
 #include "Components/MeshReference.hpp"
 #include "crypto/Hashing.hpp"
+#include "Components/ComponentMetadata.hpp"
 
 // NOLINTEND

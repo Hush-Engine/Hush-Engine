@@ -11,5 +11,5 @@ void Hush::Reflection::TypeInfo::SetSize(size_t size) {
 }
 
 void Hush::Reflection::TypeInfo::SetName(std::string_view name) {
-	this->m_name = name;
+	this->m_name = std::string(name.data(), name.size());
 }

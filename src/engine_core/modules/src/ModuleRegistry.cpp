@@ -226,8 +226,6 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 
 	Reflection::TypeInfo typeInfo(descriptor.typeId);
 	typeInfo.SetName(descriptor.name);
-	// We point the string view to this std::string that is kept in memory for as long as the type lives
-	descriptor.name = typeInfo.GetName();
 	typeInfo.AddMetadata(Reflection::METADATA_KEY_SYSTEM.data(), "true");
 	if (m_reflectionDB.RegisterClass(std::move(typeInfo), module) != Reflection::ERegisterClassError::None)
 	{
@@ -235,6 +233,9 @@ Hush::Modules::ModuleRegistry::EError Hush::Modules::ModuleRegistry::RegisterFor
 	}
 
 	it->second.foreignSystems.push_back(std::move(descriptor));
+	// We point the string view to this std::string that is kept in memory for as long as the type lives
+	ForeignSystemDescriptor &systemDescRef = it->second.foreignSystems.back();
+	systemDescRef.name = this->m_reflectionDB.GetTypeInfo(systemDescRef.typeId)->GetName();
 	return EError::None;
 }
 

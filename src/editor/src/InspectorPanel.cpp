@@ -215,68 +215,6 @@ std::optional<Hush::Entity> &Hush::InspectorPanel::GetInspectTarget()
 	return this->m_inspectTarget;
 }
 
-void UserComponentRenderProps(Hush::Entity::EntityId id, uint8_t *instance,
-							  const Hush::ScriptingComponentSerializationInfo &compSerialInfo)
-{
-	using namespace Hush;
-	// Iterate over the properties of the type
-	std::string title = std::format("{}#{}", &(compSerialInfo.name[0]), id);
-	ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-	for (uint32_t i = 0; i < compSerialInfo.propertyCount; i++)
-	{
-		ImGui::PushID((int32_t)i);
-		const ScriptingComponentPropertyInfo *prop = &(compSerialInfo.properties[i]);
-		// Now we render depending on the type
-		uint8_t *ptrToSerialize = instance + prop->offset;
-		std::string_view propertyName = &(prop->name[0]);
-
-		switch (prop->type)
-		{
-		case Hush::EComponentPropertyType::I8:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S8, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::U8:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U8, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::I16:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S16, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::U16:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U16, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::I32:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S32, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::U32:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U32, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::I64:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_S64, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::U64:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_U64, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::F32:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Float, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::F64:
-			ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
-			break;
-		case Hush::EComponentPropertyType::Bool:
-			ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
-			break;
-		case Hush::EComponentPropertyType::Vector3:
-			UI::Vec3Edit(propertyName.data(), reinterpret_cast<float *>(ptrToSerialize));
-			break;
-		default:
-			// LogError("Type of property is not implemented for inspector serialization");
-			break;
-		}
-		ImGui::PopID();
-	}
-}
-
 // TODO: This probably should be a query on components that hold a function pointer on how to get serialized
 // Also, every entity in the editor should probably have a list of how they ordered their components ???
 void Hush::InspectorPanel::RenderProperties()
@@ -325,25 +263,60 @@ void Hush::InspectorPanel::RenderProperties()
 		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
 		const Reflection::TypeInfo* ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
+		auto *compMem = reinterpret_cast<uint8_t*>(this->m_inspectTarget.value().GetComponentRaw(compId));
+		int32_t cntr = 0;
 		for (const Reflection::FieldInfo& field : fields) {
-			(void)field;
+			ImGui::PushID(cntr);
+			std::string_view propertyName = field.GetName();
+
+			void* ptrToSerialize = compMem + field.GetOffset();
+
+			switch (field.GetTypeId().id)
+			{
+			case Hush::EComponentPropertyType::I8:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S8, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U8:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U8, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I16:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S16, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U16:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U16, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S32, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U32, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::I64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_S64, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::U64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_U64, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::F32:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_Float, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::F64:
+				ImGui::InputScalar(propertyName.data(), ImGuiDataType_Double, ptrToSerialize);
+				break;
+			case Hush::EComponentPropertyType::Bool:
+				ImGui::Checkbox(propertyName.data(), reinterpret_cast<bool *>(ptrToSerialize));
+				break;
+			case Hush::EComponentPropertyType::Vector3:
+				UI::Vec3Edit(propertyName.data(), reinterpret_cast<float *>(ptrToSerialize));
+				break;
+			default:
+				// LogError("Type of property is not implemented for inspector serialization");
+				break;
+			}
+
+			ImGui::PopID();
+			cntr++;
 		}
 	});
-	const std::vector<ScriptingComponentSerializationInfo> &serializableComps =
-		this->m_scriptingHost->GetAvailableComponentSerializationData();
 
-	for (const auto &compSerialInfo : serializableComps)
-	{
-		std::string_view compName = &(compSerialInfo.name[0]);
-
-		// PERF: THIS IS VERY BAD, WE ONLY DID THIS FOR THE JAM, BUT IT'S SUPER BAD
-		Entity::EntityId comp = this->m_activeScene->Lookup(compName);
-		if (!this->m_inspectTarget.value().HasComponentRaw(comp))
-		{
-			continue;
-		}
-
-		void *compMem = this->m_inspectTarget.value().GetComponentRaw(comp);
-		UserComponentRenderProps(comp, reinterpret_cast<uint8_t *>(compMem), compSerialInfo);
-	}
 }
