@@ -20,7 +20,6 @@
 namespace Hush
 {
 	struct Transform;
-	class ScriptingHost;
 
 	class UI
 	{

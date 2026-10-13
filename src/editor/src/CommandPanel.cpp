@@ -8,7 +8,6 @@
 #include "Logger.hpp"
 #include "Scene.hpp"
 #include "ScenePanel.hpp"
-#include "ScriptingHost.hpp"
 #include "UIUtils.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"

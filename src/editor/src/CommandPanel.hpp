@@ -2,7 +2,6 @@
 
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
-#include "ScriptingHost.hpp"
 #include "SystemSelection.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"

@@ -33,7 +33,6 @@
 #include "components/EditorInfo.hpp"
 #include "ResourceManager.hpp"
 #include "filesystem/CFileSystem/CFileSystem.hpp"
-#include "ScriptingHost.hpp"
 #include "imguizmo/ImGuizmo.h"
 #include "systems/EditorCameraSystem.hpp"
 #include "systems/RenderingSystem.hpp"
@@ -215,7 +214,6 @@ public:
 		entt.AddComponent<Hush::Graphics::ShaderCompiler>();
 
 		this->LoadModules((projRoot / "modules").string());
-		this->m_scriptingHost = &entt.AddComponent<Hush::ScriptingHost>();
 		this->m_resourceManager = m_engine->GetResourceManager();
 
 		// ── ImGui initialization ────────────────────────────────────
@@ -712,7 +710,6 @@ private:
 
 	std::unique_ptr<Hush::Scene> m_scene;
 	std::unique_ptr<Hush::EditorCameraSystem> m_cameraSystem;
-	Hush::ScriptingHost *m_scriptingHost = nullptr;
 	uintptr_t m_testSystem = 0;
 
 	/// Holds the previous scene texture alive across a render graph rebuild

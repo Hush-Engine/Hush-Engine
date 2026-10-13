@@ -13,7 +13,6 @@
 #include "Logger.hpp"
 #include "RHI/ShaderCompiler.hpp"
 #include "Ref.hpp"
-#include "ScriptingHost.hpp"
 #include "Shared/Camera.hpp"
 #include "components/EditorInfo.hpp"
 #include "imgui/imgui.h"
@@ -189,11 +188,6 @@ void Hush::InspectorPanel::Init(Scene *activeScene) noexcept
 	this->m_activeScene = activeScene;
 	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
 	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
-	// BUG: This may produce a dangling ptr if the storage moves, use a compref instead
-	activeScene->CreateQuery<ScriptingHost>().Each(
-		[this]([[maybe_unused]]
-			   Entity &entity,
-			   ScriptingHost &scriptingHostRef) { this->m_scriptingHost = &scriptingHostRef; });
 }
 
 void Hush::InspectorPanel::SetInspectTarget(Entity::EntityId entity)
@@ -260,10 +254,15 @@ void Hush::InspectorPanel::RenderProperties()
 		{
 			return;
 		}
+
 		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
 		const Reflection::TypeInfo* ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
 		auto *compMem = reinterpret_cast<uint8_t*>(this->m_inspectTarget.value().GetComponentRaw(compId));
+
+		std::string title = std::format("{}#{}", ti->GetName(), compId);
+		ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
 		int32_t cntr = 0;
 		for (const Reflection::FieldInfo& field : fields) {
 			ImGui::PushID(cntr);

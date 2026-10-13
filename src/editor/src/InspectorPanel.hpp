@@ -3,7 +3,6 @@
 #include "Entity.hpp"
 #include "IEditorPanel.hpp"
 #include <optional>
-#include "ScriptingHost.hpp"
 #include "components/EditorInfo.hpp"
 
 namespace Hush
@@ -29,8 +28,6 @@ namespace Hush
 		std::optional<Entity> m_inspectTarget = std::nullopt;
 
 		ComponentRef m_editorInfo{};
-
-		ScriptingHost* m_scriptingHost = nullptr;
 
 		Scene *m_activeScene;
 	};
