@@ -35,6 +35,9 @@ namespace Hush::Modules
 	[[hush::export]]
 	bool AddSystemToScene(HushEngine *engine, Scene *scene, ModuleHandle module, std::uint64_t typeId);
 
+	[[hush::export]]
+	bool RegisterComponentFromReflectedType(HushEngine *engine, Scene *scene, uint64_t typeId);
+
 	/// Queries whether a reflected type is currently registered.
 	[[hush::export]]
 	bool HasReflectedType(HushEngine *engine, std::uint64_t typeId);

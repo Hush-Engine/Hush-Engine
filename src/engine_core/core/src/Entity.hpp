@@ -9,6 +9,7 @@
 #include "Assertions.hpp"
 #include "Logger.hpp"
 #include "NullTerminatedStringView.hpp"
+#include "reflection/Annotations.hpp"
 #include "traits/EntityTraits.hpp"
 #include "HushBindings.hpp"
 
@@ -93,7 +94,7 @@ namespace Hush
 		constexpr static EntityId INVALID_ENTITY_ID = 0;
 
 		/// @brief Component that holds the name of an entity
-		struct [[hush::reflect]] Name
+		struct [[hush::reflect(Hush::Reflection::name("Name"))]] Name
 		{
 			HUSH_GENERATED_BODY
 		public:

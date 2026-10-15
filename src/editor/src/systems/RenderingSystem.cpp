@@ -347,7 +347,7 @@ void Hush::RenderingSystem::Init()
 		ser.serialize = &Serializable::DefaultSerialize<MeshReference>;
 		ser.deserialize = &::MeshReferenceDeserialize;
 		ser.postDeserialize = &::MeshReferencePostDeserialize;
-		ser.ctx = &this->m_renderingContext;
+		ser.SetContextRef(&this->m_renderingContext);
 	}
 
 	Entity::EntityId camRefId = this->GetScene().RegisterComponent<Camera>();

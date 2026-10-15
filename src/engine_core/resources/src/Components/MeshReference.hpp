@@ -8,6 +8,7 @@
 #include "Ref.hpp"
 #include "Vector3Math.hpp"
 #include "crypto/Hashing.hpp"
+#include "reflection/Annotations.hpp"
 
 #include <cstdint>
 #include <glm/ext/vector_float3.hpp>
@@ -32,7 +33,7 @@ namespace Hush
 	/// @brief Small wrapper around the `Mesh` data structure, internally, this is useful for caching using our
 	/// reference counting system
 	// This structure is intended as a bridge between cached resource data and the rendering pipeline
-	class [[hush::reflect]] [[hush::export]] MeshReference
+	class [[hush::reflect(Hush::Reflection::name("MeshReference"))]] [[hush::export]] MeshReference
 	{
 		HUSH_GENERATED_BODY
 	public:
