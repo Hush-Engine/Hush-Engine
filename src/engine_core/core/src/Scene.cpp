@@ -669,23 +669,25 @@ inline Hush::Scene::EError DeserializeComponents(
 	for (currToken = deserializer.GetToken(); ShouldContinueReadingCompsArray(currToken);
 		 currToken = deserializer.GetToken())
 	{
+		// ReadObject atomically captures the raw JSON of this component object into
+		// objectJson AND advances the main deserializer completely past its closing
+		// brace. This ensures the main deserializer cursor is always aligned to the
+		// next component (or ArrayEnd) regardless of how many fields each component has.
 		std::string_view objectJson;
-		deserializer.PeekObject(objectJson);
+		if (!deserializer.ReadObject(objectJson))
+		{
+			break;
+		}
 
+		// Use an isolated deserializer for all field-level reads so the main
+		// deserializer state is never affected by per-component parsing.
 		Serialization::JsonDeserializer localDeser{objectJson};
+		localDeser.Next(); // Consume ObjectStart {
 
-		deserializer.Next();
-		BREAK_LOOP_IF_NEEDED;
-
-		deserializer.ReadKey(currKey);
-		BREAK_LOOP_IF_NEEDED;
-		deserializer.ReadInt(compId);
-		BREAK_LOOP_IF_NEEDED;
-
-		deserializer.ReadKey(currKey);
-		BREAK_LOOP_IF_NEEDED;
-		deserializer.ReadString(compKey);
-		BREAK_LOOP_IF_NEEDED;
+		localDeser.ReadKey(currKey);
+		localDeser.ReadInt(compId);
+		localDeser.ReadKey(currKey);
+		localDeser.ReadString(compKey); // compKey is a string_view into localDeser (alive this iteration)
 
 		// Pair IDs have bit 63 set and have zero size — they cannot be added as normal
 		// components. Defer them to the post-loop remapping pass.
@@ -693,8 +695,6 @@ inline Hush::Scene::EError DeserializeComponents(
 		if (pendingPairs != nullptr && Entity::IsPairId(savedCompId))
 		{
 			pendingPairs->emplace_back(entity.GetId(), savedCompId);
-			deserializer.SkipObject();
-			BREAK_LOOP_IF_NEEDED;
 			continue;
 		}
 
@@ -702,18 +702,19 @@ inline Hush::Scene::EError DeserializeComponents(
 		Entity comp = scene->CreateEntityWithKey(compKey);
 		void *instance = entity.AddComponentRaw(comp.GetId());
 
-		// Deserialize it
+		// Custom deserializers expect the stream positioned at { of the full component
+		// object (they skip "id"/"key" as unknown keys via the visitor). Use a fresh
+		// deserializer from the same objectJson snapshot rather than the mid-consumed
+		// localDeser (which has already advanced past "id" and "key").
 		Serializable *serComp = comp.GetComponent<Serializable>();
 		if (serComp != nullptr && serComp->deserialize != nullptr)
 		{
 			auto *rawInstance = static_cast<std::uint8_t *>(instance);
+			Serialization::JsonDeserializer serDeser{objectJson};
 			// Purposefully not doing an if-check bc we currently have a lot of components failing this check but
 			// deserializing correctly
-			serComp->deserialize(rawInstance, deserializer, serComp->ctx);
-			// if (serializer->deserialize(rawInstance, deserializer, serializer->ctx) != Serializable::EError::None)
-			// {
-			// 	return Scene::EError::BadSceneFormat;
-			// }
+			void *ctx = serComp->usesLocalBuffer ? serComp->localBuffer.data() : serComp->ctx;
+			serComp->deserialize(rawInstance, serDeser, ctx);
 			if (serComp->postDeserialize != nullptr)
 			{
 				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
@@ -936,7 +937,8 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 				return;
 			}
 
-			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer, serializer->ctx);
+			void *context = serializer->usesLocalBuffer ? (void *)serializer->localBuffer.data() : serializer->ctx;
+			Serializable::EError err = serializer->serialize(rawComp, jsonSerializer, context);
 
 			serialErr = jsonSerializer.EndObject();
 			if (err != Serializable::EError::None)

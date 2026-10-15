@@ -2,6 +2,7 @@
 
 #include "Types/Color.hpp"
 #include "Vector4Math.hpp"
+#include "reflection/Annotations.hpp"
 #include <string_view>
 
 #include <Hushgen.hpp>
@@ -16,11 +17,11 @@
 
 namespace Hush
 {
-	struct [[hush::reflect]] DirectionalLight
+	struct [[hush::reflect(Hush::Reflection::name("DirectionalLight"))]] DirectionalLight
 	{
 		HUSH_GENERATED_BODY
 	public:
-		[[hush::property]]
+		[[hush::property, hush::export]]
 		float intensity = 1.0F;
 		[[hush::property]]
 		Color color = Vector4Math::ONE;

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "reflection/Annotations.hpp"
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
@@ -22,7 +23,7 @@
 
 namespace Hush
 {
-	class [[hush::export]] [[hush::reflect]] Camera
+	class [[hush::export]] [[hush::reflect(Hush::Reflection::name("Camera"))]] Camera
 	{
 		HUSH_GENERATED_BODY
 	public:

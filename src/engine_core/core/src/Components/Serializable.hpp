@@ -2,9 +2,11 @@
 //  not the entity that holds the component instance
 #pragma once
 
+#include "Assertions.hpp"
 #include "Entity.hpp"
 #include "serialization/Deserialization.hpp"
 #include "serialization/Formats/JsonSerializer.hpp"
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -26,9 +28,28 @@ namespace Hush
 		void (*postDeserialize)(uint8_t *instance, Entity::EntityId containerEntity, Entity::EntityId componentType,
 								void *ctx) = nullptr;
 		void *ctx = nullptr;
+		static constexpr size_t LOCAL_BUFF_SIZE = 16;
+		std::array<uint8_t, LOCAL_BUFF_SIZE> localBuffer;
 
 		/// @brief Component type this serializable references
 		Entity::EntityId type = Entity::INVALID_ENTITY_ID;
+
+		bool usesLocalBuffer = false;
+
+		void SetContextInline(const uint8_t *data, size_t size)
+		{
+			HUSH_ASSERT(size <= LOCAL_BUFF_SIZE,
+						"Inline context size({}) is bigger than the component's local buffer size ({})", size,
+						LOCAL_BUFF_SIZE);
+			std::memcpy(this->localBuffer.data(), data, size);
+			this->usesLocalBuffer = true;
+		}
+
+		void SetContextRef(void *ctx)
+		{
+			this->usesLocalBuffer = false;
+			this->ctx = ctx;
+		}
 
 		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough
 		template <class T>
