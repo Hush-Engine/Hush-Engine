@@ -18,7 +18,8 @@ namespace Hush::Reflection
 /// Registers every reflected type of the HushGeneratedTestModule module into the reflection database.
 /// The module handle says which module owns the types.
 /// Returns true when every type was registered.
-bool RegisterModule_HushGeneratedTestModule(Hush::Reflection::ReflectionDB &db, Hush::ModuleHandle module = Hush::ENGINE_MODULE_HANDLE);
+bool RegisterModule_HushGeneratedTestModule(Hush::Reflection::ReflectionDB &db,
+											Hush::ModuleHandle module = Hush::ENGINE_MODULE_HANDLE);
 
 /// Gets the descriptors of every system defined by the HushGeneratedTestModule module.
 std::span<const Hush::SystemDescriptor> GetSystemDescriptors_HushGeneratedTestModule();
