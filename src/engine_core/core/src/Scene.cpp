@@ -610,9 +610,9 @@ namespace
 		return hasModule && hasType && !system.type.empty() && FinishDocument(deserializer, JsonToken::ObjectEnd);
 	}
 
-	bool ParseSystems(std::string_view json, std::vector<Hush::SerializedSystem> &systems)
+	bool ParseSystems(std::string_view arrayJson, std::vector<Hush::SerializedSystem> &systems)
 	{
-		JsonDeserializer deserializer(json);
+		JsonDeserializer deserializer{arrayJson};
 		if (!deserializer.Next() || deserializer.GetToken() != JsonToken::ArrayStart)
 		{
 			return false;
@@ -758,15 +758,77 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 	// Enter the object
 	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
 	std::string_view currKey{};
-	HUSH_COND_FAIL_V(deserializer.ReadKey(currKey), EError::BadSceneFormat);
-	// This should be the entities array now
-	HUSH_COND_FAIL_V(deserializer.Next(), EError::BadSceneFormat);
 	// Maps old session entity index (lower 32 bits of serialized ID) → new runtime entity ID.
 	std::unordered_map<Entity::EntityId, Entity::EntityId> idRemap;
 	// Relationship pairs deferred until all entities are created.
 	std::vector<std::pair<Entity::EntityId, Entity::EntityId>> pendingPairs;
 
+	// Check version major and minor
+	int64_t versionMajor{};
+	deserializer.ReadKey(currKey);
+	HUSH_COND_FAIL_V(currKey == "versionMajor", EError::BadSceneFormat);
+	deserializer.ReadInt(versionMajor);
+
+	int64_t versionMinor{};
+	deserializer.ReadKey(currKey);
+	deserializer.ReadInt(versionMinor);
+	// Hard drop on major mismatch, let smaller versions through (minor versions should not break parsing)
+	HUSH_COND_FAIL_MSG_V(versionMajor == Scene::SCENE_FMT_VERSION_MAJOR && versionMinor <= SCENE_FMT_VERSION_MINOR,
+						 EError::MismatchedVersion,
+						 "Required scene format version is {}.{}, the scene trying to be loaded has version {}.{}",
+						 SCENE_FMT_VERSION_MAJOR, SCENE_FMT_VERSION_MINOR, versionMajor, versionMinor);
+
+	deserializer.ReadKey(currKey);
+	HUSH_COND_FAIL_MSG_V(currKey == "systems", EError::BadSceneFormat, "Expected \"systems\" array, found {}", currKey);
+	// We should consume until we hit the entities
+	std::vector<SerializedSystem> systemReferences;
+	std::string_view systemsArrayStr;
+	deserializer.ReadArray(systemsArrayStr);
+	ParseSystems(systemsArrayStr, systemReferences);
+
+	// Enter the array
+	deserializer.ReadKey(currKey);
+	HUSH_COND_FAIL_V(currKey == "entities", EError::BadSceneFormat);
+	deserializer.Next(); // Enters the array
+
 	// We are now on our object
+	this->ReadAndLoadAllEntities(deserializer, idRemap, pendingPairs);
+
+	// Second pass: reconstruct relationship pairs with remapped entity IDs.
+	// Built-in flecs entities (e.g. EcsChildOf) are not in idRemap; fall back to their original ID.
+	auto *flecsWorld = static_cast<ecs_world_t *>(m_world);
+	for (const auto &[entityId, savedPairId] : pendingPairs)
+	{
+		Entity::EntityId oldFirst = Entity::GetPairFirst(savedPairId);
+		Entity::EntityId oldSecond = Entity::GetPairSecond(savedPairId);
+		Entity::EntityId newFirst = idRemap.contains(oldFirst) ? idRemap.at(oldFirst) : oldFirst;
+		Entity::EntityId newSecond = idRemap.contains(oldSecond) ? idRemap.at(oldSecond) : oldSecond;
+		ecs_add_id(flecsWorld, entityId, ecs_pair(newFirst, newSecond));
+	}
+
+	(void)asset;
+	if (!this->m_systemFactory)
+	{
+		return EError::SystemResolutionFailed;
+	}
+	for (const auto &sysInfo : systemReferences)
+	{
+		std::unique_ptr<ISystem> sys = this->m_systemFactory(*this, sysInfo.module, sysInfo.type);
+		HUSH_COND_FAIL_MSG_V(
+			sys != nullptr, EError::SystemResolutionFailed,
+			"Could not instantiate system {} on module {}. Make sure it exists on the compiled module output",
+			sysInfo.type, sysInfo.module);
+		this->AddSystem(std::move(sys), sysInfo);
+	}
+	return EError::None;
+}
+
+void Hush::Scene::ReadAndLoadAllEntities(Serialization::JsonDeserializer &deserializer,
+										 std::unordered_map<Entity::EntityId, Entity::EntityId> &idRemap,
+										 std::vector<std::pair<Entity::EntityId, Entity::EntityId>> &pendingPairs)
+{
+	std::string_view currKey{};
+
 	while (deserializer.Next())
 	{
 		// Entity structure
@@ -802,66 +864,6 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 		DeserializeComponents(this, arrayDeser, ent, &pendingPairs);
 		deserializer.Next();
 	}
-
-	// Second pass: reconstruct relationship pairs with remapped entity IDs.
-	// Built-in flecs entities (e.g. EcsChildOf) are not in idRemap; fall back to their original ID.
-	auto *flecsWorld = static_cast<ecs_world_t *>(m_world);
-	for (const auto &[entityId, savedPairId] : pendingPairs)
-	{
-		Entity::EntityId oldFirst = Entity::GetPairFirst(savedPairId);
-		Entity::EntityId oldSecond = Entity::GetPairSecond(savedPairId);
-		Entity::EntityId newFirst = idRemap.count(oldFirst) ? idRemap.at(oldFirst) : oldFirst;
-		Entity::EntityId newSecond = idRemap.count(oldSecond) ? idRemap.at(oldSecond) : oldSecond;
-		ecs_add_id(flecsWorld, entityId, ecs_pair(newFirst, newSecond));
-	}
-
-	(void)asset;
-	// ParsedScene parsedScene;
-	// std::vector<ParsedEntity> entities;
-	// if (!ParseSceneRoot(asset, parsedScene) || !ParseEntities(parsedScene.entities, entities))
-	// {
-	// 	return EError::BadSceneFormat;
-	// }
-
-	// std::vector<SerializedSystem> systemReferences;
-	// if (parsedScene.systems.has_value() && !ParseSystems(*parsedScene.systems, systemReferences))
-	// {
-	// 	return EError::BadSceneFormat;
-	// }
-
-	// std::vector<OwnedSystem> resolvedSystems;
-	// resolvedSystems.reserve(systemReferences.size());
-	// for (SerializedSystem &reference : systemReferences)
-	// {
-	// 	if (!m_systemFactory)
-	// 	{
-	// 		return EError::SystemResolutionFailed;
-	// 	}
-
-	// 	std::unique_ptr<ISystem> instance = m_systemFactory(*this, reference.module, reference.type);
-	// 	if (instance == nullptr)
-	// 	{
-	// 		return EError::SystemResolutionFailed;
-	// 	}
-	// 	resolvedSystems.push_back({.instance = std::move(instance), .serialized = std::move(reference)});
-	// }
-
-	// for (const ParsedEntity &entityValue : entities)
-	// {
-	// 	Entity entity = entityValue.key.empty() ? CreateEntity() : CreateEntityWithKey(entityValue.key);
-	// 	const EError error = DeserializeComponents(this, entityValue.components, entity);
-	// 	if (error != EError::None)
-	// 	{
-	// 		return error;
-	// 	}
-	// }
-
-	// for (OwnedSystem &system : resolvedSystems)
-	// {
-	// 	AddSystem(std::move(system.instance), std::move(*system.serialized));
-	// }
-
-	return EError::None;
 }
 
 Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)

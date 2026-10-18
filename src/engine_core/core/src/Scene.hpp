@@ -82,7 +82,8 @@ namespace Hush
 		{
 			None = 0,
 			BadSceneFormat,
-			SystemResolutionFailed
+			SystemResolutionFailed,
+			MismatchedVersion
 		};
 
 		/// Constructor.
@@ -368,6 +369,8 @@ namespace Hush
 		friend class Entity;
 		friend class RawQuery;
 		friend class impl::QueryImpl;
+
+		void ReadAndLoadAllEntities(Serialization::JsonDeserializer& deserializer, std::unordered_map<Entity::EntityId, Entity::EntityId>& idRemap, std::vector<std::pair<Entity::EntityId, Entity::EntityId>>& pendingPairs);
 
 		template <typename T>
 		[[nodiscard]]
