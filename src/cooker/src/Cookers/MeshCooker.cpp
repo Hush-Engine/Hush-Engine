@@ -69,7 +69,9 @@ Hush::Result<Hush::ICooker::CookResult, Hush::ECookError> Hush::MeshCooker::Cook
 	std::vector<std::vector<GLTFLoader::TextureInfo>> texturesByMaterial;
 	std::vector<GeoSurface> surfaces;
 
-	GLTFLoader::FillMeshData(&modelAsset, 0, &vertexBuff, &indexBuff, &mats, &texturesByMaterial, &surfaces);
+	// TODO: Restore the path thing
+	GLTFLoader::FillMeshData(&modelAsset, 0, &vertexBuff, &indexBuff, &mats, &texturesByMaterial, &surfaces,
+							 ctx.sourceVPath);
 
 	// GLB container layout: 12-byte header followed by chunks, each prefixed by [length:uint32][type:uint32].
 	// The first chunk is the JSON one; the binary (BIN) chunk follows it. The texture offsets reported by

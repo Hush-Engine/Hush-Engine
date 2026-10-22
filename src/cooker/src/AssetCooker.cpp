@@ -215,7 +215,7 @@ namespace Hush
 			srcFile.read(reinterpret_cast<char *>(srcData.data()), static_cast<std::streamsize>(srcSize));
 
 			CookContext ctx;
-			ctx.sourceVPath = relVPath;
+			ctx.sourceVPath = "res://" + relVPath;
 			ctx.frameAllocator = allocator;
 
 			auto blob = CookToBlob(srcData, ext, meta, ctx);

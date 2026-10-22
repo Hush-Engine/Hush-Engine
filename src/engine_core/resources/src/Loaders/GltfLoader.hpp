@@ -76,15 +76,17 @@ namespace Hush::GLTFLoader
 
 	void FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
 					  std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
-					  std::vector<std::vector<TextureInfo>> *outTexturesByMat, std::vector<GeoSurface> *outSurfaces);
+					  std::vector<std::vector<TextureInfo>> *outTexturesByMat, std::vector<GeoSurface> *outSurfaces,
+					  std::string_view resourcePrefixName = "");
 
 	GltfLoadFunctions::EError LoadAssetFromBinary(std::span<const std::byte> data, AssetHandle *outAsset);
 
 	// Returns true if TANGENT attributes were loaded from the glTF (so callers can skip CalculateTangentBasis).
 	bool ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
 						   const fastgltf::Mesh &mesh, const std::filesystem::path &basePath, Ref<Mesh> &innerMeshRef,
-						   MeshReference *meshRef = nullptr); // A MeshRefcomponent may or may not be present, for
-															  // either the entity or raw upload paths
+						   MeshReference *meshRef = nullptr,
+						   std::string_view virtualPath = ""); // A MeshRefcomponent may or may not be present, for
+															   // either the entity or raw upload paths
 
 	Entity GenerateMeshEntities(const RenderingContext &renderingContext, const std::string_view &virtualPath);
 
@@ -101,6 +103,7 @@ namespace Hush::GLTFLoader
 	Ref<Graphics::Material3D> MakeMaterial(const RenderingContext &renderingContext, size_t materialIdx,
 										   const fastgltf::Asset &asset,
 										   const std::vector<Graphics::IGraphicsTexture *> &loadedTextures,
-										   const std::filesystem::path &basePath, MeshReference *meshRefComp = nullptr);
+										   const std::filesystem::path &basePath, MeshReference *meshRefComp = nullptr,
+										   std::string_view prefixUniqueNaming = "");
 
 } // namespace Hush::GLTFLoader

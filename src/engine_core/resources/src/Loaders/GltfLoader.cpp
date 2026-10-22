@@ -48,7 +48,7 @@ void Hush::GLTFLoader::AssetHandle::Dispose()
 void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::vector<Mesh::Vertex> *outVertexBuffer,
 									std::vector<uint32_t> *outIndexBuffer, std::vector<MaterialInfo> *outMaterials,
 									std::vector<std::vector<TextureInfo>> *outTexturesByMat,
-									std::vector<GeoSurface> *outSurfaces)
+									std::vector<GeoSurface> *outSurfaces, std::string_view resourcePrefixName)
 {
 	HUSH_ASSERT(asset != nullptr, "Unable to fill mesh data with a null asset!");
 	auto *gltfAsset = reinterpret_cast<fastgltf::Asset *>(asset->backing);
@@ -121,7 +121,10 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			auto albedo = rawMaterial.pbrData.baseColorFactor;
 			const fastgltf::math::nvec3 &emission = rawMaterial.emissiveFactor;
 			(void)emission;
-			const uint32_t materialResourceId = Hashing::Fnv1a(rawMaterial.name);
+			// PERF: Small string allocs, should be fine tho
+			std::string uniqueMatName = resourcePrefixName.data();
+			uniqueMatName.append(rawMaterial.name);
+			const uint32_t materialResourceId = Hashing::Fnv1a(uniqueMatName);
 			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),
 								.resource = materialResourceId,
 								.alphaCutoff = rawMaterial.alphaCutoff,
@@ -222,7 +225,7 @@ Hush::GltfLoadFunctions::EError Hush::GLTFLoader::LoadAssetFromBinary(std::span<
 
 bool Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContext, const fastgltf::Asset &asset,
 										 const fastgltf::Mesh &mesh, const std::filesystem::path &basePath,
-										 Ref<Mesh> &innerMeshRef, MeshReference *meshRef)
+										 Ref<Mesh> &innerMeshRef, MeshReference *meshRef, std::string_view virtualPath)
 {
 #ifdef DEBUG
 	if (meshRef != nullptr)
@@ -277,8 +280,6 @@ bool Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 		}
 
 		// Load the UVs here
-		// TODO: LOADUVS()
-
 		std::vector<glm::vec2> texBuffer =
 			GltfLoadFunctions::FindAttributeByName<glm::vec2>(primitive, asset, "TEXCOORD_0");
 
@@ -314,7 +315,7 @@ bool Hush::GLTFLoader::ProcessPrimitives(const RenderingContext &renderingContex
 			size_t materialIdx = primitive.materialIndex.value();
 
 			Ref<Graphics::Material3D> materialInstance =
-				MakeMaterial(renderingContext, materialIdx, asset, {}, basePath, meshRef);
+				MakeMaterial(renderingContext, materialIdx, asset, {}, basePath, meshRef, virtualPath);
 			// Keep alive on the Mesh component
 			if (meshRef != nullptr)
 			{
@@ -368,8 +369,9 @@ Hush::Entity Hush::GLTFLoader::GenerateMeshEntities(const RenderingContext &rend
 		meshRef->SetName(mesh.name);
 
 		std::filesystem::path basePath = hostPathRes.value().parent_path();
+		// TODO: Restore path thing
 		bool hadGltfTangents =
-			ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent);
+			ProcessPrimitives(renderingContext, assetRes.get(), mesh, basePath, meshRef, &meshComponent, virtualPath);
 
 		// Generate the material per primitive here
 
@@ -515,7 +517,7 @@ namespace
 Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	const RenderingContext &renderingContext, size_t materialIdx, const fastgltf::Asset &asset,
 	const std::vector<Graphics::IGraphicsTexture *> &loadedTextures, const std::filesystem::path &basePath,
-	MeshReference *meshRefComp)
+	MeshReference *meshRefComp, std::string_view prefixUniqueNaming)
 {
 	(void)loadedTextures;
 	const fastgltf::Material &material = asset.materials.at(materialIdx);
@@ -525,7 +527,10 @@ Hush::Ref<Hush::Graphics::Material3D> Hush::GLTFLoader::MakeMaterial(
 	const Graphics::Material3DDescriptor *defaultMaterialDesc = renderingContext.materialDescriptor;
 	Graphics::IGraphicsDevice *graphicsDevice = renderingContext.device;
 
-	auto materialInstance = resourceManager->AllocateRef<Graphics::Material3D>(material.name);
+	std::string uniqueName{prefixUniqueNaming.data(), prefixUniqueNaming.size()};
+	uniqueName.append(material.name);
+
+	auto materialInstance = resourceManager->AllocateRef<Graphics::Material3D>(uniqueName);
 	materialInstance->SetCullMode(material.doubleSided ? ECullMode::None : ECullMode::Front);
 	materialInstance->SetMaterialPass(passType);
 	materialInstance->SetAlphaBlendMode(EAlphaBlendMode::OneMinusSrcAlpha);

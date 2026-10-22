@@ -778,16 +778,18 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 						 "Required scene format version is {}.{}, the scene trying to be loaded has version {}.{}",
 						 SCENE_FMT_VERSION_MAJOR, SCENE_FMT_VERSION_MINOR, versionMajor, versionMinor);
 
-	deserializer.ReadKey(currKey);
-	HUSH_COND_FAIL_MSG_V(currKey == "systems", EError::BadSceneFormat, "Expected \"systems\" array, found {}", currKey);
-	// We should consume until we hit the entities
 	std::vector<SerializedSystem> systemReferences;
-	std::string_view systemsArrayStr;
-	deserializer.ReadArray(systemsArrayStr);
-	ParseSystems(systemsArrayStr, systemReferences);
+	deserializer.ReadKey(currKey);
+	if (currKey == "systems")
+	{
+		// We should consume until we hit the entities
+		std::string_view systemsArrayStr;
+		deserializer.ReadArray(systemsArrayStr);
+		ParseSystems(systemsArrayStr, systemReferences);
+		deserializer.ReadKey(currKey);
+	}
 
 	// Enter the array
-	deserializer.ReadKey(currKey);
 	HUSH_COND_FAIL_V(currKey == "entities", EError::BadSceneFormat);
 	deserializer.Next(); // Enters the array
 

@@ -34,8 +34,8 @@
 #include "Shared/DirectionalLight.hpp"
 #include "SystemSelection.hpp"
 
-constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component",
-															   "add-system", "help"};
+constexpr std::array<std::string_view, 6> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component",
+															   "add-system", "help",		"recook-assets"};
 
 // NOLINTNEXTLINE
 #define CALC_CMD_HASH(idx)                                                                                             \
@@ -47,7 +47,8 @@ enum class EBuiltinCommands : uint32_t
 	FindEntity = CALC_CMD_HASH(1),
 	AddComponent = CALC_CMD_HASH(2),
 	AddSystem = CALC_CMD_HASH(3),
-	Help = CALC_CMD_HASH(4)
+	Help = CALC_CMD_HASH(4),
+	RecookAssets = CALC_CMD_HASH(5)
 };
 
 void Hush::CommandPanel::Init(Scene *activeScene) noexcept
@@ -194,6 +195,29 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		return;
 	case EBuiltinCommands::Help:
 		break;
+	case EBuiltinCommands::RecookAssets: {
+
+		if (this->m_cookerService != nullptr)
+		{
+			// PERF: Maybe this can cook on a different thread
+			auto cookRes = this->m_cookerService->CookAllAssets();
+			// Send in a notification
+			Entity notifEntity = this->m_activeScene->CreateEntity();
+			if (cookRes.has_error())
+			{
+				std::string errMsg = "Failed to cook assets! Error: ";
+				errMsg.append(magic_enum::enum_name(cookRes.error()));
+				notifEntity.EmplaceComponent<ToastNotification>(errMsg, 1.0f, ToastNotification::EToastType::Error);
+			}
+			else
+			{
+				constexpr std::string_view cookedSuccesfullyMsg = "All assets were correctly re-cooked!";
+				notifEntity.EmplaceComponent<ToastNotification>(cookedSuccesfullyMsg, 1.0f,
+																ToastNotification::EToastType::Info);
+			}
+		}
+		break;
+	}
 	default:
 		// Show error
 		// Then fade out

@@ -112,7 +112,7 @@ namespace Hush::Graphics
 		return m_initialized;
 	}
 
-	Material3D::EError Material3D::SetPropertyRaw(std::string_view name, const std::span<const std::byte> &value)
+	Material3D::EError Material3D::SetPropertyRaw(std::string_view name, std::span<const uint8_t> value)
 	{
 		auto it = m_propertyMap.find(std::string(name));
 		if (it == m_propertyMap.end())
@@ -133,7 +133,7 @@ namespace Hush::Graphics
 		return EError::None;
 	}
 
-	Material3D::EError Material3D::GetPropertyRaw(std::string_view name, std::byte *outValue, size_t size)
+	Material3D::EError Material3D::GetPropertyRaw(std::string_view name, uint8_t *outValue, size_t size)
 	{
 		auto it = m_propertyMap.find(std::string(name));
 		if (it == m_propertyMap.end())
