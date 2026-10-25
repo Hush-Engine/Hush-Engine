@@ -9,6 +9,7 @@
 #include "Scene.hpp"
 #include "ScenePanel.hpp"
 #include "UIUtils.hpp"
+#include "async/Executor.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
 #include "definitions/KeyCode.hpp"
@@ -196,25 +197,30 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 	case EBuiltinCommands::Help:
 		break;
 	case EBuiltinCommands::RecookAssets: {
-
 		if (this->m_cookerService != nullptr)
 		{
-			// PERF: Maybe this can cook on a different thread
-			auto cookRes = this->m_cookerService->CookAllAssets();
-			// Send in a notification
-			Entity notifEntity = this->m_activeScene->CreateEntity();
-			if (cookRes.has_error())
-			{
-				std::string errMsg = "Failed to cook assets! Error: ";
-				errMsg.append(magic_enum::enum_name(cookRes.error()));
-				notifEntity.EmplaceComponent<ToastNotification>(errMsg, 1.0f, ToastNotification::EToastType::Error);
-			}
-			else
-			{
-				constexpr std::string_view cookedSuccesfullyMsg = "All assets were correctly re-cooked!";
-				notifEntity.EmplaceComponent<ToastNotification>(cookedSuccesfullyMsg, 1.0f,
-																ToastNotification::EToastType::Info);
-			}
+			auto cookTask = [](CommandPanel *commandPanel) -> Threading::Task<void> {
+				auto cookRes = commandPanel->m_cookerService->CookAllAssets();
+				// Send in a notification
+				Entity notifEntity = commandPanel->m_activeScene->CreateEntity();
+				if (cookRes.has_error())
+				{
+					std::string errMsg = "Failed to cook assets! Error: ";
+					errMsg.append(magic_enum::enum_name(cookRes.error()));
+					notifEntity.EmplaceComponent<ToastNotification>(errMsg, 1.0f, ToastNotification::EToastType::Error);
+				}
+				else
+				{
+					constexpr std::string_view cookedSuccesfullyMsg = "All assets were correctly re-cooked!";
+					notifEntity.EmplaceComponent<ToastNotification>(cookedSuccesfullyMsg, 1.0f,
+																	ToastNotification::EToastType::Info);
+				}
+				co_return;
+			};
+
+			HushEngine *engine = this->m_activeScene->GetEngine();
+			Threading::Executors::ThreadPool *pool = engine->GetEngineThreadPool();
+			Threading::SpawnOn(pool, cookTask(this));
 		}
 		break;
 	}

@@ -784,8 +784,12 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 	{
 		// We should consume until we hit the entities
 		std::string_view systemsArrayStr;
-		deserializer.ReadArray(systemsArrayStr);
-		ParseSystems(systemsArrayStr, systemReferences);
+		bool arrayRead = deserializer.ReadArray(systemsArrayStr);
+		if (!arrayRead || !ParseSystems(systemsArrayStr, systemReferences))
+		{
+			LogFormat(ELogLevel::Error, "Failed to deserialize systems from scene file!");
+			return EError::BadSceneFormat;
+		}
 		deserializer.ReadKey(currKey);
 	}
 
@@ -809,7 +813,7 @@ Hush::Scene::EError Hush::Scene::FromSceneAsset(const std::string &asset)
 	}
 
 	(void)asset;
-	if (!this->m_systemFactory)
+	if (!systemReferences.empty() && !this->m_systemFactory)
 	{
 		return EError::SystemResolutionFailed;
 	}
