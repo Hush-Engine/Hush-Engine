@@ -1108,6 +1108,11 @@ void Hush::Scene::DestroyEntity(Entity &entity)
 	ecs_delete(world, entity.GetId());
 }
 
+void Hush::Scene::QueueEntityDestroy(Entity &entity)
+{
+	Entity::QueueDestroy(entity);
+}
+
 std::optional<std::uint64_t> Hush::Scene::GetRegisteredComponentId(NullTerminatedStringView name)
 {
 	std::shared_lock lock(m_registeredEntitiesMutex);

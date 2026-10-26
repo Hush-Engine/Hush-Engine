@@ -244,17 +244,22 @@ void Hush::InspectorPanel::RenderProperties()
 		Serialize(camComponent);
 	}
 
-	// Now, for any user defined components, we use the functions inside of their archetype
-	// HACK: Super bad awful approach
 	// Iterate the current entity of the components that have a serializable comp
 	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
 		auto *inspectable = ent.GetComponent<InspectableComponent>();
-		if (inspectable == nullptr || !inspectable->reflectedTypeId.IsValid())
+		if (inspectable == nullptr)
 		{
 			return;
 		}
-
+		if (!inspectable->reflectedTypeId.IsValid())
+		{
+			// Just use the ecs_get_name
+			std::string_view entKey = ent.GetKey();
+			std::string title = std::format("{}#{}", entKey, compId);
+			ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+			return;
+		}
 		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
 		const Reflection::TypeInfo *ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();

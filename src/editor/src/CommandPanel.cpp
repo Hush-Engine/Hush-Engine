@@ -392,7 +392,7 @@ void Hush::CommandPanel::AddComponentPopup()
 	popupState.onElementClicked = [](size_t idx, PopupListState *state) {
 		auto *localCtx = reinterpret_cast<PopupCtx *>(state->ctx);
 		Entity::EntityId compId = localCtx->compsArr->at(idx);
-		localCtx->entityRef->AddComponentRaw(compId);
+		localCtx->entityRef->AddId(compId);
 	};
 
 	DrawSearchPopup(&popupState);

@@ -221,6 +221,9 @@ namespace Hush
 		[[hush::export]]
 		void DestroyEntity(Entity &entity);
 
+		[[hush::export]]
+		void QueueEntityDestroy(Entity &entity);
+
 		/// Get the component registered id by name
 		/// @param name Component name
 		/// @return The component id if it exists, std::nullopt otherwise

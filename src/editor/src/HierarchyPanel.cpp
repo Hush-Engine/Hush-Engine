@@ -12,6 +12,7 @@
 #include "Components/LocalTransform.hpp"
 #include "Components/Serializable.hpp"
 #include "Components/WorldTransform.hpp"
+#include "EcsTerms.hpp"
 #include "Entity.hpp"
 #include "InputManager.hpp"
 #include "InspectorPanel.hpp"
@@ -65,7 +66,10 @@ void Hush::HierarchyPanel::Init(Scene *activeScene) noexcept
 	Entity engineManager = activeScene->CreateEntityWithKey(ENGINE_MANAGER);
 	this->m_editorInfo = engineManager.CreateComponentReference<EditorInfo>();
 	this->m_activeScene = activeScene;
-	this->m_inspectableEntitiesQuery = this->m_activeScene->CreateQuery<WorldTransform, LocalTransform, Entity::Name>();
+	auto queryBuiler = this->m_activeScene->CreateQueryBuilder<WorldTransform, LocalTransform, Entity::Name>();
+	Entity ecsPrefabEnt = this->m_activeScene->EntityFromIdUnchecked(EcsTerms::TEMPLATE);
+	queryBuiler.WithOptional(ecsPrefabEnt); // Include flecs prefabs
+	this->m_inspectableEntitiesQuery = queryBuiler.Build();
 }
 
 void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
@@ -91,7 +95,8 @@ void Hush::HierarchyPanel::OnRender([[maybe_unused]] float deltaTime)
 			InputManager::IsKeyDownThisFrame(EKeyCode::KpEnter) || InputManager::IsKeyDownThisFrame(EKeyCode::RETURN);
 		if (ImGui::Button("Yes") || didSubmit)
 		{
-			Entity::QueueDestroy(this->m_activeScene->EntityFromIdUnchecked(selection.value));
+			Entity toDestroy = this->m_activeScene->EntityFromIdUnchecked(selection.value);
+			Entity::QueueDestroy(toDestroy);
 			selection.value = 0;
 			this->m_state = EState::None;
 		}

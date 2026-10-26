@@ -301,6 +301,9 @@ namespace Hush
 		[[hush::export]]
 		void *AddComponentRaw(EntityId componentId);
 
+		/// Adds a component to the entity without treating it as a mutable component (useful for tags and built-in flecs markers)
+		void AddId(EntityId componentId);
+
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
@@ -352,7 +355,7 @@ namespace Hush
 		/// @details This function is useful to destroy any entities that might be in use by other
 		/// systems at the time of its intended destruction; instead of immediately removing the entity
 		/// from the world, it waits until the @ref EntityManagerSystem ticks again to remove it
-		static void QueueDestroy(Entity &&entity);
+		static void QueueDestroy(Entity &entity);
 
 		void SetParent(const Entity &parent);
 

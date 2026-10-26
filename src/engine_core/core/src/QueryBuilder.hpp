@@ -66,6 +66,10 @@ namespace Hush
 		[[hush::export]]
 		void WithOptional(uint8_t *queryDesc, uint8_t *termCountRef, Entity::EntityId term);
 
+		/// @brief Makes the query match to the normally excluded template entities (Flecs Prefabs)
+		[[hush::export]]
+		void IncludeTemplates(uint8_t *queryDesc, uint8_t *termCountRef);
+
 		/// @brief Builds the query from the specified descriptor
 		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
 		[[hush::export]]
@@ -117,10 +121,16 @@ namespace Hush
 			return *this;
 		}
 
+		inline QueryBuilder &IncludeTemplates()
+		{
+			impl::QueryBuilderImpl::IncludeTemplates(this->m_opaqueDesc.data(), &this->m_termCount);
+			return *this;
+		}
+
 		Query<Components...> Build()
 		{
 			RawQuery initializedQuery = impl::QueryBuilderImpl::InitQuery(this->m_scene, this->m_opaqueDesc.data());
-			return Query<Components...>(initializedQuery);
+			return Query<Components...>(std::move(initializedQuery));
 		}
 
 	private:

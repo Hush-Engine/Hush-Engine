@@ -84,6 +84,11 @@ void *Hush::Entity::AddComponentRaw(const EntityId componentId)
 	return ecs_get_mut_id(world, m_entityId, componentId);
 }
 
+void Hush::Entity::AddId(EntityId componentId) {
+	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
+	ecs_add_id(world, m_entityId, componentId);
+}
+
 void *Hush::Entity::GetComponentRaw(EntityId componentId)
 {
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
@@ -152,7 +157,7 @@ void Hush::Entity::Destroy(Entity &&entity)
 	scene->DestroyEntity(std::move(entity));
 }
 
-void Hush::Entity::QueueDestroy(Entity &&entity)
+void Hush::Entity::QueueDestroy(Entity &entity)
 {
 	if (!entity.IsAlive())
 	{
