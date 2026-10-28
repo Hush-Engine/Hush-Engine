@@ -734,6 +734,17 @@ Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *in
 			return Entity::INVALID_ENTITY_ID;
 		}
 	}
+	// Just copy the references to the material
+	else
+	{
+		for (const auto &surface : mesh->GetSurfaces())
+		{
+			Ref<Material3D> matRef = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
+			HUSH_ASSERT(!matRef.IsNull(),
+						"Material should have been created on the other branch, something went wrong with references!");
+			meshRefComp.PushMaterial(matRef);
+		}
+	}
 
 	// Let ResourceUploadSystem create + upload the GPU vertex/index buffers.
 	entity.AddComponent<Renderer::GpuUploadComponent>();

@@ -36,7 +36,7 @@ namespace Hush
 
 		bool usesLocalBuffer = false;
 
-		void SetContextInline(const uint8_t *data, size_t size)
+		inline void SetContextInline(const uint8_t *data, size_t size)
 		{
 			HUSH_ASSERT(size <= LOCAL_BUFF_SIZE,
 						"Inline context size({}) is bigger than the component's local buffer size ({})", size,
@@ -45,10 +45,10 @@ namespace Hush
 			this->usesLocalBuffer = true;
 		}
 
-		void SetContextRef(void *ctx)
+		inline void SetContextRef(void *context)
 		{
 			this->usesLocalBuffer = false;
-			this->ctx = ctx;
+			this->ctx = context;
 		}
 
 		/// @brief If your component (T) is registered with Hush's reflection system this function is more than enough

@@ -1,9 +1,14 @@
+#include "Components/ComponentMetadata.hpp"
+#include "EcsTerms.hpp"
 #include "Scene.hpp"
 #include "EntityManagerSystem.hpp"
 
 void Hush::EntityManagerSystem::Init()
 {
-	this->m_markedForDeletion = this->GetScene().CreateQuery<EntityMarkedForDeletion>();
+	Scene& scene = this->GetScene();
+	this->m_markedForDeletion = scene.CreateQuery<EntityMarkedForDeletion>();
+	Entity templateComp = scene.EntityFromIdUnchecked(EcsTerms::TEMPLATE);
+	templateComp.AddComponent<InspectableComponent>();
 }
 
 void Hush::EntityManagerSystem::OnShutdown()
@@ -14,7 +19,12 @@ void Hush::EntityManagerSystem::OnUpdate(float delta)
 {
 	(void)delta;
 	this->m_markedForDeletion.Each(
-		[this](Entity &ent, EntityMarkedForDeletion &) { this->GetScene().DestroyEntity(ent); });
+		[this](Entity &ent, EntityMarkedForDeletion &deletionComp) {
+			if (deletionComp.onDestroy != nullptr) {
+				deletionComp.onDestroy(ent.GetId(), &this->GetScene());
+			}
+			this->GetScene().DestroyEntity(ent);
+		});
 }
 
 void Hush::EntityManagerSystem::OnFixedUpdate(float delta)

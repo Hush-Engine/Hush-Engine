@@ -244,21 +244,29 @@ void Hush::InspectorPanel::RenderProperties()
 		Serialize(camComponent);
 	}
 
-	// Now, for any user defined components, we use the functions inside of their archetype
-	// HACK: Super bad awful approach
 	// Iterate the current entity of the components that have a serializable comp
 	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
 		auto *inspectable = ent.GetComponent<InspectableComponent>();
-		if (inspectable == nullptr || !inspectable->reflectedTypeId.IsValid())
+		if (inspectable == nullptr)
 		{
 			return;
 		}
-
+		if (!inspectable->reflectedTypeId.IsValid())
+		{
+			// Just use the ecs_get_name
+			std::string_view entKey = ent.GetKey();
+			std::string title = std::format("{}#{}", entKey, compId);
+			ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+			return;
+		}
 		Reflection::ReflectionDB *reflectionDb = this->m_activeScene->GetEngine()->GetReflectionDB();
 		const Reflection::TypeInfo *ti = reflectionDb->GetTypeInfo(inspectable->reflectedTypeId);
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
 		auto *compMem = reinterpret_cast<uint8_t *>(this->m_inspectTarget.value().GetComponentRaw(compId));
+
+		// NOTE: This is a narrowing conversion, it might lead to weird behaviour, we could look into stripping out component bytes from its id bitmask
+		ImGui::PushID(static_cast<int32_t>(compId));
 
 		std::string title = std::format("{}#{}", ti->GetName(), compId);
 		ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
@@ -317,5 +325,6 @@ void Hush::InspectorPanel::RenderProperties()
 			ImGui::PopID();
 			cntr++;
 		}
+		ImGui::PopID();
 	});
 }

@@ -5,12 +5,15 @@
 #include "RHI/GraphicsResources.hpp"
 #include "RHI/ICommandList.hpp"
 #include "RHI/MaterialInstance.hpp"
+#include <cstdint>
 #include <cstring>
 #include <span>
 #include <string_view>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "HushBindings.hpp"
 
 namespace Hush::Graphics
 {
@@ -74,10 +77,10 @@ namespace Hush::Graphics
 
 	/// @brief High-level material class that abstracts away the underlying
 	///        graphics API and shader details.
-	class Material3D
+	class [[hush::export]] Material3D
 	{
 	public:
-		enum class EError
+		enum class [[hush::export]] EError
 		{
 			None,
 			NullDevice,
@@ -119,14 +122,16 @@ namespace Hush::Graphics
 		// Uniform property access
 		// -----------------------------------------------------------------
 
-		EError SetPropertyRaw(std::string_view name, const std::span<const std::byte> &value);
+		[[hush::export]]
+		EError SetPropertyRaw(std::string_view name, std::span<const uint8_t> value);
 
-		EError GetPropertyRaw(std::string_view name, std::byte *outValue, size_t size);
+		[[hush::export]]
+		EError GetPropertyRaw(std::string_view name, uint8_t *outValue, size_t size);
 
 		template <class T>
 		EError GetProperty(std::string_view name, T *outValue)
 		{
-			auto *ptr = reinterpret_cast<std::byte *>(outValue);
+			auto *ptr = reinterpret_cast<uint8_t *>(outValue);
 			return GetPropertyRaw(name, ptr, sizeof(T));
 		}
 
@@ -146,8 +151,7 @@ namespace Hush::Graphics
 			requires std::is_trivially_copyable_v<T>
 		EError SetProperty(std::string_view name, const T &value)
 		{
-			auto valueView =
-				std::span<const std::byte, sizeof(T)>(reinterpret_cast<const std::byte *>(&value), sizeof(T));
+			auto valueView = std::span<const uint8_t, sizeof(T)>(reinterpret_cast<const uint8_t *>(&value), sizeof(T));
 			return this->SetPropertyRaw(name, valueView);
 		}
 

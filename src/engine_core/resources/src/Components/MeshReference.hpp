@@ -112,6 +112,12 @@ namespace Hush
 			return this->m_materials;
 		}
 
+		[[nodiscard]] [[hush::export]]
+		size_t GetMaterialCount() const;
+
+		[[hush::export]]
+		Graphics::Material3D *GetMaterialAt(size_t index);
+
 		/// @brief Fnv1a resource ids of the materials in @ref GetMaterials, in the same order.
 		[[nodiscard]]
 		const std::vector<uint32_t> &GetMaterialIds() const

@@ -3,6 +3,7 @@
 //
 
 #include "Assertions.hpp"
+#include "CommandPanel.hpp"
 #include "Components/GlobalKeys.hpp"
 #include "Components/LocalTransform.hpp"
 #include "Components/WorldTransform.hpp"
@@ -266,6 +267,7 @@ public:
 		// dirLightEntity.AddComponent<Hush::LocalTransform>();
 		// dirLightEntity.EmplaceComponent<Hush::DirectionalLight>(1.0f, Hush::Vector4Math::ONE);
 		this->m_userInterface.Init(this->m_scene.get());
+		this->m_userInterface.GetPanel<Hush::CommandPanel>().SetCookerService(m_cookerService.get());
 		this->HookEvents();
 	}
 
