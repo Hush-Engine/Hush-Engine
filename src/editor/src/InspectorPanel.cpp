@@ -265,6 +265,9 @@ void Hush::InspectorPanel::RenderProperties()
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
 		auto *compMem = reinterpret_cast<uint8_t *>(this->m_inspectTarget.value().GetComponentRaw(compId));
 
+		// NOTE: This is a narrowing conversion, it might lead to weird behaviour, we could look into stripping out component bytes from its id bitmask
+		ImGui::PushID(static_cast<int32_t>(compId));
+
 		std::string title = std::format("{}#{}", ti->GetName(), compId);
 		ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 
@@ -322,5 +325,6 @@ void Hush::InspectorPanel::RenderProperties()
 			ImGui::PopID();
 			cntr++;
 		}
+		ImGui::PopID();
 	});
 }

@@ -19,7 +19,12 @@ void Hush::EntityManagerSystem::OnUpdate(float delta)
 {
 	(void)delta;
 	this->m_markedForDeletion.Each(
-		[this](Entity &ent, EntityMarkedForDeletion &) { this->GetScene().DestroyEntity(ent); });
+		[this](Entity &ent, EntityMarkedForDeletion &deletionComp) {
+			if (deletionComp.onDestroy != nullptr) {
+				deletionComp.onDestroy(ent.GetId(), &this->GetScene());
+			}
+			this->GetScene().DestroyEntity(ent);
+		});
 }
 
 void Hush::EntityManagerSystem::OnFixedUpdate(float delta)

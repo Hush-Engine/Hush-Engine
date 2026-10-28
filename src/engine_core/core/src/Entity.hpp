@@ -35,6 +35,8 @@ namespace Hush
 {
 	class Scene;
 
+	using EntityOnDestroyCallback_t = void(*)(uint64_t, void*);
+
 	template <typename... Components>
 	class Query;
 	// Upper bound on sizeof(ecs_ref_t): 48 bytes on 64-bit targets. On 32 bit target (such as wasm32) the two trailing
@@ -355,7 +357,7 @@ namespace Hush
 		/// @details This function is useful to destroy any entities that might be in use by other
 		/// systems at the time of its intended destruction; instead of immediately removing the entity
 		/// from the world, it waits until the @ref EntityManagerSystem ticks again to remove it
-		static void QueueDestroy(Entity &entity);
+		static void QueueDestroy(Entity &entity, EntityOnDestroyCallback_t destructor = nullptr);
 
 		void SetParent(const Entity &parent);
 
@@ -390,6 +392,13 @@ namespace Hush
 
 		[[nodiscard]]
 		std::string_view QueryName() const;
+
+		/// @brief Non-trivial set name, this sets the name component, use a component reference if you need to query this once per frame
+		[[hush::export]]
+		void SetName(std::string_view name);
+
+		[[hush::export]]
+		void SetKey(std::string_view key);
 
 		// HACK: To avoid exporting a string view
 		[[hush::export]]

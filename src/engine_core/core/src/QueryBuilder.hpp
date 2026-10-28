@@ -70,6 +70,9 @@ namespace Hush
 		[[hush::export]]
 		void IncludeTemplates(uint8_t *queryDesc, uint8_t *termCountRef);
 
+		[[hush::export]]
+		void TemplatesOnly(uint8_t* queryDesc, uint8_t* termCountRef);
+
 		/// @brief Builds the query from the specified descriptor
 		/// @param queryDesc Underlying query description (the value of the @ref OpaqueQueryDescriptor::data function)
 		[[hush::export]]
@@ -124,6 +127,11 @@ namespace Hush
 		inline QueryBuilder &IncludeTemplates()
 		{
 			impl::QueryBuilderImpl::IncludeTemplates(this->m_opaqueDesc.data(), &this->m_termCount);
+			return *this;
+		}
+
+		inline QueryBuilder &TemplatesOnly() {
+			impl::QueryBuilderImpl::TemplatesOnly(this->m_opaqueDesc.data(), &this->m_termCount);
 			return *this;
 		}
 

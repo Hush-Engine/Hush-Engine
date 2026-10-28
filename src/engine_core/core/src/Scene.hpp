@@ -222,7 +222,7 @@ namespace Hush
 		void DestroyEntity(Entity &entity);
 
 		[[hush::export]]
-		void QueueEntityDestroy(Entity &entity);
+		void QueueEntityDestroy(Entity &entity, EntityOnDestroyCallback_t destructor = nullptr);
 
 		/// Get the component registered id by name
 		/// @param name Component name

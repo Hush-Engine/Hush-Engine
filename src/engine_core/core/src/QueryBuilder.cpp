@@ -96,7 +96,24 @@ void Hush::impl::QueryBuilderImpl::WithOptional(uint8_t *queryDesc, uint8_t *ter
 	(*termCountRef)++;
 }
 
-void Hush::impl::QueryBuilderImpl::IncludeTemplates(uint8_t *queryDesc, uint8_t *termCountRef) {
+void Hush::impl::QueryBuilderImpl::IncludeTemplates(uint8_t *queryDesc, uint8_t *termCountRef)
+{
+	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
+	HUSH_ASSERT(termCountRef != nullptr, "Cannot add term with a null count reference!");
+	HUSH_COND_FAIL_MSG(*termCountRef < MAX_TERM_COUNT,
+					   "Maximum amount of query terms exceeded, you can only query for {} terms at once!",
+					   MAX_TERM_COUNT);
+
+	auto *desc = reinterpret_cast<ecs_query_desc_t *>(queryDesc);
+
+	ecs_term_t builtTerm{.id = EcsTerms::TEMPLATE, .oper = EcsOptional};
+
+	desc->terms[*termCountRef] = builtTerm;
+	(*termCountRef)++;
+}
+
+void Hush::impl::QueryBuilderImpl::TemplatesOnly(uint8_t *queryDesc, uint8_t *termCountRef)
+{
 	HUSH_ASSERT(queryDesc != nullptr, "Unable to build query, descriptor is null!");
 	HUSH_ASSERT(termCountRef != nullptr, "Cannot add term with a null count reference!");
 	HUSH_COND_FAIL_MSG(*termCountRef < MAX_TERM_COUNT,

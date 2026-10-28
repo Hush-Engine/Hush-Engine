@@ -259,6 +259,7 @@ FragmentOutput fragMain(VertexOutput input)
     params.Albedo = texColor.rgb * scalarPow(input.outColor, 2.2);
 
     float4 metalRough = metalRoughTex.Sample(defaultSampler, input.outUV);
+    float ao = metalRough.r;
     params.Metalness = metalRough.b * materialData.metal_rough_factors.x;
     params.Roughness = metalRough.g * materialData.metal_rough_factors.y;
     params.Roughness = max(params.Roughness, 0.05);
@@ -293,7 +294,7 @@ FragmentOutput fragMain(VertexOutput input)
         (scalarPow(texEmission.xyz, 2.2) * materialData.emissionFactors.xyz) * materialData.emissionFactors.w;
 
     float3 directLight = CalculateDirLights(params);
-    float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5;
+    float3 ambient = u_sceneData.ambientColor.rgb * texColor.rgb * 0.5 * ao;
 
     FragmentOutput o;
     vec3 finalColor = vec3(ambient + directLight + emission);

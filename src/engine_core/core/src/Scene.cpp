@@ -699,8 +699,13 @@ inline Hush::Scene::EError DeserializeComponents(
 		}
 
 		// Get the component with that key
-		Entity comp = scene->CreateEntityWithKey(compKey);
-		void *instance = entity.AddComponentRaw(comp.GetId());
+		Entity::EntityId existingComp =
+			scene->Lookup(compKey); // It appears the lookup works better with built-in types(?
+		Entity comp = scene->EntityFromIdUnchecked(existingComp);
+		if (!comp.IsValid())
+		{
+			comp = scene->CreateEntityWithKey(compKey);
+		}
 
 		// Custom deserializers expect the stream positioned at { of the full component
 		// object (they skip "id"/"key" as unknown keys via the visitor). Use a fresh
@@ -709,6 +714,8 @@ inline Hush::Scene::EError DeserializeComponents(
 		Serializable *serComp = comp.GetComponent<Serializable>();
 		if (serComp != nullptr && serComp->deserialize != nullptr)
 		{
+			// This assumes the component has a valid instance (i.e, it's not a tag)
+			void *instance = entity.AddComponentRaw(comp.GetId());
 			auto *rawInstance = static_cast<std::uint8_t *>(instance);
 			Serialization::JsonDeserializer serDeser{objectJson};
 			// Purposefully not doing an if-check bc we currently have a lot of components failing this check but
@@ -719,6 +726,11 @@ inline Hush::Scene::EError DeserializeComponents(
 			{
 				serComp->postDeserialize(rawInstance, entity.GetId(), serComp->type, serComp->ctx);
 			}
+		}
+		else
+		{
+			// Simply add the comp, without modifying its internal data
+			entity.AddId(comp.GetId());
 		}
 	}
 	return Scene::EError::None;
@@ -878,7 +890,8 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 	// Serialize every single entity in the world with each of its components
 	// TODO: For now, every entity that has a transform is enough, but there are
 	// use cases where we want to serialize raw entities with no inspectable transoforms
-	auto q = this->CreateQuery<WorldTransform>();
+	auto queryBuilder = this->CreateQueryBuilder<WorldTransform>().IncludeTemplates();
+	auto q = queryBuilder.Build();
 	auto *world = static_cast<ecs_world_t *>(m_world);
 	EntityId serializableId = this->RegisterComponent<Serializable>();
 
@@ -918,12 +931,15 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 			// deserialization can detect them via IsPairId and remap old→new entity indices.
 			// Cast to int64_t so rapidjson writes a signed int that ReadInt can parse back
 			// (the pair ID has bit 63 set and would exceed INT64_MAX as unsigned).
-			if (Entity::IsPairId(comp))
+			if (Entity::IsPairId(comp) || ecs_id_is_tag(world, comp))
 			{
 				constexpr const char *emptyStr = "";
 				serialErr = jsonSerializer.BeginObject();
 				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
-				serialErr = jsonSerializer.Serialize("key", std::string_view{emptyStr});
+				// Tags could still have keys
+				const char *entKey = ecs_get_name(world, comp);
+				std::string_view realKey = entKey != nullptr ? std::string_view{entKey} : std::string_view{emptyStr};
+				serialErr = jsonSerializer.Serialize("key", realKey);
 				serialErr = jsonSerializer.EndObject();
 				return;
 			}
@@ -964,7 +980,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 
 	(void)serialErr;
 
-	asset.assign(jsonSerializer.FinishSerialization());
+	asset.assign(Serialization::PrettifyJson(jsonSerializer.FinishSerialization()));
 
 	return EError::None;
 }
@@ -1108,9 +1124,9 @@ void Hush::Scene::DestroyEntity(Entity &entity)
 	ecs_delete(world, entity.GetId());
 }
 
-void Hush::Scene::QueueEntityDestroy(Entity &entity)
+void Hush::Scene::QueueEntityDestroy(Entity &entity, EntityOnDestroyCallback_t destructor)
 {
-	Entity::QueueDestroy(entity);
+	Entity::QueueDestroy(entity, destructor);
 }
 
 std::optional<std::uint64_t> Hush::Scene::GetRegisteredComponentId(NullTerminatedStringView name)
