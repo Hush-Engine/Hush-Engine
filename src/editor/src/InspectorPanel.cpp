@@ -33,6 +33,7 @@
 #include "reflection/FieldInfo.hpp"
 #include "reflection/TypeInfo.hpp"
 #include <memory>
+#include "EcsTerms.hpp"
 
 constexpr float NESTED_INDENT_SIZE = 10.0F;
 
@@ -246,6 +247,9 @@ void Hush::InspectorPanel::RenderProperties()
 
 	// Iterate the current entity of the components that have a serializable comp
 	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
+	    if (Entity::IsPairId(compId) && Entity::GetPairFirst(compId) == EcsTerms::CHILD_OF) {
+	    	return;
+	    }
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
 		auto *inspectable = ent.GetComponent<InspectableComponent>();
 		if (inspectable == nullptr)

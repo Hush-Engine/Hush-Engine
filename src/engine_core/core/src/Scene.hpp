@@ -165,7 +165,7 @@ namespace Hush
 		/// @param componentSize Size in bytes of the component, needed for ensuring correct data access on your
 		/// callback
 		/// @param observerType Component event type
-		[[hush::export]]
+		[[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::typeSizeParams("componentSize"))]]
 		void AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
 									 EComponentObserverType observerType, ObserverCallback_t callback);
 
@@ -253,7 +253,7 @@ namespace Hush
 		EntityId LookupCStr(NullTerminatedStringView tag) const;
 
 		// HACK: Marshallable version
-		[[hush::export]] [[nodiscard]]
+		[[hush::export(Hush::Export::typeNameParams("tag"))]] [[nodiscard]]
 		EntityId Lookup(std::string_view tag) const;
 
 		[[nodiscard]]

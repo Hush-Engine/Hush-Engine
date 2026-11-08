@@ -262,6 +262,7 @@ void Hush::HierarchyPanel::GenerateEntitySelectableTree(Entity &entity, const En
 			}
 			ImGui::PushID(childIdx);
 			GenerateEntitySelectableTree(currChild, *childName, inspector);
+			ImGui::PopID();
 			childIdx++;
 		});
 		ImGui::TreePop();

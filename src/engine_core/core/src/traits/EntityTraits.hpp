@@ -77,7 +77,7 @@ namespace Hush::ComponentTraits
 		ComponentMoveCtor moveAssignDtor;
 	};
 
-	struct [[hush::export]] ComponentInfo
+	struct [[hush::export]] ComponentInfo // Add a small CreateFromTemplate marker
 	{
 		std::size_t size;
 		std::size_t alignment;

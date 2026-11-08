@@ -859,6 +859,8 @@ void Hush::Scene::ReadAndLoadAllEntities(Serialization::JsonDeserializer &deseri
 		deserializer.ReadString(entKey);
 
 		Entity ent;
+		// TODO: Handle the case where we have a pair entity that holds first and second
+		// Where first might be a built-in entity (i.e ChildOf)
 		if (entKey.empty())
 		{
 			ent = this->CreateEntity();
@@ -937,7 +939,7 @@ Hush::Scene::EError Hush::Scene::ToSceneAsset(std::string &asset)
 				serialErr = jsonSerializer.BeginObject();
 				serialErr = jsonSerializer.Serialize("id", static_cast<int64_t>(comp));
 				// Tags could still have keys
-				const char *entKey = ecs_get_name(world, comp);
+				const char *entKey = ecs_is_alive(world, comp) ? ecs_get_name(world, comp) : nullptr;
 				std::string_view realKey = entKey != nullptr ? std::string_view{entKey} : std::string_view{emptyStr};
 				serialErr = jsonSerializer.Serialize("key", realKey);
 				serialErr = jsonSerializer.EndObject();

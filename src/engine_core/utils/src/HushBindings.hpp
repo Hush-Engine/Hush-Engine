@@ -58,6 +58,49 @@ namespace Hush::Export
 	/// };
 	constexpr bool ignore = true;
 
+	// Helpful functions for template generation
+
+
+	/// @brief Produces a macro marker for a symbol that specifies parameters that could be converted to templated component ID searches at runtime
+	/// @details A marker macro output for this function that comes from the input
+	/// @code {.cpp}
+	/// // (On Entity.h)
+	/// [[hush::export(Hush::Export::queryCompIdParams("componentId"))]]
+	/// bool RemoveComponentRaw(EntityId componentId);
+	/// @endcode
+	/// Would produce:
+	/// @code {.c}
+	/// HUSH_QCOMP_ID(T_PAIR(T0, "componentId"))
+	/// extern bool Hush__Entity__RemoveComponentRaw(Hush__Entity *self, Hush__Entity_EntityId componentId);
+	/// @endcode
+	/// The binding generator's job is then to process that macro into a wrapper function at its target file
+	/// @code {.cs}
+	/// public bool RemoveComponent<T0>() {
+	///    return this.RemoveComponentRaw(QueryCompId<T0>());
+	/// }
+	/// @endcode
+	/// Where the query function can do a hash lookup based on T0's typename, an array lookup, whatever the language seems fit
+	template <std::size_t N>
+	constexpr void queryCompIdParams(const char(&names)[N] ...) {
+		(void)names;
+	}
+
+	template <std::size_t N>
+	constexpr void typeNameParams(const char(&names)[N] ...) {
+		(void)names;
+	}
+
+	template <std::size_t N>
+	constexpr void templatedReturn(const char(&typeSpecifier)[N]) { // i.e templatedReturn("T0")
+		(void)typeSpecifier;
+	}
+
+	template <std::size_t N>
+	constexpr void typeSizeParams(const char(&typeSpecifiers)[N]...) {
+		(void)typeSpecifiers;
+	}
+	
+
 	/// Renames a class or struct.
 	/// @param name The new name of the class or struct.
 	/// For instance, given the following class:
