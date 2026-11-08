@@ -35,7 +35,7 @@ namespace Hush
 {
 	class Scene;
 
-	using EntityOnDestroyCallback_t = void(*)(uint64_t, void*);
+	using EntityOnDestroyCallback_t = void (*)(uint64_t, void *);
 
 	template <typename... Components>
 	class Query;
@@ -303,14 +303,16 @@ namespace Hush
 		[[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::templatedReturn("T0"))]]
 		void *AddComponentRaw(EntityId componentId);
 
-		/// Adds a component to the entity without treating it as a mutable component (useful for tags and built-in flecs markers)
+		/// Adds a component to the entity without treating it as a mutable component (useful for tags and built-in
+		/// flecs markers)
 		[[hush::export]]
 		void AddId(EntityId componentId);
 
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
-		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::templatedReturn("T0"))]]
+		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"),
+									 Hush::Export::templatedReturn("T0"))]]
 		void *GetComponentRaw(EntityId componentId);
 
 		[[nodiscard]] [[hush::export]]
@@ -319,13 +321,15 @@ namespace Hush
 		/// Get a component from the entity.
 		/// @param componentId Id of the component.
 		/// @return Pointer to the component.
-		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::templatedReturn("T0"))]]
+		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"),
+									 Hush::Export::templatedReturn("T0"))]]
 		void *GetComponentRaw(EntityId componentId) const;
 
 		/// Check if the entity has a component.
 		/// @param componentId Id of the component.
 		/// @return True if the entity has the component, false otherwise.
-		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::templatedReturn("T0"))]]
+		[[nodiscard]] [[hush::export(Hush::Export::queryCompIdParams("componentId"),
+									 Hush::Export::templatedReturn("T0"))]]
 		bool HasComponentRaw(EntityId componentId);
 
 		/// Emplace a component to the entity.
@@ -394,7 +398,8 @@ namespace Hush
 		[[nodiscard]]
 		std::string_view QueryName() const;
 
-		/// @brief Non-trivial set name, this sets the name component, use a component reference if you need to query this once per frame
+		/// @brief Non-trivial set name, this sets the name component, use a component reference if you need to query
+		/// this once per frame
 		[[hush::export]]
 		void SetName(std::string_view name);
 

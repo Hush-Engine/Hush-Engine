@@ -60,8 +60,8 @@ namespace Hush::Export
 
 	// Helpful functions for template generation
 
-
-	/// @brief Produces a macro marker for a symbol that specifies parameters that could be converted to templated component ID searches at runtime
+	/// @brief Produces a macro marker for a symbol that specifies parameters that could be converted to templated
+	/// component ID searches at runtime
 	/// @details A marker macro output for this function that comes from the input
 	/// @code {.cpp}
 	/// // (On Entity.h)
@@ -79,27 +79,31 @@ namespace Hush::Export
 	///    return this.RemoveComponentRaw(QueryCompId<T0>());
 	/// }
 	/// @endcode
-	/// Where the query function can do a hash lookup based on T0's typename, an array lookup, whatever the language seems fit
+	/// Where the query function can do a hash lookup based on T0's typename, an array lookup, whatever the language
+	/// seems fit
 	template <std::size_t N>
-	constexpr void queryCompIdParams(const char(&names)[N] ...) {
+	constexpr void queryCompIdParams(const char (&names)[N]...)
+	{
 		(void)names;
 	}
 
 	template <std::size_t N>
-	constexpr void typeNameParams(const char(&names)[N] ...) {
+	constexpr void typeNameParams(const char (&names)[N]...)
+	{
 		(void)names;
 	}
 
 	template <std::size_t N>
-	constexpr void templatedReturn(const char(&typeSpecifier)[N]) { // i.e templatedReturn("T0")
+	constexpr void templatedReturn(const char (&typeSpecifier)[N])
+	{ // i.e templatedReturn("T0")
 		(void)typeSpecifier;
 	}
 
 	template <std::size_t N>
-	constexpr void typeSizeParams(const char(&typeSpecifiers)[N]...) {
+	constexpr void typeSizeParams(const char (&typeSpecifiers)[N]...)
+	{
 		(void)typeSpecifiers;
 	}
-	
 
 	/// Renames a class or struct.
 	/// @param name The new name of the class or struct.

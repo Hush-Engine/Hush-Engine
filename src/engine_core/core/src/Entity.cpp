@@ -84,7 +84,8 @@ void *Hush::Entity::AddComponentRaw(const EntityId componentId)
 	return ecs_get_mut_id(world, m_entityId, componentId);
 }
 
-void Hush::Entity::AddId(EntityId componentId) {
+void Hush::Entity::AddId(EntityId componentId)
+{
 	auto *world = static_cast<ecs_world_t *>(m_ownerScene->GetWorld());
 	ecs_add_id(world, m_entityId, componentId);
 }
@@ -157,14 +158,14 @@ void Hush::Entity::Destroy(Entity &&entity)
 	scene->DestroyEntity(std::move(entity));
 }
 
-void Hush::Entity::QueueDestroy(Entity &entity,EntityOnDestroyCallback_t destructor)
+void Hush::Entity::QueueDestroy(Entity &entity, EntityOnDestroyCallback_t destructor)
 {
 	if (!entity.IsAlive())
 	{
 		// Something beat us to the deletion
 		return;
 	}
-	EntityMarkedForDeletion& deletionComp = entity.AddComponent<EntityMarkedForDeletion>();
+	EntityMarkedForDeletion &deletionComp = entity.AddComponent<EntityMarkedForDeletion>();
 	deletionComp.onDestroy = destructor;
 }
 
@@ -273,7 +274,8 @@ std::string_view Hush::Entity::QueryName() const
 	return name->GetName();
 }
 
-void Hush::Entity::SetName(std::string_view name) {
+void Hush::Entity::SetName(std::string_view name)
+{
 	Entity::Name *nameComp = this->GetComponent<Entity::Name>();
 	if (nameComp == nullptr)
 	{
@@ -282,7 +284,8 @@ void Hush::Entity::SetName(std::string_view name) {
 	nameComp->SetName(name);
 }
 
-void Hush::Entity::SetKey(std::string_view key) {
+void Hush::Entity::SetKey(std::string_view key)
+{
 	auto *world = static_cast<ecs_world_t *>(this->m_ownerScene->GetWorld());
 	ecs_set_name(world, this->m_entityId, key.data());
 }

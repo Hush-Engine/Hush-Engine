@@ -247,9 +247,10 @@ void Hush::InspectorPanel::RenderProperties()
 
 	// Iterate the current entity of the components that have a serializable comp
 	this->m_inspectTarget->EachId([this](Entity::EntityId compId) {
-	    if (Entity::IsPairId(compId) && Entity::GetPairFirst(compId) == EcsTerms::CHILD_OF) {
-	    	return;
-	    }
+		if (Entity::IsPairId(compId) && Entity::GetPairFirst(compId) == EcsTerms::CHILD_OF)
+		{
+			return;
+		}
 		Entity ent = this->m_activeScene->EntityFromIdUnchecked(compId);
 		auto *inspectable = ent.GetComponent<InspectableComponent>();
 		if (inspectable == nullptr)
@@ -269,7 +270,8 @@ void Hush::InspectorPanel::RenderProperties()
 		std::span<const Reflection::FieldInfo> fields = ti->GetFields();
 		auto *compMem = reinterpret_cast<uint8_t *>(this->m_inspectTarget.value().GetComponentRaw(compId));
 
-		// NOTE: This is a narrowing conversion, it might lead to weird behaviour, we could look into stripping out component bytes from its id bitmask
+		// NOTE: This is a narrowing conversion, it might lead to weird behaviour, we could look into stripping out
+		// component bytes from its id bitmask
 		ImGui::PushID(static_cast<int32_t>(compId));
 
 		std::string title = std::format("{}#{}", ti->GetName(), compId);
