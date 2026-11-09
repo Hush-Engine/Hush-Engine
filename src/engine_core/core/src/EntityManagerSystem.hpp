@@ -2,11 +2,14 @@
 
 #include "ISystem.hpp"
 #include "Query.hpp"
+#include "Scene.hpp"
 namespace Hush
 {
 	// Small component tag that will trigger deletion on this system
 	struct EntityMarkedForDeletion
 	{
+		// An optional destructor
+		EntityOnDestroyCallback_t onDestroy = nullptr;
 	};
 
 	class EntityManagerSystem final : public ISystem

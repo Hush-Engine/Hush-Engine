@@ -82,7 +82,8 @@ namespace Hush
 		{
 			None = 0,
 			BadSceneFormat,
-			SystemResolutionFailed
+			SystemResolutionFailed,
+			MismatchedVersion
 		};
 
 		/// Constructor.
@@ -164,7 +165,7 @@ namespace Hush
 		/// @param componentSize Size in bytes of the component, needed for ensuring correct data access on your
 		/// callback
 		/// @param observerType Component event type
-		[[hush::export]]
+		[[hush::export(Hush::Export::queryCompIdParams("componentId"), Hush::Export::typeSizeParams("componentSize"))]]
 		void AddComponentObserverRaw(Entity::EntityId componentId, size_t componentSize,
 									 EComponentObserverType observerType, ObserverCallback_t callback);
 
@@ -220,6 +221,9 @@ namespace Hush
 		[[hush::export]]
 		void DestroyEntity(Entity &entity);
 
+		[[hush::export]]
+		void QueueEntityDestroy(Entity &entity, EntityOnDestroyCallback_t destructor = nullptr);
+
 		/// Get the component registered id by name
 		/// @param name Component name
 		/// @return The component id if it exists, std::nullopt otherwise
@@ -249,7 +253,7 @@ namespace Hush
 		EntityId LookupCStr(NullTerminatedStringView tag) const;
 
 		// HACK: Marshallable version
-		[[hush::export]] [[nodiscard]]
+		[[hush::export(Hush::Export::typeNameParams("tag"))]] [[nodiscard]]
 		EntityId Lookup(std::string_view tag) const;
 
 		[[nodiscard]]
@@ -368,6 +372,10 @@ namespace Hush
 		friend class Entity;
 		friend class RawQuery;
 		friend class impl::QueryImpl;
+
+		void ReadAndLoadAllEntities(Serialization::JsonDeserializer &deserializer,
+									std::unordered_map<Entity::EntityId, Entity::EntityId> &idRemap,
+									std::vector<std::pair<Entity::EntityId, Entity::EntityId>> &pendingPairs);
 
 		template <typename T>
 		[[nodiscard]]

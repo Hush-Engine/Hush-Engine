@@ -1,6 +1,8 @@
 #pragma once
 
 #include "AssetCooker.hpp"
+#include "AssetFormat.hpp"
+#include "ICooker.hpp"
 #include "VirtualFilesystem.hpp"
 #include <filesystem>
 #include <string>
@@ -44,6 +46,12 @@ namespace Hush
 		AssetCooker &GetCooker()
 		{
 			return m_cooker;
+		}
+
+		/// Cook all assets in the project content directory.
+		Result<void, ECookError> CookAllAssets()
+		{
+			return m_cooker.CookDirectory(m_projectRoot, ECompressionFormat::None, this->m_frameAllocator);
 		}
 
 		/// Optionally supply the file watcher so the service can suppress the watcher

@@ -734,6 +734,20 @@ Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *in
 			return Entity::INVALID_ENTITY_ID;
 		}
 	}
+	// Just copy the references to the material
+	else
+	{
+		for (const auto &surface : mesh->GetSurfaces())
+		{
+			Ref<Material3D> matRef = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
+			// A surface without a material can be valid
+			if (matRef.IsNull())
+			{
+				continue;
+			}
+			meshRefComp.PushMaterial(matRef);
+		}
+	}
 
 	// Let ResourceUploadSystem create + upload the GPU vertex/index buffers.
 	entity.AddComponent<Renderer::GpuUploadComponent>();

@@ -13,4 +13,5 @@ namespace Hush::EcsTerms
 	extern const Entity::EntityId WILDCARD;
 	extern const Entity::EntityId ANY;
 	extern const Entity::EntityId CHILD_OF;
+	extern const Entity::EntityId TEMPLATE;
 } // namespace Hush::EcsTerms

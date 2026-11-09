@@ -8,7 +8,9 @@
 
 #include "Assertions.hpp"
 #include <Result.hpp>
+#include <rapidjson/document.h>
 #include <rapidjson/memorystream.h>
+#include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/reader.h>
@@ -902,6 +904,19 @@ namespace Hush::Serialization
 		}
 
 		return EndArray();
+	}
+
+	inline std::string PrettifyJson(const std::string &compact)
+	{
+		rapidjson::Document doc;
+		doc.Parse(compact.c_str(), compact.size());
+		if (doc.HasParseError())
+			return compact;
+
+		rapidjson::StringBuffer sb;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> pw(sb);
+		doc.Accept(pw);
+		return sb.GetString();
 	}
 
 	template <typename T>

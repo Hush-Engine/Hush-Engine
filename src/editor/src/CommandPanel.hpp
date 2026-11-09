@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CookerService.hpp"
 #include "IEditorPanel.hpp"
 #include "Scene.hpp"
 #include "SystemSelection.hpp"
@@ -31,6 +32,11 @@ namespace Hush
 		void Init(Scene *activeScene) noexcept override;
 
 		void OnRender(float deltaTime) override;
+
+		void SetCookerService(CookerService *cookerService) noexcept
+		{
+			m_cookerService = cookerService;
+		}
 
 	private:
 		// For any pop up list, including (later on) the commands themselves
@@ -86,6 +92,8 @@ namespace Hush
 		Scene *m_activeScene;
 
 		EditorInfo *m_editorInfo;
+
+		CookerService *m_cookerService = nullptr;
 
 		// For the selection state of any pop up
 		int32_t m_selectedItem = -1;

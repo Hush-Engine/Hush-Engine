@@ -419,7 +419,6 @@ namespace Hush
 
 		private:
 			friend struct SentinelQueryIterator;
-
 			/// Get a tuple of spans of the components.
 			///
 			/// @tparam I Index sequence.

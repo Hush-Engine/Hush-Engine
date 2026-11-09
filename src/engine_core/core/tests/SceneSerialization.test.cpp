@@ -116,9 +116,11 @@ TEST_CASE("Scene assets resolve systems independent of root field order", "[scen
 TEST_CASE("Scene assets remain compatible with entity-only files", "[scene][serialization]")
 {
 	Hush::Scene scene(nullptr, nullptr);
-	REQUIRE(scene.FromSceneAsset(R"({"entities":[]})") == Hush::Scene::EError::None);
-	REQUIRE(scene.FromSceneAsset(R"({"systems":[{"module":"Missing","type":"Missing.System"}],"entities":[]})") ==
-			Hush::Scene::EError::SystemResolutionFailed);
+	REQUIRE(scene.FromSceneAsset(R"({"versionMajor":0,"versionMinor":2,"entities":[]})") == Hush::Scene::EError::None);
+	REQUIRE(
+		scene.FromSceneAsset(
+			R"({"versionMajor":0,"versionMinor":2,"systems":[{"module":"Missing","type":"Missing.System"}],"entities":[]})") ==
+		Hush::Scene::EError::SystemResolutionFailed);
 }
 
 TEST_CASE("Scene assets validate entities before resolving systems", "[scene][serialization]")
@@ -131,7 +133,8 @@ TEST_CASE("Scene assets validate entities before resolving systems", "[scene][se
 			return std::make_unique<SceneAssetTestSystem>(target);
 		});
 
-	REQUIRE(scene.FromSceneAsset(R"({"systems":[{"module":"Game","type":"Game.System"}]})") ==
+	REQUIRE(scene.FromSceneAsset(
+				R"({"versionMajor":0,"versionMinor":2,"systems":[{"module":"Game","type":"Game.System"}]})") ==
 			Hush::Scene::EError::BadSceneFormat);
 	REQUIRE(factoryCalls == 0);
 }

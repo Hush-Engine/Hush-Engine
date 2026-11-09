@@ -9,6 +9,7 @@
 #include "Scene.hpp"
 #include "ScenePanel.hpp"
 #include "UIUtils.hpp"
+#include "async/Executor.hpp"
 #include "components/EditorInfo.hpp"
 #include "crypto/Hashing.hpp"
 #include "definitions/KeyCode.hpp"
@@ -34,8 +35,8 @@
 #include "Shared/DirectionalLight.hpp"
 #include "SystemSelection.hpp"
 
-constexpr std::array<std::string_view, 5> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component",
-															   "add-system", "help"};
+constexpr std::array<std::string_view, 6> BUILT_IN_COMMANDS = {"add-entity", "find-entity", "add-component",
+															   "add-system", "help",		"recook-assets"};
 
 // NOLINTNEXTLINE
 #define CALC_CMD_HASH(idx)                                                                                             \
@@ -47,7 +48,8 @@ enum class EBuiltinCommands : uint32_t
 	FindEntity = CALC_CMD_HASH(1),
 	AddComponent = CALC_CMD_HASH(2),
 	AddSystem = CALC_CMD_HASH(3),
-	Help = CALC_CMD_HASH(4)
+	Help = CALC_CMD_HASH(4),
+	RecookAssets = CALC_CMD_HASH(5)
 };
 
 void Hush::CommandPanel::Init(Scene *activeScene) noexcept
@@ -194,6 +196,34 @@ void Hush::CommandPanel::SubmitCommand(uint32_t command, const std::string_view 
 		return;
 	case EBuiltinCommands::Help:
 		break;
+	case EBuiltinCommands::RecookAssets: {
+		if (this->m_cookerService != nullptr)
+		{
+			auto cookTask = [](CommandPanel *commandPanel) -> Threading::Task<void> {
+				auto cookRes = commandPanel->m_cookerService->CookAllAssets();
+				// Send in a notification
+				Entity notifEntity = commandPanel->m_activeScene->CreateEntity();
+				if (cookRes.has_error())
+				{
+					std::string errMsg = "Failed to cook assets! Error: ";
+					errMsg.append(magic_enum::enum_name(cookRes.error()));
+					notifEntity.EmplaceComponent<ToastNotification>(errMsg, 1.0f, ToastNotification::EToastType::Error);
+				}
+				else
+				{
+					constexpr std::string_view cookedSuccesfullyMsg = "All assets were correctly re-cooked!";
+					notifEntity.EmplaceComponent<ToastNotification>(cookedSuccesfullyMsg, 1.0f,
+																	ToastNotification::EToastType::Info);
+				}
+				co_return;
+			};
+
+			HushEngine *engine = this->m_activeScene->GetEngine();
+			Threading::Executors::ThreadPool *pool = engine->GetEngineThreadPool();
+			Threading::SpawnOn(pool, cookTask(this));
+		}
+		break;
+	}
 	default:
 		// Show error
 		// Then fade out
@@ -362,7 +392,7 @@ void Hush::CommandPanel::AddComponentPopup()
 	popupState.onElementClicked = [](size_t idx, PopupListState *state) {
 		auto *localCtx = reinterpret_cast<PopupCtx *>(state->ctx);
 		Entity::EntityId compId = localCtx->compsArr->at(idx);
-		localCtx->entityRef->AddComponentRaw(compId);
+		localCtx->entityRef->AddId(compId);
 	};
 
 	DrawSearchPopup(&popupState);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.hpp"
+#include "reflection/Annotations.hpp"
 #include <string_view>
 
 #include <Hushgen.hpp>
@@ -16,7 +17,7 @@
 namespace Hush
 {
 	/// @brief Scripting-facing API of the rendering system as a component.
-	struct [[hush::export]] [[hush::reflect]] RenderingSystemAPI
+	struct [[hush::export]] [[hush::reflect(Hush::Reflection::name("RenderingSystemAPI"))]] RenderingSystemAPI
 	{
 		HUSH_GENERATED_BODY
 	public:
