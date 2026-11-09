@@ -1,5 +1,6 @@
 #include "MeshReference.hpp"
 #include "Assertions.hpp"
+#include <string_view>
 
 void Hush::MeshReference::CalculateBounds(glm::vec3 *outCenter, glm::vec3 *outSize)
 {
@@ -56,9 +57,10 @@ size_t Hush::MeshReference::GetMaterialCount() const
 
 Hush::Graphics::Material3D *Hush::MeshReference::GetMaterialAt(size_t index)
 {
+	constexpr std::string_view defaultName = "[Empty mesh]";
 	HUSH_COND_FAIL_MSG_V(index < this->m_materials.size(), nullptr,
 						 "Material index {} is out of bounds of the mesh's ({}) material list size ({})", index,
-						 this->GetMesh()->GetName(), this->m_materials.size());
+						 this->GetMesh().IsNull() ? defaultName : this->GetMesh()->GetName(), this->m_materials.size());
 	Ref<Graphics::Material3D> &mat = this->m_materials[index];
 	return mat.Get();
 }

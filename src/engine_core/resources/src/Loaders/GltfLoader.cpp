@@ -122,7 +122,7 @@ void Hush::GLTFLoader::FillMeshData(AssetHandle *asset, size_t meshIndex, std::v
 			const fastgltf::math::nvec3 &emission = rawMaterial.emissiveFactor;
 			(void)emission;
 			// PERF: Small string allocs, should be fine tho
-			std::string uniqueMatName = resourcePrefixName.data();
+			std::string uniqueMatName = {resourcePrefixName.data(), resourcePrefixName.size()};
 			uniqueMatName.append(rawMaterial.name);
 			const uint32_t materialResourceId = Hashing::Fnv1a(uniqueMatName);
 			MaterialInfo mat = {.pass = GltfLoadFunctions::GetMaterialPassFromFastGltfPass(rawMaterial.alphaMode),

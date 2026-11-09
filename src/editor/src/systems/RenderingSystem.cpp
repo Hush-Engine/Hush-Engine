@@ -740,8 +740,11 @@ Hush::Entity::EntityId InstantiateMeshEntities(const char *virtualPath, void *in
 		for (const auto &surface : mesh->GetSurfaces())
 		{
 			Ref<Material3D> matRef = resourceManager->GetRefOrNull<Material3D>(surface.materialResource);
-			HUSH_ASSERT(!matRef.IsNull(),
-						"Material should have been created on the other branch, something went wrong with references!");
+			// A surface without a material can be valid
+			if (matRef.IsNull())
+			{
+				continue;
+			}
 			meshRefComp.PushMaterial(matRef);
 		}
 	}
