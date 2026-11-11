@@ -5,7 +5,10 @@
 */
 
 #pragma once
+#include "definitions/GamepadButtons.hpp"
+#include "definitions/GamepadState.hpp"
 #include "definitions/KeyData.hpp"
+#include "definitions/KeyStates.hpp"
 #include "definitions/MouseButton.hpp"
 #include "definitions/MouseData.hpp"
 #include <array>
@@ -65,6 +68,8 @@ namespace Hush
 
 		static void SendKeyEvent(KeyCode key, EKeyState state);
 
+		static void SendGamepadButtonEvent(uint32_t internalGamepadId, EGamepadButton button, EKeyState state);
+
 		static void SendMouseButtonEvent(MouseButton mouseButton, EKeyState state);
 
 		static void SendMouseMovementEvent(int32_t posX, int32_t posY, int32_t accelerationX, int32_t accelerationY);
@@ -72,6 +77,8 @@ namespace Hush
 		static void SendWheelEvent(float posX, float posY);
 
 		static void ResetMouseAcceleration();
+
+		static void SendGamepadAxisMotion(uint32_t internalGamepadId, EGamepadAxis axis, float value);
 
 		static void ResetCharData();
 
@@ -82,10 +89,35 @@ namespace Hush
 		[[hush::export]]
 		static void SetCursorLock(ECursorLockMode lockMode);
 
+		static void AddGamepad(GamepadState state);
+
+		static void RemoveGamepad(uint32_t internalGamepadId);
+
+		[[hush::export]]
+		static float GetGamepadAxis(size_t controllerIndex, EGamepadAxis axis);
+
+		[[hush::export]]
+		static bool IsGamepadButtonDown(size_t controllerIndex, EGamepadButton button);
+
+		[[hush::export]]
+		static bool IsGamepadButtonHeld(size_t controllerIndex, EGamepadButton button);
+
+		[[hush::export]]
+		static bool IsGamepadButtonDownThisFrame(size_t controllerIndex, EGamepadButton button);
+
+		[[hush::export]]
+		static bool IsGamepadButtonUp(size_t controllerIndex, EGamepadButton button);
+
+		static constexpr size_t MAX_GAMEPADS = 7;
+
 	private:
 		// TODO: Reserve memory for this map???
 		// NOLINTNEXTLINE
 		static std::vector<KeyData> S_KEY_DATA_BY_CODE;
+
+		/// @brief This is a guess of an upper limit on gamepads, the assumption is based on max
+		/// peripherals on a PC, I doubt any application will use more than 7 gamepads, but who knows
+		static std::array<GamepadState, MAX_GAMEPADS> S_GAMEPAD_STATES;
 
 		// NOLINTNEXTLINE
 		static MouseData S_MOUSE_DATA;
@@ -94,8 +126,6 @@ namespace Hush
 		static inline char s_lastChar = 0;
 
 		static void UpdateKeyStateFromData(KeyData &keyData, EKeyState incomingState);
-
-		static bool KeyMapContains(EKeyCode key);
 
 		static bool MouseMapContains(EMouseButton button);
 	};

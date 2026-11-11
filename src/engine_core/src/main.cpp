@@ -31,7 +31,9 @@ extern "C"
 		*appstate = new AppState;
 		AppState &state = *static_cast<AppState *>(*appstate);
 
-		if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+		// TODO: Make sure to call the SteamApiInitEx function here when supporting steam apps
+
+		if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD))
 		{
 			Hush::LogFormat(Hush::ELogLevel::Error, "SDL_InitSubSystem failed: {}", SDL_GetError());
 			return SDL_APP_FAILURE;
