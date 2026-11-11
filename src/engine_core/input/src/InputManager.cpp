@@ -226,6 +226,8 @@ void Hush::InputManager::AddGamepad(GamepadState state)
 			return;
 		}
 	}
+	SDL_CloseGamepad(reinterpret_cast<SDL_Gamepad *>(state.sdlHandle));
+	LogFormat(ELogLevel::Error, "Maximum amount of controllers ({}) exceeded, ignored new controller!", MAX_GAMEPADS);
 }
 
 void Hush::InputManager::RemoveGamepad(uint32_t internalGamepadId)
