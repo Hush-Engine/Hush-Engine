@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 namespace Hush
 {
 	enum class [[hush::export]] EKeyState
@@ -15,4 +16,8 @@ namespace Hush
 		Held,
 		Released
 	};
+
+	// HACK: Do not use inheritance on the enum but this alias for its sizing due to limitations of the hush::export
+	// tool
+	using EKeyState_t = int8_t;
 } // namespace Hush

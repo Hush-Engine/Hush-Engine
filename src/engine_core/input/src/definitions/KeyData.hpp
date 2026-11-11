@@ -13,7 +13,7 @@ namespace Hush
 	struct KeyData
 	{
 		EKeyCode code = EKeyCode::UNKNOWN;
-		EKeyState currentState = EKeyState::None;
-		EKeyState previousState = EKeyState::None;
+		EKeyState_t currentState = (EKeyState_t)EKeyState::None;
+		EKeyState_t previousState = (EKeyState_t)EKeyState::None;
 	};
 } // namespace Hush

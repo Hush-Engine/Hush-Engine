@@ -1,14 +1,16 @@
 #pragma once
 
+// TODO: Rename to VectorMath plainly
+
 #include "MathUtils.hpp"
 #include <cmath>
+#include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float4.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
 namespace Hush::Vector3Math
 {
-
 	constexpr inline glm::vec3 ZERO = glm::vec3(0.0F);
 
 	constexpr inline glm::vec3 ONE = glm::vec3(1.0F);

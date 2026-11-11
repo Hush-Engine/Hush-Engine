@@ -5,11 +5,20 @@
 #include "WindowManager.hpp"
 #include "Logger.hpp"
 // #include "Vulkan/VulkanRenderer.hpp"
+#include "definitions/GamepadButtons.hpp"
+#include "definitions/GamepadState.hpp"
 #include "definitions/KeyCode.hpp"
+#include "definitions/KeyStates.hpp"
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_video.h>
+#include <cmath>
+#include <cstdint>
 #include <imgui/backends/imgui_impl_sdl3.h>
+#include <limits>
+#include <magic_enum/magic_enum.hpp>
 
 // Graphics backend
 #if defined(HUSH_VULKAN_IMPL)
@@ -149,6 +158,32 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		// Send 0 as acceleration bc it will be calculated manually
 		InputManager::SendWheelEvent(event.wheel.x, event.wheel.y);
 		break;
+	case SDL_EVENT_GAMEPAD_ADDED: {
+		GamepadState gamepad{};
+		gamepad.internalId = event.gdevice.which;
+		InputManager::AddGamepad(gamepad);
+		break;
+	}
+	case SDL_EVENT_GAMEPAD_REMOVED:
+		InputManager::RemoveGamepad(event.gdevice.which);
+		break;
+	case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
+		auto axis = (EGamepadAxis)event.gaxis.axis;
+		int16_t value = event.gaxis.value;
+		constexpr float limitMax = std::numeric_limits<int16_t>::max();
+		float percentage = (float)value / limitMax;
+		percentage = std::truncf(percentage * 1000.f) / 1000.f;
+		InputManager::SendGamepadAxisMotion(event.gaxis.which, axis, percentage);
+		break;
+	}
+	case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		InputManager::SendGamepadButtonEvent(event.gbutton.which, static_cast<EGamepadButton>(event.gbutton.button),
+											 EKeyState::Pressed);
+		break;
+	case SDL_EVENT_GAMEPAD_BUTTON_UP:
+		InputManager::SendGamepadButtonEvent(event.gbutton.which, static_cast<EGamepadButton>(event.gbutton.button),
+											 EKeyState::Released);
+		break;
 	case SDL_EVENT_DROP_FILE:
 		if (m_dropCallback && event.drop.data != nullptr)
 		{
@@ -163,7 +198,7 @@ void Hush::WindowRenderer::HandleEvents(bool *applicationRunning, const SDL_Even
 		break;
 	}
 	// this->m_windowRenderer->HandleEvent(&event);
-}
+} // TODO: Make sure to call the SteamApiInitEx function here when supporting steam apps
 
 void Hush::WindowRenderer::WaitIdle()
 {
@@ -202,7 +237,7 @@ bool Hush::WindowRenderer::InitSDLIfNotStarted() noexcept
 		return true;
 	}
 #if !HUSH_PLATFORM_EMSCRIPTEN
-	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+	bool rc = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD);
 	return rc;
 #else
 	return true;
